@@ -84,8 +84,24 @@ const Lecture = () => {
     return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   };
 
-  const handleBackToActions = () => {
-    navigate(`/lecture/${lectureId}`);
+  const handleBackToCourse = async () => {
+    try {
+      // Get the course_id for this lecture
+      const { data: lecture, error } = await supabase
+        .from('lectures')
+        .select('course_id')
+        .eq('id', lectureId)
+        .single();
+      
+      if (error) throw error;
+      
+      // Navigate to the course page
+      navigate(`/course/${lecture.course_id}`);
+    } catch (error) {
+      console.error('Error navigating back:', error);
+      // If there's an error, just navigate to the courses list
+      navigate('/');
+    }
   };
 
   // If we're in summary mode and have a summary, show only the summary
@@ -94,12 +110,12 @@ const Lecture = () => {
       <div className="min-h-screen bg-white p-8">
         <div className="max-w-4xl mx-auto">
           <Button
-            onClick={handleBackToActions}
+            onClick={handleBackToCourse}
             variant="ghost"
             className="mb-6 hover:bg-gray-100"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Actions
+            Back to Course
           </Button>
           
           {isSummarizing ? (
