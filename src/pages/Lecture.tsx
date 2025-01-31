@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, FileText } from "lucide-react";
@@ -10,11 +10,20 @@ import { useToast } from "@/components/ui/use-toast";
 
 const Lecture = () => {
   const { lectureId } = useParams();
+  const [searchParams] = useSearchParams();
+  const action = searchParams.get('action');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (action === 'summary') {
+      handleGetSummary();
+    }
+  }, [action]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -56,12 +65,7 @@ const Lecture = () => {
       });
 
       if (error) throw error;
-
-      const summaryMessage = { 
-        role: 'assistant' as const, 
-        content: "Here's a summary of the lecture:\n\n" + data.summary 
-      };
-      setMessages(prev => [...prev, summaryMessage]);
+      setSummary(data.summary);
     } catch (error) {
       console.error('Error generating summary:', error);
       toast({
@@ -74,6 +78,32 @@ const Lecture = () => {
     }
   };
 
+  // If we're in summary mode and have a summary, show only the summary
+  if (action === 'summary') {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <div className="max-w-4xl mx-auto">
+          {isSummarizing ? (
+            <div className="text-center py-12">
+              <p className="text-lg text-gray-600">Generating lecture summary...</p>
+            </div>
+          ) : summary ? (
+            <div className="prose prose-lg max-w-none">
+              {summary.split('\n').map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-lg text-gray-600">No summary available</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Regular chat view
   return (
     <div className="h-screen flex">
       {/* PDF Viewer Section */}
@@ -83,17 +113,6 @@ const Lecture = () => {
 
       {/* Chat Section */}
       <div className="w-1/2 h-full flex flex-col bg-white">
-        <div className="p-4 border-b">
-          <Button
-            onClick={handleGetSummary}
-            disabled={isSummarizing}
-            className="w-full gap-2"
-          >
-            <FileText className="w-4 h-4" />
-            {isSummarizing ? "Generating Summary..." : "Get Lecture Summary"}
-          </Button>
-        </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message, index) => (
             <ChatMessage key={index} message={message} />

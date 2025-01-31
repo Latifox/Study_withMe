@@ -47,7 +47,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that creates concise and informative summaries of lecture content. Focus on the key points and main ideas.'
+            content: 'You are a helpful assistant that creates comprehensive lecture summaries. Please provide a detailed summary that includes:\n\n1. Key points in bullet points\n2. Important quotes from the lecture (using proper citation format)\n3. Main topics organized in a clear structure\n4. Any lists or enumerations from the lecture\n\nMaintain the original language of the lecture and ensure the summary is both detailed and easy to read.'
           },
           {
             role: 'user',
