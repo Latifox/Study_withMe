@@ -48,23 +48,29 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a quiz generator that creates questions based on lecture content. Generate a quiz with the following specifications:
-              - Difficulty: ${config.difficulty}
-              - Question type: ${config.questionTypes}
-              - Number of questions: ${config.numberOfQuestions}
-              ${config.hintsEnabled ? '- Include a hint for each question' : ''}
-              
-              Return ONLY a valid JSON array of questions, where each question has:
-              - question: string
-              - type: "multiple_choice" | "true_false"
-              - options: string[] (possible answers)
-              - correctAnswer: string (must be one of the options)
-              ${config.hintsEnabled ? '- hint: string' : ''}
-              
-              For multiple choice questions, provide 4 options.
-              For true/false questions, options should be ["True", "False"].
-              
-              Make sure to return ONLY the JSON array, no additional text or formatting.`
+            content: `You are a quiz generator. Generate a quiz based on the provided lecture content. 
+            
+            Rules:
+            - Generate exactly ${config.numberOfQuestions} questions
+            - Difficulty level: ${config.difficulty}
+            - Question types: ${config.questionTypes === 'mixed' ? 'mix of multiple choice and true/false' : config.questionTypes}
+            ${config.hintsEnabled ? '- Include a helpful hint for each question' : ''}
+            
+            Response format:
+            Return a JSON array where each question object has these exact properties:
+            {
+              "question": "string with the question text",
+              "type": "multiple_choice" or "true_false",
+              "options": ["array", "of", "possible", "answers"],
+              "correctAnswer": "must match one of the options exactly",
+              ${config.hintsEnabled ? '"hint": "helpful hint text",' : ''}
+            }
+            
+            Important:
+            - For multiple choice: provide exactly 4 options
+            - For true/false: options must be exactly ["True", "False"]
+            - Return ONLY the JSON array, no markdown, no extra text
+            - Ensure the JSON is valid and properly formatted`
           },
           {
             role: 'user',
@@ -87,12 +93,34 @@ serve(async (req) => {
 
     let quiz;
     try {
-      quiz = JSON.parse(data.choices[0].message.content.trim());
-      console.log('Successfully parsed quiz:', quiz);
+      // Remove any potential markdown formatting and clean the string
+      const cleanContent = data.choices[0].message.content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      
+      quiz = JSON.parse(cleanContent);
+      
+      // Validate quiz structure
+      if (!Array.isArray(quiz)) {
+        throw new Error('Quiz response is not an array');
+      }
+      
+      // Validate each question
+      quiz.forEach((q, i) => {
+        if (!q.question || !q.type || !q.options || !q.correctAnswer) {
+          throw new Error(`Question ${i + 1} is missing required properties`);
+        }
+        if (!q.options.includes(q.correctAnswer)) {
+          throw new Error(`Question ${i + 1} correct answer is not in options`);
+        }
+      });
+      
+      console.log('Successfully parsed and validated quiz:', quiz);
     } catch (error) {
-      console.error('Error parsing quiz JSON:', error);
+      console.error('Error parsing or validating quiz JSON:', error);
       console.error('Raw content:', data.choices[0].message.content);
-      throw new Error('Failed to parse quiz JSON from OpenAI response');
+      throw new Error(`Failed to parse quiz JSON: ${error.message}`);
     }
 
     return new Response(
