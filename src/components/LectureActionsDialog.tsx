@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface LectureActionsDialogProps {
@@ -19,6 +19,11 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
 
   const handleChatAction = () => {
     navigate(`/lecture/${lectureId}`);
+    onClose();
+  };
+
+  const handleSummaryAction = () => {
+    navigate(`/lecture/${lectureId}?action=summary`);
     onClose();
   };
 
@@ -37,7 +42,14 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             <MessageSquare className="w-5 h-5" />
             Chat with your lecture
           </Button>
-          {/* More actions will be added here in the future */}
+          <Button
+            onClick={handleSummaryAction}
+            className="flex items-center gap-2 w-full"
+            size="lg"
+          >
+            <FileText className="w-5 h-5" />
+            Get Lecture Summary
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
