@@ -36,10 +36,12 @@ const Lecture = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="h-[calc(100vh-2rem)]">
-            <PDFViewer url={lecture.pdf_path} />
+            <PDFViewer lectureId={lectureId} />
           </div>
           <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4">
-            <ChatMessage lectureId={parseInt(lectureId!)} action={action} />
+            <div className="flex flex-col gap-4">
+              <ChatMessage message={{ role: 'assistant', content: 'Hello! How can I help you with this lecture?' }} />
+            </div>
           </div>
         </div>
       )}
