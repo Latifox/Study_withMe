@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadProps {
   courseId?: string;
@@ -13,10 +14,11 @@ interface FileUploadProps {
 const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   const handleUpload = async () => {
-    if (!file || !title) {
+    if (!file || !title || !courseId) {
       toast({
         title: "Error",
         description: "Please provide both a title and a file",
@@ -26,18 +28,57 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     try {
-      // Here we'll handle file upload and text extraction
+      setIsUploading(true);
+
+      // Upload PDF to storage
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${crypto.randomUUID()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('lecture_pdfs')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL of the uploaded file
+      const { data: { publicUrl } } = supabase.storage
+        .from('lecture_pdfs')
+        .getPublicUrl(filePath);
+
+      // Extract text from PDF
+      const { data: extractedData, error: extractError } = await supabase.functions
+        .invoke('extract-pdf-text', {
+          body: { pdfUrl: publicUrl },
+        });
+
+      if (extractError) throw extractError;
+
+      // Save lecture metadata and content to database
+      const { error: dbError } = await supabase
+        .from('lectures')
+        .insert({
+          course_id: parseInt(courseId),
+          title,
+          pdf_path: filePath,
+          content: extractedData.text,
+        });
+
+      if (dbError) throw dbError;
+
       toast({
         title: "Success",
         description: "Lecture uploaded successfully!",
       });
       onClose();
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Error",
-        description: "Failed to upload lecture",
+        description: "Failed to upload lecture: " + error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -68,10 +109,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
           </div>
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
-          <Button onClick={handleUpload}>Upload</Button>
+          <Button onClick={handleUpload} disabled={isUploading}>
+            {isUploading ? "Uploading..." : "Upload"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
