@@ -1,14 +1,10 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import * as pdfjs from "npm:pdfjs-dist@3.11.174/legacy/build/pdf.js"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Configure PDF.js to use built-in worker
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjs.PDFWorker;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -31,13 +27,17 @@ serve(async (req) => {
     const arrayBuffer = await file.arrayBuffer();
     console.log('File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
 
-    const pdf = await pdfjs.getDocument({ 
+    // Configure PDF.js for serverless environment
+    const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
       useWorkerFetch: false,
       isEvalSupported: false,
-      useSystemFonts: true
-    }).promise;
-    
+      useSystemFonts: true,
+      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+    });
+
+    console.log('PDF loading task created');
+    const pdf = await loadingTask.promise;
     console.log('PDF loaded successfully, pages:', pdf.numPages);
 
     // Extract text from all pages
