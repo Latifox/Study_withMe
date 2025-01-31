@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Further reduced chunk size and increased processing efficiency
-const CHUNK_SIZE = 1000;
-const OVERLAP = 25;
-const DELAY_BETWEEN_CALLS = 3000; // 3 seconds delay
+// Significantly reduced chunk size and increased delays
+const CHUNK_SIZE = 800;
+const OVERLAP = 20;
+const DELAY_BETWEEN_CALLS = 4000; // 4 seconds delay
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
-      .select('content, title')
+      .select('content')
       .eq('id', lectureId)
       .single();
 
@@ -37,9 +37,7 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log(`Retrieved lecture: ${lecture.title}`);
-
-    // Split content into smaller chunks with minimal overlap
+    // Split content into smaller chunks
     const chunks = [];
     let startIndex = 0;
     while (startIndex < lecture.content.length) {
@@ -48,18 +46,18 @@ serve(async (req) => {
       startIndex = endIndex - OVERLAP;
     }
 
-    console.log(`Content split into ${chunks.length} chunks`);
+    console.log(`Processing ${chunks.length} chunks`);
 
-    // Process chunks sequentially with increased delay
-    const chunkSummaries = [];
+    // Process chunks with increased delay and memory optimization
+    const summaries = [];
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-      
       try {
+        // Enforce delay between API calls
         if (i > 0) {
           await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CALLS));
         }
 
+        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -71,14 +69,14 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'Summarize briefly.'
+                content: 'Summarize key points only.'
               },
               {
                 role: 'user',
                 content: chunks[i]
               }
             ],
-            max_tokens: 200,
+            max_tokens: 150,
             temperature: 0.3,
           }),
         });
@@ -88,17 +86,17 @@ serve(async (req) => {
         }
 
         const data = await response.json();
-        chunkSummaries.push(data.choices[0].message.content);
-        console.log(`Successfully processed chunk ${i + 1}`);
+        summaries.push(data.choices[0].message.content);
+        console.log(`Chunk ${i + 1} processed successfully`);
       } catch (error) {
         console.error(`Error processing chunk ${i + 1}:`, error);
-        throw new Error(`Failed to process chunk ${i + 1}: ${error.message}`);
+        throw new Error(`Failed to process chunk ${i + 1}`);
       }
     }
 
-    // Final consolidation with minimal processing
-    console.log('Starting final summary consolidation');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Generate final summary with reduced complexity
+    console.log('Generating final summary');
+    const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -109,28 +107,28 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Create a concise summary.'
+            content: 'Create a brief summary.'
           },
           {
             role: 'user',
-            content: chunkSummaries.join(' ')
+            content: summaries.join(' ')
           }
         ],
-        max_tokens: 500,
+        max_tokens: 400,
         temperature: 0.3,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error in final summary: ${response.status}`);
+    if (!finalResponse.ok) {
+      throw new Error(`OpenAI API error in final summary: ${finalResponse.status}`);
     }
 
-    const finalSummary = await response.json();
-    console.log('Successfully generated final summary');
+    const finalData = await finalResponse.json();
+    console.log('Summary generated successfully');
 
     return new Response(
       JSON.stringify({
-        summary: finalSummary.choices[0].message.content
+        summary: finalData.choices[0].message.content
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
