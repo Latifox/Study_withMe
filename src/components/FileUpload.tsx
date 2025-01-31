@@ -21,11 +21,10 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     const formData = new FormData();
     formData.append('file', file);
 
+    console.log('Sending PDF for text extraction...');
+    
     const { data, error } = await supabase.functions.invoke('extract-pdf-text', {
       body: formData,
-      headers: {
-        'Accept': 'application/json',
-      },
     });
 
     if (error) {

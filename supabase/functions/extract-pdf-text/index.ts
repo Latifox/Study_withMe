@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as pdfjs from "npm:pdfjs-dist@3.11.174/legacy/build/pdf.js";
+import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
+import * as pdfjs from "npm:pdf-parse@1.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,70 +14,51 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Received request to extract PDF text');
+    
+    // Get the PDF file from the request
     const formData = await req.formData();
     const file = formData.get('file');
     
     if (!file || !(file instanceof File)) {
-      console.error('No file provided or invalid file type');
-      throw new Error('No file provided');
+      throw new Error('No PDF file provided');
     }
 
-    console.log('Processing PDF file:', file.name, 'Size:', file.size);
-
-    // Load the PDF document
+    console.log('Processing PDF file:', file.name);
+    
+    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
-    console.log('File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
+    const buffer = Buffer.from(arrayBuffer);
+    
+    console.log('PDF file converted to buffer, size:', buffer.length);
 
-    // Configure PDF.js
-    const loadingTask = pdfjs.getDocument({
-      data: arrayBuffer,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    });
-
-    console.log('PDF loading task created');
-    const pdf = await loadingTask.promise;
-    console.log('PDF loaded successfully, pages:', pdf.numPages);
-
-    // Extract text from all pages
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      console.log(`Processing page ${i}/${pdf.numPages}`);
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      fullText += pageText + '\n';
-    }
-
-    console.log('Text extraction complete, total length:', fullText.length);
-
-    // Clean and format the text
-    const cleanedText = fullText
-      .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-      .replace(/\n\s*\n/g, '\n')  // Remove excessive newlines
-      .trim();
-
-    console.log('Text cleaned, final length:', cleanedText.length);
+    // Extract text from PDF
+    const data = await pdfjs(buffer);
+    const text = data.text;
+    
+    console.log('Successfully extracted text, length:', text.length);
 
     return new Response(
-      JSON.stringify({ text: cleanedText }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ text }),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
     );
+
   } catch (error) {
     console.error('Error processing PDF:', error);
-    console.error('Error stack:', error.stack);
     
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        stack: error.stack 
+        error: 'Failed to extract PDF content',
+        details: error.message 
       }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
