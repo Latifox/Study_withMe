@@ -36,7 +36,7 @@ const Lecture = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="h-[calc(100vh-2rem)]">
-            <PDFViewer pdfPath={lecture.pdf_path} />
+            <PDFViewer url={lecture.pdf_path} />
           </div>
           <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4">
             <ChatMessage lectureId={parseInt(lectureId!)} action={action} />
