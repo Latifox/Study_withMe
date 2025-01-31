@@ -54,7 +54,7 @@ serve(async (req) => {
               - Number of questions: ${config.numberOfQuestions}
               ${config.hintsEnabled ? '- Include a hint for each question' : ''}
               
-              Format the response as a JSON array of questions, where each question has:
+              Return ONLY a valid JSON array of questions, where each question has:
               - question: string
               - type: "multiple_choice" | "true_false"
               - options: string[] (possible answers)
@@ -64,7 +64,7 @@ serve(async (req) => {
               For multiple choice questions, provide 4 options.
               For true/false questions, options should be ["True", "False"].
               
-              Ensure questions are challenging but fair, and directly related to the lecture content.`
+              Make sure to return ONLY the JSON array, no additional text or formatting.`
           },
           {
             role: 'user',
@@ -83,8 +83,17 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const quiz = JSON.parse(data.choices[0].message.content);
-    console.log('Successfully generated quiz with', quiz.length, 'questions');
+    console.log('Raw OpenAI response:', data.choices[0].message.content);
+
+    let quiz;
+    try {
+      quiz = JSON.parse(data.choices[0].message.content.trim());
+      console.log('Successfully parsed quiz:', quiz);
+    } catch (error) {
+      console.error('Error parsing quiz JSON:', error);
+      console.error('Raw content:', data.choices[0].message.content);
+      throw new Error('Failed to parse quiz JSON from OpenAI response');
+    }
 
     return new Response(
       JSON.stringify({ quiz }),
