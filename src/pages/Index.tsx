@@ -1,8 +1,9 @@
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { CreateCourseDialog } from "@/components/CreateCourseDialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Index = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800">My Courses</h1>
-          <Button onClick={() => navigate('/new-course')}>Create Course</Button>
+          <CreateCourseDialog />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
