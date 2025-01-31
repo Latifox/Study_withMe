@@ -7,12 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Processing configuration
-const CHUNK_SIZE = 800;
-const OVERLAP = 20;
-const DELAY_BETWEEN_CALLS = 4000; // 4 seconds delay
-
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -37,73 +33,15 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    // Split content into smaller chunks
-    const chunks = [];
-    let startIndex = 0;
-    while (startIndex < lecture.content.length) {
-      const endIndex = Math.min(startIndex + CHUNK_SIZE, lecture.content.length);
-      chunks.push(lecture.content.slice(startIndex, endIndex));
-      startIndex = endIndex - OVERLAP;
-    }
-
-    console.log(`Processing ${chunks.length} chunks`);
-
-    // Process chunks with increased delay and memory optimization
-    const summaries = [];
-    for (let i = 0; i < chunks.length; i++) {
-      try {
-        // Enforce delay between API calls
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CALLS));
-        }
-
-        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',  // Fixed: Using correct model name
-            messages: [
-              {
-                role: 'system',
-                content: 'Summarize key points only.'
-              },
-              {
-                role: 'user',
-                content: chunks[i]
-              }
-            ],
-            max_tokens: 150,
-            temperature: 0.3,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`OpenAI API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        summaries.push(data.choices[0].message.content);
-        console.log(`Chunk ${i + 1} processed successfully`);
-      } catch (error) {
-        console.error(`Error processing chunk ${i + 1}:`, error);
-        throw new Error(`Failed to process chunk ${i + 1}`);
-      }
-    }
-
-    // Generate final summary with reduced complexity
-    console.log('Generating final summary');
-    const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Simple test to ensure OpenAI integration works
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',  // Fixed: Using correct model name
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -111,24 +49,25 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: summaries.join(' ')
+            content: lecture.content.substring(0, 1000) // Just test with first 1000 chars
           }
         ],
-        max_tokens: 400,
+        max_tokens: 150,
         temperature: 0.3,
       }),
     });
 
-    if (!finalResponse.ok) {
-      throw new Error(`OpenAI API error in final summary: ${finalResponse.status}`);
+    if (!response.ok) {
+      console.error('OpenAI API error:', await response.text());
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const finalData = await finalResponse.json();
-    console.log('Summary generated successfully');
+    const data = await response.json();
+    console.log('Successfully generated summary');
 
     return new Response(
       JSON.stringify({
-        summary: finalData.choices[0].message.content
+        summary: data.choices[0].message.content
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
