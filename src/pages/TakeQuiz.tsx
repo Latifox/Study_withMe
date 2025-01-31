@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader } from "lucide-react";
+import { Loader, RefreshCw, ArrowLeft } from "lucide-react";
 
 interface Question {
   question: string;
@@ -25,11 +25,10 @@ interface QuizState {
 const TakeQuiz = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { lectureId } = useParams();
+  const { courseId, lectureId } = useParams();
   const [quizConfig, setQuizConfig] = useState<any>(null);
 
   useEffect(() => {
-    // Try to get config from localStorage
     const storedConfig = localStorage.getItem(`quiz_config_${lectureId}`);
     if (storedConfig) {
       setQuizConfig(JSON.parse(storedConfig));
@@ -47,7 +46,7 @@ const TakeQuiz = () => {
     questions: [],
     userAnswers: {},
     showResults: false,
-    timeRemaining: 900, // Will be updated when config is loaded
+    timeRemaining: 900,
   });
 
   const [showHint, setShowHint] = useState<Record<number, boolean>>({});
@@ -138,6 +137,43 @@ const TakeQuiz = () => {
     return `${correctAnswers}/${quizState.questions.length}`;
   };
 
+  const handleGenerateNewQuiz = () => {
+    setQuizState({
+      questions: [],
+      userAnswers: {},
+      showResults: false,
+      timeRemaining: quizConfig.config.timeLimit * 60,
+    });
+    setIsLoading(true);
+    const generateQuiz = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-quiz', {
+          body: { 
+            lectureId: quizConfig.lectureId, 
+            config: quizConfig.config 
+          },
+        });
+
+        if (error) throw error;
+        setQuizState(prev => ({ ...prev, questions: data.quiz }));
+      } catch (error) {
+        console.error('Error generating quiz:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate quiz. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    generateQuiz();
+  };
+
+  const handleBackToLectures = () => {
+    navigate(`/course/${courseId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
@@ -160,8 +196,20 @@ const TakeQuiz = () => {
           </div>
         </div>
         {quizState.showResults && (
-          <div className="mt-2 text-lg">
-            Final Score: {calculateScore()}
+          <div className="space-y-4">
+            <div className="mt-2 text-lg">
+              Final Score: {calculateScore()}
+            </div>
+            <div className="flex gap-4">
+              <Button onClick={handleGenerateNewQuiz} className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Generate New Quiz
+              </Button>
+              <Button onClick={handleBackToLectures} variant="outline" className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Lectures
+              </Button>
+            </div>
           </div>
         )}
       </div>
