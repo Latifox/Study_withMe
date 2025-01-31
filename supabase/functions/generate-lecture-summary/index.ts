@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Significantly reduced chunk size and increased delays
+// Processing configuration
 const CHUNK_SIZE = 800;
 const OVERLAP = 20;
 const DELAY_BETWEEN_CALLS = 4000; // 4 seconds delay
@@ -65,7 +65,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-3.5-turbo',  // Fixed: Using correct model name
             messages: [
               {
                 role: 'system',
@@ -103,7 +103,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',  // Fixed: Using correct model name
         messages: [
           {
             role: 'system',
