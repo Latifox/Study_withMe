@@ -7,8 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const CHUNK_SIZE = 4000; // Characters per chunk
-const OVERLAP = 200; // Overlap between chunks to maintain context
+// Reduced chunk size and overlap for better resource management
+const CHUNK_SIZE = 2000;
+const OVERLAP = 100;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,6 +18,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
+    console.log(`Processing lecture ID: ${lectureId}`);
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -37,7 +39,7 @@ serve(async (req) => {
 
     console.log(`Processing lecture: ${lecture.title}`);
 
-    // Split content into overlapping chunks
+    // Split content into smaller chunks
     const chunks = [];
     let startIndex = 0;
     while (startIndex < lecture.content.length) {
@@ -48,11 +50,16 @@ serve(async (req) => {
 
     console.log(`Split content into ${chunks.length} chunks`);
 
-    // Process each chunk sequentially
+    // Process chunks with delay between calls to prevent resource exhaustion
     const chunkSummaries = [];
     for (let i = 0; i < chunks.length; i++) {
       console.log(`Processing chunk ${i + 1}/${chunks.length}`);
       
+      // Add delay between API calls to prevent overload
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -64,30 +71,33 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: `You are an expert at summarizing academic content. Your task is to create a clear, 
-              well-structured summary of a portion of lecture content. Focus on:
+              content: `You are an expert at creating concise, informative summaries of academic content. Focus on:
               1. Key concepts and main ideas
               2. Important relationships between concepts
-              3. Significant examples or case studies
-              4. Core arguments or theoretical frameworks
+              3. Core arguments or theoretical frameworks
               
-              If this is part of a larger text, maintain context awareness and avoid redundancy.
-              Be concise but comprehensive.`
+              Keep the summary clear and well-structured. If this is part of a larger text, maintain context awareness.`
             },
             {
               role: 'user',
               content: `This is ${i === 0 ? 'the beginning' : i === chunks.length - 1 ? 'the end' : 'a middle section'} 
-              of a lecture titled "${lecture.title}". Please summarize this section:\n\n${chunks[i]}`
+              of a lecture titled "${lecture.title}". Please summarize this section concisely:\n\n${chunks[i]}`
             }
           ],
+          max_tokens: 500, // Limit response size
+          temperature: 0.3, // More focused responses
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
 
       const data = await response.json();
       chunkSummaries.push(data.choices[0].message.content);
     }
 
-    // Final pass to combine and refine all summaries
+    // Final consolidation with a smaller prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -99,21 +109,21 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating cohesive summaries from multiple sections. Your task is to:
-            1. Combine multiple section summaries into one flowing narrative
-            2. Eliminate redundancies while preserving all unique information
-            3. Ensure logical flow and connections between ideas
-            4. Structure the final summary with clear sections and bullet points where appropriate
-            5. Maintain academic rigor while being accessible`
+            content: `Create a cohesive final summary from the provided section summaries. Focus on main points and maintain clarity.`
           },
           {
             role: 'user',
-            content: `Here are summaries of different sections of a lecture titled "${lecture.title}". 
-            Please combine them into one coherent, well-structured summary:\n\n${chunkSummaries.join('\n\n')}`
+            content: `Combine these summaries of "${lecture.title}" into one coherent summary:\n\n${chunkSummaries.join('\n\n')}`
           }
         ],
+        max_tokens: 1000,
+        temperature: 0.3,
       }),
     });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
 
     const finalSummary = await response.json();
 
