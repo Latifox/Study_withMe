@@ -177,7 +177,7 @@ const TakeQuiz = () => {
                 <h3 className="text-lg font-semibold">
                   {index + 1}. {question.question}
                 </h3>
-                {config?.hintsEnabled && question.hint && (
+                {quizConfig?.config?.hintsEnabled && question.hint && (
                   <Button
                     variant="outline"
                     onClick={() => toggleHint(index)}
