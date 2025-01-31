@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm"
+import pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.mjs'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,11 +26,13 @@ serve(async (req) => {
     const pdfData = await response.arrayBuffer()
     
     // Initialize PDF.js without worker (since we're in Deno environment)
-    const loadingTask = pdfjsLib.getDocument({
+    pdfjs.GlobalWorkerOptions.workerSrc = '';
+    
+    const loadingTask = pdfjs.getDocument({
       data: pdfData,
-      useWorkerFetch: false,
+      disableFontFace: true,
       isEvalSupported: false,
-      useSystemFonts: true
+      useSystemFonts: false
     })
 
     const pdfDoc = await loadingTask.promise
