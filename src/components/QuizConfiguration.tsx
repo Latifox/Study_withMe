@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,18 +36,20 @@ interface QuizConfigurationProps {
 
 const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
   const navigate = useNavigate();
+  const { courseId } = useParams();
   const { toast } = useToast();
   
-  const { data: lecture } = useQuery({
+  const { data: lecture, isError } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lectures")
         .select("*, courses(*)")
         .eq("id", lectureId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("Lecture not found");
       return data;
     },
   });
@@ -70,7 +72,6 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
         description: "Please wait while we generate your quiz...",
       });
       
-      // Store config in localStorage
       localStorage.setItem(`quiz_config_${lectureId}`, JSON.stringify({
         config: data,
         lectureId: lectureId
@@ -87,13 +88,41 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
   };
 
   const handleBack = () => {
-    if (lecture?.course_id) {
-      navigate(`/course/${lecture.course_id}`);
+    if (courseId) {
+      navigate(`/course/${courseId}`);
     }
   };
 
+  if (isError) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p>Failed to load lecture information. Please try again later.</p>
+            <Button onClick={handleBack} className="mt-4">
+              Back to Course
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!lecture) {
-    return <div>Loading...</div>;
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Lecture Not Found</h2>
+            <p>The requested lecture could not be found.</p>
+            <Button onClick={handleBack} className="mt-4">
+              Back to Course
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
