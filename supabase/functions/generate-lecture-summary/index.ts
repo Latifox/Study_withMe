@@ -33,14 +33,14 @@ serve(async (req) => {
 
     console.log('Fetched lecture content, sending to OpenAI...');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -76,17 +76,29 @@ VERY IMPORTANT: Maintain the EXACT SAME LANGUAGE as the input text - if the lect
           }
         ],
         temperature: 0.3,
+        max_tokens: 2000,
       }),
     });
 
-    if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
-      const errorText = await response.text();
+    if (!openaiResponse.ok) {
+      console.error('OpenAI API error:', openaiResponse.status);
+      const errorText = await openaiResponse.text();
       console.error('OpenAI API error details:', errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      
+      if (openaiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a few moments.' }),
+          { 
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
     }
 
-    const data = await response.json();
+    const data = await openaiResponse.json();
     console.log('Successfully generated summary');
 
     return new Response(
@@ -96,7 +108,10 @@ VERY IMPORTANT: Maintain the EXACT SAME LANGUAGE as the input text - if the lect
   } catch (error) {
     console.error('Error generating summary:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Please try again in a few moments or contact support if the issue persists.'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
