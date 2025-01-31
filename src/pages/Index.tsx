@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
+import { DeleteCourseDialog } from "@/components/DeleteCourseDialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -38,10 +39,15 @@ const Index = () => {
             courses?.map((course) => (
               <Card key={course.id} className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
-                  <CardTitle className="text-xl">{course.title}</CardTitle>
-                  <CardDescription>
-                    Created on {new Date(course.created_at).toLocaleDateString()}
-                  </CardDescription>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-xl">{course.title}</CardTitle>
+                      <CardDescription>
+                        Created on {new Date(course.created_at).toLocaleDateString()}
+                      </CardDescription>
+                    </div>
+                    <DeleteCourseDialog courseId={course.id} courseTitle={course.title} />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Button 
