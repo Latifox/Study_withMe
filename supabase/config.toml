@@ -1,1 +1,9 @@
 project_id = "bjpawnertrqwtgyvrhml"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[functions.extract-pdf-text]
+verify_jwt = false
