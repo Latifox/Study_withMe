@@ -79,32 +79,27 @@ const Lecture = () => {
     }
   };
 
-  // Function to convert markdown-style bold to HTML
   const formatText = (text: string) => {
     return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   };
 
   const handleBackToCourse = async () => {
     try {
-      // Get the course_id for this lecture
       const { data: lecture, error } = await supabase
         .from('lectures')
         .select('course_id')
-        .eq('id', lectureId)
+        .eq('id', parseInt(lectureId!))
         .single();
       
       if (error) throw error;
       
-      // Navigate to the course page
       navigate(`/course/${lecture.course_id}`);
     } catch (error) {
       console.error('Error navigating back:', error);
-      // If there's an error, just navigate to the courses list
       navigate('/');
     }
   };
 
-  // If we're in summary mode and have a summary, show only the summary
   if (action === 'summary') {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -142,15 +137,22 @@ const Lecture = () => {
     );
   }
 
-  // Regular chat view
   return (
     <div className="h-screen flex">
-      {/* PDF Viewer Section */}
       <div className="w-1/2 h-full bg-gray-50 border-r">
+        <div className="p-4 border-b bg-white">
+          <Button
+            onClick={handleBackToCourse}
+            variant="ghost"
+            className="hover:bg-gray-100"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Course
+          </Button>
+        </div>
         <PDFViewer lectureId={lectureId} />
       </div>
 
-      {/* Chat Section */}
       <div className="w-1/2 h-full flex flex-col bg-white">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message, index) => (
