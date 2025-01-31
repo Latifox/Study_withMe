@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,6 +19,8 @@ serve(async (req) => {
       throw new Error('No file provided');
     }
 
+    console.log('Received file:', file.name);
+
     // Convert the file to text using GPT-4's vision capabilities
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -28,18 +29,14 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4-vision-preview",
+        model: "gpt-4o",
         messages: [
-          {
-            role: "system",
-            content: "You are a helpful assistant that reads PDF documents and extracts their textual content accurately. Please read the PDF and provide its content in a clear, structured format. Include all text content, maintaining paragraphs and sections."
-          },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please read this PDF document and extract all the text content from it. Maintain the structure and formatting as much as possible. Return the content in a clear, readable format."
+                text: "Extract all text content from this PDF, maintaining its structure and formatting. Return only the extracted text content."
               },
               {
                 type: "image_url",
@@ -56,29 +53,18 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
+      console.error('OpenAI API error status:', response.status);
       const errorText = await response.text();
       console.error('OpenAI API error:', errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const extractedText = data.choices[0].message.content;
-
-    // Process the text to ensure it's properly formatted
-    const processedContent = {
-      fullText: extractedText,
-      sections: extractedText.split('\n\n').filter(Boolean), // Split into paragraphs
-      metadata: {
-        extractedAt: new Date().toISOString(),
-        processingMethod: 'gpt-4-vision',
-      }
-    };
+    console.log('Successfully extracted text from PDF');
 
     return new Response(
-      JSON.stringify({ text: JSON.stringify(processedContent) }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ text: data.choices[0].message.content }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error processing PDF:', error);

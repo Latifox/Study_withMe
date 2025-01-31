@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -7,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,17 +16,15 @@ serve(async (req) => {
     const { lectureId } = await req.json();
     console.log(`Processing lecture ID: ${lectureId}`);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
-      .eq('id', lectureId)
+      .eq('id', parseInt(lectureId))
       .single();
 
     if (lectureError || !lecture?.content) {
@@ -34,16 +32,8 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    // Parse the stored JSON content
-    let parsedContent;
-    try {
-      parsedContent = JSON.parse(lecture.content);
-    } catch (e) {
-      console.log('Content is not in JSON format, using as plain text');
-      parsedContent = { fullText: lecture.content };
-    }
+    console.log('Fetched lecture content length:', lecture.content.length);
 
-    // Generate summary using OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -51,7 +41,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -59,16 +49,18 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: parsedContent.fullText || parsedContent
+            content: lecture.content
           }
         ],
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.3,
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', await response.text());
+      console.error('OpenAI API error status:', response.status);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
