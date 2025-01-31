@@ -75,7 +75,7 @@ const Course = () => {
                       {new Date(lecture.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <Button variant="outline">Open Lecture</Button>
+                  <Button variant="outline">Take Action</Button>
                 </CardContent>
               </Card>
             ))

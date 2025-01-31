@@ -14,6 +14,7 @@ interface PDFViewerProps {
 const PDFViewer = ({ lectureId }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState(1);
+  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
 
   const { data: pdfUrl, isLoading } = useQuery({
     queryKey: ['lecture-pdf', lectureId],
@@ -44,7 +45,7 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" ref={setContainerRef}>
       <div className="flex-1 overflow-auto flex justify-center p-4">
         <Document
           file={pdfUrl}
@@ -55,6 +56,7 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
             pageNumber={pageNumber}
             renderTextLayer={false}
             renderAnnotationLayer={false}
+            width={containerRef?.clientWidth ? containerRef.clientWidth - 64 : undefined}
           />
         </Document>
       </div>
