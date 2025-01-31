@@ -17,31 +17,33 @@ serve(async (req) => {
   try {
     const formData = await req.formData();
     const file = formData.get('file');
-
-    if (!file) {
+    
+    if (!file || !(file instanceof File)) {
       throw new Error('No file provided');
     }
 
     console.log('Processing PDF file:', file.name);
 
-    // Convert file to ArrayBuffer
+    // Load the PDF document
     const arrayBuffer = await file.arrayBuffer();
-    
-    // Load PDF document
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
     
+    console.log('PDF loaded, extracting text from pages...');
+
     // Extract text from all pages
     let fullText = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
-        .map(item => 'str' in item ? item.str : '')
+        .map((item: any) => item.str)
         .join(' ');
-      fullText += pageText + '\n\n';
+      fullText += pageText + '\n';
     }
 
-    // Clean and preprocess the text
+    console.log('Text extracted, cleaning...');
+
+    // Clean and format the text
     const cleanedText = fullText
       .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
       .replace(/\n\s*\n/g, '\n')  // Remove excessive newlines
@@ -57,9 +59,9 @@ serve(async (req) => {
     console.error('Error processing PDF:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      { 
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

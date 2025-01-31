@@ -47,7 +47,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that creates comprehensive summaries of lecture content. Focus on key points, main ideas, and important concepts.'
+            content: 'You are a helpful assistant that creates concise and informative summaries of lecture content. Focus on the key points and main ideas.'
           },
           {
             role: 'user',

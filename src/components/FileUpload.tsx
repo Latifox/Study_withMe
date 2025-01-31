@@ -31,6 +31,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     const { text } = await response.json();
+    console.log('Extracted text length:', text.length);
     return text;
   };
 
@@ -47,30 +48,36 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     try {
       setIsUploading(true);
 
-      // Extract PDF content
+      // Extract PDF content first
+      console.log('Extracting PDF content...');
       const pdfContent = await extractPDFContent(file);
+      console.log('PDF content extracted successfully');
 
       // Upload PDF to storage
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
       
+      console.log('Uploading PDF to storage...');
       const { error: uploadError } = await supabase.storage
         .from('lecture_pdfs')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
+      console.log('PDF uploaded successfully');
 
       // Save lecture metadata and content to database
+      console.log('Saving lecture to database...');
       const { error: dbError } = await supabase
         .from('lectures')
         .insert({
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
-          content: pdfContent,
+          content: pdfContent, // Store the extracted text
         });
 
       if (dbError) throw dbError;
+      console.log('Lecture saved successfully');
 
       toast({
         title: "Success",
