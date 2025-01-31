@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, Brain, Quote, ListChecks, Lightbulb, ExternalLink } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
@@ -26,15 +26,36 @@ const LectureSummary = () => {
     },
   });
 
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading, error } = useQuery({
     queryKey: ["lecture-summary", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { lectureId }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's a rate limit error
+        if (error.status === 429) {
+          throw new Error("Rate limit reached. Please wait a moment and try again.");
+        }
+        throw error;
+      }
       return data.summary;
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on rate limit errors
+      if (error?.message?.includes("Rate limit")) {
+        return false;
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3;
+    },
+    onError: (error) => {
+      toast({
+        title: "Error generating summary",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -46,6 +67,25 @@ const LectureSummary = () => {
             <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
             <p className="text-lg">Generating comprehensive summary...</p>
             <p className="text-sm text-muted-foreground">This might take a moment as we analyze the lecture content.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex justify-center items-center h-[60vh]">
+          <div className="text-center space-y-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Lectures
+            </Button>
           </div>
         </div>
       </div>
