@@ -1,10 +1,10 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import * as pdfjs from "npm:pdfjs-dist@3.11.174/legacy/build/pdf.js"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import * as pdfjs from "npm:pdfjs-dist@3.11.174/legacy/build/pdf.js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -27,13 +27,12 @@ serve(async (req) => {
     const arrayBuffer = await file.arrayBuffer();
     console.log('File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
 
-    // Configure PDF.js for serverless environment
+    // Configure PDF.js
     const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
       useWorkerFetch: false,
       isEvalSupported: false,
       useSystemFonts: true,
-      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
     });
 
     console.log('PDF loading task created');
@@ -77,7 +76,7 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
