@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -17,11 +16,13 @@ serve(async (req) => {
     const { lectureId } = await req.json();
     console.log(`Processing lecture ID: ${lectureId}`);
 
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -33,7 +34,16 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    // Simple test to ensure OpenAI integration works
+    // Parse the stored JSON content
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(lecture.content);
+    } catch (e) {
+      console.log('Content is not in JSON format, using as plain text');
+      parsedContent = { fullText: lecture.content };
+    }
+
+    // Generate summary using OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,18 +51,18 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: 'Create a brief summary.'
+            content: 'Create a comprehensive summary of the lecture content, highlighting the main points and key takeaways.'
           },
           {
             role: 'user',
-            content: lecture.content.substring(0, 1000) // Just test with first 1000 chars
+            content: parsedContent.fullText || parsedContent
           }
         ],
-        max_tokens: 150,
+        max_tokens: 500,
         temperature: 0.3,
       }),
     });

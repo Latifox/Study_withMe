@@ -28,18 +28,18 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4-vision-preview",
         messages: [
           {
             role: "system",
-            content: "You are a helpful assistant that reads PDF documents and extracts their textual content accurately. Please read the PDF and provide its content in a clear, structured format."
+            content: "You are a helpful assistant that reads PDF documents and extracts their textual content accurately. Please read the PDF and provide its content in a clear, structured format. Include all text content, maintaining paragraphs and sections."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please read this PDF document and extract all the text content from it. Maintain the structure and formatting as much as possible."
+                text: "Please read this PDF document and extract all the text content from it. Maintain the structure and formatting as much as possible. Return the content in a clear, readable format."
               },
               {
                 type: "image_url",
@@ -50,21 +50,32 @@ serve(async (req) => {
               }
             ]
           }
-        ]
+        ],
+        max_tokens: 4000
       })
     });
 
-    const data = await response.json();
-    console.log('OpenAI Response:', data);
-
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
+    const data = await response.json();
     const extractedText = data.choices[0].message.content;
 
+    // Process the text to ensure it's properly formatted
+    const processedContent = {
+      fullText: extractedText,
+      sections: extractedText.split('\n\n').filter(Boolean), // Split into paragraphs
+      metadata: {
+        extractedAt: new Date().toISOString(),
+        processingMethod: 'gpt-4-vision',
+      }
+    };
+
     return new Response(
-      JSON.stringify({ text: extractedText }),
+      JSON.stringify({ text: JSON.stringify(processedContent) }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
