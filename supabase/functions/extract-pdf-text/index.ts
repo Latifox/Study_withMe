@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
-import * as pdfjs from "npm:pdf-parse@1.1.1";
+import pdfParse from "npm:pdf-parse@1.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +33,7 @@ serve(async (req) => {
     console.log('PDF file converted to buffer, size:', buffer.length);
 
     // Extract text from PDF
-    const data = await pdfjs(buffer);
+    const data = await pdfParse(buffer);
     const text = data.text;
     
     console.log('Successfully extracted text, length:', text.length);
