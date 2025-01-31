@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Course from "./pages/Course";
 import Lecture from "./pages/Lecture";
+import LectureSummary from "./pages/LectureSummary";
 import TakeQuiz from "./pages/TakeQuiz";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/course/:courseId" element={<Course />} />
           <Route path="/lecture/:lectureId" element={<Lecture />} />
+          <Route path="/lecture/:lectureId/summary" element={<LectureSummary />} />
           <Route path="/take-quiz/:lectureId" element={<TakeQuiz />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
