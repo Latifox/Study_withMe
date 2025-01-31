@@ -14,6 +14,20 @@ const Course = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [selectedLectureId, setSelectedLectureId] = useState<number | null>(null);
   
+  const { data: course } = useQuery({
+    queryKey: ['course', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', parseInt(courseId!))
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: lectures, isLoading } = useQuery({
     queryKey: ['lectures', courseId],
     queryFn: async () => {
@@ -40,7 +54,9 @@ const Course = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Courses
           </Button>
-          <h1 className="text-4xl font-bold text-gray-800">Course Lectures</h1>
+          <h1 className="text-4xl font-bold text-gray-800">
+            {course?.title || 'Loading...'}
+          </h1>
         </div>
 
         <div className="flex justify-end mb-6">
