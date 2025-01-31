@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,24 +30,24 @@ const formSchema = z.object({
 
 type QuizConfigFormValues = z.infer<typeof formSchema>;
 
-interface QuizConfigurationProps {
-  lectureId: number;
-}
-
-const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
+const QuizConfiguration = () => {
   const navigate = useNavigate();
+  const { courseId, lectureId } = useParams();
   const { toast } = useToast();
   
-  const { data: lecture } = useQuery({
+  const { data: lecture, isError, error } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
+      if (!lectureId) throw new Error("Lecture ID is required");
+      
       const { data, error } = await supabase
         .from("lectures")
         .select("*, courses(*)")
-        .eq("id", lectureId)
-        .single();
+        .eq("id", parseInt(lectureId))
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("Lecture not found");
       return data;
     },
   });
@@ -76,7 +76,7 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
         lectureId: lectureId
       }));
       
-      navigate(`/take-quiz/${lectureId}`);
+      navigate(`/course/${courseId}/lecture/${lectureId}/take-quiz`);
     } catch (error) {
       toast({
         title: "Error",
@@ -87,13 +87,40 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
   };
 
   const handleBack = () => {
-    if (lecture?.course_id) {
-      navigate(`/course/${lecture.course_id}`);
+    if (courseId) {
+      navigate(`/course/${courseId}`);
     }
   };
 
+  if (isError) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p className="text-gray-600 mb-4">
+              {error instanceof Error ? error.message : "Failed to load lecture"}
+            </p>
+            <Button onClick={handleBack} variant="outline">
+              <ArrowLeft className="mr-2" />
+              Back to Course
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!lecture) {
-    return <div>Loading...</div>;
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Loading...</h2>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

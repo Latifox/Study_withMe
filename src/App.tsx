@@ -26,7 +26,7 @@ const App = () => (
           <Route path="/course/:courseId/lecture/:lectureId/summary" element={<LectureSummary />} />
           <Route 
             path="/course/:courseId/lecture/:lectureId/quiz" 
-            element={<QuizConfiguration lectureId={Number(window.location.pathname.split('/').pop())} />} 
+            element={<QuizConfiguration />} 
           />
           <Route path="/course/:courseId/lecture/:lectureId/take-quiz" element={<TakeQuiz />} />
           <Route path="*" element={<NotFound />} />
