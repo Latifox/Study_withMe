@@ -6,11 +6,13 @@ import { Upload, ArrowLeft } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import LectureActionsDialog from "@/components/LectureActionsDialog";
 
 const Course = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
+  const [selectedLectureId, setSelectedLectureId] = useState<number | null>(null);
   
   const { data: lectures, isLoading } = useQuery({
     queryKey: ['lectures', courseId],
@@ -66,7 +68,7 @@ const Course = () => {
               <Card 
                 key={lecture.id}
                 className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-                onClick={() => navigate(`/lecture/${lecture.id}`)}
+                onClick={() => setSelectedLectureId(lecture.id)}
               >
                 <CardContent className="flex justify-between items-center p-6">
                   <div>
@@ -75,7 +77,15 @@ const Course = () => {
                       {new Date(lecture.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <Button variant="outline">Take Action</Button>
+                  <Button 
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedLectureId(lecture.id);
+                    }}
+                  >
+                    Take Action
+                  </Button>
                 </CardContent>
               </Card>
             ))
@@ -88,6 +98,12 @@ const Course = () => {
             onClose={() => setShowUpload(false)}
           />
         )}
+
+        <LectureActionsDialog
+          isOpen={!!selectedLectureId}
+          onClose={() => setSelectedLectureId(null)}
+          lectureId={selectedLectureId!}
+        />
       </div>
     </div>
   );
