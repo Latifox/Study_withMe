@@ -2,16 +2,19 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
+import { Send, FileText } from "lucide-react";
 import PDFViewer from "@/components/PDFViewer";
 import ChatMessage from "@/components/ChatMessage";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const Lecture = () => {
   const { lectureId } = useParams();
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const { toast } = useToast();
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -45,6 +48,32 @@ const Lecture = () => {
     }
   };
 
+  const handleGetSummary = async () => {
+    setIsSummarizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId }
+      });
+
+      if (error) throw error;
+
+      const summaryMessage = { 
+        role: 'assistant' as const, 
+        content: "Here's a summary of the lecture:\n\n" + data.summary 
+      };
+      setMessages(prev => [...prev, summaryMessage]);
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate lecture summary. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   return (
     <div className="h-screen flex">
       {/* PDF Viewer Section */}
@@ -54,6 +83,17 @@ const Lecture = () => {
 
       {/* Chat Section */}
       <div className="w-1/2 h-full flex flex-col bg-white">
+        <div className="p-4 border-b">
+          <Button
+            onClick={handleGetSummary}
+            disabled={isSummarizing}
+            className="w-full gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            {isSummarizing ? "Generating Summary..." : "Get Lecture Summary"}
+          </Button>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message, index) => (
             <ChatMessage key={index} message={message} />
