@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Brain, Quote, ListChecks, Lightbulb } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, Quote, ListChecks, Lightbulb, ExternalLink } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -62,6 +62,13 @@ const LectureSummary = () => {
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Lectures
+        </Button>
+        <Button
+          onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary/fullversion`)}
+          className="gap-2"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Get Full Summary
         </Button>
       </div>
 

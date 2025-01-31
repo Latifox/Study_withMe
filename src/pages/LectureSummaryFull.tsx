@@ -1,0 +1,79 @@
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, BookOpen } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
+import { Card, CardContent } from "@/components/ui/card";
+
+const LectureSummaryFull = () => {
+  const { courseId, lectureId } = useParams();
+  const navigate = useNavigate();
+
+  const { data: lecture } = useQuery({
+    queryKey: ["lecture", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lectures")
+        .select("*, courses(*)")
+        .eq("id", parseInt(lectureId!))
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ["lecture-summary", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId }
+      });
+
+      if (error) throw error;
+      return data.summary;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex justify-center items-center h-[60vh]">
+          <div className="text-center space-y-4">
+            <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
+            <p className="text-lg">Generating comprehensive summary...</p>
+            <p className="text-sm text-muted-foreground">This might take a moment as we analyze the lecture content.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary`)}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Summary
+        </Button>
+      </div>
+
+      <Card className="prose prose-sm max-w-none">
+        <CardContent className="p-6">
+          <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <BookOpen className="w-6 h-6" />
+            {lecture?.title} - Full Summary
+          </h1>
+          <ReactMarkdown>{summary?.fullContent || ''}</ReactMarkdown>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default LectureSummaryFull;

@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Course from "./pages/Course";
 import LectureChat from "./pages/LectureChat";
 import LectureSummary from "./pages/LectureSummary";
+import LectureSummaryFull from "./pages/LectureSummaryFull";
 import QuizConfiguration from "./components/QuizConfiguration";
 import TakeQuiz from "./pages/TakeQuiz";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,10 @@ const App = () => (
           <Route path="/course/:courseId" element={<Course />} />
           <Route path="/course/:courseId/lecture/:lectureId/chat" element={<LectureChat />} />
           <Route path="/course/:courseId/lecture/:lectureId/summary" element={<LectureSummary />} />
+          <Route 
+            path="/course/:courseId/lecture/:lectureId/summary/fullversion" 
+            element={<LectureSummaryFull />} 
+          />
           <Route 
             path="/course/:courseId/lecture/:lectureId/quiz" 
             element={<QuizConfiguration />} 

@@ -40,7 +40,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
@@ -71,6 +71,14 @@ serve(async (req) => {
 - Mention related concepts
 - Add study tips or memory aids
 - Note any prerequisites or follow-up topics
+
+# Full Content
+Provide a detailed, comprehensive summary of the entire lecture content, including:
+- In-depth explanations of all concepts
+- Extended examples and applications
+- Detailed analysis of important points
+- Connection between different topics
+- Study recommendations and practical implications
 
 Make each section informative yet concise. Use proper Markdown formatting throughout.`
           },
@@ -111,6 +119,7 @@ Make each section informative yet concise. Use proper Markdown formatting throug
       keyConcepts: extractSection(fullSummary, "Key Concepts"),
       importantQuotes: extractSection(fullSummary, "Important Quotes"),
       additionalNotes: extractSection(fullSummary, "Additional Notes"),
+      fullContent: extractSection(fullSummary, "Full Content"),
     };
 
     console.log('Successfully generated structured summary');
