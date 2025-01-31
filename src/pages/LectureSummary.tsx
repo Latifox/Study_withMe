@@ -1,13 +1,13 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import ReactMarkdown from 'react-markdown';
 
 const LectureSummary = () => {
-  const { lectureId } = useParams();
+  const { courseId, lectureId } = useParams();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -37,12 +37,6 @@ const LectureSummary = () => {
     },
   });
 
-  const handleBack = () => {
-    if (lecture?.course_id) {
-      navigate(`/lecture/${lectureId}`);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto p-4">
@@ -56,20 +50,20 @@ const LectureSummary = () => {
   return (
     <div className="container mx-auto p-4">
       <Button
-        variant="ghost"
-        onClick={handleBack}
-        className="mb-4"
+        variant="outline"
+        onClick={() => navigate(`/course/${courseId}`)}
+        className="mb-4 gap-2"
       >
-        <ArrowLeft className="mr-2" />
-        Back to Lecture
+        <ArrowLeft className="w-4 h-4" />
+        Back to Lectures
       </Button>
 
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold mb-6">
           {lecture?.title} - Summary
         </h1>
-        <div className="prose max-w-none">
-          {summary}
+        <div className="prose prose-sm md:prose-base lg:prose-lg max-w-none">
+          <ReactMarkdown>{summary || ''}</ReactMarkdown>
         </div>
       </div>
     </div>

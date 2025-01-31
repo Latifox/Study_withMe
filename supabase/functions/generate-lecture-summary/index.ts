@@ -15,13 +15,11 @@ serve(async (req) => {
     const { lectureId } = await req.json();
     console.log('Generating summary for lecture:', lectureId);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -35,7 +33,6 @@ serve(async (req) => {
 
     console.log('Fetched lecture content, sending to OpenAI...');
 
-    // Generate summary using OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -43,11 +40,35 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that creates comprehensive lecture summaries. Please provide a detailed summary that includes:\n\n1. Key points in bullet points\n2. Important quotes from the lecture (using proper citation format)\n3. Main topics organized in a clear structure\n4. Any lists or enumerations from the lecture\n\nVERY IMPORTANT: Maintain the EXACT SAME LANGUAGE as the input text - if the lecture is in Spanish, write the summary in Spanish, if it\'s in French, write it in French, etc. Use **bold** markdown syntax for emphasis. Ensure the summary is both detailed and easy to read.'
+            content: `You are a helpful assistant that creates comprehensive lecture summaries. Please provide a well-structured summary following this format:
+
+# Main Topics
+- List the main topics covered in the lecture
+- Use bullet points for clarity
+
+# Key Concepts
+- Break down important concepts
+- Include relevant definitions
+- Use **bold** for emphasis on crucial terms
+
+# Important Quotes
+> Use proper quote formatting for significant quotes from the lecture
+> Include context where necessary
+
+# Summary Points
+1. Numbered list of key takeaways
+2. Each point should be concise but informative
+
+# Additional Notes
+- Any supplementary information
+- Related concepts or connections
+- Practical applications
+
+VERY IMPORTANT: Maintain the EXACT SAME LANGUAGE as the input text - if the lecture is in Spanish, write the summary in Spanish, if it's in French, write it in French, etc.`
           },
           {
             role: 'user',
