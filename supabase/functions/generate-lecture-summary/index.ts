@@ -14,17 +14,19 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log(`Processing lecture ID: ${lectureId}`);
+    console.log('Generating summary for lecture:', lectureId);
 
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
-      .eq('id', parseInt(lectureId))
+      .eq('id', lectureId)
       .single();
 
     if (lectureError || !lecture?.content) {
@@ -32,8 +34,9 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Fetched lecture content length:', lecture.content.length);
+    console.log('Fetched lecture content, length:', lecture.content.length);
 
+    // Generate summary using OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -45,22 +48,22 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Create a comprehensive summary of the lecture content, highlighting the main points and key takeaways.'
+            content: 'You are a helpful assistant that creates comprehensive summaries of lecture content. Focus on key points, main ideas, and important concepts.'
           },
           {
             role: 'user',
             content: lecture.content
           }
         ],
-        max_tokens: 1000,
+        max_tokens: 2000,
         temperature: 0.3,
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error status:', response.status);
+      console.error('OpenAI API error:', response.status);
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('OpenAI API error details:', errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
@@ -68,19 +71,16 @@ serve(async (req) => {
     console.log('Successfully generated summary');
 
     return new Response(
-      JSON.stringify({
-        summary: data.choices[0].message.content
-      }),
+      JSON.stringify({ summary: data.choices[0].message.content }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
-    console.error('Error in generate-lecture-summary function:', error);
+    console.error('Error generating summary:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

@@ -19,9 +19,9 @@ serve(async (req) => {
       throw new Error('No file provided');
     }
 
-    console.log('Received file:', file.name);
+    console.log('Processing PDF file:', file.name);
 
-    // Convert the file to text using GPT-4's vision capabilities
+    // Extract text using GPT-4's vision capabilities
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -36,7 +36,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Extract all text content from this PDF, maintaining its structure and formatting. Return only the extracted text content."
+                text: "Extract and structure all text content from this PDF. Return only the extracted text content."
               },
               {
                 type: "image_url",
@@ -53,9 +53,9 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error status:', response.status);
+      console.error('OpenAI API error:', response.status);
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('OpenAI API error details:', errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
