@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
@@ -13,15 +15,39 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState(1);
 
+  const { data: pdfUrl, isLoading } = useQuery({
+    queryKey: ['lecture-pdf', lectureId],
+    queryFn: async () => {
+      const { data: lecture } = await supabase
+        .from('lectures')
+        .select('pdf_path')
+        .eq('id', parseInt(lectureId!))
+        .single();
+
+      if (!lecture?.pdf_path) throw new Error('PDF path not found');
+
+      const { data } = supabase.storage
+        .from('lecture_pdfs')
+        .getPublicUrl(lecture.pdf_path);
+
+      return data.publicUrl;
+    },
+    enabled: !!lectureId
+  });
+
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
   };
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-full">Loading PDF...</div>;
+  }
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 overflow-auto flex justify-center p-4">
         <Document
-          file={`/path/to/pdf/${lectureId}.pdf`} // This will be replaced with actual PDF path
+          file={pdfUrl}
           onLoadSuccess={onDocumentLoadSuccess}
           className="max-w-full"
         >

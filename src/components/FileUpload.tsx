@@ -17,6 +17,23 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
+  const extractPDFContent = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('https://bjpawnertrqwtgyvrhml.supabase.co/functions/v1/extract-pdf-text', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to extract PDF content');
+    }
+
+    const { text } = await response.json();
+    return text;
+  };
+
   const handleUpload = async () => {
     if (!file || !title || !courseId) {
       toast({
@@ -30,6 +47,9 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     try {
       setIsUploading(true);
 
+      // Extract PDF content
+      const pdfContent = await extractPDFContent(file);
+
       // Upload PDF to storage
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
@@ -40,20 +60,14 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL of the uploaded file
-      const { data: { publicUrl } } = supabase.storage
-        .from('lecture_pdfs')
-        .getPublicUrl(filePath);
-
-      // Save lecture metadata to database
-      // Note: We're storing the PDF content as a placeholder for now
+      // Save lecture metadata and content to database
       const { error: dbError } = await supabase
         .from('lectures')
         .insert({
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
-          content: "PDF content will be processed separately.",
+          content: pdfContent,
         });
 
       if (dbError) throw dbError;
