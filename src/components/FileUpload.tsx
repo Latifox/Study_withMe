@@ -45,22 +45,15 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         .from('lecture_pdfs')
         .getPublicUrl(filePath);
 
-      // Extract text from PDF
-      const { data: extractedData, error: extractError } = await supabase.functions
-        .invoke('extract-pdf-text', {
-          body: { pdfUrl: publicUrl },
-        });
-
-      if (extractError) throw extractError;
-
-      // Save lecture metadata and content to database
+      // Save lecture metadata to database
+      // Note: We're storing the PDF content as a placeholder for now
       const { error: dbError } = await supabase
         .from('lectures')
         .insert({
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
-          content: extractedData.text,
+          content: "PDF content will be processed separately.",
         });
 
       if (dbError) throw dbError;
