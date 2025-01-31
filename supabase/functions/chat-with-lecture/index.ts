@@ -14,8 +14,8 @@ serve(async (req) => {
 
   try {
     const { lectureId, message } = await req.json();
-    
-    // Create Supabase client
+
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -28,7 +28,15 @@ serve(async (req) => {
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) throw lectureError;
+    if (lectureError) {
+      throw new Error('Failed to fetch lecture content');
+    }
+
+    if (!lecture.content) {
+      throw new Error('No lecture content available');
+    }
+
+    console.log('Fetched lecture content:', lecture.content.substring(0, 100) + '...');
 
     // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -43,8 +51,9 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a helpful AI assistant that helps students understand their lecture content. 
-            The lecture content is about: ${lecture.title}
-            Here's the lecture content: ${lecture.content}
+            You have access to the following lecture content titled "${lecture.title}":
+            
+            ${lecture.content}
             
             Base your responses on this lecture content. If asked something not covered in the lecture,
             politely inform that it's not covered in this specific lecture material.`
@@ -55,6 +64,12 @@ serve(async (req) => {
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', data);
+      throw new Error('Failed to generate response');
+    }
+
     return new Response(JSON.stringify({
       response: data.choices[0].message.content
     }), {
@@ -62,8 +77,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error in chat-with-lecture function:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
