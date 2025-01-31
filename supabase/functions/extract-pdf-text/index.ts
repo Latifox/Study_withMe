@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,19 +19,28 @@ serve(async (req) => {
 
     // Fetch the PDF file
     const response = await fetch(pdfUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF: ${response.statusText}`)
+    }
+    
     const pdfData = await response.arrayBuffer()
+    
+    // Initialize PDF.js without worker (since we're in Deno environment)
+    const loadingTask = pdfjsLib.getDocument({
+      data: pdfData,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true
+    })
 
-    // Set up PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
-
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: pdfData })
     const pdfDoc = await loadingTask.promise
+    console.log('PDF document loaded successfully')
 
     let fullText = ''
     
     // Extract text from each page
     for (let i = 1; i <= pdfDoc.numPages; i++) {
+      console.log(`Processing page ${i} of ${pdfDoc.numPages}`)
       const page = await pdfDoc.getPage(i)
       const textContent = await page.getTextContent()
       const pageText = textContent.items
@@ -55,7 +64,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing PDF:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
       { 
         headers: { 
           ...corsHeaders,

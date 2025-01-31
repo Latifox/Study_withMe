@@ -1,0 +1,4 @@
+project_id = "bjpawnertrqwtgyvrhml"
+
+[extract-pdf-text]
+verify_jwt = false
