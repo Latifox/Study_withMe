@@ -23,8 +23,8 @@ import { supabase } from "@/integrations/supabase/client";
 const formSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
   questionTypes: z.enum(["multiple_choice", "true_false", "mixed"]),
-  timeLimit: z.number().min(1).max(120),
-  numberOfQuestions: z.number().min(1).max(50),
+  timeLimit: z.number().min(1).max(30),
+  numberOfQuestions: z.number().min(1).max(15),
   hintsEnabled: z.boolean(),
 });
 
@@ -57,7 +57,7 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
     defaultValues: {
       difficulty: "medium",
       questionTypes: "mixed",
-      timeLimit: 30,
+      timeLimit: 15,
       numberOfQuestions: 10,
       hintsEnabled: true,
     },
@@ -65,13 +65,18 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
 
   const onSubmit = async (data: QuizConfigFormValues) => {
     try {
-      // Here we'll later implement the quiz generation logic
       toast({
         title: "Generating Quiz",
         description: "Please wait while we generate your quiz...",
       });
-      // For now, we'll just navigate back
-      navigate(`/course/${lecture?.course_id}`);
+      
+      // We'll implement the quiz generation logic in the next step
+      navigate(`/take-quiz/${lectureId}`, { 
+        state: { 
+          config: data,
+          lectureId: lectureId
+        }
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -179,7 +184,7 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
                         {...field}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                         min={1}
-                        max={120}
+                        max={30}
                       />
                     </FormControl>
                   </FormItem>
@@ -198,7 +203,7 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
                         {...field}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                         min={1}
-                        max={50}
+                        max={15}
                       />
                     </FormControl>
                   </FormItem>
