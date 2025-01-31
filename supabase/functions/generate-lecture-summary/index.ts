@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -40,7 +41,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -107,13 +108,21 @@ Make each section informative yet concise. Use proper Markdown formatting throug
         );
       }
       
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `OpenAI API error: ${openaiResponse.status}`,
+          details: 'Please try again in a few moments or contact support if the issue persists.'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const data = await openaiResponse.json();
     const fullSummary = data.choices[0].message.content;
     
-    // Parse the markdown sections
     const sections = {
       mainTopics: extractSection(fullSummary, "Main Topics"),
       keyConcepts: extractSection(fullSummary, "Key Concepts"),

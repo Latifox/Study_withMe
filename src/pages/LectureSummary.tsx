@@ -38,25 +38,31 @@ const LectureSummary = () => {
         if (error.status === 429) {
           throw new Error("Rate limit reached. Please wait a moment and try again.");
         }
+        // Check if it's an OpenAI API error
+        if (error.status === 500 && error.message.includes("OpenAI API error")) {
+          throw new Error("Error generating summary. Please try again in a few moments.");
+        }
         throw error;
       }
       return data.summary;
     },
     retry: (failureCount, error: any) => {
-      // Don't retry on rate limit errors
-      if (error?.message?.includes("Rate limit")) {
+      // Don't retry on rate limit errors or OpenAI errors
+      if (error?.message?.includes("Rate limit") || error?.message?.includes("OpenAI API error")) {
         return false;
       }
       // Retry other errors up to 3 times
       return failureCount < 3;
     },
-    onError: (error) => {
-      toast({
-        title: "Error generating summary",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    meta: {
+      onError: (error: Error) => {
+        toast({
+          title: "Error generating summary",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    }
   });
 
   if (isLoading) {
@@ -76,17 +82,16 @@ const LectureSummary = () => {
   if (error) {
     return (
       <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center h-[60vh]">
-          <div className="text-center space-y-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/course/${courseId}`)}
-              className="gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Lectures
-            </Button>
-          </div>
+        <div className="flex flex-col justify-center items-center h-[60vh] space-y-4">
+          <p className="text-destructive">{error.message}</p>
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/course/${courseId}`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Lectures
+          </Button>
         </div>
       </div>
     );
