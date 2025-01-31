@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, FileText } from "lucide-react";
+import { Send, FileText, ArrowLeft } from "lucide-react";
 import PDFViewer from "@/components/PDFViewer";
 import ChatMessage from "@/components/ChatMessage";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 const Lecture = () => {
   const { lectureId } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const action = searchParams.get('action');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [input, setInput] = useState("");
@@ -83,11 +84,24 @@ const Lecture = () => {
     return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   };
 
+  const handleBackToActions = () => {
+    navigate(`/lecture/${lectureId}`);
+  };
+
   // If we're in summary mode and have a summary, show only the summary
   if (action === 'summary') {
     return (
       <div className="min-h-screen bg-white p-8">
         <div className="max-w-4xl mx-auto">
+          <Button
+            onClick={handleBackToActions}
+            variant="ghost"
+            className="mb-6 hover:bg-gray-100"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Actions
+          </Button>
+          
           {isSummarizing ? (
             <div className="text-center py-12">
               <p className="text-lg text-gray-600">Generating lecture summary...</p>
