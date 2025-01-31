@@ -1,191 +1,48 @@
-import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Send, FileText, ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import PDFViewer from "@/components/PDFViewer";
 import ChatMessage from "@/components/ChatMessage";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import QuizConfiguration from "@/components/QuizConfiguration";
 
 const Lecture = () => {
   const { lectureId } = useParams();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const action = searchParams.get('action');
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
-  const { toast } = useToast();
+  const action = searchParams.get("action");
 
-  useEffect(() => {
-    if (action === 'summary') {
-      handleGetSummary();
-    }
-  }, [action]);
-
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = { role: 'user' as const, content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
-        body: { lectureId, message: input }
-      });
-
-      if (error) throw error;
-
-      const assistantMessage = { 
-        role: 'assistant' as const, 
-        content: data.response 
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error calling chat function:', error);
-      const errorMessage = { 
-        role: 'assistant' as const, 
-        content: "I apologize, but I encountered an error processing your request. Please try again." 
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGetSummary = async () => {
-    setIsSummarizing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId }
-      });
-
-      if (error) throw error;
-      setSummary(data.summary);
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate lecture summary. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
-
-  const formatText = (text: string) => {
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  };
-
-  const handleBackToCourse = async () => {
-    try {
-      const { data: lecture, error } = await supabase
-        .from('lectures')
-        .select('course_id')
-        .eq('id', parseInt(lectureId!))
+  const { data: lecture } = useQuery({
+    queryKey: ["lecture", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lectures")
+        .select("*")
+        .eq("id", parseInt(lectureId!))
         .single();
-      
-      if (error) throw error;
-      
-      navigate(`/course/${lecture.course_id}`);
-    } catch (error) {
-      console.error('Error navigating back:', error);
-      navigate('/');
-    }
-  };
 
-  if (action === 'summary') {
-    return (
-      <div className="min-h-screen bg-white p-8">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            onClick={handleBackToCourse}
-            variant="ghost"
-            className="mb-6 hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Course
-          </Button>
-          
-          {isSummarizing ? (
-            <div className="text-center py-12">
-              <p className="text-lg text-gray-600">Generating lecture summary...</p>
-            </div>
-          ) : summary ? (
-            <div className="prose prose-lg max-w-none">
-              {summary.split('\n').map((paragraph, index) => (
-                <p 
-                  key={index} 
-                  dangerouslySetInnerHTML={{ __html: formatText(paragraph) }}
-                  className="mb-4"
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-lg text-gray-600">No summary available</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (!lecture) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="h-screen flex">
-      <div className="w-1/2 h-full bg-gray-50 border-r">
-        <div className="p-4 border-b bg-white">
-          <Button
-            onClick={handleBackToCourse}
-            variant="ghost"
-            className="hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Course
-          </Button>
-        </div>
-        <PDFViewer lectureId={lectureId} />
-      </div>
-
-      <div className="w-1/2 h-full flex flex-col bg-white">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message, index) => (
-            <ChatMessage key={index} message={message} />
-          ))}
-          {isLoading && (
-            <div className="text-gray-500 italic">
-              Thinking...
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 border-t">
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about the lecture..."
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              className="flex-1"
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={handleSend} 
-              className="gap-2"
-              disabled={isLoading}
-            >
-              <Send className="w-4 h-4" />
-              Send
-            </Button>
+    <div className="container mx-auto p-4">
+      {action === "quiz" ? (
+        <QuizConfiguration lectureId={parseInt(lectureId!)} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-[calc(100vh-2rem)]">
+            <PDFViewer pdfPath={lecture.pdf_path} />
+          </div>
+          <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4">
+            <ChatMessage lectureId={parseInt(lectureId!)} action={action} />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
