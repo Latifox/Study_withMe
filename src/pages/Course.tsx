@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Upload, ArrowLeft } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import LectureActionsDialog from "@/components/LectureActionsDialog";
+import { DeleteLectureDialog } from "@/components/DeleteLectureDialog";
 
 const Course = () => {
   const { courseId } = useParams();
@@ -93,15 +94,22 @@ const Course = () => {
                       {new Date(lecture.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <Button 
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedLectureId(lecture.id);
-                    }}
-                  >
-                    Take Action
-                  </Button>
+                  <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                    <DeleteLectureDialog 
+                      lectureId={lecture.id} 
+                      lectureTitle={lecture.title} 
+                      courseId={parseInt(courseId!)}
+                    />
+                    <Button 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLectureId(lecture.id);
+                      }}
+                    >
+                      Take Action
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))
