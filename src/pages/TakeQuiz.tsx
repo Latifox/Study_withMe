@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -23,51 +23,71 @@ interface QuizState {
 }
 
 const TakeQuiz = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { lectureId } = useParams();
-  const config = location.state?.config;
+  const [quizConfig, setQuizConfig] = useState<any>(null);
+
+  useEffect(() => {
+    // Try to get config from localStorage
+    const storedConfig = localStorage.getItem(`quiz_config_${lectureId}`);
+    if (storedConfig) {
+      setQuizConfig(JSON.parse(storedConfig));
+    } else {
+      toast({
+        title: "Error",
+        description: "Quiz configuration not found. Please try again.",
+        variant: "destructive",
+      });
+      navigate(`/lecture/${lectureId}`);
+    }
+  }, [lectureId]);
 
   const [quizState, setQuizState] = useState<QuizState>({
     questions: [],
     userAnswers: {},
     showResults: false,
-    timeRemaining: config?.timeLimit ? config.timeLimit * 60 : 900,
+    timeRemaining: 900, // Will be updated when config is loaded
   });
 
   const [showHint, setShowHint] = useState<Record<number, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const generateQuiz = async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase.functions.invoke('generate-quiz', {
-          body: { lectureId, config },
-        });
+    if (quizConfig) {
+      setQuizState(prev => ({
+        ...prev,
+        timeRemaining: quizConfig.config.timeLimit * 60
+      }));
 
-        if (error) throw error;
-        setQuizState(prev => ({ ...prev, questions: data.quiz }));
-      } catch (error) {
-        console.error('Error generating quiz:', error);
-        toast({
-          title: "Error",
-          description: "Failed to generate quiz. Please try again.",
-          variant: "destructive",
-        });
-        navigate(`/lecture/${lectureId}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      const generateQuiz = async () => {
+        try {
+          setIsLoading(true);
+          const { data, error } = await supabase.functions.invoke('generate-quiz', {
+            body: { 
+              lectureId: quizConfig.lectureId, 
+              config: quizConfig.config 
+            },
+          });
 
-    if (config && lectureId) {
+          if (error) throw error;
+          setQuizState(prev => ({ ...prev, questions: data.quiz }));
+        } catch (error) {
+          console.error('Error generating quiz:', error);
+          toast({
+            title: "Error",
+            description: "Failed to generate quiz. Please try again.",
+            variant: "destructive",
+          });
+          navigate(`/lecture/${lectureId}`);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
       generateQuiz();
-    } else {
-      navigate(`/lecture/${lectureId}`);
     }
-  }, [config, lectureId]);
+  }, [quizConfig]);
 
   useEffect(() => {
     if (!quizState.showResults && quizState.timeRemaining > 0) {

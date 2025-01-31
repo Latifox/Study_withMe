@@ -70,13 +70,13 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
         description: "Please wait while we generate your quiz...",
       });
       
-      // We'll implement the quiz generation logic in the next step
-      navigate(`/take-quiz/${lectureId}`, { 
-        state: { 
-          config: data,
-          lectureId: lectureId
-        }
-      });
+      // Store config in localStorage
+      localStorage.setItem(`quiz_config_${lectureId}`, JSON.stringify({
+        config: data,
+        lectureId: lectureId
+      }));
+      
+      navigate(`/take-quiz/${lectureId}`);
     } catch (error) {
       toast({
         title: "Error",
