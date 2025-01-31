@@ -158,9 +158,6 @@ const TakeQuiz = () => {
           <div className="text-xl font-bold">
             Time Remaining: {formatTime(quizState.timeRemaining)}
           </div>
-          {!quizState.showResults && (
-            <Button onClick={submitQuiz}>Submit Quiz</Button>
-          )}
         </div>
         {quizState.showResults && (
           <div className="mt-2 text-lg">
