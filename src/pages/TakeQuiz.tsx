@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader } from "lucide-react";
 
 interface Question {
   question: string;
@@ -32,14 +33,16 @@ const TakeQuiz = () => {
     questions: [],
     userAnswers: {},
     showResults: false,
-    timeRemaining: config?.timeLimit ? config.timeLimit * 60 : 900, // default 15 minutes
+    timeRemaining: config?.timeLimit ? config.timeLimit * 60 : 900,
   });
 
   const [showHint, setShowHint] = useState<Record<number, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const generateQuiz = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase.functions.invoke('generate-quiz', {
           body: { lectureId, config },
         });
@@ -53,6 +56,9 @@ const TakeQuiz = () => {
           description: "Failed to generate quiz. Please try again.",
           variant: "destructive",
         });
+        navigate(`/lecture/${lectureId}`);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -112,8 +118,17 @@ const TakeQuiz = () => {
     return `${correctAnswers}/${quizState.questions.length}`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-lg text-muted-foreground">Please wait while we generate your quiz...</p>
+      </div>
+    );
+  }
+
   if (quizState.questions.length === 0) {
-    return <div className="container mx-auto p-4">Loading quiz...</div>;
+    return null;
   }
 
   return (
