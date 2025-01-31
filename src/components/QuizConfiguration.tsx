@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
@@ -36,6 +38,20 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const { data: lecture } = useQuery({
+    queryKey: ["lecture", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lectures")
+        .select("*, courses(*)")
+        .eq("id", lectureId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const form = useForm<QuizConfigFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -55,7 +71,7 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
         description: "Please wait while we generate your quiz...",
       });
       // For now, we'll just navigate back
-      navigate(`/lecture/${lectureId}`);
+      navigate(`/course/${lecture?.course_id}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -66,8 +82,14 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
   };
 
   const handleBack = () => {
-    navigate(`/lecture/${lectureId}`);
+    if (lecture?.course_id) {
+      navigate(`/course/${lecture.course_id}`);
+    }
   };
+
+  if (!lecture) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -77,7 +99,7 @@ const QuizConfiguration = ({ lectureId }: QuizConfigurationProps) => {
         className="mb-4"
       >
         <ArrowLeft className="mr-2" />
-        Back to Lecture
+        Back to Course
       </Button>
       
       <Card className="w-full max-w-2xl mx-auto">
