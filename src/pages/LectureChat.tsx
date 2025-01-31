@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import PDFViewer from "@/components/PDFViewer";
@@ -7,9 +7,11 @@ import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft } from "lucide-react";
 
 const LectureChat = () => {
-  const { lectureId } = useParams();
+  const { courseId, lectureId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
@@ -64,6 +66,14 @@ const LectureChat = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <Button 
+        variant="outline" 
+        onClick={() => navigate(`/course/${courseId}`)}
+        className="mb-4 gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Lectures
+      </Button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="h-[calc(100vh-2rem)]">
           <PDFViewer lectureId={lectureId} />
