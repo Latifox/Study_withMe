@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Further reduced chunk size and increased delay for better resource management
-const CHUNK_SIZE = 1500;
-const OVERLAP = 50;
-const DELAY_BETWEEN_CALLS = 2000; // 2 seconds delay
+// Further reduced chunk size and increased processing efficiency
+const CHUNK_SIZE = 1000;
+const OVERLAP = 25;
+const DELAY_BETWEEN_CALLS = 3000; // 3 seconds delay
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -19,15 +19,13 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log(`Starting to process lecture ID: ${lectureId}`);
+    console.log(`Processing lecture ID: ${lectureId}`);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content, title')
@@ -41,7 +39,7 @@ serve(async (req) => {
 
     console.log(`Retrieved lecture: ${lecture.title}`);
 
-    // Split content into smaller chunks
+    // Split content into smaller chunks with minimal overlap
     const chunks = [];
     let startIndex = 0;
     while (startIndex < lecture.content.length) {
@@ -52,13 +50,12 @@ serve(async (req) => {
 
     console.log(`Content split into ${chunks.length} chunks`);
 
-    // Process chunks with increased delay and better error handling
+    // Process chunks sequentially with increased delay
     const chunkSummaries = [];
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`Starting chunk ${i + 1}/${chunks.length}`);
+      console.log(`Processing chunk ${i + 1}/${chunks.length}`);
       
       try {
-        // Add increased delay between API calls
         if (i > 0) {
           await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CALLS));
         }
@@ -74,14 +71,14 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'Create a brief, focused summary highlighting only the main points and key concepts.'
+                content: 'Summarize briefly.'
               },
               {
                 role: 'user',
-                content: `Summarize this section (${i + 1}/${chunks.length}) of "${lecture.title}":\n\n${chunks[i]}`
+                content: chunks[i]
               }
             ],
-            max_tokens: 300,
+            max_tokens: 200,
             temperature: 0.3,
           }),
         });
@@ -112,14 +109,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Create a brief, coherent summary combining the provided sections.'
+            content: 'Create a concise summary.'
           },
           {
             role: 'user',
-            content: `Combine these summaries into one concise overview:\n\n${chunkSummaries.join('\n\n')}`
+            content: chunkSummaries.join(' ')
           }
         ],
-        max_tokens: 800,
+        max_tokens: 500,
         temperature: 0.3,
       }),
     });
