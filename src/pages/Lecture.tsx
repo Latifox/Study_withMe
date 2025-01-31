@@ -78,6 +78,11 @@ const Lecture = () => {
     }
   };
 
+  // Function to convert markdown-style bold to HTML
+  const formatText = (text: string) => {
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  };
+
   // If we're in summary mode and have a summary, show only the summary
   if (action === 'summary') {
     return (
@@ -90,7 +95,11 @@ const Lecture = () => {
           ) : summary ? (
             <div className="prose prose-lg max-w-none">
               {summary.split('\n').map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
+                <p 
+                  key={index} 
+                  dangerouslySetInnerHTML={{ __html: formatText(paragraph) }}
+                  className="mb-4"
+                />
               ))}
             </div>
           ) : (

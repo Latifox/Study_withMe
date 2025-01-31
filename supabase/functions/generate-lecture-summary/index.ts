@@ -47,7 +47,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that creates comprehensive lecture summaries. Please provide a detailed summary that includes:\n\n1. Key points in bullet points\n2. Important quotes from the lecture (using proper citation format)\n3. Main topics organized in a clear structure\n4. Any lists or enumerations from the lecture\n\nMaintain the original language of the lecture and ensure the summary is both detailed and easy to read.'
+            content: 'You are a helpful assistant that creates comprehensive lecture summaries. Please provide a detailed summary that includes:\n\n1. Key points in bullet points\n2. Important quotes from the lecture (using proper citation format)\n3. Main topics organized in a clear structure\n4. Any lists or enumerations from the lecture\n\nVERY IMPORTANT: Maintain the EXACT SAME LANGUAGE as the input text - if the lecture is in Spanish, write the summary in Spanish, if it\'s in French, write it in French, etc. Use **bold** markdown syntax for emphasis. Ensure the summary is both detailed and easy to read.'
           },
           {
             role: 'user',
