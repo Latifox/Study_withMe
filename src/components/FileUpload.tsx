@@ -21,18 +21,20 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('https://bjpawnertrqwtgyvrhml.supabase.co/functions/v1/extract-pdf-text', {
-      method: 'POST',
+    const { data, error } = await supabase.functions.invoke('extract-pdf-text', {
       body: formData,
+      headers: {
+        'Accept': 'application/json',
+      },
     });
 
-    if (!response.ok) {
+    if (error) {
+      console.error('Error extracting PDF content:', error);
       throw new Error('Failed to extract PDF content');
     }
 
-    const { text } = await response.json();
-    console.log('Extracted text length:', text.length);
-    return text;
+    console.log('Extracted text length:', data.text.length);
+    return data.text;
   };
 
   const handleUpload = async () => {
@@ -73,7 +75,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
-          content: pdfContent, // Store the extracted text
+          content: pdfContent,
         });
 
       if (dbError) throw dbError;
