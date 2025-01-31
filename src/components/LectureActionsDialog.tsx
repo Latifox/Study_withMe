@@ -46,7 +46,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             size="lg"
           >
             <MessageSquare className="w-5 h-5" />
-            Chat with your lecture
+            Chat
           </Button>
           <Button
             onClick={handleSummaryAction}
@@ -54,7 +54,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             size="lg"
           >
             <FileText className="w-5 h-5" />
-            Get Lecture Summary
+            Highlights
           </Button>
           <Button
             onClick={handleQuizAction}
@@ -62,7 +62,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             size="lg"
           >
             <HelpCircle className="w-5 h-5" />
-            Get Quiz
+            Quiz
           </Button>
         </div>
       </DialogContent>
