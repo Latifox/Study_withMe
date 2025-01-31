@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface FileUploadProps {
   courseId?: string;
@@ -16,6 +17,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [title, setTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const extractPDFContent = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -79,6 +81,9 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
       if (dbError) throw dbError;
       console.log('Lecture saved successfully');
+
+      // Invalidate the lectures query to trigger a refresh
+      queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
 
       toast({
         title: "Success",
