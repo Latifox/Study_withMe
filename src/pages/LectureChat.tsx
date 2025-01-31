@@ -1,21 +1,16 @@
 import { useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import PDFViewer from "@/components/PDFViewer";
 import ChatMessage from "@/components/ChatMessage";
-import QuizConfiguration from "@/components/QuizConfiguration";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { FileText } from "lucide-react";
 
-const Lecture = () => {
+const LectureChat = () => {
   const { lectureId } = useParams();
-  const [searchParams] = useSearchParams();
-  const action = searchParams.get("action");
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
     { role: 'assistant', content: 'Hello! How can I help you with this lecture?' }
@@ -67,53 +62,34 @@ const Lecture = () => {
     return <div>Loading...</div>;
   }
 
-  const renderContent = () => {
-    if (action === 'quiz') {
-      return <QuizConfiguration lectureId={parseInt(lectureId!)} />;
-    }
-
-    return (
-      <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4 flex flex-col">
-        <div className="flex justify-end mb-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/lecture/${lectureId}/summary`)}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            View Summary
-          </Button>
-        </div>
-        <div className="flex-1 overflow-auto space-y-4 mb-4">
-          {messages.map((message, index) => (
-            <ChatMessage key={index} message={message} />
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type your message..."
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            disabled={isLoading}
-          />
-          <Button onClick={handleSendMessage} disabled={isLoading}>
-            Send
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="container mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="h-[calc(100vh-2rem)]">
           <PDFViewer lectureId={lectureId} />
         </div>
-        {renderContent()}
+        <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4 flex flex-col">
+          <div className="flex-1 overflow-auto space-y-4 mb-4">
+            {messages.map((message, index) => (
+              <ChatMessage key={index} message={message} />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Type your message..."
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={isLoading}
+            />
+            <Button onClick={handleSendMessage} disabled={isLoading}>
+              Send
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default Lecture;
+export default LectureChat;

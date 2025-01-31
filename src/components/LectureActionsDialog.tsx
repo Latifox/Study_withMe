@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MessageSquare, FileText, HelpCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface LectureActionsDialogProps {
   isOpen: boolean;
@@ -16,19 +16,20 @@ interface LectureActionsDialogProps {
 
 const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDialogProps) => {
   const navigate = useNavigate();
+  const { courseId } = useParams();
 
   const handleChatAction = () => {
-    navigate(`/lecture/${lectureId}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
     onClose();
   };
 
   const handleSummaryAction = () => {
-    navigate(`/lecture/${lectureId}?action=summary`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/summary`);
     onClose();
   };
 
   const handleQuizAction = () => {
-    navigate(`/lecture/${lectureId}?action=quiz`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/quiz`);
     onClose();
   };
 
