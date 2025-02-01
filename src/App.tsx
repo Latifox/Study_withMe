@@ -11,6 +11,7 @@ import LectureSummaryFull from "./pages/LectureSummaryFull";
 import QuizConfiguration from "./components/QuizConfiguration";
 import TakeQuiz from "./pages/TakeQuiz";
 import Flashcards from "./pages/Flashcards";
+import Mindmap from "./pages/Mindmap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           />
           <Route path="/course/:courseId/lecture/:lectureId/take-quiz" element={<TakeQuiz />} />
           <Route path="/course/:courseId/lecture/:lectureId/flashcards" element={<Flashcards />} />
+          <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<Mindmap />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
