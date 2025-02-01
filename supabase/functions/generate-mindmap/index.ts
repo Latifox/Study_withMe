@@ -50,25 +50,34 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a mindmap generator. Create a hierarchical mindmap structure for the lecture content. 
-            The response should be a JSON object with nodes array containing mindmap nodes.
-            Each node should have:
-            - id: unique string
-            - label: text content
-            - type: "main" | "subtopic" | "detail"
-            - parentId: id of parent node (null for root)
-            
-            Create:
-            - One main topic (type: "main")
-            - 3-5 key subtopics (type: "subtopic")
-            - 2-3 details for each subtopic (type: "detail")`
+            content: `You are a mindmap generator. Generate a mindmap structure in JSON format.
+            Return ONLY a valid JSON object with this exact structure, nothing else:
+            {
+              "nodes": [
+                {
+                  "id": "string",
+                  "label": "string",
+                  "type": "main" | "subtopic" | "detail",
+                  "parentId": null or "string"
+                }
+              ]
+            }
+            Rules:
+            1. Create exactly one main node (type: "main")
+            2. Create 3-5 subtopic nodes (type: "subtopic")
+            3. For each subtopic, create 2-3 detail nodes (type: "detail")
+            4. Main node should have parentId: null
+            5. Subtopics should have the main node's id as parentId
+            6. Details should have their subtopic's id as parentId
+            7. Each id must be unique
+            8. Do not include any markdown formatting or code block markers`
           },
           {
             role: 'user',
             content: `Generate a mindmap for this lecture titled "${lecture.title}":\n\n${lecture.content}`
           }
         ],
-        temperature: 0.7,
+        temperature: 0.5,
         max_tokens: 2000,
       }),
     });
@@ -81,15 +90,26 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Successfully generated mindmap from OpenAI');
+    console.log('Raw OpenAI response:', data.choices[0].message.content);
 
-    // Parse the response to ensure it's valid JSON
-    const mindmapContent = JSON.parse(data.choices[0].message.content);
-    
-    return new Response(
-      JSON.stringify(mindmapContent),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    try {
+      // Attempt to parse the response content as JSON
+      const mindmapContent = JSON.parse(data.choices[0].message.content);
+      
+      // Validate the structure
+      if (!mindmapContent.nodes || !Array.isArray(mindmapContent.nodes)) {
+        throw new Error('Invalid mindmap structure');
+      }
+
+      return new Response(
+        JSON.stringify(mindmapContent),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      console.error('Raw content:', data.choices[0].message.content);
+      throw new Error('Failed to parse mindmap data');
+    }
   } catch (error) {
     console.error('Error generating mindmap:', error);
     return new Response(
