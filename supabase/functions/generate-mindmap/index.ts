@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log('Generating mindmap for lecture:', lectureId);
+    console.log('Generating study plan for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,15 +32,10 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -48,60 +43,44 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a mindmap generator. Generate a hierarchical mindmap structure in JSON format.
-            The structure should represent a tree-like hierarchy with connecting lines.
-            Return ONLY a valid JSON object with this exact structure:
+            content: `You are a study plan generator. Create a comprehensive study plan based on lecture content.
+            Structure the response in this exact JSON format:
             {
-              "nodes": [
+              "title": "string",
+              "topics": [
                 {
-                  "id": "string",
-                  "label": "string",
-                  "type": "main" | "subtopic" | "detail",
-                  "parentId": null or "string"
+                  "title": "string",
+                  "keyPoints": ["string"],
+                  "studyApproach": "string",
+                  "estimatedTime": "string"
                 }
-              ]
-            }
-            Rules:
-            1. Create exactly one main node (type: "main") as the central topic
-            2. Create 3-5 major subtopic nodes (type: "subtopic") connected to the main node
-            3. For each subtopic, create 2-4 detail nodes (type: "detail")
-            4. Main node should have parentId: null
-            5. Subtopics should have the main node's id as parentId
-            6. Details should have their subtopic's id as parentId
-            7. Each id must be unique
-            8. Labels should be concise but descriptive
-            9. Do not include any markdown formatting or code block markers`
+              ],
+              "additionalResources": ["string"],
+              "practiceExercises": ["string"]
+            }`
           },
           {
             role: 'user',
-            content: `Generate a hierarchical mindmap for this lecture titled "${lecture.title}":\n\n${lecture.content}`
+            content: `Create a study plan for this lecture titled "${lecture.title}":\n\n${lecture.content}`
           }
         ],
-        temperature: 0.5,
-        max_tokens: 2000,
+        temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
       console.error('OpenAI API error:', response.status);
-      const errorData = await response.json();
-      console.error('OpenAI error details:', errorData);
-      throw new Error('Failed to generate mindmap');
+      throw new Error('Failed to generate study plan');
     }
 
     const data = await response.json();
-    const mindmapContent = JSON.parse(data.choices[0].message.content);
-    
-    if (!mindmapContent.nodes || !Array.isArray(mindmapContent.nodes)) {
-      throw new Error('Invalid mindmap structure');
-    }
+    const studyPlan = JSON.parse(data.choices[0].message.content);
 
-    return new Response(
-      JSON.stringify(mindmapContent),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify(studyPlan), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('Error generating mindmap:', error);
+    console.error('Error generating study plan:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

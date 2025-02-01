@@ -5,16 +5,20 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface MindmapNode {
-  id: string;
-  label: string;
-  type: "main" | "subtopic" | "detail";
-  parentId: string | null;
+interface StudyTopic {
+  title: string;
+  keyPoints: string[];
+  studyApproach: string;
+  estimatedTime: string;
 }
 
-interface MindmapData {
-  nodes: MindmapNode[];
+interface StudyPlan {
+  title: string;
+  topics: StudyTopic[];
+  additionalResources: string[];
+  practiceExercises: string[];
 }
 
 const Mindmap = () => {
@@ -22,68 +26,25 @@ const Mindmap = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: mindmapData, isLoading } = useQuery({
+  const { data: studyPlan, isLoading } = useQuery({
     queryKey: ['mindmap', lectureId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke<MindmapData>("generate-mindmap", {
+      const { data, error } = await supabase.functions.invoke<StudyPlan>("generate-mindmap", {
         body: { lectureId },
       });
 
       if (error) {
         toast({
           title: "Error",
-          description: "Failed to generate mindmap. Please try again.",
+          description: "Failed to generate study plan. Please try again.",
           variant: "destructive",
         });
         throw error;
       }
 
-      return JSON.parse(data as unknown as string) as MindmapData;
+      return data;
     },
   });
-
-  const renderNode = (node: MindmapNode, level: number, isLastChild: boolean = false) => {
-    const children = mindmapData?.nodes.filter(n => n.parentId === node.id) || [];
-    const paddingLeft = level * 4;
-    
-    let nodeClassName = "relative py-2 animate-fade-in ";
-    let contentClassName = "inline-block p-3 rounded-lg ";
-    
-    switch (node.type) {
-      case "main":
-        contentClassName += "bg-primary text-primary-foreground font-bold text-xl";
-        break;
-      case "subtopic":
-        contentClassName += "bg-secondary text-secondary-foreground font-semibold text-lg";
-        break;
-      case "detail":
-        contentClassName += "bg-muted text-muted-foreground";
-        break;
-    }
-
-    return (
-      <div key={node.id} style={{ paddingLeft: `${paddingLeft}rem` }} className={nodeClassName}>
-        {level > 0 && (
-          <div className="absolute left-0 top-1/2 w-8 border-t border-gray-300"></div>
-        )}
-        {level > 0 && !isLastChild && (
-          <div className="absolute left-0 top-1/2 h-full border-l border-gray-300"></div>
-        )}
-        <div className={contentClassName}>
-          {node.label}
-        </div>
-        <div className="ml-4">
-          {children.map((child, index) => 
-            renderNode(
-              child, 
-              level + 1, 
-              index === children.length - 1
-            )
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="container mx-auto py-8">
@@ -96,25 +57,79 @@ const Mindmap = () => {
           <ArrowLeft className="w-4 h-4" />
           Back to Course
         </Button>
-        <h1 className="text-3xl font-bold">Lecture Mindmap</h1>
+        <h1 className="text-3xl font-bold">Study Plan</h1>
       </div>
 
       {isLoading ? (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
-          <div className="animate-pulse">Generating mindmap...</div>
+          <div className="animate-pulse">Generating study plan...</div>
         </div>
-      ) : mindmapData ? (
-        <div className="space-y-4 pl-8">
-          {mindmapData.nodes
-            .filter(node => node.parentId === null)
-            .map((node, index, array) => 
-              renderNode(node, 0, index === array.length - 1)
-            )}
+      ) : studyPlan ? (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{studyPlan.title}</CardTitle>
+            </CardHeader>
+          </Card>
+
+          {studyPlan.topics.map((topic, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <CardTitle className="text-xl">{topic.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">Key Points:</h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {topic.keyPoints.map((point, idx) => (
+                        <li key={idx}>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Study Approach:</h3>
+                    <p>{topic.studyApproach}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Estimated Time:</h3>
+                    <p>{topic.estimatedTime}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Resources</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc pl-5 space-y-1">
+                {studyPlan.additionalResources.map((resource, index) => (
+                  <li key={index}>{resource}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Practice Exercises</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc pl-5 space-y-1">
+                {studyPlan.practiceExercises.map((exercise, index) => (
+                  <li key={index}>{exercise}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <div className="text-center py-8 text-red-500">
-          Failed to generate mindmap. Please try again.
+          Failed to generate study plan. Please try again.
         </div>
       )}
     </div>
