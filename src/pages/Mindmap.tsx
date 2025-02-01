@@ -46,7 +46,7 @@ const Mindmap = () => {
     const children = mindmapData?.nodes.filter(n => n.parentId === node.id) || [];
     const paddingLeft = level * 2;
     
-    let className = "p-4 rounded-lg mb-2 ";
+    let className = "p-4 rounded-lg mb-2 animate-fade-in ";
     switch (node.type) {
       case "main":
         className += "bg-primary text-primary-foreground font-bold text-xl";
@@ -84,7 +84,10 @@ const Mindmap = () => {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8">Generating mindmap...</div>
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+          <div className="animate-pulse">Generating mindmap...</div>
+        </div>
       ) : mindmapData ? (
         <div className="space-y-4">
           {mindmapData.nodes
