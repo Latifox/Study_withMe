@@ -42,29 +42,45 @@ const Mindmap = () => {
     },
   });
 
-  const renderNode = (node: MindmapNode, level: number) => {
+  const renderNode = (node: MindmapNode, level: number, isLastChild: boolean = false) => {
     const children = mindmapData?.nodes.filter(n => n.parentId === node.id) || [];
-    const paddingLeft = level * 2;
+    const paddingLeft = level * 4;
     
-    let className = "p-4 rounded-lg mb-2 animate-fade-in ";
+    let nodeClassName = "relative py-2 animate-fade-in ";
+    let contentClassName = "inline-block p-3 rounded-lg ";
+    
     switch (node.type) {
       case "main":
-        className += "bg-primary text-primary-foreground font-bold text-xl";
+        contentClassName += "bg-primary text-primary-foreground font-bold text-xl";
         break;
       case "subtopic":
-        className += "bg-secondary text-secondary-foreground font-semibold text-lg";
+        contentClassName += "bg-secondary text-secondary-foreground font-semibold text-lg";
         break;
       case "detail":
-        className += "bg-muted text-muted-foreground";
+        contentClassName += "bg-muted text-muted-foreground";
         break;
     }
 
     return (
-      <div key={node.id} style={{ paddingLeft: `${paddingLeft}rem` }}>
-        <div className={className}>
+      <div key={node.id} style={{ paddingLeft: `${paddingLeft}rem` }} className={nodeClassName}>
+        {level > 0 && (
+          <div className="absolute left-0 top-1/2 w-8 border-t border-gray-300"></div>
+        )}
+        {level > 0 && !isLastChild && (
+          <div className="absolute left-0 top-1/2 h-full border-l border-gray-300"></div>
+        )}
+        <div className={contentClassName}>
           {node.label}
         </div>
-        {children.map(child => renderNode(child, level + 1))}
+        <div className="ml-4">
+          {children.map((child, index) => 
+            renderNode(
+              child, 
+              level + 1, 
+              index === children.length - 1
+            )
+          )}
+        </div>
       </div>
     );
   };
@@ -89,10 +105,12 @@ const Mindmap = () => {
           <div className="animate-pulse">Generating mindmap...</div>
         </div>
       ) : mindmapData ? (
-        <div className="space-y-4">
+        <div className="space-y-4 pl-8">
           {mindmapData.nodes
             .filter(node => node.parentId === null)
-            .map(node => renderNode(node, 0))}
+            .map((node, index, array) => 
+              renderNode(node, 0, index === array.length - 1)
+            )}
         </div>
       ) : (
         <div className="text-center py-8 text-red-500">

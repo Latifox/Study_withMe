@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,8 +31,6 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Successfully fetched lecture content');
-
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
@@ -50,8 +47,9 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a mindmap generator. Generate a mindmap structure in JSON format.
-            Return ONLY a valid JSON object with this exact structure, nothing else:
+            content: `You are a mindmap generator. Generate a hierarchical mindmap structure in JSON format.
+            The structure should represent a tree-like hierarchy with connecting lines.
+            Return ONLY a valid JSON object with this exact structure:
             {
               "nodes": [
                 {
@@ -63,18 +61,19 @@ serve(async (req) => {
               ]
             }
             Rules:
-            1. Create exactly one main node (type: "main")
-            2. Create 3-5 subtopic nodes (type: "subtopic")
-            3. For each subtopic, create 2-3 detail nodes (type: "detail")
+            1. Create exactly one main node (type: "main") as the central topic
+            2. Create 3-5 major subtopic nodes (type: "subtopic") connected to the main node
+            3. For each subtopic, create 2-4 detail nodes (type: "detail")
             4. Main node should have parentId: null
             5. Subtopics should have the main node's id as parentId
             6. Details should have their subtopic's id as parentId
             7. Each id must be unique
-            8. Do not include any markdown formatting or code block markers`
+            8. Labels should be concise but descriptive
+            9. Do not include any markdown formatting or code block markers`
           },
           {
             role: 'user',
-            content: `Generate a mindmap for this lecture titled "${lecture.title}":\n\n${lecture.content}`
+            content: `Generate a hierarchical mindmap for this lecture titled "${lecture.title}":\n\n${lecture.content}`
           }
         ],
         temperature: 0.5,
@@ -90,26 +89,16 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Raw OpenAI response:', data.choices[0].message.content);
-
-    try {
-      // Attempt to parse the response content as JSON
-      const mindmapContent = JSON.parse(data.choices[0].message.content);
-      
-      // Validate the structure
-      if (!mindmapContent.nodes || !Array.isArray(mindmapContent.nodes)) {
-        throw new Error('Invalid mindmap structure');
-      }
-
-      return new Response(
-        JSON.stringify(mindmapContent),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      console.error('Raw content:', data.choices[0].message.content);
-      throw new Error('Failed to parse mindmap data');
+    const mindmapContent = JSON.parse(data.choices[0].message.content);
+    
+    if (!mindmapContent.nodes || !Array.isArray(mindmapContent.nodes)) {
+      throw new Error('Invalid mindmap structure');
     }
+
+    return new Response(
+      JSON.stringify(mindmapContent),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error generating mindmap:', error);
     return new Response(
