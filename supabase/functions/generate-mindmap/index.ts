@@ -51,18 +51,14 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a mindmap generator. Create a hierarchical mindmap structure for the lecture content. 
-            The response should be a JSON object with the following structure:
-            {
-              "nodes": [
-                {
-                  "id": "string",
-                  "label": "string",
-                  "type": "main" | "subtopic" | "detail",
-                  "parentId": "string" (null for root node)
-                }
-              ]
-            }
-            The mindmap should have:
+            The response should be a JSON object with nodes array containing mindmap nodes.
+            Each node should have:
+            - id: unique string
+            - label: text content
+            - type: "main" | "subtopic" | "detail"
+            - parentId: id of parent node (null for root)
+            
+            Create:
             - One main topic (type: "main")
             - 3-5 key subtopics (type: "subtopic")
             - 2-3 details for each subtopic (type: "detail")`
@@ -72,19 +68,26 @@ serve(async (req) => {
             content: `Generate a mindmap for this lecture titled "${lecture.title}":\n\n${lecture.content}`
           }
         ],
+        temperature: 0.7,
+        max_tokens: 2000,
       }),
     });
 
     if (!response.ok) {
       console.error('OpenAI API error:', response.status);
+      const errorData = await response.json();
+      console.error('OpenAI error details:', errorData);
       throw new Error('Failed to generate mindmap');
     }
 
     const data = await response.json();
     console.log('Successfully generated mindmap from OpenAI');
 
+    // Parse the response to ensure it's valid JSON
+    const mindmapContent = JSON.parse(data.choices[0].message.content);
+    
     return new Response(
-      JSON.stringify(data.choices[0].message.content),
+      JSON.stringify(mindmapContent),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
