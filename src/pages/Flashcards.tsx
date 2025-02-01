@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -83,7 +83,8 @@ const Flashcards = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
         <div className="max-w-4xl mx-auto text-center py-8">
-          Loading flashcards...
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading flashcards...</p>
         </div>
       </div>
     );
