@@ -44,7 +44,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a flashcard generator. Generate exactly ${count} flashcards based on the provided lecture content. Each flashcard should have a question on one side and the answer on the other side. The content should be concise and focused on key concepts.`
+            content: `You are a flashcard generator. Generate exactly ${count} flashcards based on the provided lecture content. Each flashcard should have a question on one side and the answer on the other side. Format each flashcard as:
+Question: [your question here]
+Answer: [your answer here]
+
+Make each flashcard focused on a single key concept.`
           },
           {
             role: 'user',

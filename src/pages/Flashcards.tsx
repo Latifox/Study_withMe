@@ -26,11 +26,14 @@ const Flashcards = () => {
         body: { lectureId: parseInt(lectureId!) }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error generating flashcards:', error);
+        throw error;
+      }
       return data.flashcards;
     },
     meta: {
-      onError: (error: Error) => {
+      onError: () => {
         toast({
           title: "Error",
           description: "Failed to generate flashcards. Please try again.",
@@ -62,6 +65,11 @@ const Flashcards = () => {
 
       if (error) throw error;
       setAdditionalCards(prev => [...prev, ...data.flashcards]);
+      
+      toast({
+        title: "Success",
+        description: "Generated new flashcards successfully!",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -70,6 +78,16 @@ const Flashcards = () => {
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
+        <div className="max-w-4xl mx-auto text-center py-8">
+          Loading flashcards...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
@@ -88,39 +106,34 @@ const Flashcards = () => {
           </h1>
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-8">Loading flashcards...</div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {allFlashcards.map((flashcard, index) => (
-                <div
-                  key={index}
-                  className="perspective-1000"
-                  onClick={() => handleCardClick(index)}
-                >
-                  <div
-                    className={`relative w-full h-64 cursor-pointer transition-transform duration-500 transform-style-3d ${
-                      flippedCards.has(index) ? 'rotate-y-180' : ''
-                    }`}
-                  >
-                    <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden">
-                      <p className="text-lg">{flashcard.question}</p>
-                    </Card>
-                    <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-blue-50 rotate-y-180 backface-hidden">
-                      <p className="text-lg">{flashcard.answer}</p>
-                    </Card>
-                  </div>
-                </div>
-              ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {allFlashcards.map((flashcard, index) => (
+            <div
+              key={index}
+              className="perspective-1000 cursor-pointer"
+              onClick={() => handleCardClick(index)}
+            >
+              <div
+                className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${
+                  flippedCards.has(index) ? 'rotate-y-180' : ''
+                }`}
+              >
+                <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-white">
+                  <p className="text-lg">{flashcard.question}</p>
+                </Card>
+                <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-blue-50 rotate-y-180 backface-hidden">
+                  <p className="text-lg">{flashcard.answer}</p>
+                </Card>
+              </div>
             </div>
-            <div className="flex justify-center">
-              <Button onClick={generateMoreFlashcards} size="lg">
-                Generate More Flashcards
-              </Button>
-            </div>
-          </>
-        )}
+          ))}
+        </div>
+
+        <div className="flex justify-center">
+          <Button onClick={generateMoreFlashcards} size="lg">
+            Generate More Flashcards
+          </Button>
+        </div>
       </div>
     </div>
   );
