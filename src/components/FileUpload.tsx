@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react";
 
 interface FileUploadProps {
   courseId?: string;
@@ -108,6 +109,23 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         <DialogHeader>
           <DialogTitle>Upload New Lecture</DialogTitle>
         </DialogHeader>
+        
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800 mb-2">File Requirements:</h4>
+              <ul className="text-sm text-amber-700 space-y-1 list-disc pl-4">
+                <li>PDF files only</li>
+                <li>Text must be searchable (no scanned documents)</li>
+                <li>Maximum file size: 10MB</li>
+                <li>Clear, readable text formatting</li>
+                <li>No password-protected documents</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Lecture Title</Label>
