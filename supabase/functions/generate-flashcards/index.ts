@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId, count = 3 } = await req.json();
+    console.log('Generating flashcards for lecture:', lectureId, 'count:', count);
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -33,10 +34,17 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
+    console.log('Successfully fetched lecture content');
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -65,6 +73,8 @@ Make each flashcard focused on a single key concept.`
     }
 
     const data = await response.json();
+    console.log('Successfully generated flashcards from OpenAI');
+
     const content = data.choices[0].message.content;
 
     // Parse the response to extract flashcards
@@ -80,6 +90,8 @@ Make each flashcard focused on a single key concept.`
       .filter((card: { question: string, answer: string }) => 
         card.question && card.answer
       );
+
+    console.log('Returning flashcards:', flashcards.length);
 
     return new Response(
       JSON.stringify({ flashcards }),
