@@ -51,6 +51,14 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <Button
+            onClick={handleMindmapAction}
+            className="flex items-center gap-2 w-full"
+            size="lg"
+          >
+            <Network className="w-5 h-5" />
+            Study plan
+          </Button>
+          <Button
             onClick={handleChatAction}
             className="flex items-center gap-2 w-full"
             size="lg"
@@ -81,14 +89,6 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           >
             <BookOpen className="w-5 h-5" />
             Flashcards
-          </Button>
-          <Button
-            onClick={handleMindmapAction}
-            className="flex items-center gap-2 w-full"
-            size="lg"
-          >
-            <Network className="w-5 h-5" />
-            Mindmap
           </Button>
         </div>
       </DialogContent>
