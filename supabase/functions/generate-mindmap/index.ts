@@ -44,7 +44,7 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a study plan generator. Create a comprehensive study plan based on lecture content.
-            Structure the response in this exact JSON format:
+            Return ONLY a JSON object with this exact structure (no markdown, no extra text):
             {
               "title": "string",
               "topics": [
@@ -74,6 +74,9 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log('OpenAI response:', data.choices[0].message.content);
+
+    // Parse the response content directly, assuming it's already valid JSON
     const studyPlan = JSON.parse(data.choices[0].message.content);
 
     return new Response(JSON.stringify(studyPlan), {
