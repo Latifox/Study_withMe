@@ -4,8 +4,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
+import { Settings } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,24 +30,20 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch existing configuration
-  const { data: config, isLoading } = useQuery({
+  const { data: config } = useQuery({
     queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
-      if (!lectureId) return null;
-
       const { data, error } = await supabase
         .from("lecture_ai_configs")
         .select("*")
         .eq("lecture_id", lectureId)
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        console.error("Error fetching AI config:", error);
+      if (error && error.code !== "PGRST116") {
         throw error;
       }
       return data;
     },
-    enabled: !!lectureId, // Only run query if lectureId exists
   });
 
   // Update local state when config is fetched
@@ -61,15 +57,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   }, [config]);
 
   const handleSave = async () => {
-    if (!lectureId) {
-      toast({
-        title: "Error",
-        description: "Invalid lecture ID",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setIsSaving(true);
       const { error } = await supabase
@@ -104,16 +91,11 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     }
   };
 
-  if (!lectureId) return null;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Configure AI Settings</DialogTitle>
-          <DialogDescription>
-            Customize how the AI assistant interacts with this lecture's content.
-          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
@@ -180,7 +162,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             </p>
           </div>
 
-          <Button onClick={handleSave} disabled={isSaving || isLoading} className="w-full">
+          <Button onClick={handleSave} disabled={isSaving} className="w-full">
             {isSaving ? "Saving..." : "Save Configuration"}
           </Button>
         </div>
