@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import TheorySlide from "@/components/story/TheorySlide";
 import StoryQuiz from "@/components/story/StoryQuiz";
 import SegmentProgress from "@/components/story/SegmentProgress";
+import LearningPathway from "@/components/story/LearningPathway";
 
 interface Slide {
   id: string;
@@ -43,6 +44,7 @@ const Story = () => {
   const [currentSegment, setCurrentSegment] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [score, setScore] = useState(0);
+  const [completedNodes] = useState(new Set<string>());
 
   const { data: storyContent, isLoading, error } = useQuery({
     queryKey: ['story-content', lectureId],
@@ -152,9 +154,20 @@ const Story = () => {
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
 
+  // Convert segments to learning pathway nodes
+  const pathwayNodes = storyContent.segments.map(segment => ({
+    id: segment.id,
+    title: segment.title,
+    type: "concept" as const,
+    difficulty: "intermediate" as const,
+    prerequisites: [], // You can set prerequisites based on your needs
+    points: 10,
+    description: `Complete this segment about ${segment.title}`,
+  }));
+
   return (
     <div className="container mx-auto p-4">
-      <div className="mb-6 space-y-4">
+      <div className="mb-6">
         <Button
           variant="ghost"
           onClick={handleBack}
@@ -163,31 +176,56 @@ const Story = () => {
           <ArrowLeft className="w-4 h-4" />
           Back to Course
         </Button>
-        
-        <SegmentProgress
-          currentSegment={currentSegment}
-          totalSegments={storyContent.segments.length}
-          currentStep={currentStep}
-          totalSteps={4}
-        />
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-6">{currentSegmentData.title}</h2>
-        
-        {isSlide ? (
-          <TheorySlide
-            content={currentSegmentData.slides[slideIndex].content}
-            onContinue={handleContinue}
-          />
-        ) : (
-          <StoryQuiz
-            question={currentSegmentData.questions[questionIndex]}
-            onCorrectAnswer={handleCorrectAnswer}
-            onWrongAnswer={handleWrongAnswer}
-          />
-        )}
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Learning Pathway */}
+        <div className="md:col-span-1">
+          <Card className="p-6">
+            <LearningPathway
+              nodes={pathwayNodes}
+              completedNodes={completedNodes}
+              currentNode={currentSegmentData.id}
+              onNodeSelect={(nodeId) => {
+                const index = storyContent.segments.findIndex(s => s.id === nodeId);
+                if (index !== -1) {
+                  setCurrentSegment(index);
+                  setCurrentStep(0);
+                }
+              }}
+            />
+          </Card>
+        </div>
+
+        {/* Content Area */}
+        <div className="md:col-span-2">
+          <Card className="p-6">
+            <div className="mb-6">
+              <SegmentProgress
+                currentSegment={currentSegment}
+                totalSegments={storyContent.segments.length}
+                currentStep={currentStep}
+                totalSteps={4}
+              />
+            </div>
+
+            <h2 className="text-2xl font-bold mb-6">{currentSegmentData.title}</h2>
+            
+            {isSlide ? (
+              <TheorySlide
+                content={currentSegmentData.slides[slideIndex].content}
+                onContinue={handleContinue}
+              />
+            ) : (
+              <StoryQuiz
+                question={currentSegmentData.questions[questionIndex]}
+                onCorrectAnswer={handleCorrectAnswer}
+                onWrongAnswer={handleWrongAnswer}
+              />
+            )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
