@@ -201,11 +201,13 @@ const Story = () => {
             />
           </div>
           
-          <div className="order-1 md:order-2">
-            <Card className="p-6">
-              {renderCurrentStep()}
-            </Card>
-          </div>
+          {currentStep.conceptId && (
+            <div className="order-1 md:order-2">
+              <Card className="p-6">
+                {renderCurrentStep()}
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
