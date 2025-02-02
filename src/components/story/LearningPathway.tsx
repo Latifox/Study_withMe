@@ -40,6 +40,13 @@ const LearningPathway = ({
     return "locked";
   };
 
+  const handleNodeClick = (node: LessonNode) => {
+    const status = getNodeStatus(node);
+    if (status !== "locked") {
+      onNodeSelect(node.id);
+    }
+  };
+
   return (
     <div className="relative w-full max-w-2xl mx-auto py-8">
       <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2" />
@@ -61,7 +68,7 @@ const LearningPathway = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() => status !== "locked" && onNodeSelect(node.id)}
+                      onClick={() => handleNodeClick(node)}
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
                       className={cn(
@@ -71,6 +78,7 @@ const LearningPathway = ({
                         status === "available" ? "bg-blue-100" : "",
                         isActive ? "ring-2 ring-primary ring-offset-2" : ""
                       )}
+                      disabled={status === "locked"}
                     >
                       {status === "locked" && <Lock className="w-5 h-5 text-gray-400" />}
                       {status === "completed" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
@@ -82,6 +90,11 @@ const LearningPathway = ({
                       <p className="font-semibold">{node.title}</p>
                       <p className="text-sm text-gray-500">{node.description}</p>
                       <p className="text-xs text-primary">Points: {node.points}</p>
+                      {status === "locked" && (
+                        <p className="text-xs text-red-500">
+                          Complete previous nodes to unlock
+                        </p>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
