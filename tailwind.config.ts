@@ -70,47 +70,27 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: { height: '0' },
-					to: { height: 'var(--radix-accordion-content-height)' }
+					from: {
+						height: '0'
+					},
+					to: {
+						height: 'var(--radix-accordion-content-height)'
+					}
 				},
 				'accordion-up': {
-					from: { height: 'var(--radix-accordion-content-height)' },
-					to: { height: '0' }
+					from: {
+						height: 'var(--radix-accordion-content-height)'
+					},
+					to: {
+						height: '0'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
-			},
-			typography: {
-				DEFAULT: {
-					css: {
-						maxWidth: 'none',
-						color: 'inherit',
-						a: {
-							color: 'inherit',
-							textDecoration: 'underline',
-							fontWeight: '500'
-						},
-						strong: {
-							color: 'inherit',
-							fontWeight: '600'
-						},
-						code: {
-							color: 'inherit',
-							fontWeight: '400'
-						},
-						p: {
-							marginTop: '0.5em',
-							marginBottom: '0.5em'
-						}
-					}
-				}
 			}
 		}
 	},
-	plugins: [
-		require("tailwindcss-animate"),
-		require('@tailwindcss/typography')
-	],
+	plugins: [require("tailwindcss-animate")],
 } satisfies Config;

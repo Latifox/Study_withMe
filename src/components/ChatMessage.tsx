@@ -1,5 +1,3 @@
-import ReactMarkdown from 'react-markdown';
-
 interface ChatMessageProps {
   message: {
     role: 'user' | 'assistant';
@@ -19,9 +17,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             : 'bg-gray-100 text-gray-800'
         }`}
       >
-        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-          {message.content}
-        </ReactMarkdown>
+        {message.content}
       </div>
     </div>
   );

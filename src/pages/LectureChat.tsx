@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,21 +13,12 @@ const LectureChat = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
     { role: 'assistant', content: 'Hello! How can I help you with this lecture?' }
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]); // Scroll when messages update
 
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
@@ -92,7 +83,6 @@ const LectureChat = () => {
             {messages.map((message, index) => (
               <ChatMessage key={index} message={message} />
             ))}
-            <div ref={messagesEndRef} /> {/* Scroll anchor */}
           </div>
           <div className="flex gap-2">
             <Input
