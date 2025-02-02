@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -53,61 +54,6 @@ serve(async (req) => {
 
     console.log('Using AI config:', config);
 
-    const systemPrompt = `You are an expert at creating educational content. Create an engaging learning journey based on lecture material. 
-    
-    Important parameters to consider:
-    - Temperature: ${config.temperature} (higher means more varied and creative responses)
-    - Creativity Level: ${config.creativity_level} (higher means more creative and engaging content)
-    - Detail Level: ${config.detail_level} (higher means more detailed explanations)
-    ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
-    
-    Requirements:
-    - Create EXACTLY 10 segments
-    - Each segment must have EXACTLY 2 theory slides and 2 quiz questions
-    - Keep the original language of the lecture content
-    - Make content progressively more challenging
-    - Ensure logical flow between segments
-    - Keep content concise and focused
-    - Avoid special characters or complex formatting
-    
-    Return a JSON object with this exact structure (no markdown, no code blocks):
-    {
-      "segments": [
-        {
-          "id": "segment-1",
-          "title": "Basic title",
-          "slides": [
-            {
-              "id": "slide-1-1",
-              "content": "Simple slide content"
-            },
-            {
-              "id": "slide-1-2",
-              "content": "Simple slide content"
-            }
-          ],
-          "questions": [
-            {
-              "id": "question-1-1",
-              "type": "multiple_choice",
-              "question": "Simple question text",
-              "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-              "correctAnswer": "Option 1",
-              "explanation": "Simple explanation"
-            },
-            {
-              "id": "question-1-2",
-              "type": "multiple_choice",
-              "question": "Simple question text",
-              "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-              "correctAnswer": "Option 1",
-              "explanation": "Simple explanation"
-            }
-          ]
-        }
-      ]
-    }`;
-
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -119,11 +65,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: systemPrompt
+            content: `Create an educational journey with exactly 10 segments based on the lecture content. Each segment must have 2 theory slides and 2 quiz questions. Keep content focused and concise.`
           },
           {
             role: 'user',
-            content: `Create a comprehensive learning journey with 10 segments for this lecture titled "${lecture.title}". Here's the content to teach (keep it in its original language): ${lecture.content}`
+            content: `Create a learning journey for this lecture titled "${lecture.title}". Content: ${lecture.content}`
           }
         ],
         temperature: config.temperature,
@@ -132,9 +78,9 @@ serve(async (req) => {
     });
 
     if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error('Failed to generate content with OpenAI');
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
     const aiResponseData = await openAIResponse.json();
@@ -162,22 +108,6 @@ serve(async (req) => {
         throw new Error('Invalid story content structure: missing segments array');
       }
 
-      if (storyContent.segments.length !== 10) {
-        throw new Error(`Invalid number of segments: expected 10, got ${storyContent.segments.length}`);
-      }
-
-      storyContent.segments.forEach((segment: any, index: number) => {
-        if (!segment.id || !segment.title || !Array.isArray(segment.slides) || !Array.isArray(segment.questions)) {
-          throw new Error(`Invalid segment structure at index ${index}`);
-        }
-        if (segment.slides.length !== 2) {
-          throw new Error(`Segment ${index} has ${segment.slides.length} slides instead of 2`);
-        }
-        if (segment.questions.length !== 2) {
-          throw new Error(`Segment ${index} has ${segment.questions.length} questions instead of 2`);
-        }
-      });
-
       console.log('Successfully validated story content structure');
 
     } catch (parseError) {
@@ -187,16 +117,27 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ storyContent }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        } 
+      }
     );
 
   } catch (error) {
     console.error('Error in generate-story-content function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        },
       }
     );
   }
