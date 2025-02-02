@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Youtube, FileText, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -80,7 +81,25 @@ const Resources = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8">Loading resources...</div>
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-8 w-[250px]" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-[200px]" />
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((j) => (
+                        <Skeleton key={j} className="h-[100px] w-full" />
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : resources?.map((conceptResource: ConceptResources) => (
           <Card key={conceptResource.concept} className="mb-6">
             <CardHeader>
