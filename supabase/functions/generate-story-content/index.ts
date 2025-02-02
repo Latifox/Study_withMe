@@ -65,7 +65,45 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Create an educational journey with exactly 10 segments based on the lecture content. Each segment must have 2 theory slides and 2 quiz questions. Keep content focused and concise.`
+            content: `You are a story content generator. Generate educational content in the following JSON format ONLY:
+{
+  "segments": [
+    {
+      "id": "segment-1",
+      "title": "string",
+      "slides": [
+        {
+          "id": "slide-1-1",
+          "content": "string"
+        },
+        {
+          "id": "slide-1-2",
+          "content": "string"
+        }
+      ],
+      "questions": [
+        {
+          "id": "question-1-1",
+          "type": "multiple_choice",
+          "question": "string",
+          "options": ["string", "string", "string", "string"],
+          "correctAnswer": "string",
+          "explanation": "string"
+        },
+        {
+          "id": "question-1-2",
+          "type": "true_false",
+          "question": "string",
+          "correctAnswer": true,
+          "explanation": "string"
+        }
+      ]
+    }
+  ]
+}
+
+Create exactly 10 segments. Each segment must have exactly 2 slides and 2 questions. Keep content focused and concise.
+DO NOT include any markdown formatting or additional text. ONLY output valid JSON.`
           },
           {
             role: 'user',
@@ -93,20 +131,25 @@ serve(async (req) => {
     let storyContent;
     try {
       const rawContent = aiResponseData.choices[0].message.content;
-      console.log('Raw AI response length:', rawContent.length);
+      console.log('Raw AI response:', rawContent);
       
-      // Clean up any potential markdown formatting
-      const cleanedContent = rawContent
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      
-      storyContent = JSON.parse(cleanedContent);
+      // Parse the JSON response
+      storyContent = JSON.parse(rawContent);
       
       // Validate structure
       if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
         throw new Error('Invalid story content structure: missing segments array');
       }
+
+      // Validate each segment has exactly 2 slides and 2 questions
+      storyContent.segments.forEach((segment: any, index: number) => {
+        if (!segment.slides || segment.slides.length !== 2) {
+          throw new Error(`Segment ${index + 1} does not have exactly 2 slides`);
+        }
+        if (!segment.questions || segment.questions.length !== 2) {
+          throw new Error(`Segment ${index + 1} does not have exactly 2 questions`);
+        }
+      });
 
       console.log('Successfully validated story content structure');
 
