@@ -28,7 +28,7 @@ const Story = () => {
   const { data: segmentContent, isLoading: isLoadingSegment } = useSegmentContent(
     lectureId,
     currentSegment,
-    storyContent?.segments[currentSegment]?.title || ''
+    storyContent?.segments?.[currentSegment]?.title || ''
   );
 
   // Prefetch next segment
@@ -123,6 +123,23 @@ const Story = () => {
     navigate(`/course/${courseId}`);
   };
 
+  // Handle loading state
+  if (isLoadingStory) {
+    return (
+      <div className="container mx-auto p-2">
+        <Card className="p-4">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <p className="ml-3 text-sm text-muted-foreground">
+              Loading story content...
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle error state
   if (storyError) {
     return (
       <div className="container mx-auto p-2">
@@ -140,24 +157,14 @@ const Story = () => {
     );
   }
 
-  if (isLoadingStory) {
-    return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          <p className="text-sm text-muted-foreground">Loading story content...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Handle case when no story content is available
   if (!storyContent?.segments?.length) {
     return (
       <div className="container mx-auto p-2">
         <Card className="p-3">
-          <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Content</h2>
+          <h2 className="text-lg font-bold text-red-600 mb-2">No Content Available</h2>
           <p className="text-sm text-muted-foreground mb-2">
-            No story content available
+            No story content has been generated yet. Please try again later.
           </p>
           <Button onClick={handleBack} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-1" />
@@ -178,52 +185,6 @@ const Story = () => {
     points: TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER,
     description: segment.description,
   }));
-
-  if (isLoadingSegment) {
-    return (
-      <div className="container mx-auto p-2">
-        <div className="mb-2">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="gap-1"
-            size="sm"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            Back
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div className="md:col-span-1">
-            <Card className="p-2">
-              <LearningPathway
-                nodes={pathwayNodes}
-                completedNodes={completedNodes}
-                currentNode={currentSegmentData.id}
-                onNodeSelect={(nodeId) => {
-                  const index = storyContent.segments.findIndex(s => s.id === nodeId);
-                  if (index !== -1 && completedNodes.has(storyContent.segments[index].id)) {
-                    setCurrentSegment(index);
-                    setCurrentStep(0);
-                  }
-                }}
-              />
-            </Card>
-          </div>
-
-          <div className="md:col-span-2">
-            <Card className="p-4 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              <p className="ml-3 text-sm text-muted-foreground">
-                Loading segment content...
-              </p>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto p-2">
