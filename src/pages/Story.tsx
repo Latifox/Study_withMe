@@ -64,12 +64,7 @@ const Story = () => {
         throw new Error('Invalid story content structure');
       }
       return data.storyContent as StoryContent;
-    },
-    staleTime: Infinity, // Keep the data fresh forever since story content won't change
-    cacheTime: 1000 * 60 * 60, // Cache for 1 hour
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
-    refetchOnMount: false, // Prevent refetch on component mount
-    refetchOnReconnect: false, // Prevent refetch on reconnect
+    }
   });
 
   const handleContinue = () => {
