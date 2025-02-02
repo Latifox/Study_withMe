@@ -49,7 +49,7 @@ const LearningPathway = ({
 
   return (
     <div className="relative w-full h-[calc(100vh-14rem)] flex items-center justify-center px-4">
-      <div className="absolute left-1/2 h-full w-0.5 bg-gray-200 -translate-x-1/2" />
+      <div className="absolute left-[55%] h-full w-0.5 bg-gray-200 -translate-x-1/2" />
       
       <div className="relative flex flex-col justify-between h-full py-4">
         {nodes.map((node, index) => {
@@ -65,7 +65,7 @@ const LearningPathway = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <div className="absolute right-full pr-2 w-32">
+              <div className="absolute right-full pr-4 w-40">
                 <p className="text-xs font-medium text-right truncate" title={node.title}>
                   {node.title}
                 </p>
