@@ -8,6 +8,7 @@ import {
 import { Settings } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 
 interface LectureAIConfigDialogProps {
@@ -20,6 +21,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [temperature, setTemperature] = useState([0.7]);
   const [creativity, setCreativity] = useState([0.5]);
   const [detailLevel, setDetailLevel] = useState([0.6]);
+  const [customInstructions, setCustomInstructions] = useState("");
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -76,6 +78,19 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             />
             <p className="text-sm text-muted-foreground">
               Controls the depth and length of AI responses.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Custom Instructions</Label>
+            <Textarea
+              placeholder="Add any specific instructions for how the AI should approach this lecture (e.g., 'Focus on practical examples' or 'Explain concepts as if teaching to beginners')"
+              value={customInstructions}
+              onChange={(e) => setCustomInstructions(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <p className="text-sm text-muted-foreground">
+              These instructions will be applied whenever you interact with AI for this lecture.
             </p>
           </div>
 
