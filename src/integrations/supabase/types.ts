@@ -68,7 +68,7 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "lectures"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       lectures: {
@@ -106,7 +106,39 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
-          },
+          }
+        ]
+      }
+      story_contents: {
+        Row: {
+          content: Json
+          created_at: string
+          id: number
+          lecture_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_contents_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: true
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          }
         ]
       }
     }

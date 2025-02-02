@@ -55,16 +55,44 @@ const Story = () => {
   const { data: storyContent, isLoading, error } = useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-story-content', {
+      // First, try to get existing story content
+      const { data: existingContent } = await supabase
+        .from('story_contents')
+        .select('content')
+        .eq('lecture_id', lectureId)
+        .single();
+
+      if (existingContent) {
+        return existingContent.content as StoryContent;
+      }
+
+      // If no existing content, generate new content
+      const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
         body: { lectureId }
       });
 
       if (error) throw error;
-      if (!data?.storyContent?.segments?.length) {
+      if (!generatedContent?.storyContent?.segments?.length) {
         throw new Error('Invalid story content structure');
       }
-      return data.storyContent as StoryContent;
-    }
+
+      // Store the generated content
+      const { error: insertError } = await supabase
+        .from('story_contents')
+        .insert({
+          lecture_id: lectureId,
+          content: generatedContent.storyContent
+        });
+
+      if (insertError) throw insertError;
+
+      return generatedContent.storyContent as StoryContent;
+    },
+    staleTime: Infinity, // Content won't become stale
+    cacheTime: 1000 * 60 * 60, // Cache for 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false
   });
 
   const handleContinue = () => {
