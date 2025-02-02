@@ -54,6 +54,7 @@ serve(async (req) => {
 
     console.log('Using AI config:', config);
 
+    // Reduce temperature to get more consistent outputs
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -65,7 +66,10 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a story content generator. Generate educational content in the following JSON format ONLY:
+            content: `You are a story content generator. Your task is to generate educational content in a strict JSON format. Follow these rules:
+
+1. Output ONLY valid JSON, no markdown or additional text
+2. Follow this exact structure:
 {
   "segments": [
     {
@@ -102,16 +106,19 @@ serve(async (req) => {
   ]
 }
 
-Create exactly 10 segments. Each segment must have exactly 2 slides and 2 questions. Keep content focused and concise.
-DO NOT include any markdown formatting or additional text. ONLY output valid JSON.`
+3. Create exactly 5 segments (not 10 to reduce complexity)
+4. Each segment must have exactly 2 slides and 2 questions
+5. Keep content focused and concise
+6. Ensure all strings are properly escaped
+7. Do not use any special characters that could break JSON parsing`
           },
           {
             role: 'user',
             content: `Create a learning journey for this lecture titled "${lecture.title}". Content: ${lecture.content}`
           }
         ],
-        temperature: config.temperature,
-        max_tokens: 3000,
+        temperature: 0.5, // Lower temperature for more consistent outputs
+        max_tokens: 2000, // Reduced to prevent overly long responses
       }),
     });
 
@@ -133,8 +140,14 @@ DO NOT include any markdown formatting or additional text. ONLY output valid JSO
       const rawContent = aiResponseData.choices[0].message.content;
       console.log('Raw AI response:', rawContent);
       
+      // Try to clean the content before parsing
+      const cleanContent = rawContent
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+        .replace(/\\(?!["\\/bfnrtu])/g, '\\\\') // Escape backslashes
+        .trim();
+      
       // Parse the JSON response
-      storyContent = JSON.parse(rawContent);
+      storyContent = JSON.parse(cleanContent);
       
       // Validate structure
       if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
