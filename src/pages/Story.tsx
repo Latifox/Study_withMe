@@ -12,9 +12,9 @@ import LearningPathway from "@/components/story/LearningPathway";
 
 type StoryStep = 
   | { type: "concept"; conceptId: string }
-  | { type: "quiz"; quizIndex: number }
+  | { type: "quiz"; quizIndex: number; conceptId: string }
   | { type: "related_concept"; conceptId: string; relatedIndex: number }
-  | { type: "final_quiz"; quizIndex: number };
+  | { type: "final_quiz"; quizIndex: number; conceptId: string };
 
 const Story = () => {
   const { courseId, lectureId } = useParams();
@@ -57,11 +57,11 @@ const Story = () => {
     if (!currentChapter) return;
 
     if (currentStep.type === "concept") {
-      setCurrentStep({ type: "quiz", quizIndex: 0 });
+      setCurrentStep({ type: "quiz", quizIndex: 0, conceptId: currentStep.conceptId });
     } else if (currentStep.type === "quiz") {
       const nextQuizIndex = (currentStep.quizIndex + 1);
       if (nextQuizIndex < currentChapter.initialQuizzes.length) {
-        setCurrentStep({ type: "quiz", quizIndex: nextQuizIndex });
+        setCurrentStep({ type: "quiz", quizIndex: nextQuizIndex, conceptId: currentStep.conceptId });
       } else {
         setCurrentStep({ 
           type: "related_concept", 
@@ -78,12 +78,12 @@ const Story = () => {
           relatedIndex: nextIndex 
         });
       } else {
-        setCurrentStep({ type: "final_quiz", quizIndex: 0 });
+        setCurrentStep({ type: "final_quiz", quizIndex: 0, conceptId: currentStep.conceptId });
       }
     } else if (currentStep.type === "final_quiz") {
       const nextQuizIndex = currentStep.quizIndex + 1;
       if (nextQuizIndex < currentChapter.finalQuizzes.length) {
-        setCurrentStep({ type: "final_quiz", quizIndex: nextQuizIndex });
+        setCurrentStep({ type: "final_quiz", quizIndex: nextQuizIndex, conceptId: currentStep.conceptId });
       } else if (storyPoints >= maxPointsPerChapter) {
         // Move to next chapter if enough points
         if (currentChapterIndex + 1 < storyContent.chapters.length) {
@@ -115,6 +115,53 @@ const Story = () => {
           relatedIndex: currentChapter.relatedConcepts.findIndex(c => c.id === relatedConceptIds[0])
         });
       }
+    }
+  };
+
+  const renderCurrentStep = () => {
+    if (!currentChapter) return null;
+
+    switch (currentStep.type) {
+      case "concept":
+        const concept = currentChapter.nodes.find(n => n.id === currentStep.conceptId);
+        return concept ? (
+          <ConceptDescription
+            title={concept.title}
+            description={currentChapter.mainDescription}
+            onContinue={handleContinue}
+          />
+        ) : null;
+
+      case "quiz":
+        return (
+          <StoryQuiz
+            question={currentChapter.initialQuizzes[currentStep.quizIndex]}
+            onCorrectAnswer={handleCorrectAnswer}
+            onWrongAnswer={handleWrongAnswer}
+          />
+        );
+
+      case "related_concept":
+        const relatedConcept = currentChapter.relatedConcepts[currentStep.relatedIndex];
+        return relatedConcept ? (
+          <ConceptDescription
+            title={relatedConcept.title}
+            description={relatedConcept.description}
+            onContinue={handleContinue}
+          />
+        ) : null;
+
+      case "final_quiz":
+        return (
+          <StoryQuiz
+            question={currentChapter.finalQuizzes[currentStep.quizIndex]}
+            onCorrectAnswer={handleCorrectAnswer}
+            onWrongAnswer={handleWrongAnswer}
+          />
+        );
+
+      default:
+        return null;
     }
   };
 
