@@ -38,16 +38,21 @@ export const useStoryContent = (lectureId: string | undefined) => {
       const numericLectureId = parseInt(lectureId, 10);
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
+      console.log('Fetching story content for lecture:', numericLectureId);
+
       const { data: storyContent, error: contentError } = await supabase
         .from('story_contents')
-        .select('*, story_segment_contents(*)')
+        .select('*, story_segment_contents(segment_number, segment_title, content)')
         .eq('lecture_id', numericLectureId)
         .maybeSingle();
 
-      if (contentError) throw contentError;
+      if (contentError) {
+        console.error('Error fetching story content:', contentError);
+        throw contentError;
+      }
 
       if (!storyContent) {
-        // If no content exists, trigger generation
+        console.log('No content exists, triggering generation');
         const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
           body: { lectureId: numericLectureId }
         });
@@ -56,15 +61,23 @@ export const useStoryContent = (lectureId: string | undefined) => {
         return generatedContent.storyContent;
       }
 
+      console.log('Raw story content:', storyContent);
+
       // Return existing content with segment content included
       const sortedSegments = storyContent.story_segment_contents
         .sort((a: any, b: any) => a.segment_number - b.segment_number)
-        .map((segment: any) => ({
-          id: `segment-${segment.segment_number + 1}`,
-          title: segment.segment_title,
-          description: segment.description || '',
-          ...segment.content
-        }));
+        .map((segment: any) => {
+          console.log('Processing segment:', segment);
+          return {
+            id: `segment-${segment.segment_number + 1}`,
+            title: segment.segment_title,
+            description: segment.content?.description || '',
+            slides: segment.content?.slides || [],
+            questions: segment.content?.questions || []
+          };
+        });
+
+      console.log('Processed segments:', sortedSegments);
 
       return {
         segments: sortedSegments

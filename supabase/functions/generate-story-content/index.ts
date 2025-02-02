@@ -95,6 +95,7 @@ serve(async (req) => {
       segment_number: index,
       segment_title: segment.title,
       content: {
+        description: segment.description,
         slides: segment.slides,
         questions: segment.questions
       },
