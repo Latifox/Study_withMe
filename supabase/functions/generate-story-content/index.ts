@@ -45,12 +45,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating educational content. Analyze the lecture content and break it down into logical segments.
+            content: `You are an expert at creating educational content. Analyze the lecture content and break it down into EXACTLY 10 logical segments.
+            
             For each segment:
             1. Create 2 detailed theory slides that explain the concepts using markdown formatting (bold, lists, bullet points)
             2. Generate 2 quiz questions based on the content just presented
             
-            Create as many segments as needed to cover all important content from the lecture.
+            IMPORTANT: You MUST create exactly 10 segments, even if you need to break down concepts into smaller pieces.
+            If the content is short, you should go into more detail for each concept to reach 10 segments.
             
             Return ONLY valid JSON without any markdown formatting or additional text.
             
@@ -94,7 +96,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: lecture.content || 'Create a basic learning journey'
+            content: lecture.content || 'Create a basic learning journey with exactly 10 segments'
           }
         ],
         temperature: 0.7,
@@ -119,7 +121,13 @@ serve(async (req) => {
         .trim();
       
       storyContent = JSON.parse(cleanContent);
-      console.log('Successfully parsed story content');
+      
+      // Validate that we have exactly 10 segments
+      if (!Array.isArray(storyContent?.segments) || storyContent.segments.length !== 10) {
+        throw new Error('Story content must have exactly 10 segments');
+      }
+      
+      console.log('Successfully parsed story content with 10 segments');
     } catch (error) {
       console.error('Error parsing story content:', error);
       console.error('Raw content:', data.choices[0].message.content);
