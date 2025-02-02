@@ -89,7 +89,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             className="flex items-center gap-2 w-full"
             size="lg"
           >
-            <BookOpen className="w-5 h-5" />
+            <FileText className="w-5 h-5" />
             Flashcards
           </Button>
           <Button
