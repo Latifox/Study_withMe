@@ -9,6 +9,7 @@ import StoryProgress from "@/components/story/StoryProgress";
 import ConceptDescription from "@/components/story/ConceptDescription";
 import StoryQuiz from "@/components/story/StoryQuiz";
 import LearningPathway from "@/components/story/LearningPathway";
+import { useToast } from "@/hooks/use-toast";
 
 type StoryStep = 
   | { type: "main_concept"; slideIndex: number; conceptId: string }
@@ -19,28 +20,44 @@ type StoryStep =
 const Story = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<StoryStep | null>(null);
   const [nodePoints, setNodePoints] = useState<Record<string, number>>({});
   const [wrongAnswers, setWrongAnswers] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState<Set<string>>(new Set());
 
-  const { data: storyContent, isLoading } = useQuery({
+  const { data: storyContent, isLoading, error } = useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
+      console.log('Fetching story content for lecture:', lectureId);
       const { data, error } = await supabase.functions.invoke('generate-story-content', {
         body: { lectureId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching story content:', error);
+        throw error;
+      }
+
+      console.log('Received story content:', data);
       return data.storyContent;
     }
   });
 
   const handleNodeSelect = (nodeId: string) => {
-    const node = storyContent?.chapters[0].nodes.find(n => n.id === nodeId);
-    if (!node) return;
+    const nodes = storyContent?.chapters?.[0]?.nodes;
+    if (!nodes) {
+      console.error('No nodes available');
+      return;
+    }
 
-    const isFirstNode = storyContent?.chapters[0].nodes[0].id === nodeId;
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) {
+      console.error('Node not found:', nodeId);
+      return;
+    }
+
+    const isFirstNode = nodes[0].id === nodeId;
     const hasPrerequisites = node.prerequisites.every(prereq => completedNodes.has(prereq));
     
     if (isFirstNode || hasPrerequisites) {
@@ -49,24 +66,33 @@ const Story = () => {
         slideIndex: 0, 
         conceptId: nodeId 
       });
-      // Reset points if starting node over
       setNodePoints(prev => ({ ...prev, [nodeId]: 0 }));
-      // Reset wrong answers for this node
       setWrongAnswers(new Set());
+    } else {
+      toast({
+        title: "Node Locked",
+        description: "Complete the prerequisites first",
+        variant: "destructive"
+      });
     }
   };
 
   const getCurrentContent = () => {
-    if (!currentStep || !storyContent) return null;
+    if (!currentStep || !storyContent?.chapters?.[0]) {
+      console.log('No current step or story content available');
+      return null;
+    }
 
     const currentNode = storyContent.chapters[0].nodes.find(
       n => n.id === currentStep.conceptId
     );
-    if (!currentNode) return null;
+    if (!currentNode) {
+      console.error('Current node not found:', currentStep.conceptId);
+      return null;
+    }
 
     switch (currentStep.type) {
       case "main_concept":
-        // Return different content based on slideIndex
         const mainSlides = [
           `Introduction to ${currentNode.title}`,
           `Key principles of ${currentNode.title}`,
@@ -78,10 +104,19 @@ const Story = () => {
         };
 
       case "main_quiz":
-        return storyContent.chapters[0].initialQuizzes[currentStep.quizIndex];
+        const mainQuiz = storyContent.chapters[0].initialQuizzes?.[currentStep.quizIndex];
+        if (!mainQuiz) {
+          console.error('Main quiz not found:', currentStep.quizIndex);
+          return null;
+        }
+        return mainQuiz;
 
       case "related_concept": {
-        const relatedConcept = storyContent.chapters[0].relatedConcepts[currentStep.conceptIndex];
+        const relatedConcept = storyContent.chapters[0].relatedConcepts?.[currentStep.conceptIndex];
+        if (!relatedConcept) {
+          console.error('Related concept not found:', currentStep.conceptIndex);
+          return null;
+        }
         const relatedSlides = [
           `Basic overview of ${relatedConcept.title}`,
           `Detailed exploration of ${relatedConcept.title}`
@@ -92,8 +127,14 @@ const Story = () => {
         };
       }
 
-      case "related_quiz":
-        return storyContent.chapters[0].finalQuizzes[currentStep.quizIndex];
+      case "related_quiz": {
+        const relatedQuiz = storyContent.chapters[0].finalQuizzes?.[currentStep.quizIndex];
+        if (!relatedQuiz) {
+          console.error('Related quiz not found:', currentStep.quizIndex);
+          return null;
+        }
+        return relatedQuiz;
+      }
     }
   };
 
@@ -245,6 +286,20 @@ const Story = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold text-red-600">Error Loading Story</h2>
+          <p className="text-gray-600">Please try again later</p>
+          <Button onClick={() => navigate(`/course/${courseId}`)}>
+            Back to Course
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
@@ -268,7 +323,7 @@ const Story = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="order-2 md:order-1">
             <LearningPathway
-              nodes={storyContent?.chapters[0].nodes || []}
+              nodes={storyContent?.chapters[0]?.nodes || []}
               completedNodes={completedNodes}
               currentNode={currentStep?.conceptId || null}
               onNodeSelect={handleNodeSelect}
