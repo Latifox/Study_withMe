@@ -53,37 +53,37 @@ const LectureChat = () => {
       setCurrentStreamingMessage("");
       
       const response = await supabase.functions.invoke('chat-with-lecture', {
-        body: { lectureId, message: inputMessage },
-        responseType: 'stream'
+        body: { lectureId, message: inputMessage }
       });
 
       if (response.error) throw new Error(response.error.message);
       
-      const reader = response.data.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices[0]?.delta?.content || '';
-              setCurrentStreamingMessage(prev => prev + content);
-            } catch (e) {
-              console.error('Error parsing chunk:', e);
+      // The response will be a ReadableStream
+      const reader = new ReadableStream({
+        start(controller) {
+          const textDecoder = new TextDecoder();
+          const chunks = response.data.split('\n');
+          
+          for (const chunk of chunks) {
+            if (chunk.startsWith('data: ')) {
+              const data = chunk.slice(6);
+              if (data === '[DONE]') {
+                controller.close();
+                continue;
+              }
+              
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices[0]?.delta?.content || '';
+                setCurrentStreamingMessage(prev => prev + content);
+              } catch (e) {
+                console.error('Error parsing chunk:', e);
+              }
             }
           }
+          controller.close();
         }
-      }
+      });
 
       // After streaming is complete, add the full message to the messages array
       setMessages(prev => [...prev, { role: 'assistant', content: currentStreamingMessage }]);
