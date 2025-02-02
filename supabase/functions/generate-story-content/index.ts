@@ -44,7 +44,6 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    // Use default values if no AI config is found
     const config = aiConfig || {
       temperature: 0.7,
       creativity_level: 0.5,
@@ -52,9 +51,62 @@ serve(async (req) => {
       custom_instructions: ''
     };
 
-    console.log('Fetched lecture title:', lecture.title);
-    console.log('Content length:', lecture.content.length);
     console.log('Using AI config:', config);
+
+    const systemPrompt = `You are an expert at creating educational content. Create an engaging learning journey based on lecture material. 
+    
+    Important parameters to consider:
+    - Temperature: ${config.temperature} (higher means more varied and creative responses)
+    - Creativity Level: ${config.creativity_level} (higher means more creative and engaging content)
+    - Detail Level: ${config.detail_level} (higher means more detailed explanations)
+    ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
+    
+    Requirements:
+    - Create EXACTLY 10 segments
+    - Each segment must have EXACTLY 2 theory slides and 2 quiz questions
+    - Keep the original language of the lecture content
+    - Make content progressively more challenging
+    - Ensure logical flow between segments
+    - Keep content concise and focused
+    - Avoid special characters or complex formatting
+    
+    Return a JSON object with this exact structure (no markdown, no code blocks):
+    {
+      "segments": [
+        {
+          "id": "segment-1",
+          "title": "Basic title",
+          "slides": [
+            {
+              "id": "slide-1-1",
+              "content": "Simple slide content"
+            },
+            {
+              "id": "slide-1-2",
+              "content": "Simple slide content"
+            }
+          ],
+          "questions": [
+            {
+              "id": "question-1-1",
+              "type": "multiple_choice",
+              "question": "Simple question text",
+              "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+              "correctAnswer": "Option 1",
+              "explanation": "Simple explanation"
+            },
+            {
+              "id": "question-1-2",
+              "type": "multiple_choice",
+              "question": "Simple question text",
+              "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+              "correctAnswer": "Option 1",
+              "explanation": "Simple explanation"
+            }
+          ]
+        }
+      ]
+    }`;
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -63,70 +115,19 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating educational content. Create an engaging learning journey based on lecture material. 
-            
-            Important parameters to consider:
-            - Temperature: ${config.temperature} (higher means more varied and creative responses)
-            - Creativity Level: ${config.creativity_level} (higher means more creative and engaging content)
-            - Detail Level: ${config.detail_level} (higher means more detailed explanations)
-            ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
-            
-            Requirements:
-            - Create EXACTLY 10 segments
-            - Each segment must have EXACTLY 2 theory slides and 2 quiz questions
-            - Keep the original language of the lecture content
-            - Make content progressively more challenging
-            - Ensure logical flow between segments
-            
-            Return ONLY a raw JSON object (no markdown, no code blocks) with this structure:
-            {
-              "segments": [
-                {
-                  "id": "segment-1",
-                  "title": "Section Title",
-                  "slides": [
-                    {
-                      "id": "slide-1-1",
-                      "content": "Slide content in the lecture's original language"
-                    },
-                    {
-                      "id": "slide-1-2",
-                      "content": "Slide content in the lecture's original language"
-                    }
-                  ],
-                  "questions": [
-                    {
-                      "id": "question-1-1",
-                      "type": "multiple_choice",
-                      "question": "Question text in the lecture's original language",
-                      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-                      "correctAnswer": "Correct option text",
-                      "explanation": "Explanation in the lecture's original language"
-                    },
-                    {
-                      "id": "question-1-2",
-                      "type": "multiple_choice",
-                      "question": "Question text in the lecture's original language",
-                      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-                      "correctAnswer": "Correct option text",
-                      "explanation": "Explanation in the lecture's original language"
-                    }
-                  ]
-                }
-              ]
-            }`
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: `Create a comprehensive learning journey with 10 segments for this lecture titled "${lecture.title}". Here's the content to teach: ${lecture.content}`
+            content: `Create a comprehensive learning journey with 10 segments for this lecture titled "${lecture.title}". Here's the content to teach (keep it in its original language): ${lecture.content}`
           }
         ],
         temperature: config.temperature,
-        max_tokens: 4000,
+        max_tokens: 3000,
       }),
     });
 
@@ -137,8 +138,7 @@ serve(async (req) => {
     }
 
     const aiResponseData = await openAIResponse.json();
-    console.log('Received response from OpenAI');
-
+    
     if (!aiResponseData.choices?.[0]?.message?.content) {
       console.error('Invalid AI response structure:', aiResponseData);
       throw new Error('Invalid AI response structure');
@@ -147,23 +147,21 @@ serve(async (req) => {
     let storyContent;
     try {
       const rawContent = aiResponseData.choices[0].message.content;
-      console.log('Raw AI response:', rawContent);
+      console.log('Raw AI response length:', rawContent.length);
       
       // Clean up any potential markdown formatting
       const cleanedContent = rawContent
-        .replace(/```json\n?/g, '')  // Remove ```json
-        .replace(/```\n?/g, '')      // Remove closing ```
-        .trim();                     // Remove extra whitespace
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
       
-      console.log('Cleaned content:', cleanedContent);
       storyContent = JSON.parse(cleanedContent);
       
-      // Validate the structure
+      // Validate structure
       if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
         throw new Error('Invalid story content structure: missing segments array');
       }
 
-      // Validate each segment
       if (storyContent.segments.length !== 10) {
         throw new Error(`Invalid number of segments: expected 10, got ${storyContent.segments.length}`);
       }
@@ -172,12 +170,15 @@ serve(async (req) => {
         if (!segment.id || !segment.title || !Array.isArray(segment.slides) || !Array.isArray(segment.questions)) {
           throw new Error(`Invalid segment structure at index ${index}`);
         }
-        if (segment.slides.length !== 2 || segment.questions.length !== 2) {
-          throw new Error(`Incorrect number of slides or questions in segment ${index}`);
+        if (segment.slides.length !== 2) {
+          throw new Error(`Segment ${index} has ${segment.slides.length} slides instead of 2`);
+        }
+        if (segment.questions.length !== 2) {
+          throw new Error(`Segment ${index} has ${segment.questions.length} questions instead of 2`);
         }
       });
 
-      console.log('Successfully validated story content structure with 10 segments');
+      console.log('Successfully validated story content structure');
 
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
