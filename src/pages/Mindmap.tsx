@@ -1,24 +1,25 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { motion } from "framer-motion";
 
-interface StudyTopic {
+interface LearningStep {
+  step: number;
   title: string;
-  keyPoints: string[];
-  studyApproach: string;
-  estimatedTime: string;
+  description: string;
+  action: string;
+  timeEstimate: string;
+  benefits: string[];
 }
 
-interface StudyPlan {
+interface LearningJourney {
   title: string;
-  topics: StudyTopic[];
-  additionalResources: string[];
-  practiceExercises: string[];
+  keyTopics: string[];
+  learningSteps: LearningStep[];
 }
 
 const Mindmap = () => {
@@ -26,17 +27,17 @@ const Mindmap = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: studyPlan, isLoading } = useQuery({
+  const { data: journey, isLoading } = useQuery({
     queryKey: ['mindmap', lectureId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke<StudyPlan>("generate-mindmap", {
+      const { data, error } = await supabase.functions.invoke<LearningJourney>("generate-mindmap", {
         body: { lectureId },
       });
 
       if (error) {
         toast({
           title: "Error",
-          description: "Failed to generate study plan. Please try again.",
+          description: "Failed to generate learning journey. Please try again.",
           variant: "destructive",
         });
         throw error;
@@ -46,92 +47,159 @@ const Mindmap = () => {
     },
   });
 
+  const getActionIcon = (action: string) => {
+    switch (action) {
+      case 'summary':
+        return <BookOpen className="w-6 h-6" />;
+      case 'chat':
+        return <MessageSquare className="w-6 h-6" />;
+      case 'flashcards':
+        return <Activity className="w-6 h-6" />;
+      case 'quiz':
+        return <Brain className="w-6 h-6" />;
+      case 'resources':
+        return <Network className="w-6 h-6" />;
+      default:
+        return null;
+    }
+  };
+
+  const handleActionClick = (action: string) => {
+    switch (action) {
+      case 'summary':
+        navigate(`/course/${courseId}/lecture/${lectureId}/summary`);
+        break;
+      case 'chat':
+        navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
+        break;
+      case 'flashcards':
+        navigate(`/course/${courseId}/lecture/${lectureId}/flashcards`);
+        break;
+      case 'quiz':
+        navigate(`/course/${courseId}/lecture/${lectureId}/quiz`);
+        break;
+      case 'resources':
+        navigate(`/course/${courseId}/lecture/${lectureId}/resources`);
+        break;
+    }
+  };
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.3
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0 }
+  };
+
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center gap-4 mb-8">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/course/${courseId}`)}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Course
-        </Button>
-        <h1 className="text-3xl font-bold">Study Plan</h1>
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
-          <div className="animate-pulse">Generating study plan...</div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/course/${courseId}`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Course
+          </Button>
         </div>
-      ) : studyPlan ? (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{studyPlan.title}</CardTitle>
-            </CardHeader>
-          </Card>
 
-          {studyPlan.topics.map((topic, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <CardTitle className="text-xl">{topic.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold mb-2">Key Points:</h3>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {topic.keyPoints.map((point, idx) => (
-                        <li key={idx}>{point}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Study Approach:</h3>
-                    <p>{topic.studyApproach}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Estimated Time:</h3>
-                    <p>{topic.estimatedTime}</p>
-                  </div>
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="h-8 w-3/4 bg-gray-200 animate-pulse rounded" />
+            <div className="h-32 bg-gray-200 animate-pulse rounded" />
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-48 bg-gray-200 animate-pulse rounded" />
+              ))}
+            </div>
+          </div>
+        ) : journey ? (
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-8"
+          >
+            <motion.div variants={item}>
+              <h1 className="text-4xl font-bold text-gray-800 mb-4">{journey.title}</h1>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-semibold mb-3">Key Topics</h2>
+                <div className="flex flex-wrap gap-2">
+                  {journey.keyTopics.map((topic, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
+                    >
+                      {topic}
+                    </span>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            </motion.div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Resources</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc pl-5 space-y-1">
-                {studyPlan.additionalResources.map((resource, index) => (
-                  <li key={index}>{resource}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Practice Exercises</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc pl-5 space-y-1">
-                {studyPlan.practiceExercises.map((exercise, index) => (
-                  <li key={index}>{exercise}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <div className="text-center py-8 text-red-500">
-          Failed to generate study plan. Please try again.
-        </div>
-      )}
+            <div className="space-y-6">
+              {journey.learningSteps.map((step, index) => (
+                <motion.div
+                  key={step.step}
+                  variants={item}
+                  className="relative"
+                >
+                  {index !== journey.learningSteps.length - 1 && (
+                    <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-gray-200" />
+                  )}
+                  
+                  <Card className="relative bg-white p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start gap-6">
+                      <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                        {getActionIcon(step.action)}
+                      </div>
+                      <div className="flex-grow">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-xl font-semibold">{step.title}</h3>
+                          <span className="text-sm text-gray-500">{step.timeEstimate}</span>
+                        </div>
+                        <p className="text-gray-600 mb-4">{step.description}</p>
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {step.benefits.map((benefit, i) => (
+                              <span
+                                key={i}
+                                className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded"
+                              >
+                                {benefit}
+                              </span>
+                            ))}
+                          </div>
+                          <Button
+                            onClick={() => handleActionClick(step.action)}
+                            className="w-full sm:w-auto"
+                          >
+                            Start This Step
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <div className="text-center py-8 text-red-500">
+            Failed to generate learning journey. Please try again.
+          </div>
+        )}
+      </div>
     </div>
   );
 };
