@@ -20,7 +20,6 @@ export function CreateCourseDialog() {
 
     setIsSubmitting(true);
     try {
-      // First, create the course
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
         .insert([{ title: title.trim() }])
@@ -30,22 +29,6 @@ export function CreateCourseDialog() {
       if (courseError) {
         console.error('Error creating course:', courseError);
         throw courseError;
-      }
-
-      console.log('Created course:', courseData);
-
-      // Then, create the course access record
-      const { error: accessError } = await supabase
-        .from('course_access')
-        .insert([{
-          course_id: courseData.id,
-          user_email: 'mihailescu77@gmail.com',
-          access_type: 'owner'
-        }]);
-
-      if (accessError) {
-        console.error('Error creating course access:', accessError);
-        throw accessError;
       }
 
       toast({
