@@ -66,7 +66,7 @@ const LearningPathway = ({
               transition={{ delay: index * 0.05 }}
             >
               <div className="absolute right-full pr-6 w-96">
-                <p className="text-xs font-medium text-right">
+                <p className="text-xs font-medium text-right whitespace-pre-line min-h-[2.5rem] flex items-center justify-end">
                   {node.title}
                 </p>
               </div>
