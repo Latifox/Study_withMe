@@ -23,7 +23,8 @@ const Story = () => {
   const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
 
-  const { data: storyContent, isLoading: isLoadingStory } = useStoryContent(lectureId);
+  const { data: storyContent, isLoading: isLoadingStory, error: storyError } = useStoryContent(lectureId);
+  
   const { data: segmentContent, isLoading: isLoadingSegment } = useSegmentContent(
     lectureId,
     currentSegment,
@@ -122,6 +123,23 @@ const Story = () => {
     navigate(`/course/${courseId}`);
   };
 
+  if (storyError) {
+    return (
+      <div className="container mx-auto p-2">
+        <Card className="p-3">
+          <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Content</h2>
+          <p className="text-sm text-muted-foreground mb-2">
+            Failed to load story content: {storyError.message}
+          </p>
+          <Button onClick={handleBack} variant="outline" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoadingStory) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
@@ -139,7 +157,7 @@ const Story = () => {
         <Card className="p-3">
           <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Content</h2>
           <p className="text-sm text-muted-foreground mb-2">
-            Failed to load story content
+            No story content available
           </p>
           <Button onClick={handleBack} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-1" />
