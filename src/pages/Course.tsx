@@ -17,22 +17,13 @@ const Course = () => {
   const [selectedLectureId, setSelectedLectureId] = useState<number | null>(null);
   const [showAIConfig, setShowAIConfig] = useState<number | null>(null);
   
-  // Validate courseId is a valid number
-  const parsedCourseId = courseId ? parseInt(courseId) : null;
-  
-  // Return to home if courseId is invalid
-  if (!parsedCourseId || isNaN(parsedCourseId)) {
-    navigate('/');
-    return null;
-  }
-  
   const { data: course } = useQuery({
-    queryKey: ['course', parsedCourseId],
+    queryKey: ['course', courseId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('courses')
         .select('*')
-        .eq('id', parsedCourseId)
+        .eq('id', parseInt(courseId!))
         .single();
       
       if (error) throw error;
@@ -41,12 +32,12 @@ const Course = () => {
   });
 
   const { data: lectures, isLoading } = useQuery({
-    queryKey: ['lectures', parsedCourseId],
+    queryKey: ['lectures', courseId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lectures')
         .select('*')
-        .eq('course_id', parsedCourseId)
+        .eq('course_id', parseInt(courseId!))
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -109,7 +100,7 @@ const Course = () => {
                     <DeleteLectureDialog 
                       lectureId={lecture.id} 
                       lectureTitle={lecture.title} 
-                      courseId={parsedCourseId}
+                      courseId={parseInt(courseId!)}
                     />
                     <Button 
                       variant="outline"
@@ -139,7 +130,7 @@ const Course = () => {
 
         {showUpload && (
           <FileUpload 
-            courseId={parsedCourseId.toString()} 
+            courseId={courseId} 
             onClose={() => setShowUpload(false)}
           />
         )}
