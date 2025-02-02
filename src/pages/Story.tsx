@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LearningPathway from "@/components/story/LearningPathway";
-import { useStoryContent, useSegmentContent } from "@/hooks/useStoryContent";
+import { useStoryContent } from "@/hooks/useStoryContent";
 import { StoryContainer } from "@/components/story/StoryContainer";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -31,32 +31,20 @@ const Story = () => {
     error: storyError,
     refetch: refetchStory
   } = useStoryContent(lectureId);
-  
-  const { 
-    data: segmentContent, 
-    isLoading: isLoadingSegment 
-  } = useSegmentContent(
-    lectureId,
-    currentSegment,
-    storyContent?.segments?.[currentSegment]?.title || ''
-  );
 
   // Prefetch next segment
   useEffect(() => {
     if (storyContent?.segments && currentSegment < storyContent.segments.length - 1) {
       const nextSegment = currentSegment + 1;
-      const nextSegmentTitle = storyContent.segments[nextSegment].title;
-      
-      // Prefetch using queryClient instead of directly calling the hook
       queryClient.prefetchQuery({
-        queryKey: ['segment-content', lectureId, nextSegment],
-        queryFn: () => fetch(`/api/segment-content/${lectureId}/${nextSegment}/${nextSegmentTitle}`).then(res => res.json())
+        queryKey: ['story-content', lectureId, nextSegment],
+        queryFn: () => fetch(`/api/segment-content/${lectureId}/${nextSegment}`).then(res => res.json())
       });
     }
   }, [currentSegment, storyContent, lectureId, queryClient]);
 
   const handleContinue = () => {
-    if (!storyContent?.segments || !segmentContent) return;
+    if (!storyContent?.segments) return;
 
     const totalSteps = 4;
     if (currentStep < totalSteps - 1) {
@@ -96,13 +84,13 @@ const Story = () => {
   };
 
   const handleCorrectAnswer = () => {
-    if (!storyContent?.segments || !segmentContent) return;
+    if (!storyContent?.segments) return;
     
     const currentSegmentData = storyContent.segments[currentSegment];
     const questionIndex = currentStep - 2;
-    const questionId = segmentContent.questions[questionIndex].id;
+    const questionId = currentSegmentData.questions?.[questionIndex]?.id;
     
-    if (!attemptedQuestions.has(questionId)) {
+    if (questionId && !attemptedQuestions.has(questionId)) {
       setSegmentScores(prev => ({
         ...prev,
         [currentSegmentData.id]: (prev[currentSegmentData.id] || 0) + POINTS_PER_CORRECT_ANSWER
@@ -113,12 +101,13 @@ const Story = () => {
   };
 
   const handleWrongAnswer = () => {
-    if (!storyContent?.segments || !segmentContent) return;
+    if (!storyContent?.segments) return;
     
+    const currentSegmentData = storyContent.segments[currentSegment];
     const questionIndex = currentStep - 2;
-    const questionId = segmentContent.questions[questionIndex].id;
+    const questionId = currentSegmentData.questions?.[questionIndex]?.id;
     
-    if (!attemptedQuestions.has(questionId)) {
+    if (questionId && !attemptedQuestions.has(questionId)) {
       setAttemptedQuestions(prev => new Set([...prev, questionId]));
     }
     handleContinue();
@@ -129,7 +118,7 @@ const Story = () => {
   };
 
   // Handle loading state
-  if (isLoadingStory || isLoadingSegment) {
+  if (isLoadingStory) {
     return (
       <div className="container mx-auto p-2">
         <Card className="p-4">
@@ -229,8 +218,8 @@ const Story = () => {
               segments: [{
                 id: currentSegmentData.id,
                 title: currentSegmentData.title,
-                slides: segmentContent?.slides,
-                questions: segmentContent?.questions
+                slides: currentSegmentData.slides,
+                questions: currentSegmentData.questions
               }]
             }}
             currentSegment={0}
