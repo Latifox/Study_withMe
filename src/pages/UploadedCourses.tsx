@@ -24,7 +24,7 @@ const UploadedCourses = () => {
       }
       
       console.log('Fetched courses:', data);
-      return data;
+      return data || [];
     }
   });
 

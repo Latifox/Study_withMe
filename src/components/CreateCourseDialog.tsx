@@ -26,21 +26,29 @@ export function CreateCourseDialog() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
+      console.log('Creating course with title:', title.trim());
+      const { data, error } = await supabase
         .from('courses')
-        .insert([{ title: title.trim() }]);
+        .insert([{ title: title.trim() }])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating course:', error);
+        throw error;
+      }
 
+      console.log('Course created successfully:', data);
       toast({
         title: "Success",
         description: "Course created successfully",
       });
       
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['uploaded-courses'] });
       setTitle("");
       setOpen(false);
     } catch (error) {
+      console.error('Error in handleSubmit:', error);
       toast({
         title: "Error",
         description: "Failed to create course",
