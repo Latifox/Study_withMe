@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -33,54 +32,7 @@ serve(async (req) => {
       throw lectureError;
     }
 
-    console.log('Successfully fetched lecture content, generating story...');
-
-    // Create a default story structure if no content is available
-    const defaultStoryContent = {
-      chapters: [
-        {
-          id: "chapter1",
-          title: "Main Chapter",
-          nodes: [
-            {
-              id: "node1",
-              title: "Introduction",
-              type: "concept",
-              difficulty: "beginner",
-              prerequisites: [],
-              points: 100,
-              description: "Getting started with the basics"
-            }
-          ],
-          mainDescription: "Main chapter content",
-          initialQuizzes: [
-            {
-              type: "true_false",
-              question: "Is this a sample question?",
-              correctAnswer: true,
-              explanation: "This is a sample explanation"
-            }
-          ],
-          relatedConcepts: [
-            {
-              id: "related1",
-              title: "Related Topic 1",
-              description: "Description of related topic 1"
-            }
-          ],
-          finalQuizzes: [
-            {
-              type: "multiple_choice",
-              question: "Sample multiple choice question?",
-              options: ["Option 1", "Option 2", "Option 3", "Option 4"],
-              correctAnswer: "Option 1",
-              explanation: "Explanation for the correct answer",
-              relatedConceptIds: ["related1"]
-            }
-          ]
-        }
-      ]
-    };
+    console.log('Successfully fetched lecture content, generating segments...');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -93,51 +45,47 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating interactive learning content. Analyze the lecture content and create a structured learning journey. 
+            content: `You are an expert at creating educational content. Analyze the lecture content and break it down into logical segments.
+            For each segment:
+            1. Create 2 detailed theory slides that explain the concepts using markdown formatting (bold, lists, bullet points)
+            2. Generate 2 quiz questions based on the content just presented
             
-            Important: Return ONLY valid JSON without any markdown formatting or additional text.
+            Create as many segments as needed to cover all important content from the lecture.
+            
+            Return ONLY valid JSON without any markdown formatting or additional text.
             
             The response should follow this exact structure:
             {
-              "chapters": [
+              "segments": [
                 {
                   "id": "string (unique identifier)",
-                  "title": "string (key concept name)",
-                  "nodes": [
+                  "title": "string (segment topic)",
+                  "slides": [
                     {
-                      "id": "string (unique identifier)",
-                      "title": "string",
-                      "type": "concept" | "quiz" | "challenge",
-                      "difficulty": "beginner" | "intermediate" | "advanced",
-                      "prerequisites": ["array of node ids"],
-                      "points": number,
-                      "description": "string"
+                      "id": "string",
+                      "content": "string (markdown formatted content)"
+                    },
+                    {
+                      "id": "string",
+                      "content": "string (markdown formatted content)"
                     }
                   ],
-                  "mainDescription": "string (detailed explanation of the concept)",
-                  "initialQuizzes": [
+                  "questions": [
                     {
-                      "type": "true_false",
-                      "question": "string",
-                      "correctAnswer": boolean,
-                      "explanation": "string (detailed explanation for wrong answers)"
-                    }
-                  ],
-                  "relatedConcepts": [
-                    {
-                      "id": "string (unique identifier)",
-                      "title": "string",
-                      "description": "string (detailed explanation)"
-                    }
-                  ],
-                  "finalQuizzes": [
-                    {
+                      "id": "string",
                       "type": "multiple_choice",
                       "question": "string",
                       "options": ["array of 4 strings"],
                       "correctAnswer": "string (must match one of the options)",
-                      "explanation": "string (detailed explanation for wrong answers)",
-                      "relatedConceptIds": ["array of concept ids"]
+                      "explanation": "string"
+                    },
+                    {
+                      "id": "string",
+                      "type": "multiple_choice",
+                      "question": "string",
+                      "options": ["array of 4 strings"],
+                      "correctAnswer": "string (must match one of the options)",
+                      "explanation": "string"
                     }
                   ]
                 }
@@ -175,8 +123,7 @@ serve(async (req) => {
     } catch (error) {
       console.error('Error parsing story content:', error);
       console.error('Raw content:', data.choices[0].message.content);
-      // Return default content instead of throwing
-      storyContent = defaultStoryContent;
+      throw new Error(`Failed to parse story content: ${error.message}`);
     }
 
     return new Response(
@@ -185,13 +132,11 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in generate-story-content function:', error);
-    // Return default content on error
     return new Response(
-      JSON.stringify({ 
-        storyContent: defaultStoryContent 
-      }),
+      JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }
