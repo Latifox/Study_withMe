@@ -9,12 +9,19 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { lectureContent } = await req.json();
+    
+    if (!lectureContent) {
+      throw new Error('Lecture content is required');
+    }
+
+    console.log('Generating resources for lecture content:', lectureContent.substring(0, 100) + '...');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -55,7 +62,18 @@ serve(async (req) => {
     });
 
     const data = await response.json();
-    const resources = JSON.parse(data.choices[0].message.content);
+    console.log('OpenAI response received');
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI');
+    }
+
+    // Parse the content as JSON, removing any markdown formatting if present
+    const content = data.choices[0].message.content;
+    const cleanContent = content.replace(/```json\n|\n```/g, '');
+    const resources = JSON.parse(cleanContent);
+
+    console.log('Successfully parsed resources:', resources.length, 'concepts found');
 
     return new Response(JSON.stringify(resources), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
