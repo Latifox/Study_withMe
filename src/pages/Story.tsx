@@ -11,20 +11,16 @@ import StoryQuiz from "@/components/story/StoryQuiz";
 import LearningPathway from "@/components/story/LearningPathway";
 
 type StoryStep = 
-  | { type: "concept"; conceptId: string }
-  | { type: "quiz"; quizIndex: number; conceptId: string }
-  | { type: "related_concept"; conceptId: string; relatedIndex: number }
-  | { type: "final_quiz"; quizIndex: number; conceptId: string };
+  | { type: "main_concept"; slideIndex: number; conceptId: string }
+  | { type: "main_quiz"; quizIndex: number; conceptId: string }
+  | { type: "related_concept"; conceptIndex: number; slideIndex: number; conceptId: string }
+  | { type: "related_quiz"; conceptIndex: number; quizIndex: number; conceptId: string };
 
 const Story = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
-  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
-  const [currentStep, setCurrentStep] = useState<StoryStep>({ 
-    type: "concept", 
-    conceptId: "" 
-  });
-  const [storyPoints, setStoryPoints] = useState(0);
+  const [currentStep, setCurrentStep] = useState<StoryStep | null>(null);
+  const [nodePoints, setNodePoints] = useState<Record<string, number>>({});
   const [wrongAnswers, setWrongAnswers] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState<Set<string>>(new Set());
 
@@ -40,128 +36,184 @@ const Story = () => {
     }
   });
 
-  const currentChapter = storyContent?.chapters[currentChapterIndex];
-  const maxPointsPerChapter = 7; // 2 initial quizzes + 5 final quizzes
-
   const handleNodeSelect = (nodeId: string) => {
-    const node = storyContent?.chapters.find(chapter => 
-      chapter.nodes.some(n => n.id === nodeId)
-    );
+    // Only allow selection if node is available (first node or previous completed)
+    const node = storyContent?.chapters[0].nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const isFirstNode = storyContent?.chapters[0].nodes[0].id === nodeId;
+    const hasPrerequisites = node.prerequisites.every(prereq => completedNodes.has(prereq));
     
-    if (node) {
-      setCurrentStep({ type: "concept", conceptId: nodeId });
+    if (isFirstNode || hasPrerequisites) {
+      setCurrentStep({ 
+        type: "main_concept", 
+        slideIndex: 0, 
+        conceptId: nodeId 
+      });
+      // Reset points if starting node over
+      if (!nodePoints[nodeId]) {
+        setNodePoints(prev => ({ ...prev, [nodeId]: 0 }));
+      }
     }
   };
 
   const handleContinue = () => {
-    if (!currentChapter) return;
+    if (!currentStep || !storyContent) return;
 
-    if (currentStep.type === "concept") {
-      setCurrentStep({ type: "quiz", quizIndex: 0, conceptId: currentStep.conceptId });
-    } else if (currentStep.type === "quiz") {
-      const nextQuizIndex = (currentStep.quizIndex + 1);
-      if (nextQuizIndex < currentChapter.initialQuizzes.length) {
-        setCurrentStep({ type: "quiz", quizIndex: nextQuizIndex, conceptId: currentStep.conceptId });
-      } else {
-        setCurrentStep({ 
-          type: "related_concept", 
-          conceptId: currentChapter.relatedConcepts[0].id,
-          relatedIndex: 0 
-        });
-      }
-    } else if (currentStep.type === "related_concept") {
-      const nextIndex = currentStep.relatedIndex + 1;
-      if (nextIndex < currentChapter.relatedConcepts.length) {
-        setCurrentStep({ 
-          type: "related_concept",
-          conceptId: currentChapter.relatedConcepts[nextIndex].id,
-          relatedIndex: nextIndex 
-        });
-      } else {
-        setCurrentStep({ type: "final_quiz", quizIndex: 0, conceptId: currentStep.conceptId });
-      }
-    } else if (currentStep.type === "final_quiz") {
-      const nextQuizIndex = currentStep.quizIndex + 1;
-      if (nextQuizIndex < currentChapter.finalQuizzes.length) {
-        setCurrentStep({ type: "final_quiz", quizIndex: nextQuizIndex, conceptId: currentStep.conceptId });
-      } else if (storyPoints >= maxPointsPerChapter) {
-        // Move to next chapter if enough points
-        if (currentChapterIndex + 1 < storyContent.chapters.length) {
-          setCurrentChapterIndex(prev => prev + 1);
-          setCurrentStep({ type: "concept", conceptId: "" });
-          setStoryPoints(0);
-          setWrongAnswers(new Set());
+    const currentNode = storyContent.chapters[0].nodes.find(
+      n => n.id === currentStep.conceptId
+    );
+    if (!currentNode) return;
+
+    switch (currentStep.type) {
+      case "main_concept":
+        if (currentStep.slideIndex < 2) {
+          // Show next main concept slide
+          setCurrentStep({
+            ...currentStep,
+            slideIndex: currentStep.slideIndex + 1
+          });
+        } else {
+          // Move to main quiz
+          setCurrentStep({
+            type: "main_quiz",
+            quizIndex: 0,
+            conceptId: currentStep.conceptId
+          });
         }
-      }
+        break;
+
+      case "main_quiz":
+        if (currentStep.quizIndex < 3) {
+          // Show next main quiz
+          setCurrentStep({
+            ...currentStep,
+            quizIndex: currentStep.quizIndex + 1
+          });
+        } else {
+          // Move to first related concept
+          setCurrentStep({
+            type: "related_concept",
+            conceptIndex: 0,
+            slideIndex: 0,
+            conceptId: currentStep.conceptId
+          });
+        }
+        break;
+
+      case "related_concept":
+        if (currentStep.slideIndex < 1) {
+          // Show next slide of current related concept
+          setCurrentStep({
+            ...currentStep,
+            slideIndex: currentStep.slideIndex + 1
+          });
+        } else {
+          // Move to related quiz
+          setCurrentStep({
+            type: "related_quiz",
+            conceptIndex: currentStep.conceptIndex,
+            quizIndex: 0,
+            conceptId: currentStep.conceptId
+          });
+        }
+        break;
+
+      case "related_quiz":
+        if (currentStep.quizIndex < 1) {
+          // Show next quiz of current related concept
+          setCurrentStep({
+            ...currentStep,
+            quizIndex: currentStep.quizIndex + 1
+          });
+        } else if (currentStep.conceptIndex < 2) {
+          // Move to next related concept
+          setCurrentStep({
+            type: "related_concept",
+            conceptIndex: currentStep.conceptIndex + 1,
+            slideIndex: 0,
+            conceptId: currentStep.conceptId
+          });
+        } else {
+          // Check if enough points to complete node
+          const points = nodePoints[currentStep.conceptId] || 0;
+          if (points >= 75) {
+            setCompletedNodes(prev => new Set([...prev, currentStep.conceptId]));
+          }
+          setCurrentStep(null);
+        }
+        break;
     }
   };
 
   const handleCorrectAnswer = () => {
-    if (!wrongAnswers.has(JSON.stringify(currentStep))) {
-      setStoryPoints(prev => prev + 1);
-      setCompletedNodes(prev => new Set([...prev, currentStep.conceptId]));
+    if (!currentStep) return;
+    
+    // Add 10 points if this question hasn't been answered wrong before
+    const questionKey = JSON.stringify(currentStep);
+    if (!wrongAnswers.has(questionKey)) {
+      setNodePoints(prev => ({
+        ...prev,
+        [currentStep.conceptId]: (prev[currentStep.conceptId] || 0) + 10
+      }));
     }
     handleContinue();
   };
 
   const handleWrongAnswer = () => {
-    setWrongAnswers(prev => new Set([...prev, JSON.stringify(currentStep)]));
-    if (currentStep.type === "final_quiz") {
-      const relatedConceptIds = currentChapter?.finalQuizzes[currentStep.quizIndex].relatedConceptIds;
-      if (relatedConceptIds?.length) {
-        setCurrentStep({ 
-          type: "related_concept",
-          conceptId: relatedConceptIds[0],
-          relatedIndex: currentChapter.relatedConcepts.findIndex(c => c.id === relatedConceptIds[0])
-        });
-      }
-    }
+    if (!currentStep) return;
+    
+    // Mark this question as answered incorrectly
+    const questionKey = JSON.stringify(currentStep);
+    setWrongAnswers(prev => new Set([...prev, questionKey]));
   };
 
   const renderCurrentStep = () => {
-    if (!currentChapter) return null;
+    if (!currentStep || !storyContent) return null;
+
+    const currentNode = storyContent.chapters[0].nodes.find(
+      n => n.id === currentStep.conceptId
+    );
+    if (!currentNode) return null;
 
     switch (currentStep.type) {
-      case "concept":
-        const concept = currentChapter.nodes.find(n => n.id === currentStep.conceptId);
-        return concept ? (
+      case "main_concept":
+        return (
           <ConceptDescription
-            title={concept.title}
-            description={currentChapter.mainDescription}
+            title={`${currentNode.title} - Part ${currentStep.slideIndex + 1}`}
+            description={storyContent.chapters[0].mainDescription}
             onContinue={handleContinue}
           />
-        ) : null;
+        );
 
-      case "quiz":
+      case "main_quiz":
         return (
           <StoryQuiz
-            question={currentChapter.initialQuizzes[currentStep.quizIndex]}
+            question={storyContent.chapters[0].initialQuizzes[currentStep.quizIndex]}
             onCorrectAnswer={handleCorrectAnswer}
             onWrongAnswer={handleWrongAnswer}
           />
         );
 
-      case "related_concept":
-        const relatedConcept = currentChapter.relatedConcepts[currentStep.relatedIndex];
-        return relatedConcept ? (
+      case "related_concept": {
+        const relatedConcept = storyContent.chapters[0].relatedConcepts[currentStep.conceptIndex];
+        return (
           <ConceptDescription
-            title={relatedConcept.title}
+            title={`${relatedConcept.title} - Part ${currentStep.slideIndex + 1}`}
             description={relatedConcept.description}
             onContinue={handleContinue}
           />
-        ) : null;
+        );
+      }
 
-      case "final_quiz":
+      case "related_quiz":
         return (
           <StoryQuiz
-            question={currentChapter.finalQuizzes[currentStep.quizIndex]}
+            question={storyContent.chapters[0].finalQuizzes[currentStep.quizIndex]}
             onCorrectAnswer={handleCorrectAnswer}
             onWrongAnswer={handleWrongAnswer}
           />
         );
-
-      default:
-        return null;
     }
   };
 
@@ -185,23 +237,25 @@ const Story = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Course
           </Button>
-          <StoryProgress
-            currentPoints={storyPoints}
-            maxPoints={maxPointsPerChapter}
-          />
+          {currentStep && (
+            <StoryProgress
+              currentPoints={nodePoints[currentStep.conceptId] || 0}
+              maxPoints={100}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="order-2 md:order-1">
             <LearningPathway
-              nodes={currentChapter?.nodes || []}
+              nodes={storyContent?.chapters[0].nodes || []}
               completedNodes={completedNodes}
-              currentNode={currentStep.conceptId}
+              currentNode={currentStep?.conceptId || null}
               onNodeSelect={handleNodeSelect}
             />
           </div>
           
-          {currentStep.conceptId && (
+          {currentStep && (
             <div className="order-1 md:order-2">
               <Card className="p-6">
                 {renderCurrentStep()}
