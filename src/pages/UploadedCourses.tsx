@@ -9,18 +9,36 @@ import { supabase } from "@/integrations/supabase/client";
 const UploadedCourses = () => {
   const navigate = useNavigate();
   
-  const { data: courses, isLoading } = useQuery({
-    queryKey: ['uploaded-courses'],
+  const { data: courses, isLoading, error } = useQuery({
+    queryKey: ['courses'],
     queryFn: async () => {
+      console.log('Fetching courses for user...');
       const { data, error } = await supabase
         .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(`
+          id,
+          title,
+          created_at,
+          course_access!inner (
+            access_type
+          )
+        `)
+        .eq('course_access.user_email', 'mihailescu77@gmail.com')
+        .eq('course_access.access_type', 'owner');
+
+      if (error) {
+        console.error('Error fetching courses:', error);
+        throw error;
+      }
       
-      if (error) throw error;
+      console.log('Fetched courses:', data);
       return data;
     }
   });
+
+  if (error) {
+    console.error('Error in courses query:', error);
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">

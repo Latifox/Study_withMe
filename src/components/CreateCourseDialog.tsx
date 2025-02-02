@@ -26,11 +26,25 @@ export function CreateCourseDialog() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
+      // First, create the course
+      const { data: courseData, error: courseError } = await supabase
         .from('courses')
-        .insert([{ title: title.trim() }]);
+        .insert([{ title: title.trim() }])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (courseError) throw courseError;
+
+      // Then, create the course access record
+      const { error: accessError } = await supabase
+        .from('course_access')
+        .insert([{
+          course_id: courseData.id,
+          user_email: 'mihailescu77@gmail.com',
+          access_type: 'owner'
+        }]);
+
+      if (accessError) throw accessError;
 
       toast({
         title: "Success",
@@ -41,6 +55,7 @@ export function CreateCourseDialog() {
       setTitle("");
       setOpen(false);
     } catch (error) {
+      console.error('Error creating course:', error);
       toast({
         title: "Error",
         description: "Failed to create course",
