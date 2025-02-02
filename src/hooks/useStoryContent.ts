@@ -93,7 +93,12 @@ export const useSegmentContent = (
         .single();
 
       if (existingSegment?.content) {
-        return existingSegment.content as SegmentContent;
+        // Type assertion to ensure the content matches SegmentContent interface
+        const content = existingSegment.content as unknown as SegmentContent;
+        if (!content.slides || !content.questions) {
+          throw new Error('Invalid segment content structure');
+        }
+        return content;
       }
 
       const { data: lecture } = await supabase
@@ -115,17 +120,23 @@ export const useSegmentContent = (
 
       if (error) throw error;
 
+      // Type assertion after validating the structure
+      const content = generatedContent.content as unknown as SegmentContent;
+      if (!content.slides || !content.questions) {
+        throw new Error('Invalid generated content structure');
+      }
+
       const { error: updateError } = await supabase
         .from('story_segment_contents')
         .update({
-          content: generatedContent.content,
+          content: content,
           is_generated: true
         })
         .eq('segment_number', segmentNumber);
 
       if (updateError) throw updateError;
 
-      return generatedContent.content as SegmentContent;
+      return content;
     },
     enabled: !!lectureId && segmentNumber >= 0 && !!segmentTitle,
     gcTime: 1000 * 60 * 60,
