@@ -48,13 +48,13 @@ const UploadedCourses = () => {
           <div className="text-center py-8">
             <p className="text-gray-600">Loading courses...</p>
           </div>
-        ) : courses?.length === 0 ? (
+        ) : !courses || courses.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-600">No courses uploaded yet. Create your first course!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses?.map((course) => (
+            {courses.map((course) => (
               <Card key={course.id} className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
                   <div className="flex justify-between items-start">
