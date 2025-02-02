@@ -12,12 +12,18 @@ const UploadedCourses = () => {
   const { data: courses, isLoading } = useQuery({
     queryKey: ['uploaded-courses'],
     queryFn: async () => {
+      console.log('Fetching courses from Supabase...');
       const { data, error } = await supabase
         .from('courses')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching courses:', error);
+        throw error;
+      }
+      
+      console.log('Fetched courses:', data);
       return data;
     }
   });
@@ -28,7 +34,7 @@ const UploadedCourses = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-800">My Uploaded Courses</h1>
-            <p className="text-gray-600 mt-2">Manage your created courses</p>
+            <p className="text-gray-600 mt-2">Manage your uploaded courses</p>
           </div>
           <div className="flex gap-4">
             <Button variant="outline" onClick={() => navigate('/')}>
@@ -38,13 +44,17 @@ const UploadedCourses = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {isLoading ? (
-            <p>Loading courses...</p>
-          ) : courses?.length === 0 ? (
-            <p>No courses yet. Create your first course!</p>
-          ) : (
-            courses?.map((course) => (
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600">Loading courses...</p>
+          </div>
+        ) : courses?.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600">No courses uploaded yet. Create your first course!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {courses?.map((course) => (
               <Card key={course.id} className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -66,9 +76,9 @@ const UploadedCourses = () => {
                   </Button>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
