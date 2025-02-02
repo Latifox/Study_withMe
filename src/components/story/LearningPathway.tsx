@@ -47,20 +47,25 @@ const LearningPathway = ({
     }
   };
 
+  // Calculate spacing for 10 nodes
+  const nodeSpacing = 100 / (nodes.length - 1);
+
   return (
     <div className="relative w-full h-[calc(100vh-14rem)] flex items-center justify-center px-4">
       <div className="absolute left-[65%] h-full w-0.5 bg-gray-200 -translate-x-1/2" />
       
-      <div className="relative flex flex-col justify-between h-full py-4 ml-[65%] -translate-x-1/2">
+      <div className="relative flex flex-col justify-between h-full py-8 ml-[65%] -translate-x-1/2">
         {nodes.map((node, index) => {
           const status = getNodeStatus(node);
           const isActive = currentNode === node.id;
           const hasPrerequisites = node.prerequisites.length > 0;
+          const topPosition = `${index * nodeSpacing}%`;
           
           return (
             <motion.div
               key={node.id}
-              className="relative flex items-center justify-start gap-4"
+              className="absolute flex items-center justify-start gap-4"
+              style={{ top: topPosition }}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
