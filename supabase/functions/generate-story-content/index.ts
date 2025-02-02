@@ -55,6 +55,17 @@ serve(async (req) => {
                 {
                   "id": "string (unique identifier)",
                   "title": "string (key concept name)",
+                  "nodes": [
+                    {
+                      "id": "string (unique identifier)",
+                      "title": "string",
+                      "type": "concept" | "quiz" | "challenge",
+                      "difficulty": "beginner" | "intermediate" | "advanced",
+                      "prerequisites": ["array of node ids"],
+                      "points": number,
+                      "description": "string"
+                    }
+                  ],
                   "mainDescription": "string (detailed explanation of the concept)",
                   "initialQuizzes": [
                     {

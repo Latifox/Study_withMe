@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import StoryProgress from "@/components/story/StoryProgress";
 import ConceptDescription from "@/components/story/ConceptDescription";
 import StoryQuiz from "@/components/story/StoryQuiz";
+import LearningPathway from "@/components/story/LearningPathway";
 
 type StoryStep = 
   | { type: "concept"; conceptId: string }
@@ -25,6 +26,7 @@ const Story = () => {
   });
   const [storyPoints, setStoryPoints] = useState(0);
   const [wrongAnswers, setWrongAnswers] = useState<Set<string>>(new Set());
+  const [completedNodes, setCompletedNodes] = useState<Set<string>>(new Set());
 
   const { data: storyContent, isLoading } = useQuery({
     queryKey: ['story-content', lectureId],
@@ -40,6 +42,16 @@ const Story = () => {
 
   const currentChapter = storyContent?.chapters[currentChapterIndex];
   const maxPointsPerChapter = 7; // 2 initial quizzes + 5 final quizzes
+
+  const handleNodeSelect = (nodeId: string) => {
+    const node = storyContent?.chapters.find(chapter => 
+      chapter.nodes.some(n => n.id === nodeId)
+    );
+    
+    if (node) {
+      setCurrentStep({ type: "concept", conceptId: nodeId });
+    }
+  };
 
   const handleContinue = () => {
     if (!currentChapter) return;
@@ -87,13 +99,13 @@ const Story = () => {
   const handleCorrectAnswer = () => {
     if (!wrongAnswers.has(JSON.stringify(currentStep))) {
       setStoryPoints(prev => prev + 1);
+      setCompletedNodes(prev => new Set([...prev, currentStep.conceptId]));
     }
     handleContinue();
   };
 
   const handleWrongAnswer = () => {
     setWrongAnswers(prev => new Set([...prev, JSON.stringify(currentStep)]));
-    // Go back to the related concept description
     if (currentStep.type === "final_quiz") {
       const relatedConceptIds = currentChapter?.finalQuizzes[currentStep.quizIndex].relatedConceptIds;
       if (relatedConceptIds?.length) {
@@ -103,46 +115,6 @@ const Story = () => {
           relatedIndex: currentChapter.relatedConcepts.findIndex(c => c.id === relatedConceptIds[0])
         });
       }
-    }
-  };
-
-  const renderCurrentStep = () => {
-    if (!currentChapter) return null;
-
-    switch (currentStep.type) {
-      case "concept":
-        return (
-          <ConceptDescription
-            title={currentChapter.title}
-            description={currentChapter.mainDescription}
-            onContinue={handleContinue}
-          />
-        );
-      case "quiz":
-        return (
-          <StoryQuiz
-            question={currentChapter.initialQuizzes[currentStep.quizIndex]}
-            onCorrectAnswer={handleCorrectAnswer}
-            onWrongAnswer={handleWrongAnswer}
-          />
-        );
-      case "related_concept":
-        const relatedConcept = currentChapter.relatedConcepts[currentStep.relatedIndex];
-        return (
-          <ConceptDescription
-            title={relatedConcept.title}
-            description={relatedConcept.description}
-            onContinue={handleContinue}
-          />
-        );
-      case "final_quiz":
-        return (
-          <StoryQuiz
-            question={currentChapter.finalQuizzes[currentStep.quizIndex]}
-            onCorrectAnswer={handleCorrectAnswer}
-            onWrongAnswer={handleWrongAnswer}
-          />
-        );
     }
   };
 
@@ -169,6 +141,15 @@ const Story = () => {
           <StoryProgress
             currentPoints={storyPoints}
             maxPoints={maxPointsPerChapter}
+          />
+        </div>
+
+        <div className="mb-8">
+          <LearningPathway
+            nodes={currentChapter?.nodes || []}
+            completedNodes={completedNodes}
+            currentNode={currentStep.conceptId}
+            onNodeSelect={handleNodeSelect}
           />
         </div>
 
