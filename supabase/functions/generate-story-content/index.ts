@@ -16,13 +16,11 @@ serve(async (req) => {
     const { lectureId } = await req.json();
     console.log('Generating story content for lecture:', lectureId);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content, title')
@@ -41,7 +39,6 @@ serve(async (req) => {
     console.log('Fetched lecture title:', lecture.title);
     console.log('Content length:', lecture.content.length);
 
-    // Generate story content using OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -49,12 +46,12 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4-1106-preview',
         messages: [
           {
             role: 'system',
             content: `You are an expert at creating educational content. Your task is to create an engaging learning journey based on lecture material. 
-            Format your response as a JSON object with this exact structure:
+            You must respond with a valid JSON object following this exact structure:
             {
               "segments": [
                 {
@@ -90,8 +87,7 @@ serve(async (req) => {
                   ]
                 }
               ]
-            }
-            Create 3 segments, each with 2 slides and 2 questions. Make the content engaging and educational.`
+            }`
           },
           {
             role: 'user',
@@ -99,7 +95,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
-        max_tokens: 2500,
+        max_tokens: 4000,
       }),
     });
 
@@ -119,8 +115,9 @@ serve(async (req) => {
 
     let storyContent;
     try {
-      storyContent = JSON.parse(aiResponseData.choices[0].message.content);
-      console.log('Successfully parsed AI response into story content');
+      const rawContent = aiResponseData.choices[0].message.content;
+      console.log('Raw AI response:', rawContent);
+      storyContent = JSON.parse(rawContent);
       
       // Validate the structure
       if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
@@ -137,10 +134,11 @@ serve(async (req) => {
         }
       });
 
+      console.log('Successfully validated story content structure');
+
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
-      console.error('Raw AI response:', aiResponseData.choices[0].message.content);
-      throw new Error('Failed to parse AI response');
+      throw new Error(`Failed to parse AI response: ${parseError.message}`);
     }
 
     return new Response(
