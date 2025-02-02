@@ -7,8 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,6 +16,7 @@ serve(async (req) => {
     const { lectureId } = await req.json();
     console.log('Generating story content for lecture:', lectureId);
 
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -32,18 +31,21 @@ serve(async (req) => {
 
     if (lectureError) {
       console.error('Error fetching lecture:', lectureError);
-      throw lectureError;
+      throw new Error('Failed to fetch lecture content');
     }
 
     if (!lecture?.content) {
       throw new Error('No lecture content found');
     }
 
+    console.log('Fetched lecture title:', lecture.title);
+    console.log('Content length:', lecture.content.length);
+
     // Generate story content using OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -51,14 +53,45 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into engaging, story-like segments. 
-            Create a learning journey that teaches the material in an engaging way. 
-            Each segment should have 2 slides explaining concepts and 2 multiple choice questions to test understanding.
-            Format your response as a JSON object with segments array. Each segment should have:
-            - id (string)
-            - title (string) 
-            - slides array with 2 objects containing id and content (markdown)
-            - questions array with 2 objects containing id, type ("multiple_choice"), question, options array, correctAnswer, and explanation`
+            content: `You are an expert at creating educational content. Your task is to create an engaging learning journey based on lecture material. 
+            Format your response as a JSON object with this exact structure:
+            {
+              "segments": [
+                {
+                  "id": "segment-1",
+                  "title": "Section Title",
+                  "slides": [
+                    {
+                      "id": "slide-1-1",
+                      "content": "Slide content in markdown format"
+                    },
+                    {
+                      "id": "slide-1-2",
+                      "content": "Slide content in markdown format"
+                    }
+                  ],
+                  "questions": [
+                    {
+                      "id": "question-1-1",
+                      "type": "multiple_choice",
+                      "question": "Question text",
+                      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                      "correctAnswer": "Correct option text",
+                      "explanation": "Explanation of the correct answer"
+                    },
+                    {
+                      "id": "question-1-2",
+                      "type": "multiple_choice",
+                      "question": "Question text",
+                      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                      "correctAnswer": "Correct option text",
+                      "explanation": "Explanation of the correct answer"
+                    }
+                  ]
+                }
+              ]
+            }
+            Create 3 segments, each with 2 slides and 2 questions. Make the content engaging and educational.`
           },
           {
             role: 'user',
@@ -66,22 +99,47 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
+        max_tokens: 2500,
       }),
     });
 
-    const aiResponse = await response.json();
-    console.log('AI Response received');
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error('Failed to generate content with OpenAI');
+    }
 
-    if (!aiResponse.choices?.[0]?.message?.content) {
-      throw new Error('Invalid AI response');
+    const aiResponseData = await openAIResponse.json();
+    console.log('Received response from OpenAI');
+
+    if (!aiResponseData.choices?.[0]?.message?.content) {
+      console.error('Invalid AI response structure:', aiResponseData);
+      throw new Error('Invalid AI response structure');
     }
 
     let storyContent;
     try {
-      storyContent = JSON.parse(aiResponse.choices[0].message.content);
+      storyContent = JSON.parse(aiResponseData.choices[0].message.content);
       console.log('Successfully parsed AI response into story content');
-    } catch (e) {
-      console.error('Error parsing AI response:', e);
+      
+      // Validate the structure
+      if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
+        throw new Error('Invalid story content structure: missing segments array');
+      }
+
+      // Validate each segment
+      storyContent.segments.forEach((segment: any, index: number) => {
+        if (!segment.id || !segment.title || !Array.isArray(segment.slides) || !Array.isArray(segment.questions)) {
+          throw new Error(`Invalid segment structure at index ${index}`);
+        }
+        if (segment.slides.length !== 2 || segment.questions.length !== 2) {
+          throw new Error(`Incorrect number of slides or questions in segment ${index}`);
+        }
+      });
+
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError);
+      console.error('Raw AI response:', aiResponseData.choices[0].message.content);
       throw new Error('Failed to parse AI response');
     }
 
@@ -89,6 +147,7 @@ serve(async (req) => {
       JSON.stringify({ storyContent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error in generate-story-content function:', error);
     return new Response(
