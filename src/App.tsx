@@ -1,14 +1,14 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Root from "@/components/Root";
-import NotFound from "@/components/NotFound";
-import Index from "@/pages/Index";
-import Course from "@/pages/Course";
-import LectureChat from "@/pages/LectureChat";
-import LectureSummary from "@/pages/LectureSummary";
-import LectureSummaryFull from "@/pages/LectureSummaryFull";
-import StudyPlan from "@/pages/StudyPlan";
-import Resources from "@/pages/Resources";
-import TakeQuiz from "@/pages/TakeQuiz";
+import Root from "./components/Root";
+import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
+import Course from "./pages/Course";
+import LectureChat from "./pages/LectureChat";
+import LectureSummary from "./pages/LectureSummary";
+import LectureSummaryFull from "./pages/LectureSummaryFull";
+import StudyPlan from "./pages/StudyPlan";
+import Resources from "./pages/Resources";
+import TakeQuiz from "./pages/TakeQuiz";
 
 const router = createBrowserRouter([
   {
