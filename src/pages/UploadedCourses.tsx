@@ -18,8 +18,13 @@ const UploadedCourses = () => {
         .select(`
           id,
           title,
-          created_at
+          created_at,
+          course_access!inner (
+            access_type
+          )
         `)
+        .eq('course_access.user_email', 'mihailescu77@gmail.com')
+        .eq('course_access.access_type', 'owner')
         .order('created_at', { ascending: false });
 
       if (error) {
