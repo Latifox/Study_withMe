@@ -79,17 +79,13 @@ export const useStoryContent = (lectureId: string | undefined) => {
           console.log('Processing segment:', segment);
           const content = segment.content || {};
           
-          // Ensure we have the required structure
-          const processedSegment = {
+          return {
             id: `segment-${segment.segment_number + 1}`,
             title: segment.title,
             description: content.description || '',
-            slides: Array.isArray(content.slides) ? content.slides : [],
-            questions: Array.isArray(content.questions) ? content.questions : []
+            slides: content.slides || [],
+            questions: content.questions || []
           };
-          
-          console.log('Processed segment:', processedSegment);
-          return processedSegment;
         }) || [];
 
       console.log('Final processed segments:', sortedSegments);
@@ -98,46 +94,6 @@ export const useStoryContent = (lectureId: string | undefined) => {
         segments: sortedSegments
       };
     },
-    gcTime: 1000 * 60 * 60,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false
-  });
-};
-
-export const useSegmentContent = (
-  lectureId: string | undefined,
-  segmentNumber: number,
-  segmentTitle: string
-) => {
-  return useQuery({
-    queryKey: ['segment-content', lectureId, segmentNumber],
-    queryFn: async () => {
-      if (!lectureId) throw new Error('Lecture ID is required');
-      const numericLectureId = parseInt(lectureId, 10);
-      if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
-
-      const { data: segment, error } = await supabase
-        .from('story_segment_contents')
-        .select('content')
-        .eq('segment_number', segmentNumber)
-        .single();
-
-      if (error) throw error;
-      if (!segment?.content) {
-        throw new Error('No segment content found');
-      }
-
-      // Type assertion after validating structure
-      const content = segment.content as unknown as SegmentContent;
-      if (!content.slides || !content.questions) {
-        throw new Error('Invalid segment content structure');
-      }
-
-      return content;
-    },
-    enabled: !!lectureId && segmentNumber >= 0 && !!segmentTitle,
     gcTime: 1000 * 60 * 60,
     staleTime: Infinity,
     refetchOnWindowFocus: false,

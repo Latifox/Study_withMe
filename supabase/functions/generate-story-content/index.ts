@@ -36,7 +36,7 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    // Create story content entry first
+    // Create story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
@@ -56,7 +56,7 @@ serve(async (req) => {
     }
 
     // Generate segments with proper content structure
-    const segmentInserts = Array.from({ length: 3 }, (_, i) => ({
+    const segments = Array.from({ length: 3 }, (_, i) => ({
       story_content_id: storyContent.id,
       segment_number: i,
       title: `Part ${i + 1}`,
@@ -95,7 +95,7 @@ serve(async (req) => {
 
     const { error: segmentError } = await supabaseClient
       .from('story_segment_contents')
-      .insert(segmentInserts);
+      .insert(segments);
 
     if (segmentError) {
       console.error('Error inserting segments:', segmentError);
@@ -103,7 +103,7 @@ serve(async (req) => {
     }
 
     // Return the processed content
-    const segments = segmentInserts.map(segment => ({
+    const processedSegments = segments.map(segment => ({
       id: `segment-${segment.segment_number + 1}`,
       title: segment.title,
       description: segment.content.description,
@@ -113,7 +113,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        storyContent: { segments }
+        storyContent: { segments: processedSegments }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
