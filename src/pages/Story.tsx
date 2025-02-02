@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import LearningPathway from "@/components/story/LearningPathway";
+import { useQueryClient } from "@tanstack/react-query";
 import { useStoryContent } from "@/hooks/useStoryContent";
 import { StoryContainer } from "@/components/story/StoryContainer";
-import { useQueryClient } from "@tanstack/react-query";
+import LearningPathway from "@/components/story/LearningPathway";
+import StoryHeader from "@/components/story/StoryHeader";
+import StoryLayout from "@/components/story/StoryLayout";
+import StoryLoading from "@/components/story/StoryLoading";
+import StoryError from "@/components/story/StoryError";
 
 const POINTS_PER_CORRECT_ANSWER = 5;
-const REQUIRED_SCORE_PERCENTAGE = 75;
 const TOTAL_QUESTIONS_PER_SEGMENT = 2;
+const REQUIRED_SCORE_PERCENTAGE = 75;
 
 const Story = () => {
   const { courseId, lectureId } = useParams();
@@ -29,7 +30,6 @@ const Story = () => {
     data: storyContent, 
     isLoading: isLoadingStory,
     error: storyError,
-    refetch: refetchStory
   } = useStoryContent(lectureId);
 
   // Prefetch next segment
@@ -42,6 +42,10 @@ const Story = () => {
       });
     }
   }, [currentSegment, storyContent, lectureId, queryClient]);
+
+  const handleBack = () => {
+    navigate(`/course/${courseId}`);
+  };
 
   const handleContinue = () => {
     if (!storyContent?.segments) return;
@@ -113,58 +117,29 @@ const Story = () => {
     handleContinue();
   };
 
-  const handleBack = () => {
-    navigate(`/course/${courseId}`);
-  };
-
-  // Handle loading state
   if (isLoadingStory) {
     return (
       <div className="container mx-auto p-2">
-        <Card className="p-4">
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <p className="text-sm text-muted-foreground">
-              Loading story content...
-            </p>
-          </div>
-        </Card>
+        <StoryLoading />
       </div>
     );
   }
 
-  // Handle error state
   if (storyError) {
     return (
       <div className="container mx-auto p-2">
-        <Card className="p-3">
-          <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Content</h2>
-          <p className="text-sm text-muted-foreground mb-2">
-            Failed to load story content: {storyError.message}
-          </p>
-          <Button onClick={handleBack} variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
-        </Card>
+        <StoryError 
+          message={storyError instanceof Error ? storyError.message : "Failed to load story content"}
+          onBack={handleBack}
+        />
       </div>
     );
   }
 
-  // Handle case when content is still being generated
   if (!storyContent?.segments?.length) {
     return (
       <div className="container mx-auto p-2">
-        <Card className="p-4">
-          <div className="flex flex-col items-center justify-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-center text-muted-foreground">
-              Generating story content...
-              <br />
-              This may take a few moments.
-            </p>
-          </div>
-        </Card>
+        <StoryLoading />
       </div>
     );
   }
@@ -182,37 +157,23 @@ const Story = () => {
 
   return (
     <div className="container mx-auto p-2">
-      <div className="mb-2">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="gap-1"
-          size="sm"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          Back
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div className="md:col-span-1">
-          <Card className="p-2">
-            <LearningPathway
-              nodes={pathwayNodes}
-              completedNodes={completedNodes}
-              currentNode={currentSegmentData.id}
-              onNodeSelect={(nodeId) => {
-                const index = storyContent.segments.findIndex(s => s.id === nodeId);
-                if (index !== -1 && completedNodes.has(storyContent.segments[index].id)) {
-                  setCurrentSegment(index);
-                  setCurrentStep(0);
-                }
-              }}
-            />
-          </Card>
-        </div>
-
-        <div className="md:col-span-2">
+      <StoryHeader onBack={handleBack} />
+      <StoryLayout
+        pathwaySection={
+          <LearningPathway
+            nodes={pathwayNodes}
+            completedNodes={completedNodes}
+            currentNode={currentSegmentData.id}
+            onNodeSelect={(nodeId) => {
+              const index = storyContent.segments.findIndex(s => s.id === nodeId);
+              if (index !== -1 && completedNodes.has(storyContent.segments[index].id)) {
+                setCurrentSegment(index);
+                setCurrentStep(0);
+              }
+            }}
+          />
+        }
+        contentSection={
           <StoryContainer
             storyContent={{
               segments: [{
@@ -229,8 +190,8 @@ const Story = () => {
             onCorrectAnswer={handleCorrectAnswer}
             onWrongAnswer={handleWrongAnswer}
           />
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 };

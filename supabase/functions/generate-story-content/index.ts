@@ -36,13 +36,51 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
+    // Generate segments using OpenAI
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an educational content generator. Generate 10 learning segments for a lecture. 
+            Each segment should build upon previous knowledge and include:
+            - A clear title that reflects the segment's focus
+            - 2 theory slides with engaging markdown content
+            - 2 quiz questions (mix of multiple choice and true/false)
+            
+            The content should follow a logical progression from basic to advanced concepts.`
+          },
+          {
+            role: 'user',
+            content: `Generate 10 educational segments based on this lecture content: ${lecture.content}`
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
+    }
+
+    const aiResponseData = await openAIResponse.json();
+    const generatedContent = JSON.parse(aiResponseData.choices[0].message.content);
+
     // Create story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
         lecture_id: lectureId,
         title: lecture.title,
-        total_segments: 3,
+        total_segments: 10,
         current_segment: 0,
         is_generated: true,
         generation_status: 'completed'
@@ -56,39 +94,24 @@ serve(async (req) => {
     }
 
     // Generate segments with proper content structure
-    const segments = Array.from({ length: 3 }, (_, i) => ({
+    const segments = generatedContent.map((segment: any, index: number) => ({
       story_content_id: storyContent.id,
-      segment_number: i,
-      title: `Part ${i + 1}`,
+      segment_number: index,
+      title: segment.title,
       content: {
-        description: `Description for part ${i + 1}`,
-        slides: [
-          {
-            id: `slide-${i}-1`,
-            content: "# Introduction\n\nThis is the first slide of the segment."
-          },
-          {
-            id: `slide-${i}-2`,
-            content: "# Key Points\n\n- Point 1\n- Point 2\n- Point 3"
-          }
-        ],
-        questions: [
-          {
-            id: `question-${i}-1`,
-            type: "true_false",
-            question: "Is this a sample question?",
-            correctAnswer: true,
-            explanation: "This is a sample explanation for the true/false question."
-          },
-          {
-            id: `question-${i}-2`,
-            type: "multiple_choice",
-            question: "Which option is correct?",
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: "Option A",
-            explanation: "This is a sample explanation for the multiple choice question."
-          }
-        ]
+        description: segment.description,
+        slides: segment.slides.map((slide: any, slideIndex: number) => ({
+          id: `slide-${index}-${slideIndex}`,
+          content: slide.content
+        })),
+        questions: segment.questions.map((question: any, questionIndex: number) => ({
+          id: `question-${index}-${questionIndex}`,
+          type: question.type,
+          question: question.question,
+          options: question.options,
+          correctAnswer: question.correctAnswer,
+          explanation: question.explanation
+        }))
       },
       is_generated: true
     }));
