@@ -36,7 +36,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
         .single();
 
       if (existingContent) {
-        const content = existingContent.content as StoryContent;
+        // Type assertion after validation
+        const content = existingContent.content as unknown as StoryContent;
         if (!content.segments) throw new Error('Invalid story content structure');
         return content;
       }

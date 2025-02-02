@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LearningPathway from "@/components/story/LearningPathway";
 import { useStoryContent } from "@/hooks/useStoryContent";
+import { StoryContainer } from "@/components/story/StoryContainer";
 
 const POINTS_PER_CORRECT_ANSWER = 5;
 const REQUIRED_SCORE_PERCENTAGE = 75;
