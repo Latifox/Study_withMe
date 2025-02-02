@@ -30,7 +30,7 @@ const Resources = () => {
       const { data, error } = await supabase
         .from('lectures')
         .select('*')
-        .eq('id', lectureId)
+        .eq('id', parseInt(lectureId as string))
         .single();
       
       if (error) throw error;
@@ -41,21 +41,12 @@ const Resources = () => {
   const { data: resources, isLoading } = useQuery({
     queryKey: ['lecture-resources', lectureId],
     queryFn: async () => {
-      const response = await fetch(`/api/generate-resources`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          lectureContent: lecture?.content,
-        }),
+      const { data, error } = await supabase.functions.invoke('generate-resources', {
+        body: { lectureContent: lecture?.content },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch resources');
-      }
-
-      return response.json();
+      
+      if (error) throw error;
+      return data;
     },
     enabled: !!lecture?.content,
   });
