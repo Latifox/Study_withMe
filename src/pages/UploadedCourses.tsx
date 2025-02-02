@@ -5,9 +5,36 @@ import { useNavigate } from "react-router-dom";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
 import { DeleteCourseDialog } from "@/components/DeleteCourseDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 const UploadedCourses = () => {
   const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      
+      if (!session) {
+        navigate('/auth');
+        return;
+      }
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      if (!session) {
+        navigate('/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
   
   const { data: courses, isLoading, error } = useQuery({
     queryKey: ['courses'],
@@ -25,8 +52,13 @@ const UploadedCourses = () => {
 
       console.log('Fetched courses:', data);
       return data || [];
-    }
+    },
+    enabled: isAuthenticated // Only fetch when authenticated
   });
+
+  if (!isAuthenticated) {
+    return null; // Don't render anything while checking auth
+  }
 
   if (error) {
     console.error('Error in courses query:', error);
