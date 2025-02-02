@@ -33,7 +33,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
         .from('story_contents')
         .select('content')
         .eq('lecture_id', numericLectureId)
-        .single();
+        .maybeSingle();
 
       if (existingContent) {
         // Type assertion after validation
@@ -41,6 +41,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
         if (!content.segments) throw new Error('Invalid story content structure');
         return content;
       }
+
+      console.log('No existing content found, generating new content...');
 
       // If no existing content, generate new content
       const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
