@@ -12,15 +12,21 @@ const ChatMessage = ({ message, isStreaming }: ChatMessageProps) => {
   const isUser = message.role === 'user';
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div 
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} transition-opacity duration-200 ${
+        isStreaming ? 'animate-in fade-in' : ''
+      }`}
+    >
       <div
         className={`max-w-[80%] rounded-lg p-3 ${
           isUser
-            ? 'bg-blue-500 text-white'
-            : 'bg-gray-100 text-gray-800'
-        } ${isStreaming ? 'animate-fade-in' : ''}`}
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-muted text-foreground'
+        }`}
       >
-        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown 
+          className="prose prose-sm dark:prose-invert max-w-none break-words"
+        >
           {message.content}
         </ReactMarkdown>
       </div>

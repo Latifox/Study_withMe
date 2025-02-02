@@ -7,7 +7,7 @@ import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader } from "lucide-react";
 
 const LectureChat = () => {
   const { courseId, lectureId } = useParams();
@@ -16,7 +16,7 @@ const LectureChat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
-    { role: 'assistant', content: 'Hello! How can I help you with this lecture?' }
+    { role: 'assistant', content: "Hello! How can I help you with this lecture?" }
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -52,8 +52,7 @@ const LectureChat = () => {
       setMessages(prev => [...prev, { role: 'user', content: inputMessage }]);
       setCurrentStreamingMessage("");
       
-      // Use the Supabase client to invoke the function
-      const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
+      const { data: streamData, error } = await supabase.functions.invoke('chat-with-lecture', {
         body: { lectureId, message: inputMessage }
       });
 
@@ -62,44 +61,26 @@ const LectureChat = () => {
         throw error;
       }
 
-      const response = new Response(JSON.stringify(data), {
-        headers: { 'Content-Type': 'text/event-stream' }
-      });
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) throw new Error('Failed to initialize stream reader');
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.trim() === '') continue;
-            if (line.trim() === 'data: [DONE]') continue;
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                const content = data.choices[0]?.delta?.content || '';
-                setCurrentStreamingMessage(prev => prev + content);
-              } catch (e) {
-                console.error('Error parsing chunk:', e);
-              }
-            }
+      let fullMessage = '';
+      if (streamData) {
+        try {
+          const parsedData = JSON.parse(streamData);
+          if (parsedData.choices && parsedData.choices[0]?.message?.content) {
+            fullMessage = parsedData.choices[0].message.content;
+            setCurrentStreamingMessage(fullMessage);
           }
+        } catch (e) {
+          console.error('Error parsing stream data:', e);
+          throw new Error('Failed to parse AI response');
         }
-      } finally {
-        reader.releaseLock();
       }
 
-      // After streaming is complete, add the full message to the messages array
-      setMessages(prev => [...prev, { role: 'assistant', content: currentStreamingMessage }]);
-      setCurrentStreamingMessage("");
+      // After streaming is complete, add the full message to messages
+      if (fullMessage) {
+        setMessages(prev => [...prev, { role: 'assistant', content: fullMessage }]);
+        setCurrentStreamingMessage("");
+      }
+      
       setInputMessage("");
     } catch (error) {
       console.error('Chat error:', error);
@@ -152,8 +133,12 @@ const LectureChat = () => {
               onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
               disabled={isLoading}
             />
-            <Button onClick={handleSendMessage} disabled={isLoading}>
-              Send
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isLoading}
+              className="min-w-[80px]"
+            >
+              {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : "Send"}
             </Button>
           </div>
         </div>
