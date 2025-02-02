@@ -37,7 +37,6 @@ const Story = () => {
   });
 
   const handleNodeSelect = (nodeId: string) => {
-    // Only allow selection if node is available (first node or previous completed)
     const node = storyContent?.chapters[0].nodes.find(n => n.id === nodeId);
     if (!node) return;
 
@@ -51,9 +50,50 @@ const Story = () => {
         conceptId: nodeId 
       });
       // Reset points if starting node over
-      if (!nodePoints[nodeId]) {
-        setNodePoints(prev => ({ ...prev, [nodeId]: 0 }));
+      setNodePoints(prev => ({ ...prev, [nodeId]: 0 }));
+      // Reset wrong answers for this node
+      setWrongAnswers(new Set());
+    }
+  };
+
+  const getCurrentContent = () => {
+    if (!currentStep || !storyContent) return null;
+
+    const currentNode = storyContent.chapters[0].nodes.find(
+      n => n.id === currentStep.conceptId
+    );
+    if (!currentNode) return null;
+
+    switch (currentStep.type) {
+      case "main_concept":
+        // Return different content based on slideIndex
+        const mainSlides = [
+          `Introduction to ${currentNode.title}`,
+          `Key principles of ${currentNode.title}`,
+          `Advanced concepts in ${currentNode.title}`
+        ];
+        return {
+          title: `${currentNode.title} - Part ${currentStep.slideIndex + 1}`,
+          description: mainSlides[currentStep.slideIndex]
+        };
+
+      case "main_quiz":
+        return storyContent.chapters[0].initialQuizzes[currentStep.quizIndex];
+
+      case "related_concept": {
+        const relatedConcept = storyContent.chapters[0].relatedConcepts[currentStep.conceptIndex];
+        const relatedSlides = [
+          `Basic overview of ${relatedConcept.title}`,
+          `Detailed exploration of ${relatedConcept.title}`
+        ];
+        return {
+          title: `${relatedConcept.title} - Part ${currentStep.slideIndex + 1}`,
+          description: relatedSlides[currentStep.slideIndex]
+        };
       }
+
+      case "related_quiz":
+        return storyContent.chapters[0].finalQuizzes[currentStep.quizIndex];
     }
   };
 
@@ -171,45 +211,25 @@ const Story = () => {
   const renderCurrentStep = () => {
     if (!currentStep || !storyContent) return null;
 
-    const currentNode = storyContent.chapters[0].nodes.find(
-      n => n.id === currentStep.conceptId
-    );
-    if (!currentNode) return null;
+    const content = getCurrentContent();
+    if (!content) return null;
 
     switch (currentStep.type) {
       case "main_concept":
+      case "related_concept":
         return (
           <ConceptDescription
-            title={`${currentNode.title} - Part ${currentStep.slideIndex + 1}`}
-            description={storyContent.chapters[0].mainDescription}
+            title={content.title}
+            description={content.description}
             onContinue={handleContinue}
           />
         );
 
       case "main_quiz":
-        return (
-          <StoryQuiz
-            question={storyContent.chapters[0].initialQuizzes[currentStep.quizIndex]}
-            onCorrectAnswer={handleCorrectAnswer}
-            onWrongAnswer={handleWrongAnswer}
-          />
-        );
-
-      case "related_concept": {
-        const relatedConcept = storyContent.chapters[0].relatedConcepts[currentStep.conceptIndex];
-        return (
-          <ConceptDescription
-            title={`${relatedConcept.title} - Part ${currentStep.slideIndex + 1}`}
-            description={relatedConcept.description}
-            onContinue={handleContinue}
-          />
-        );
-      }
-
       case "related_quiz":
         return (
           <StoryQuiz
-            question={storyContent.chapters[0].finalQuizzes[currentStep.quizIndex]}
+            question={content}
             onCorrectAnswer={handleCorrectAnswer}
             onWrongAnswer={handleWrongAnswer}
           />
