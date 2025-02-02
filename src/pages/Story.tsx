@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LearningPathway from "@/components/story/LearningPathway";
 import { useStoryContent, useSegmentContent } from "@/hooks/useStoryContent";
@@ -23,9 +23,17 @@ const Story = () => {
   const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
 
-  const { data: storyContent, isLoading: isLoadingStory, error: storyError } = useStoryContent(lectureId);
+  const { 
+    data: storyContent, 
+    isLoading: isLoadingStory,
+    error: storyError,
+    refetch: refetchStory
+  } = useStoryContent(lectureId);
   
-  const { data: segmentContent, isLoading: isLoadingSegment } = useSegmentContent(
+  const { 
+    data: segmentContent, 
+    isLoading: isLoadingSegment 
+  } = useSegmentContent(
     lectureId,
     currentSegment,
     storyContent?.segments?.[currentSegment]?.title || ''
@@ -46,7 +54,7 @@ const Story = () => {
   const handleContinue = () => {
     if (!storyContent?.segments || !segmentContent) return;
 
-    const totalSteps = 4; // 2 slides + 2 questions
+    const totalSteps = 4;
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -110,12 +118,6 @@ const Story = () => {
     if (!attemptedQuestions.has(questionId)) {
       setAttemptedQuestions(prev => new Set([...prev, questionId]));
     }
-    
-    toast({
-      title: "Incorrect Answer",
-      description: "Moving to the next question. You'll need to achieve 75% to complete this segment.",
-      variant: "destructive",
-    });
     handleContinue();
   };
 
@@ -124,13 +126,13 @@ const Story = () => {
   };
 
   // Handle loading state
-  if (isLoadingStory) {
+  if (isLoadingStory || isLoadingSegment) {
     return (
       <div className="container mx-auto p-2">
         <Card className="p-4">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            <p className="ml-3 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <p className="text-sm text-muted-foreground">
               Loading story content...
             </p>
           </div>
@@ -157,19 +159,19 @@ const Story = () => {
     );
   }
 
-  // Handle case when no story content is available
+  // Handle case when content is still being generated
   if (!storyContent?.segments?.length) {
     return (
       <div className="container mx-auto p-2">
-        <Card className="p-3">
-          <h2 className="text-lg font-bold text-red-600 mb-2">No Content Available</h2>
-          <p className="text-sm text-muted-foreground mb-2">
-            No story content has been generated yet. Please try again later.
-          </p>
-          <Button onClick={handleBack} variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
+        <Card className="p-4">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-center text-muted-foreground">
+              Generating story content...
+              <br />
+              This may take a few moments.
+            </p>
+          </div>
         </Card>
       </div>
     );
