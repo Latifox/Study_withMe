@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import LearningPathway from "@/components/story/LearningPathway";
 import { useStoryContent, useSegmentContent } from "@/hooks/useStoryContent";
 import { StoryContainer } from "@/components/story/StoryContainer";
+import { useQueryClient } from "@tanstack/react-query";
 
 const POINTS_PER_CORRECT_ANSWER = 5;
 const REQUIRED_SCORE_PERCENTAGE = 75;
@@ -16,6 +17,7 @@ const Story = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [currentSegment, setCurrentSegment] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
@@ -43,13 +45,15 @@ const Story = () => {
   useEffect(() => {
     if (storyContent?.segments && currentSegment < storyContent.segments.length - 1) {
       const nextSegment = currentSegment + 1;
-      useSegmentContent(
-        lectureId,
-        nextSegment,
-        storyContent.segments[nextSegment].title
-      );
+      const nextSegmentTitle = storyContent.segments[nextSegment].title;
+      
+      // Prefetch using queryClient instead of directly calling the hook
+      queryClient.prefetchQuery({
+        queryKey: ['segment-content', lectureId, nextSegment],
+        queryFn: () => fetch(`/api/segment-content/${lectureId}/${nextSegment}/${nextSegmentTitle}`).then(res => res.json())
+      });
     }
-  }, [currentSegment, storyContent]);
+  }, [currentSegment, storyContent, lectureId, queryClient]);
 
   const handleContinue = () => {
     if (!storyContent?.segments || !segmentContent) return;
@@ -111,7 +115,6 @@ const Story = () => {
   const handleWrongAnswer = () => {
     if (!storyContent?.segments || !segmentContent) return;
     
-    const currentSegmentData = storyContent.segments[currentSegment];
     const questionIndex = currentStep - 2;
     const questionId = segmentContent.questions[questionIndex].id;
     
