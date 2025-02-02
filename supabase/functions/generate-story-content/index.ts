@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
+    console.log('Generating story content for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -26,7 +27,12 @@ serve(async (req) => {
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) throw lectureError;
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
+      throw lectureError;
+    }
+
+    console.log('Successfully fetched lecture content, generating story...');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -39,7 +45,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating interactive learning content. Analyze the lecture content and create a concept map with detailed information. Format your response as a JSON object with the following structure:
+            content: `You are an expert at creating interactive learning content. Analyze the lecture content and create a concept map with detailed information. 
+            
+            Important: Return ONLY valid JSON without any markdown formatting or additional text.
+            
+            The response should follow this exact structure:
             {
               "concepts": [
                 {
@@ -76,23 +86,42 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate story content');
+      console.error('OpenAI API error:', response.status);
+      const errorText = await response.text();
+      console.error('OpenAI API error details:', errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const storyContent = JSON.parse(data.choices[0].message.content);
+    console.log('Received OpenAI response');
+
+    let storyContent;
+    try {
+      // Remove any potential markdown formatting and clean the string
+      const cleanContent = data.choices[0].message.content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      
+      storyContent = JSON.parse(cleanContent);
+      console.log('Successfully parsed story content');
+    } catch (error) {
+      console.error('Error parsing story content:', error);
+      console.error('Raw content:', data.choices[0].message.content);
+      throw new Error('Failed to parse story content');
+    }
 
     return new Response(
       JSON.stringify({ storyContent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in generate-story-content function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
