@@ -86,17 +86,24 @@ export const useSegmentContent = (
       const numericLectureId = parseInt(lectureId, 10);
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
-      const { data: segment } = await supabase
+      const { data: segment, error } = await supabase
         .from('story_segment_contents')
         .select('content')
         .eq('segment_number', segmentNumber)
         .single();
 
+      if (error) throw error;
       if (!segment?.content) {
         throw new Error('No segment content found');
       }
 
-      return segment.content as SegmentContent;
+      // Ensure the content matches the SegmentContent interface
+      const content = segment.content as SegmentContent;
+      if (!content.slides || !content.questions) {
+        throw new Error('Invalid segment content structure');
+      }
+
+      return content;
     },
     enabled: !!lectureId && segmentNumber >= 0 && !!segmentTitle,
     gcTime: 1000 * 60 * 60,
