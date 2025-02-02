@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,8 +49,8 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating educational content. Your task is to create an engaging learning journey based on lecture material. 
-            You must respond with a valid JSON object following this exact structure:
+            content: `You are an expert at creating educational content. Create an engaging learning journey based on lecture material. 
+            Return ONLY a raw JSON object (no markdown, no code blocks) with this structure:
             {
               "segments": [
                 {
@@ -117,7 +116,15 @@ serve(async (req) => {
     try {
       const rawContent = aiResponseData.choices[0].message.content;
       console.log('Raw AI response:', rawContent);
-      storyContent = JSON.parse(rawContent);
+      
+      // Clean up any potential markdown formatting
+      const cleanedContent = rawContent
+        .replace(/```json\n?/g, '')  // Remove ```json
+        .replace(/```\n?/g, '')      // Remove closing ```
+        .trim();                     // Remove extra whitespace
+      
+      console.log('Cleaned content:', cleanedContent);
+      storyContent = JSON.parse(cleanedContent);
       
       // Validate the structure
       if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
