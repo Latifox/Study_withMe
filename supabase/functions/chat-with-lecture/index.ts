@@ -61,7 +61,11 @@ serve(async (req) => {
     ${lecture.content}
     
     Base your responses on this lecture content. If asked something not covered in the lecture,
-    politely inform that it's not covered in this specific lecture material.`;
+    politely inform that it's not covered in this specific lecture material.
+    
+    Adjust your responses based on these parameters:
+    - Creativity Level: ${config.creativity_level} (higher means more creative and exploratory responses)
+    - Detail Level: ${config.detail_level} (higher means more detailed and comprehensive responses)`;
 
     if (config.custom_instructions) {
       systemMessage += `\n\nAdditional instructions for handling this lecture:\n${config.custom_instructions}`;

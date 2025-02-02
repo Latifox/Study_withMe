@@ -21,18 +21,91 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content')
-      .eq('id', lectureId)
-      .single();
+    // Fetch lecture content and AI config
+    const [{ data: lecture, error: lectureError }, { data: config }] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
 
     if (lectureError || !lecture?.content) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Fetched lecture content, generating comprehensive summary...');
+    const aiConfig = config || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
+
+    console.log('Fetched lecture content and AI config, generating comprehensive summary...');
+
+    const systemMessage = `You are an expert educational content summarizer. Create a comprehensive, well-structured summary of the lecture content. 
+    
+    Adjust your output based on these parameters:
+    - Creativity Level: ${aiConfig.creativity_level} (higher means more creative and unique perspectives)
+    - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
+    
+    ${aiConfig.custom_instructions ? `Additional instructions:\n${aiConfig.custom_instructions}\n\n` : ''}
+    
+    Follow these guidelines:
+    1. Maintain the EXACT SAME LANGUAGE as the input text (if Spanish, write in Spanish, if French, write in French, etc.)
+    2. Structure the summary into these specific sections, using Markdown formatting:
+
+    # Structure
+    - Outline the organizational structure of the content
+    - Identify major sections and subsections
+    - Note any patterns in how information is presented
+    - Highlight the flow of ideas
+
+    # Key Concepts
+    - Break down 4-6 important concepts
+    - Include clear definitions
+    - Use examples where relevant
+    - Highlight important terms in **bold**
+
+    # Main Ideas
+    - List the central arguments or themes
+    - Explain core principles
+    - Identify key takeaways
+    - Connect to broader context
+
+    # Important Quotes
+    - Select 2-3 significant quotes
+    - Use proper ">" quote formatting
+    - Add brief context for each quote
+    - Attribute quotes when possible
+
+    # Relationships and Connections
+    - Identify links between concepts
+    - Show how ideas build on each other
+    - Note external connections
+    - Highlight cause-effect relationships
+
+    # Supporting Evidence & Examples
+    - List key examples used
+    - Describe supporting evidence
+    - Include relevant data or statistics
+    - Note case studies or illustrations
+
+    # Full Content
+    Provide a detailed, comprehensive summary of the entire lecture content, including:
+    - In-depth explanations of all concepts
+    - Extended examples and applications
+    - Detailed analysis of important points
+    - Connection between different topics
+    - Study recommendations and practical implications
+
+    Make each section informative yet concise. Use proper Markdown formatting throughout.`;
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -45,63 +118,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert educational content summarizer. Create a comprehensive, well-structured summary of the lecture content. Follow these guidelines:
-
-1. Maintain the EXACT SAME LANGUAGE as the input text (if Spanish, write in Spanish, if French, write in French, etc.)
-2. Structure the summary into these specific sections, using Markdown formatting:
-
-# Structure
-- Outline the organizational structure of the content
-- Identify major sections and subsections
-- Note any patterns in how information is presented
-- Highlight the flow of ideas
-
-# Key Concepts
-- Break down 4-6 important concepts
-- Include clear definitions
-- Use examples where relevant
-- Highlight important terms in **bold**
-
-# Main Ideas
-- List the central arguments or themes
-- Explain core principles
-- Identify key takeaways
-- Connect to broader context
-
-# Important Quotes
-- Select 2-3 significant quotes
-- Use proper ">" quote formatting
-- Add brief context for each quote
-- Attribute quotes when possible
-
-# Relationships and Connections
-- Identify links between concepts
-- Show how ideas build on each other
-- Note external connections
-- Highlight cause-effect relationships
-
-# Supporting Evidence & Examples
-- List key examples used
-- Describe supporting evidence
-- Include relevant data or statistics
-- Note case studies or illustrations
-
-# Full Content
-Provide a detailed, comprehensive summary of the entire lecture content, including:
-- In-depth explanations of all concepts
-- Extended examples and applications
-- Detailed analysis of important points
-- Connection between different topics
-- Study recommendations and practical implications
-
-Make each section informative yet concise. Use proper Markdown formatting throughout.`
+            content: systemMessage
           },
           {
             role: 'user',
             content: lecture.content
           }
         ],
-        temperature: 0.3,
+        temperature: aiConfig.temperature,
         max_tokens: 2500,
       }),
     });

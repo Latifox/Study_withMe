@@ -21,16 +21,54 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content, title')
-      .eq('id', lectureId)
-      .single();
+    // Fetch lecture content and AI config
+    const [{ data: lecture, error: lectureError }, { data: config }] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
 
     if (lectureError || !lecture?.content) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
+
+    const aiConfig = config || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
+
+    const systemMessage = `You are a study plan generator. Create a comprehensive study plan based on lecture content.
+    
+    Adjust your output based on these parameters:
+    - Creativity Level: ${aiConfig.creativity_level} (higher means more innovative study approaches)
+    - Detail Level: ${aiConfig.detail_level} (higher means more detailed study plans)
+    
+    ${aiConfig.custom_instructions ? `Additional instructions:\n${aiConfig.custom_instructions}\n\n` : ''}
+    
+    Return ONLY a JSON object with this exact structure (no markdown, no extra text):
+    {
+      "title": "string",
+      "topics": [
+        {
+          "title": "string",
+          "keyPoints": ["string"],
+          "studyApproach": "string",
+          "estimatedTime": "string"
+        }
+      ],
+      "additionalResources": ["string"],
+      "practiceExercises": ["string"]
+    }`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -43,28 +81,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a study plan generator. Create a comprehensive study plan based on lecture content.
-            Return ONLY a JSON object with this exact structure (no markdown, no extra text):
-            {
-              "title": "string",
-              "topics": [
-                {
-                  "title": "string",
-                  "keyPoints": ["string"],
-                  "studyApproach": "string",
-                  "estimatedTime": "string"
-                }
-              ],
-              "additionalResources": ["string"],
-              "practiceExercises": ["string"]
-            }`
+            content: systemMessage
           },
           {
             role: 'user',
             content: `Create a study plan for this lecture titled "${lecture.title}":\n\n${lecture.content}`
           }
         ],
-        temperature: 0.7,
+        temperature: aiConfig.temperature,
       }),
     });
 

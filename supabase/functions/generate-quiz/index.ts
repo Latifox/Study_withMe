@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, config } = await req.json();
-    console.log('Generating quiz for lecture:', lectureId, 'with config:', config);
+    const { lectureId, config: quizConfig } = await req.json();
+    console.log('Generating quiz for lecture:', lectureId, 'with config:', quizConfig);
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -22,19 +22,33 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content')
-      .eq('id', lectureId)
-      .single();
+    // Fetch lecture content and AI config
+    const [{ data: lecture, error: lectureError }, { data: aiConfig }] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
 
     if (lectureError || !lecture?.content) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Fetched lecture content, sending to OpenAI...');
+    const config = aiConfig || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
+
+    console.log('Fetched lecture content and AI config, sending to OpenAI...');
 
     // Generate quiz using OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -50,11 +64,17 @@ serve(async (req) => {
             role: 'system',
             content: `You are a quiz generator. Generate a quiz based on the provided lecture content. 
             
+            Adjust your output based on these parameters:
+            - Creativity Level: ${config.creativity_level} (higher means more creative and challenging questions)
+            - Detail Level: ${config.detail_level} (higher means more detailed questions and answers)
+            
+            ${config.custom_instructions ? `Additional instructions:\n${config.custom_instructions}\n\n` : ''}
+            
             Rules:
-            - Generate exactly ${config.numberOfQuestions} questions
-            - Difficulty level: ${config.difficulty}
-            - Question types: ${config.questionTypes === 'mixed' ? 'mix of multiple choice and true/false' : config.questionTypes}
-            ${config.hintsEnabled ? '- Include a helpful hint for each question' : ''}
+            - Generate exactly ${quizConfig.numberOfQuestions} questions
+            - Difficulty level: ${quizConfig.difficulty}
+            - Question types: ${quizConfig.questionTypes === 'mixed' ? 'mix of multiple choice and true/false' : quizConfig.questionTypes}
+            ${quizConfig.hintsEnabled ? '- Include a helpful hint for each question' : ''}
             
             Response format:
             Return a JSON array where each question object has these exact properties:
@@ -63,7 +83,7 @@ serve(async (req) => {
               "type": "multiple_choice" or "true_false",
               "options": ["array", "of", "possible", "answers"],
               "correctAnswer": "must match one of the options exactly",
-              ${config.hintsEnabled ? '"hint": "helpful hint text",' : ''}
+              ${quizConfig.hintsEnabled ? '"hint": "helpful hint text",' : ''}
             }
             
             Important:
@@ -77,7 +97,7 @@ serve(async (req) => {
             content: lecture.content
           }
         ],
-        temperature: 0.7,
+        temperature: config.temperature,
       }),
     });
 

@@ -22,29 +22,51 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content')
-      .eq('id', lectureId)
-      .single();
+    // Fetch lecture content and AI config
+    const [{ data: lecture, error: lectureError }, { data: config }] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
 
     if (lectureError || !lecture?.content) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Successfully fetched lecture content');
+    const aiConfig = config || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
+    console.log('Successfully fetched lecture content and AI config');
+
+    const systemMessage = `You are a flashcard generator. Generate exactly ${count} flashcards based on the provided lecture content. 
+    Each flashcard should have a question on one side and the answer on the other side.
+    
+    Adjust your output based on these parameters:
+    - Creativity Level: ${aiConfig.creativity_level} (higher means more creative and unique questions)
+    - Detail Level: ${aiConfig.detail_level} (higher means more detailed answers)
+    
+    ${aiConfig.custom_instructions ? `Additional instructions:\n${aiConfig.custom_instructions}` : ''}
+    
+    Format each flashcard as:
+    Question: [your question here]
+    Answer: [your answer here]`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -52,18 +74,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a flashcard generator. Generate exactly ${count} flashcards based on the provided lecture content. Each flashcard should have a question on one side and the answer on the other side. Format each flashcard as:
-Question: [your question here]
-Answer: [your answer here]
-
-Make each flashcard focused on a single key concept.`
+            content: systemMessage
           },
           {
             role: 'user',
             content: lecture.content
           }
         ],
-        temperature: 0.7,
+        temperature: aiConfig.temperature,
       }),
     });
 
