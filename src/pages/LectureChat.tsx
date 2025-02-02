@@ -20,7 +20,6 @@ const LectureChat = () => {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,7 +27,7 @@ const LectureChat = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, currentStreamingMessage]);
+  }, [messages]);
 
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
@@ -50,9 +49,8 @@ const LectureChat = () => {
     try {
       setIsLoading(true);
       setMessages(prev => [...prev, { role: 'user', content: inputMessage }]);
-      setCurrentStreamingMessage("");
       
-      const { data: streamData, error } = await supabase.functions.invoke('chat-with-lecture', {
+      const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
         body: { lectureId, message: inputMessage }
       });
 
@@ -61,24 +59,11 @@ const LectureChat = () => {
         throw error;
       }
 
-      let fullMessage = '';
-      if (streamData) {
-        try {
-          const parsedData = JSON.parse(streamData);
-          if (parsedData.choices && parsedData.choices[0]?.message?.content) {
-            fullMessage = parsedData.choices[0].message.content;
-            setCurrentStreamingMessage(fullMessage);
-          }
-        } catch (e) {
-          console.error('Error parsing stream data:', e);
-          throw new Error('Failed to parse AI response');
-        }
-      }
-
-      // After streaming is complete, add the full message to messages
-      if (fullMessage) {
-        setMessages(prev => [...prev, { role: 'assistant', content: fullMessage }]);
-        setCurrentStreamingMessage("");
+      if (data?.choices?.[0]?.message?.content) {
+        const assistantMessage = data.choices[0].message.content;
+        setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+      } else {
+        throw new Error('Invalid response format from AI');
       }
       
       setInputMessage("");
@@ -117,12 +102,6 @@ const LectureChat = () => {
             {messages.map((message, index) => (
               <ChatMessage key={index} message={message} />
             ))}
-            {currentStreamingMessage && (
-              <ChatMessage 
-                message={{ role: 'assistant', content: currentStreamingMessage }} 
-                isStreaming={true}
-              />
-            )}
             <div ref={messagesEndRef} />
           </div>
           <div className="flex gap-2">

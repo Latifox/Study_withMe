@@ -76,7 +76,6 @@ serve(async (req) => {
           { role: 'user', content: message }
         ],
         temperature: config.temperature,
-        stream: true,
       }),
     });
 
@@ -85,50 +84,9 @@ serve(async (req) => {
       throw new Error('Failed to get response from OpenAI');
     }
 
-    // Transform the response into a readable stream
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = openAIResponse.body?.getReader();
-        const decoder = new TextDecoder();
-
-        if (!reader) {
-          controller.close();
-          return;
-        }
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.trim() === '') continue;
-              if (line.trim() === 'data: [DONE]') continue;
-              if (line.startsWith('data: ')) {
-                controller.enqueue(line + '\n');
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error in stream processing:', error);
-          controller.error(error);
-        } finally {
-          reader.releaseLock();
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+    const data = await openAIResponse.json();
+    return new Response(JSON.stringify(data), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
