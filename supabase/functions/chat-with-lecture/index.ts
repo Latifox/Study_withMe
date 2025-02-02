@@ -80,6 +80,11 @@ serve(async (req) => {
       }),
     });
 
+    if (!openAIResponse.ok) {
+      console.error('OpenAI API error:', await openAIResponse.text());
+      throw new Error('Failed to get response from OpenAI');
+    }
+
     // Transform the response into a readable stream
     const stream = new ReadableStream({
       async start(controller) {
@@ -109,6 +114,7 @@ serve(async (req) => {
           }
         } catch (error) {
           console.error('Error in stream processing:', error);
+          controller.error(error);
         } finally {
           reader.releaseLock();
           controller.close();

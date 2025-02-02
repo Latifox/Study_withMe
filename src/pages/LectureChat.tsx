@@ -64,7 +64,10 @@ const LectureChat = () => {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to get response from AI');
+      if (!response.ok) {
+        console.error('Response not OK:', response);
+        throw new Error(`Failed to get response from AI: ${response.statusText}`);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
