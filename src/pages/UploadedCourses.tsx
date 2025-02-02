@@ -19,12 +19,11 @@ const UploadedCourses = () => {
           id,
           title,
           created_at,
-          course_access!inner (
-            access_type
+          course_access (
+            access_type,
+            user_email
           )
         `)
-        .eq('course_access.user_email', 'mihailescu77@gmail.com')
-        .eq('course_access.access_type', 'owner')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -32,8 +31,16 @@ const UploadedCourses = () => {
         throw error;
       }
       
-      console.log('Fetched courses:', data);
-      return data;
+      // Filter courses where the user has owner access
+      const userCourses = data?.filter(course => 
+        course.course_access?.some(access => 
+          access.user_email === 'mihailescu77@gmail.com' && 
+          access.access_type === 'owner'
+        )
+      ) || [];
+
+      console.log('Fetched courses:', userCourses);
+      return userCourses;
     }
   });
 

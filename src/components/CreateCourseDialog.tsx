@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,14 +16,7 @@ export function CreateCourseDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a course title",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!title.trim()) return;
 
     setIsSubmitting(true);
     try {
@@ -33,7 +27,12 @@ export function CreateCourseDialog() {
         .select()
         .single();
 
-      if (courseError) throw courseError;
+      if (courseError) {
+        console.error('Error creating course:', courseError);
+        throw courseError;
+      }
+
+      console.log('Created course:', courseData);
 
       // Then, create the course access record
       const { error: accessError } = await supabase
@@ -44,7 +43,10 @@ export function CreateCourseDialog() {
           access_type: 'owner'
         }]);
 
-      if (accessError) throw accessError;
+      if (accessError) {
+        console.error('Error creating course access:', accessError);
+        throw accessError;
+      }
 
       toast({
         title: "Success",
@@ -52,10 +54,10 @@ export function CreateCourseDialog() {
       });
       
       queryClient.invalidateQueries({ queryKey: ['courses'] });
-      setTitle("");
       setOpen(false);
+      setTitle("");
     } catch (error) {
-      console.error('Error creating course:', error);
+      console.error('Error in handleSubmit:', error);
       toast({
         title: "Error",
         description: "Failed to create course",
@@ -73,18 +75,25 @@ export function CreateCourseDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Course</DialogTitle>
+          <DialogTitle>Create Course</DialogTitle>
+          <DialogDescription>
+            Enter the title for your new course.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="title">Course Title</Label>
             <Input
-              placeholder="Enter course title"
+              id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              disabled={isSubmitting}
+              placeholder="Enter course title"
             />
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Creating..." : "Create"}
             </Button>
