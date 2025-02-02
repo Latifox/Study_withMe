@@ -175,7 +175,7 @@ const Story = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <Button
             variant="ghost"
@@ -191,18 +191,22 @@ const Story = () => {
           />
         </div>
 
-        <div className="mb-8">
-          <LearningPathway
-            nodes={currentChapter?.nodes || []}
-            completedNodes={completedNodes}
-            currentNode={currentStep.conceptId}
-            onNodeSelect={handleNodeSelect}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="order-2 md:order-1">
+            <LearningPathway
+              nodes={currentChapter?.nodes || []}
+              completedNodes={completedNodes}
+              currentNode={currentStep.conceptId}
+              onNodeSelect={handleNodeSelect}
+            />
+          </div>
+          
+          <div className="order-1 md:order-2">
+            <Card className="p-6">
+              {renderCurrentStep()}
+            </Card>
+          </div>
         </div>
-
-        <Card className="p-6">
-          {renderCurrentStep()}
-        </Card>
       </div>
     </div>
   );
