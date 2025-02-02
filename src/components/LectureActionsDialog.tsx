@@ -69,12 +69,12 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             Study plan
           </Button>
           <Button
-            onClick={handleChatAction}
+            onClick={handleStoryModeAction}
             className="flex items-center gap-2 w-full"
             size="lg"
           >
-            <MessageSquare className="w-5 h-5" />
-            Chat
+            <BookOpen className="w-5 h-5" />
+            Story Mode
           </Button>
           <Button
             onClick={handleSummaryAction}
@@ -83,6 +83,14 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           >
             <FileText className="w-5 h-5" />
             Highlights
+          </Button>
+          <Button
+            onClick={handleChatAction}
+            className="flex items-center gap-2 w-full"
+            size="lg"
+          >
+            <MessageSquare className="w-5 h-5" />
+            Chat
           </Button>
           <Button
             onClick={handleFlashcardsAction}
@@ -107,14 +115,6 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           >
             <Link className="w-5 h-5" />
             Additional Resources
-          </Button>
-          <Button
-            onClick={handleStoryModeAction}
-            className="flex items-center gap-2 w-full"
-            size="lg"
-          >
-            <BookOpen className="w-5 h-5" />
-            Story Mode
           </Button>
         </div>
       </DialogContent>
