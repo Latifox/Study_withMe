@@ -7,8 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,7 +26,7 @@ serve(async (req) => {
     // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
-      .select('content')
+      .select('content, title')
       .eq('id', lectureId)
       .single();
 
@@ -34,43 +35,55 @@ serve(async (req) => {
       throw lectureError;
     }
 
-    // Generate story content based on lecture content
-    const storyContent = {
-      segments: Array.from({ length: 10 }, (_, index) => ({
-        id: `segment-${index + 1}`,
-        title: `Section ${index + 1}`,
-        slides: [
+    if (!lecture?.content) {
+      throw new Error('No lecture content found');
+    }
+
+    // Generate story content using OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
           {
-            id: `slide-${index + 1}-1`,
-            content: `# Section ${index + 1} - Part 1\n\nThis is the first slide of section ${index + 1}. The content will be based on the lecture material.`
+            role: 'system',
+            content: `You are an expert at breaking down educational content into engaging, story-like segments. 
+            Create a learning journey that teaches the material in an engaging way. 
+            Each segment should have 2 slides explaining concepts and 2 multiple choice questions to test understanding.
+            Format your response as a JSON object with segments array. Each segment should have:
+            - id (string)
+            - title (string) 
+            - slides array with 2 objects containing id and content (markdown)
+            - questions array with 2 objects containing id, type ("multiple_choice"), question, options array, correctAnswer, and explanation`
           },
           {
-            id: `slide-${index + 1}-2`,
-            content: `# Section ${index + 1} - Part 2\n\nThis is the second slide of section ${index + 1}. The content will be based on the lecture material.`
+            role: 'user',
+            content: `Create a story-based learning journey for this lecture titled "${lecture.title}". Here's the content to teach: ${lecture.content}`
           }
         ],
-        questions: [
-          {
-            id: `question-${index + 1}-1`,
-            type: "multiple_choice",
-            question: `Question 1 for Section ${index + 1}?`,
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: "Option A",
-            explanation: "This is the explanation for the correct answer."
-          },
-          {
-            id: `question-${index + 1}-2`,
-            type: "multiple_choice",
-            question: `Question 2 for Section ${index + 1}?`,
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: "Option B",
-            explanation: "This is the explanation for the correct answer."
-          }
-        ]
-      }))
-    };
+        temperature: 0.7,
+      }),
+    });
 
-    console.log('Successfully generated story content');
+    const aiResponse = await response.json();
+    console.log('AI Response received');
+
+    if (!aiResponse.choices?.[0]?.message?.content) {
+      throw new Error('Invalid AI response');
+    }
+
+    let storyContent;
+    try {
+      storyContent = JSON.parse(aiResponse.choices[0].message.content);
+      console.log('Successfully parsed AI response into story content');
+    } catch (e) {
+      console.error('Error parsing AI response:', e);
+      throw new Error('Failed to parse AI response');
+    }
 
     return new Response(
       JSON.stringify({ storyContent }),
