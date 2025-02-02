@@ -48,10 +48,10 @@ const LearningPathway = ({
   };
 
   return (
-    <div className="relative w-full mx-auto py-4">
-      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2" />
+    <div className="relative w-full h-[calc(100vh-12rem)] flex items-center justify-center px-2">
+      <div className="absolute left-1/2 h-full w-0.5 bg-gray-200 -translate-x-1/2" />
       
-      <div className="relative space-y-4">
+      <div className="relative flex flex-col justify-between h-full py-4 max-h-full overflow-y-auto">
         {nodes.map((node, index) => {
           const status = getNodeStatus(node);
           const isActive = currentNode === node.id;
@@ -61,9 +61,9 @@ const LearningPathway = ({
             <motion.div
               key={node.id}
               className="relative flex items-center justify-center"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
               <TooltipProvider>
                 <Tooltip>
@@ -73,7 +73,7 @@ const LearningPathway = ({
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
                       className={cn(
-                        "relative z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                        "relative z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all",
                         status === "locked" ? "bg-gray-100 cursor-not-allowed" : "hover:scale-110",
                         status === "completed" ? "bg-green-100" : "",
                         status === "available" ? "bg-blue-100" : "",
@@ -81,14 +81,14 @@ const LearningPathway = ({
                       )}
                       disabled={status === "locked"}
                     >
-                      {status === "locked" && <Lock className="w-4 h-4 text-gray-400" />}
-                      {status === "completed" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                      {status === "available" && <Circle className="w-4 h-4 text-blue-500" />}
+                      {status === "locked" && <Lock className="w-3 h-3 text-gray-400" />}
+                      {status === "completed" && <CheckCircle2 className="w-3 h-3 text-green-500" />}
+                      {status === "available" && <Circle className="w-3 h-3 text-blue-500" />}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-[200px]">
                     <div className="space-y-1">
-                      <p className="font-semibold text-sm">{node.title}</p>
+                      <p className="font-semibold text-xs">{node.title}</p>
                       <p className="text-xs text-gray-500">{node.description}</p>
                       <p className="text-xs text-primary">Points: {node.points}</p>
                       {status === "locked" && hasPrerequisites && (
