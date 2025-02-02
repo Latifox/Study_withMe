@@ -113,22 +113,28 @@ export type Database = {
         Row: {
           content: Json
           created_at: string
+          current_segment: number | null
           id: number
           lecture_id: number | null
+          total_segments: number | null
           updated_at: string
         }
         Insert: {
           content: Json
           created_at?: string
+          current_segment?: number | null
           id?: number
           lecture_id?: number | null
+          total_segments?: number | null
           updated_at?: string
         }
         Update: {
           content?: Json
           created_at?: string
+          current_segment?: number | null
           id?: number
           lecture_id?: number | null
+          total_segments?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -137,6 +143,47 @@ export type Database = {
             columns: ["lecture_id"]
             isOneToOne: true
             referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_segment_contents: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: number
+          is_generated: boolean | null
+          segment_number: number
+          segment_title: string
+          story_content_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: number
+          is_generated?: boolean | null
+          segment_number: number
+          segment_title: string
+          story_content_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: number
+          is_generated?: boolean | null
+          segment_number?: number
+          segment_title?: string
+          story_content_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_segment_contents_story_content_id_fkey"
+            columns: ["story_content_id"]
+            isOneToOne: false
+            referencedRelation: "story_contents"
             referencedColumns: ["id"]
           },
         ]

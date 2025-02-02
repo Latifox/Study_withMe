@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LearningPathway from "@/components/story/LearningPathway";
-import { useStoryContent } from "@/hooks/useStoryContent";
+import { useStoryContent, useSegmentContent } from "@/hooks/useStoryContent";
 import { StoryContainer } from "@/components/story/StoryContainer";
 
 const POINTS_PER_CORRECT_ANSWER = 5;
@@ -23,10 +23,27 @@ const Story = () => {
   const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
 
-  const { data: storyContent, isLoading, error } = useStoryContent(lectureId);
+  const { data: storyContent, isLoading: isLoadingStory } = useStoryContent(lectureId);
+  const { data: segmentContent, isLoading: isLoadingSegment } = useSegmentContent(
+    lectureId,
+    currentSegment,
+    storyContent?.segments[currentSegment]?.title || ''
+  );
+
+  // Prefetch next segment
+  useEffect(() => {
+    if (storyContent?.segments && currentSegment < storyContent.segments.length - 1) {
+      const nextSegment = currentSegment + 1;
+      useSegmentContent(
+        lectureId,
+        nextSegment,
+        storyContent.segments[nextSegment].title
+      );
+    }
+  }, [currentSegment, storyContent]);
 
   const handleContinue = () => {
-    if (!storyContent?.segments) return;
+    if (!storyContent?.segments || !segmentContent) return;
 
     const totalSteps = 4; // 2 slides + 2 questions
     if (currentStep < totalSteps - 1) {
@@ -58,7 +75,6 @@ const Story = () => {
           description: `You need at least ${REQUIRED_SCORE_PERCENTAGE}% to proceed. Current score: ${scorePercentage}%. Try again!`,
           variant: "destructive",
         });
-        // Reset current segment
         setCurrentStep(0);
         setSegmentScores(prev => ({ ...prev, [currentSegmentData.id]: 0 }));
         setAttemptedQuestions(new Set());
@@ -67,11 +83,11 @@ const Story = () => {
   };
 
   const handleCorrectAnswer = () => {
-    if (!storyContent?.segments) return;
+    if (!storyContent?.segments || !segmentContent) return;
     
     const currentSegmentData = storyContent.segments[currentSegment];
     const questionIndex = currentStep - 2;
-    const questionId = currentSegmentData.questions[questionIndex].id;
+    const questionId = segmentContent.questions[questionIndex].id;
     
     if (!attemptedQuestions.has(questionId)) {
       setSegmentScores(prev => ({
@@ -84,15 +100,14 @@ const Story = () => {
   };
 
   const handleWrongAnswer = () => {
-    if (!storyContent?.segments) return;
+    if (!storyContent?.segments || !segmentContent) return;
     
     const currentSegmentData = storyContent.segments[currentSegment];
     const questionIndex = currentStep - 2;
-    const questionId = currentSegmentData.questions[questionIndex].id;
+    const questionId = segmentContent.questions[questionIndex].id;
     
     if (!attemptedQuestions.has(questionId)) {
       setAttemptedQuestions(prev => new Set([...prev, questionId]));
-      handleContinue();
     }
     
     toast({
@@ -100,13 +115,14 @@ const Story = () => {
       description: "Moving to the next question. You'll need to achieve 75% to complete this segment.",
       variant: "destructive",
     });
+    handleContinue();
   };
 
   const handleBack = () => {
     navigate(`/course/${courseId}`);
   };
 
-  if (isLoading) {
+  if (isLoadingStory) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -117,13 +133,13 @@ const Story = () => {
     );
   }
 
-  if (error || !storyContent?.segments?.length) {
+  if (!storyContent?.segments?.length) {
     return (
       <div className="container mx-auto p-2">
         <Card className="p-3">
           <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Content</h2>
           <p className="text-sm text-muted-foreground mb-2">
-            {error instanceof Error ? error.message : "Failed to load content"}
+            Failed to load story content
           </p>
           <Button onClick={handleBack} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-1" />
@@ -142,8 +158,54 @@ const Story = () => {
     difficulty: "intermediate" as const,
     prerequisites: index > 0 ? [storyContent.segments[index - 1].id] : [],
     points: TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER,
-    description: `Complete this segment about ${segment.title}`,
+    description: segment.description,
   }));
+
+  if (isLoadingSegment) {
+    return (
+      <div className="container mx-auto p-2">
+        <div className="mb-2">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="gap-1"
+            size="sm"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Back
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="md:col-span-1">
+            <Card className="p-2">
+              <LearningPathway
+                nodes={pathwayNodes}
+                completedNodes={completedNodes}
+                currentNode={currentSegmentData.id}
+                onNodeSelect={(nodeId) => {
+                  const index = storyContent.segments.findIndex(s => s.id === nodeId);
+                  if (index !== -1 && completedNodes.has(storyContent.segments[index].id)) {
+                    setCurrentSegment(index);
+                    setCurrentStep(0);
+                  }
+                }}
+              />
+            </Card>
+          </div>
+
+          <div className="md:col-span-2">
+            <Card className="p-4 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <p className="ml-3 text-sm text-muted-foreground">
+                Loading segment content...
+              </p>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-2">
@@ -179,8 +241,15 @@ const Story = () => {
 
         <div className="md:col-span-2">
           <StoryContainer
-            storyContent={storyContent}
-            currentSegment={currentSegment}
+            storyContent={{
+              segments: [{
+                id: currentSegmentData.id,
+                title: currentSegmentData.title,
+                slides: segmentContent.slides,
+                questions: segmentContent.questions
+              }]
+            }}
+            currentSegment={0}
             currentStep={currentStep}
             segmentScores={segmentScores}
             onContinue={handleContinue}

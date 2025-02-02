@@ -8,33 +8,24 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { lectureId } = await req.json();
-    console.log('Generating story content for lecture:', lectureId);
+    console.log('Generating story segments for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch both lecture content and AI configuration
-    const [{ data: lecture, error: lectureError }, { data: aiConfig }] = await Promise.all([
-      supabaseClient
-        .from('lectures')
-        .select('content, title')
-        .eq('id', lectureId)
-        .single(),
-      supabaseClient
-        .from('lecture_ai_configs')
-        .select('*')
-        .eq('lecture_id', lectureId)
-        .single()
-    ]);
+    const { data: lecture, error: lectureError } = await supabaseClient
+      .from('lectures')
+      .select('content, title')
+      .eq('id', lectureId)
+      .single();
 
     if (lectureError) {
       console.error('Error fetching lecture:', lectureError);
@@ -45,16 +36,6 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    const config = aiConfig || {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.6,
-      custom_instructions: ''
-    };
-
-    console.log('Using AI config:', config);
-
-    // Reduce temperature to get more consistent outputs
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,59 +47,24 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a story content generator. Your task is to generate educational content in a strict JSON format. Follow these rules:
-
-1. Output ONLY valid JSON, no markdown or additional text
-2. Follow this exact structure:
+            content: `You are a curriculum organizer. Your task is to break down lecture content into 10 logical segments. Output ONLY valid JSON in this format:
 {
   "segments": [
     {
       "id": "segment-1",
-      "title": "string",
-      "slides": [
-        {
-          "id": "slide-1-1",
-          "content": "string"
-        },
-        {
-          "id": "slide-1-2",
-          "content": "string"
-        }
-      ],
-      "questions": [
-        {
-          "id": "question-1-1",
-          "type": "multiple_choice",
-          "question": "string",
-          "options": ["string", "string", "string", "string"],
-          "correctAnswer": "string",
-          "explanation": "string"
-        },
-        {
-          "id": "question-1-2",
-          "type": "true_false",
-          "question": "string",
-          "correctAnswer": true,
-          "explanation": "string"
-        }
-      ]
+      "title": "Segment Title",
+      "description": "Brief description of segment content"
     }
   ]
-}
-
-3. Create exactly 5 segments (not 10 to reduce complexity)
-4. Each segment must have exactly 2 slides and 2 questions
-5. Keep content focused and concise
-6. Ensure all strings are properly escaped
-7. Do not use any special characters that could break JSON parsing`
+}`
           },
           {
             role: 'user',
-            content: `Create a learning journey for this lecture titled "${lecture.title}". Content: ${lecture.content}`
+            content: `Break down this lecture titled "${lecture.title}" into 10 logical segments: ${lecture.content}`
           }
         ],
-        temperature: 0.5, // Lower temperature for more consistent outputs
-        max_tokens: 2000, // Reduced to prevent overly long responses
+        temperature: 0.3,
+        max_tokens: 1000,
       }),
     });
 
@@ -129,71 +75,54 @@ serve(async (req) => {
     }
 
     const aiResponseData = await openAIResponse.json();
-    
-    if (!aiResponseData.choices?.[0]?.message?.content) {
-      console.error('Invalid AI response structure:', aiResponseData);
-      throw new Error('Invalid AI response structure');
+    const segmentData = JSON.parse(aiResponseData.choices[0].message.content);
+
+    // Create story content entry
+    const { data: storyContent, error: insertError } = await supabaseClient
+      .from('story_contents')
+      .insert({
+        lecture_id: lectureId,
+        content: segmentData,
+        total_segments: segmentData.segments.length,
+        current_segment: 0
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting story content:', insertError);
+      throw insertError;
     }
 
-    let storyContent;
-    try {
-      const rawContent = aiResponseData.choices[0].message.content;
-      console.log('Raw AI response:', rawContent);
-      
-      // Try to clean the content before parsing
-      const cleanContent = rawContent
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-        .replace(/\\(?!["\\/bfnrtu])/g, '\\\\') // Escape backslashes
-        .trim();
-      
-      // Parse the JSON response
-      storyContent = JSON.parse(cleanContent);
-      
-      // Validate structure
-      if (!storyContent.segments || !Array.isArray(storyContent.segments)) {
-        throw new Error('Invalid story content structure: missing segments array');
-      }
+    // Create segment entries
+    const segmentInserts = segmentData.segments.map((segment: any, index: number) => ({
+      story_content_id: storyContent.id,
+      segment_number: index,
+      segment_title: segment.title,
+      is_generated: false
+    }));
 
-      // Validate each segment has exactly 2 slides and 2 questions
-      storyContent.segments.forEach((segment: any, index: number) => {
-        if (!segment.slides || segment.slides.length !== 2) {
-          throw new Error(`Segment ${index + 1} does not have exactly 2 slides`);
-        }
-        if (!segment.questions || segment.questions.length !== 2) {
-          throw new Error(`Segment ${index + 1} does not have exactly 2 questions`);
-        }
-      });
+    const { error: segmentError } = await supabaseClient
+      .from('story_segment_contents')
+      .insert(segmentInserts);
 
-      console.log('Successfully validated story content structure');
-
-    } catch (parseError) {
-      console.error('Error parsing AI response:', parseError);
-      throw new Error(`Failed to parse AI response: ${parseError.message}`);
+    if (segmentError) {
+      console.error('Error inserting segments:', segmentError);
+      throw segmentError;
     }
 
     return new Response(
       JSON.stringify({ storyContent }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in generate-story-content function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }),
+      JSON.stringify({ error: error.message }),
       {
         status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
-        },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }

@@ -1,1 +1,7 @@
 project_id = "bjpawnertrqwtgyvrhml"
+
+[functions.generate-story-content]
+verify_jwt = false
+
+[functions.generate-segment-content]
+verify_jwt = false
