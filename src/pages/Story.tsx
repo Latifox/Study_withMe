@@ -166,22 +166,23 @@ const Story = () => {
   }));
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="mb-6">
+    <div className="container mx-auto p-2">
+      <div className="mb-2">
         <Button
           variant="ghost"
           onClick={handleBack}
-          className="gap-2"
+          className="gap-1"
+          size="sm"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Course
+          <ArrowLeft className="w-3 h-3" />
+          Back
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Learning Pathway */}
         <div className="md:col-span-1">
-          <Card className="p-6">
+          <Card className="p-3">
             <LearningPathway
               nodes={pathwayNodes}
               completedNodes={completedNodes}
@@ -199,8 +200,8 @@ const Story = () => {
 
         {/* Content Area */}
         <div className="md:col-span-2">
-          <Card className="p-6">
-            <div className="mb-6">
+          <Card className="p-3">
+            <div className="mb-3">
               <SegmentProgress
                 currentSegment={currentSegment}
                 totalSegments={storyContent.segments.length}
@@ -209,7 +210,7 @@ const Story = () => {
               />
             </div>
 
-            <h2 className="text-2xl font-bold mb-6">{currentSegmentData.title}</h2>
+            <h2 className="text-lg font-bold mb-3">{currentSegmentData.title}</h2>
             
             {isSlide ? (
               <TheorySlide
