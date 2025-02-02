@@ -10,6 +10,7 @@ import TheorySlide from "@/components/story/TheorySlide";
 import StoryQuiz from "@/components/story/StoryQuiz";
 import SegmentProgress from "@/components/story/SegmentProgress";
 import LearningPathway from "@/components/story/LearningPathway";
+import StoryProgress from "@/components/story/StoryProgress";
 
 interface Slide {
   id: string;
@@ -36,6 +37,10 @@ interface StoryContent {
   segments: Segment[];
 }
 
+const POINTS_PER_CORRECT_ANSWER = 5;
+const REQUIRED_SCORE_PERCENTAGE = 75;
+const TOTAL_QUESTIONS_PER_SEGMENT = 2;
+
 const Story = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
@@ -43,28 +48,21 @@ const Story = () => {
   
   const [currentSegment, setCurrentSegment] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
-  const [score, setScore] = useState(0);
-  const [completedNodes] = useState(new Set<string>());
+  const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
+  const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
+  const [completedNodes, setCompletedNodes] = useState(new Set<string>());
 
   const { data: storyContent, isLoading, error } = useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
-      console.log('Fetching story content for lecture:', lectureId);
       const { data, error } = await supabase.functions.invoke('generate-story-content', {
         body: { lectureId }
       });
 
-      if (error) {
-        console.error('Error fetching story content:', error);
-        throw error;
-      }
-
+      if (error) throw error;
       if (!data?.storyContent?.segments?.length) {
-        console.error('Invalid story content structure:', data);
         throw new Error('Invalid story content structure');
       }
-
-      console.log('Received story content:', data);
       return data.storyContent as StoryContent;
     }
   });
@@ -75,27 +73,73 @@ const Story = () => {
     const totalSteps = 4; // 2 slides + 2 questions
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
-    } else if (currentSegment < storyContent.segments.length - 1) {
-      setCurrentSegment(prev => prev + 1);
-      setCurrentStep(0);
     } else {
-      // Story completed
-      toast({
-        title: "Congratulations!",
-        description: `You've completed the lesson with a score of ${score}/${storyContent.segments.length * 2} questions correct!`,
-      });
+      const currentSegmentData = storyContent.segments[currentSegment];
+      const segmentScore = segmentScores[currentSegmentData.id] || 0;
+      const maxPossibleScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
+      const scorePercentage = (segmentScore / maxPossibleScore) * 100;
+
+      if (scorePercentage >= REQUIRED_SCORE_PERCENTAGE) {
+        setCompletedNodes(prev => new Set([...prev, currentSegmentData.id]));
+        if (currentSegment < storyContent.segments.length - 1) {
+          setCurrentSegment(prev => prev + 1);
+          setCurrentStep(0);
+          toast({
+            title: "Segment Completed!",
+            description: `You've completed this segment with ${scorePercentage}% score.`,
+          });
+        } else {
+          toast({
+            title: "Congratulations!",
+            description: "You've completed all segments of this lecture!",
+          });
+        }
+      } else {
+        toast({
+          title: "Score Too Low",
+          description: `You need at least ${REQUIRED_SCORE_PERCENTAGE}% to proceed. Current score: ${scorePercentage}%. Try again!`,
+          variant: "destructive",
+        });
+        // Reset current segment
+        setCurrentStep(0);
+        setSegmentScores(prev => ({ ...prev, [currentSegmentData.id]: 0 }));
+        setAttemptedQuestions(new Set());
+      }
     }
   };
 
   const handleCorrectAnswer = () => {
-    setScore(prev => prev + 1);
+    if (!storyContent?.segments) return;
+    
+    const currentSegmentData = storyContent.segments[currentSegment];
+    const questionIndex = currentStep - 2;
+    const questionId = currentSegmentData.questions[questionIndex].id;
+    
+    if (!attemptedQuestions.has(questionId)) {
+      setSegmentScores(prev => ({
+        ...prev,
+        [currentSegmentData.id]: (prev[currentSegmentData.id] || 0) + POINTS_PER_CORRECT_ANSWER
+      }));
+      setAttemptedQuestions(prev => new Set([...prev, questionId]));
+    }
     handleContinue();
   };
 
   const handleWrongAnswer = () => {
+    if (!storyContent?.segments) return;
+    
+    const currentSegmentData = storyContent.segments[currentSegment];
+    const questionIndex = currentStep - 2;
+    const questionId = currentSegmentData.questions[questionIndex].id;
+    
+    if (!attemptedQuestions.has(questionId)) {
+      setAttemptedQuestions(prev => new Set([...prev, questionId]));
+      handleContinue();
+    }
+    
     toast({
-      title: "Try Again",
-      description: "Review the explanation and try another answer.",
+      title: "Incorrect Answer",
+      description: "Moving to the next question. You'll need to achieve 75% to complete this segment.",
       variant: "destructive",
     });
   };
@@ -106,8 +150,8 @@ const Story = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4">
-        <Card className="p-6">
+      <div className="container mx-auto p-2">
+        <Card className="p-3">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
@@ -118,15 +162,15 @@ const Story = () => {
 
   if (error || !storyContent?.segments?.length) {
     return (
-      <div className="container mx-auto p-4">
-        <Card className="p-6">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Content</h2>
-          <p className="text-muted-foreground mb-4">
+      <div className="container mx-auto p-2">
+        <Card className="p-3">
+          <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Content</h2>
+          <p className="text-sm text-muted-foreground mb-2">
             {error instanceof Error ? error.message : "Failed to load content"}
           </p>
-          <Button onClick={handleBack} variant="outline">
-            <ArrowLeft className="mr-2" />
-            Back to Course
+          <Button onClick={handleBack} variant="outline" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
           </Button>
         </Card>
       </div>
@@ -134,34 +178,19 @@ const Story = () => {
   }
 
   const currentSegmentData = storyContent.segments[currentSegment];
-  if (!currentSegmentData) {
-    console.error('Invalid segment index:', currentSegment);
-    return (
-      <div className="container mx-auto p-4">
-        <Card className="p-6">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Segment</h2>
-          <p className="text-muted-foreground mb-4">Failed to load segment content</p>
-          <Button onClick={handleBack} variant="outline">
-            <ArrowLeft className="mr-2" />
-            Back to Course
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
+  const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
+  const currentScore = segmentScores[currentSegmentData.id] || 0;
 
-  // Convert segments to learning pathway nodes
-  const pathwayNodes = storyContent.segments.map(segment => ({
+  const pathwayNodes = storyContent.segments.map((segment, index) => ({
     id: segment.id,
     title: segment.title,
     type: "concept" as const,
     difficulty: "intermediate" as const,
-    prerequisites: [], // You can set prerequisites based on your needs
-    points: 10,
+    prerequisites: index > 0 ? [storyContent.segments[index - 1].id] : [],
+    points: maxScore,
     description: `Complete this segment about ${segment.title}`,
   }));
 
@@ -179,17 +208,16 @@ const Story = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Learning Pathway */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div className="md:col-span-1">
-          <Card className="p-3">
+          <Card className="p-2">
             <LearningPathway
               nodes={pathwayNodes}
               completedNodes={completedNodes}
               currentNode={currentSegmentData.id}
               onNodeSelect={(nodeId) => {
                 const index = storyContent.segments.findIndex(s => s.id === nodeId);
-                if (index !== -1) {
+                if (index !== -1 && completedNodes.has(storyContent.segments[index].id)) {
                   setCurrentSegment(index);
                   setCurrentStep(0);
                 }
@@ -198,10 +226,9 @@ const Story = () => {
           </Card>
         </div>
 
-        {/* Content Area */}
         <div className="md:col-span-2">
-          <Card className="p-3">
-            <div className="mb-3">
+          <Card className="p-2">
+            <div className="mb-2">
               <SegmentProgress
                 currentSegment={currentSegment}
                 totalSegments={storyContent.segments.length}
@@ -210,7 +237,14 @@ const Story = () => {
               />
             </div>
 
-            <h2 className="text-lg font-bold mb-3">{currentSegmentData.title}</h2>
+            <div className="mb-2">
+              <StoryProgress
+                currentPoints={currentScore}
+                maxPoints={maxScore}
+              />
+            </div>
+
+            <h2 className="text-base font-bold mb-2">{currentSegmentData.title}</h2>
             
             {isSlide ? (
               <TheorySlide

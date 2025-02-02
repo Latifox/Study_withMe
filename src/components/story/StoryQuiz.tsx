@@ -18,15 +18,18 @@ interface StoryQuizProps {
 
 const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer }: StoryQuizProps) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!selectedAnswer) return;
+    if (!selectedAnswer || hasSubmitted) return;
 
     const isCorrect = 
       question.type === "true_false" 
         ? selectedAnswer === question.correctAnswer.toString()
         : selectedAnswer === question.correctAnswer;
+
+    setHasSubmitted(true);
 
     if (isCorrect) {
       toast({
@@ -45,13 +48,14 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer }: StoryQuizProps)
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-xl font-semibold">{question.question}</h3>
+    <div className="space-y-4">
+      <h3 className="text-base font-semibold">{question.question}</h3>
       
       <RadioGroup
         value={selectedAnswer || ""}
         onValueChange={setSelectedAnswer}
-        className="space-y-3"
+        className="space-y-2"
+        disabled={hasSubmitted}
       >
         {question.type === "true_false" ? (
           <>
@@ -76,8 +80,8 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer }: StoryQuizProps)
 
       <button
         onClick={handleSubmit}
-        disabled={!selectedAnswer}
-        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-4 py-2 rounded-lg"
+        disabled={!selectedAnswer || hasSubmitted}
+        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-3 py-1.5 rounded-lg text-sm"
       >
         Submit Answer
       </button>
