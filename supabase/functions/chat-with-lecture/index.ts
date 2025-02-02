@@ -63,7 +63,7 @@ serve(async (req) => {
       systemMessage += `\n\nAdditional instructions for handling this lecture:\n${config.custom_instructions}`;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -80,9 +80,49 @@ serve(async (req) => {
       }),
     });
 
-    // Return the stream directly
-    return new Response(response.body, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
+    // Transform the response into a readable stream
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = openAIResponse.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) {
+          controller.close();
+          return;
+        }
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.trim() === '') continue;
+              if (line.trim() === 'data: [DONE]') continue;
+              if (line.startsWith('data: ')) {
+                controller.enqueue(line + '\n');
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error in stream processing:', error);
+        } finally {
+          reader.releaseLock();
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
 
   } catch (error) {

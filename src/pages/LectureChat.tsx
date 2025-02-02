@@ -52,44 +52,57 @@ const LectureChat = () => {
       setMessages(prev => [...prev, { role: 'user', content: inputMessage }]);
       setCurrentStreamingMessage("");
       
-      const response = await supabase.functions.invoke('chat-with-lecture', {
-        body: { lectureId, message: inputMessage }
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-with-lecture`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ lectureId, message: inputMessage })
+        }
+      );
 
-      if (response.error) throw new Error(response.error.message);
-      
-      // The response will be a ReadableStream
-      const reader = new ReadableStream({
-        start(controller) {
-          const textDecoder = new TextDecoder();
-          const chunks = response.data.split('\n');
+      if (!response.ok) throw new Error('Failed to get response from AI');
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) throw new Error('Failed to initialize stream reader');
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
           
-          for (const chunk of chunks) {
-            if (chunk.startsWith('data: ')) {
-              const data = chunk.slice(6);
-              if (data === '[DONE]') {
-                controller.close();
-                continue;
-              }
-              
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            if (line.trim() === 'data: [DONE]') continue;
+            if (line.startsWith('data: ')) {
               try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices[0]?.delta?.content || '';
+                const data = JSON.parse(line.slice(6));
+                const content = data.choices[0]?.delta?.content || '';
                 setCurrentStreamingMessage(prev => prev + content);
               } catch (e) {
                 console.error('Error parsing chunk:', e);
               }
             }
           }
-          controller.close();
         }
-      });
+      } finally {
+        reader.releaseLock();
+      }
 
       // After streaming is complete, add the full message to the messages array
       setMessages(prev => [...prev, { role: 'assistant', content: currentStreamingMessage }]);
       setCurrentStreamingMessage("");
       setInputMessage("");
     } catch (error) {
+      console.error('Chat error:', error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
