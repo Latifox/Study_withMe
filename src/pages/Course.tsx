@@ -60,7 +60,7 @@ const Course = () => {
         <div className="flex items-center gap-4 mb-8">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/uploaded-courses')}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
