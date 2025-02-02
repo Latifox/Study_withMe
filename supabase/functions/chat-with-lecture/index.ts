@@ -21,24 +21,53 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content, title')
-      .eq('id', lectureId)
-      .single();
+    // Fetch lecture content and AI config
+    const [lectureResponse, configResponse] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
 
-    if (lectureError) {
+    if (lectureResponse.error) {
       throw new Error('Failed to fetch lecture content');
     }
+
+    const lecture = lectureResponse.data;
+    const config = configResponse.data || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
 
     if (!lecture.content) {
       throw new Error('No lecture content available');
     }
 
     console.log('Fetched lecture content:', lecture.content.substring(0, 100) + '...');
+    console.log('Using AI config:', config);
 
-    // Call OpenAI API
+    // Build system message with custom instructions
+    let systemMessage = `You are a helpful AI assistant that helps students understand their lecture content. 
+    You have access to the following lecture content titled "${lecture.title}":
+    
+    ${lecture.content}
+    
+    Base your responses on this lecture content. If asked something not covered in the lecture,
+    politely inform that it's not covered in this specific lecture material.`;
+
+    if (config.custom_instructions) {
+      systemMessage += `\n\nAdditional instructions for handling this lecture:\n${config.custom_instructions}`;
+    }
+
+    // Call OpenAI API with configured parameters
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -48,18 +77,10 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: `You are a helpful AI assistant that helps students understand their lecture content. 
-            You have access to the following lecture content titled "${lecture.title}":
-            
-            ${lecture.content}
-            
-            Base your responses on this lecture content. If asked something not covered in the lecture,
-            politely inform that it's not covered in this specific lecture material.`
-          },
+          { role: 'system', content: systemMessage },
           { role: 'user', content: message }
         ],
+        temperature: config.temperature,
       }),
     });
 
