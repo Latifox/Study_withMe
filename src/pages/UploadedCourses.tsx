@@ -12,19 +12,15 @@ const UploadedCourses = () => {
   const { data: courses, isLoading, error } = useQuery({
     queryKey: ['courses'],
     queryFn: async () => {
-      console.log('Fetching courses for user...');
+      console.log('Fetching courses...');
       const { data, error } = await supabase
         .from('courses')
         .select(`
           id,
           title,
-          created_at,
-          course_access!inner (
-            access_type
-          )
+          created_at
         `)
-        .eq('course_access.user_email', 'mihailescu77@gmail.com')
-        .eq('course_access.access_type', 'owner');
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching courses:', error);

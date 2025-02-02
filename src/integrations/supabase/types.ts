@@ -97,6 +97,62 @@ export type Database = {
         }
         Relationships: []
       }
+      invited_course_access: {
+        Row: {
+          created_at: string
+          id: number
+          invited_course_id: number | null
+          updated_at: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          invited_course_id?: number | null
+          updated_at?: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          invited_course_id?: number | null
+          updated_at?: string
+          user_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invited_course_access_invited_course_id_fkey"
+            columns: ["invited_course_id"]
+            isOneToOne: false
+            referencedRelation: "invited_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invited_courses: {
+        Row: {
+          created_at: string
+          id: number
+          invite_code: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          invite_code: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          invite_code?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lecture_ai_configs: {
         Row: {
           created_at: string
