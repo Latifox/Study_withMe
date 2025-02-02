@@ -2,11 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StoryContent {
-  segments: {
-    id: string;
-    title: string;
-    description: string;
-  }[];
+  segments: StorySegment[];
+}
+
+export interface StorySegment {
+  id: string;
+  title: string;
+  description: string;
 }
 
 export interface SegmentContent {
@@ -34,7 +36,6 @@ export const useStoryContent = (lectureId: string | undefined) => {
       const numericLectureId = parseInt(lectureId, 10);
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
-      // First, try to get existing story content
       const { data: existingContent, error: contentError } = await supabase
         .from('story_contents')
         .select('*, story_segment_contents(*)')
@@ -44,23 +45,20 @@ export const useStoryContent = (lectureId: string | undefined) => {
       if (contentError) throw contentError;
 
       if (existingContent) {
-        // Sort segments by number
         const sortedSegments = existingContent.story_segment_contents
           .sort((a: any, b: any) => a.segment_number - b.segment_number);
 
         return {
-          ...existingContent,
           segments: sortedSegments.map((segment: any) => ({
             id: `segment-${segment.segment_number + 1}`,
             title: segment.segment_title,
-            content: segment.content
+            description: segment.description || ''
           }))
         };
       }
 
       console.log('No existing content found, generating new content...');
 
-      // If no existing content, generate new content
       const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
         body: { lectureId: numericLectureId }
       });
@@ -68,8 +66,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
       if (error) throw error;
       return generatedContent.storyContent;
     },
-    gcTime: 1000 * 60 * 60, // Cache for 1 hour
-    staleTime: Infinity, // Content won't become stale
+    gcTime: 1000 * 60 * 60,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false
@@ -88,7 +86,6 @@ export const useSegmentContent = (
       const numericLectureId = parseInt(lectureId, 10);
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
-      // Check if content already exists
       const { data: existingSegment } = await supabase
         .from('story_segment_contents')
         .select('content')
@@ -99,7 +96,6 @@ export const useSegmentContent = (
         return existingSegment.content as SegmentContent;
       }
 
-      // Get lecture content for generation
       const { data: lecture } = await supabase
         .from('lectures')
         .select('content')
@@ -108,7 +104,6 @@ export const useSegmentContent = (
 
       if (!lecture?.content) throw new Error('No lecture content found');
 
-      // Generate content for this segment
       const { data: generatedContent, error } = await supabase.functions.invoke('generate-segment-content', {
         body: {
           lectureId: numericLectureId,
@@ -120,7 +115,6 @@ export const useSegmentContent = (
 
       if (error) throw error;
 
-      // Store the generated content
       const { error: updateError } = await supabase
         .from('story_segment_contents')
         .update({
@@ -134,8 +128,8 @@ export const useSegmentContent = (
       return generatedContent.content as SegmentContent;
     },
     enabled: !!lectureId && segmentNumber >= 0 && !!segmentTitle,
-    gcTime: 1000 * 60 * 60, // Cache for 1 hour
-    staleTime: Infinity, // Content won't become stale
+    gcTime: 1000 * 60 * 60,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false

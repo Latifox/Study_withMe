@@ -5,10 +5,17 @@ import TheorySlide from "./TheorySlide";
 import StoryQuiz from "./StoryQuiz";
 import SegmentProgress from "./SegmentProgress";
 import StoryProgress from "./StoryProgress";
-import { StoryContent } from "@/hooks/useStoryContent";
+import { StoryContent, SegmentContent } from "@/hooks/useStoryContent";
 
 interface StoryContainerProps {
-  storyContent: StoryContent;
+  storyContent: {
+    segments: Array<{
+      id: string;
+      title: string;
+      slides?: SegmentContent['slides'];
+      questions?: SegmentContent['questions'];
+    }>;
+  };
   currentSegment: number;
   currentStep: number;
   segmentScores: { [key: string]: number };
@@ -35,6 +42,19 @@ export const StoryContainer = ({
   const questionIndex = currentStep - 2;
   const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
   const currentScore = segmentScores[currentSegmentData.id] || 0;
+
+  if (!currentSegmentData.slides || !currentSegmentData.questions) {
+    return (
+      <Card className="p-2">
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <p className="ml-3 text-sm text-muted-foreground">
+            Loading segment content...
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-2">

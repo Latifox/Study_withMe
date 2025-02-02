@@ -245,8 +245,8 @@ const Story = () => {
               segments: [{
                 id: currentSegmentData.id,
                 title: currentSegmentData.title,
-                slides: segmentContent.slides,
-                questions: segmentContent.questions
+                slides: segmentContent?.slides,
+                questions: segmentContent?.questions
               }]
             }}
             currentSegment={0}
