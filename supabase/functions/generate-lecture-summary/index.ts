@@ -50,10 +50,11 @@ serve(async (req) => {
 1. Maintain the EXACT SAME LANGUAGE as the input text (if Spanish, write in Spanish, if French, write in French, etc.)
 2. Structure the summary into these specific sections, using Markdown formatting:
 
-# Main Topics
-- List 3-5 main topics covered
-- Use clear, concise bullet points
-- Highlight key terminology in **bold**
+# Structure
+- Outline the organizational structure of the content
+- Identify major sections and subsections
+- Note any patterns in how information is presented
+- Highlight the flow of ideas
 
 # Key Concepts
 - Break down 4-6 important concepts
@@ -61,17 +62,29 @@ serve(async (req) => {
 - Use examples where relevant
 - Highlight important terms in **bold**
 
+# Main Ideas
+- List the central arguments or themes
+- Explain core principles
+- Identify key takeaways
+- Connect to broader context
+
 # Important Quotes
 - Select 2-3 significant quotes
 - Use proper ">" quote formatting
 - Add brief context for each quote
 - Attribute quotes when possible
 
-# Additional Notes
-- Include practical applications
-- Mention related concepts
-- Add study tips or memory aids
-- Note any prerequisites or follow-up topics
+# Relationships and Connections
+- Identify links between concepts
+- Show how ideas build on each other
+- Note external connections
+- Highlight cause-effect relationships
+
+# Supporting Evidence & Examples
+- List key examples used
+- Describe supporting evidence
+- Include relevant data or statistics
+- Note case studies or illustrations
 
 # Full Content
 Provide a detailed, comprehensive summary of the entire lecture content, including:
@@ -124,10 +137,12 @@ Make each section informative yet concise. Use proper Markdown formatting throug
     const fullSummary = data.choices[0].message.content;
     
     const sections = {
-      mainTopics: extractSection(fullSummary, "Main Topics"),
+      structure: extractSection(fullSummary, "Structure"),
       keyConcepts: extractSection(fullSummary, "Key Concepts"),
+      mainIdeas: extractSection(fullSummary, "Main Ideas"),
       importantQuotes: extractSection(fullSummary, "Important Quotes"),
-      additionalNotes: extractSection(fullSummary, "Additional Notes"),
+      relationships: extractSection(fullSummary, "Relationships and Connections"),
+      supportingEvidence: extractSection(fullSummary, "Supporting Evidence & Examples"),
       fullContent: extractSection(fullSummary, "Full Content"),
     };
 

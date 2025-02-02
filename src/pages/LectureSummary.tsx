@@ -3,7 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Brain, Quote, ListChecks, Lightbulb, ExternalLink } from "lucide-react";
+import { 
+  ArrowLeft, 
+  BookOpen, 
+  ExternalLink, 
+  LayoutTemplate,
+  Brain,
+  Lightbulb,
+  Quote,
+  Network,
+  ClipboardList
+} from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -34,11 +44,9 @@ const LectureSummary = () => {
       });
 
       if (error) {
-        // Check if it's a rate limit error
         if (error.status === 429) {
           throw new Error("Rate limit reached. Please wait a moment and try again.");
         }
-        // Check if it's an OpenAI API error
         if (error.status === 500 && error.message.includes("OpenAI API error")) {
           throw new Error("Error generating summary. Please try again in a few moments.");
         }
@@ -47,11 +55,9 @@ const LectureSummary = () => {
       return data.summary;
     },
     retry: (failureCount, error: any) => {
-      // Don't retry on rate limit errors or OpenAI errors
       if (error?.message?.includes("Rate limit") || error?.message?.includes("OpenAI API error")) {
         return false;
       }
-      // Retry other errors up to 3 times
       return failureCount < 3;
     },
     meta: {
@@ -131,12 +137,36 @@ const LectureSummary = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
+                <LayoutTemplate className="w-5 h-5" />
+                Structure
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="prose prose-sm max-w-none">
+              <ReactMarkdown>{summary?.structure || ''}</ReactMarkdown>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Brain className="w-5 h-5" />
                 Key Concepts
               </CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm max-w-none">
               <ReactMarkdown>{summary?.keyConcepts || ''}</ReactMarkdown>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Lightbulb className="w-5 h-5" />
+                Main Ideas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="prose prose-sm max-w-none">
+              <ReactMarkdown>{summary?.mainIdeas || ''}</ReactMarkdown>
             </CardContent>
           </Card>
 
@@ -155,24 +185,24 @@ const LectureSummary = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <ListChecks className="w-5 h-5" />
-                Main Topics
+                <Network className="w-5 h-5" />
+                Relationships and Connections
               </CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.mainTopics || ''}</ReactMarkdown>
+              <ReactMarkdown>{summary?.relationships || ''}</ReactMarkdown>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Lightbulb className="w-5 h-5" />
-                Additional Notes
+                <ClipboardList className="w-5 h-5" />
+                Supporting Evidence & Examples
               </CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.additionalNotes || ''}</ReactMarkdown>
+              <ReactMarkdown>{summary?.supportingEvidence || ''}</ReactMarkdown>
             </CardContent>
           </Card>
         </div>
