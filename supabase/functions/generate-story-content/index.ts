@@ -36,47 +36,13 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    // Generate segments with proper content structure
-    const segments = Array.from({ length: 3 }, (_, i) => ({
-      id: `segment-${i + 1}`,
-      title: `Part ${i + 1}`,
-      description: `Description for part ${i + 1}`,
-      slides: [
-        {
-          id: `slide-${i}-1`,
-          content: "# Introduction\n\nThis is the first slide of the segment."
-        },
-        {
-          id: `slide-${i}-2`,
-          content: "# Key Points\n\n- Point 1\n- Point 2\n- Point 3"
-        }
-      ],
-      questions: [
-        {
-          id: `question-${i}-1`,
-          type: "true_false",
-          question: "Is this a sample question?",
-          correctAnswer: true,
-          explanation: "This is a sample explanation for the true/false question."
-        },
-        {
-          id: `question-${i}-2`,
-          type: "multiple_choice",
-          question: "Which option is correct?",
-          options: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: "Option A",
-          explanation: "This is a sample explanation for the multiple choice question."
-        }
-      ]
-    }));
-
-    // Create story content entry
-    const { data: storyContent, error: insertError } = await supabaseClient
+    // Create story content entry first
+    const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
         lecture_id: lectureId,
-        content: { segments },
-        total_segments: segments.length,
+        title: lecture.title,
+        total_segments: 3,
         current_segment: 0,
         is_generated: true,
         generation_status: 'completed'
@@ -84,20 +50,45 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (insertError) {
-      console.error('Error inserting story content:', insertError);
-      throw insertError;
+    if (storyError) {
+      console.error('Error creating story content:', storyError);
+      throw storyError;
     }
 
-    // Create segment entries with proper content structure
-    const segmentInserts = segments.map((segment, index) => ({
+    // Generate segments with proper content structure
+    const segmentInserts = Array.from({ length: 3 }, (_, i) => ({
       story_content_id: storyContent.id,
-      segment_number: index,
-      segment_title: segment.title,
+      segment_number: i,
+      title: `Part ${i + 1}`,
       content: {
-        description: segment.description,
-        slides: segment.slides,
-        questions: segment.questions
+        description: `Description for part ${i + 1}`,
+        slides: [
+          {
+            id: `slide-${i}-1`,
+            content: "# Introduction\n\nThis is the first slide of the segment."
+          },
+          {
+            id: `slide-${i}-2`,
+            content: "# Key Points\n\n- Point 1\n- Point 2\n- Point 3"
+          }
+        ],
+        questions: [
+          {
+            id: `question-${i}-1`,
+            type: "true_false",
+            question: "Is this a sample question?",
+            correctAnswer: true,
+            explanation: "This is a sample explanation for the true/false question."
+          },
+          {
+            id: `question-${i}-2`,
+            type: "multiple_choice",
+            question: "Which option is correct?",
+            options: ["Option A", "Option B", "Option C", "Option D"],
+            correctAnswer: "Option A",
+            explanation: "This is a sample explanation for the multiple choice question."
+          }
+        ]
       },
       is_generated: true
     }));
@@ -111,15 +102,18 @@ serve(async (req) => {
       throw segmentError;
     }
 
+    // Return the processed content
+    const segments = segmentInserts.map(segment => ({
+      id: `segment-${segment.segment_number + 1}`,
+      title: segment.title,
+      description: segment.content.description,
+      slides: segment.content.slides,
+      questions: segment.content.questions
+    }));
+
     return new Response(
       JSON.stringify({ 
-        storyContent: { 
-          segments: segments.map(segment => ({
-            ...segment,
-            slides: segment.slides,
-            questions: segment.questions
-          }))
-        }
+        storyContent: { segments }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

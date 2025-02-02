@@ -48,7 +48,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
           story_segment_contents (
             id,
             segment_number,
-            segment_title,
+            title,
             content
           )
         `)
@@ -74,7 +74,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       // Process and validate segment content
       const sortedSegments = storyContent.story_segment_contents
-        .sort((a: any, b: any) => a.segment_number - b.segment_number)
+        ?.sort((a: any, b: any) => a.segment_number - b.segment_number)
         .map((segment: any) => {
           console.log('Processing segment:', segment);
           const content = segment.content || {};
@@ -82,7 +82,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
           // Ensure we have the required structure
           const processedSegment = {
             id: `segment-${segment.segment_number + 1}`,
-            title: segment.segment_title,
+            title: segment.title,
             description: content.description || '',
             slides: Array.isArray(content.slides) ? content.slides : [],
             questions: Array.isArray(content.questions) ? content.questions : []
@@ -90,7 +90,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
           
           console.log('Processed segment:', processedSegment);
           return processedSegment;
-        });
+        }) || [];
 
       console.log('Final processed segments:', sortedSegments);
 

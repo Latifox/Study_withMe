@@ -111,35 +111,35 @@ export type Database = {
       }
       story_contents: {
         Row: {
-          content: Json
           created_at: string
           current_segment: number | null
           generation_status: string | null
           id: number
           is_generated: boolean | null
           lecture_id: number | null
+          title: string
           total_segments: number | null
           updated_at: string
         }
         Insert: {
-          content: Json
           created_at?: string
           current_segment?: number | null
           generation_status?: string | null
-          id?: number
+          id?: never
           is_generated?: boolean | null
           lecture_id?: number | null
+          title: string
           total_segments?: number | null
           updated_at?: string
         }
         Update: {
-          content?: Json
           created_at?: string
           current_segment?: number | null
           generation_status?: string | null
-          id?: number
+          id?: never
           is_generated?: boolean | null
           lecture_id?: number | null
+          title?: string
           total_segments?: number | null
           updated_at?: string
         }
@@ -155,33 +155,33 @@ export type Database = {
       }
       story_segment_contents: {
         Row: {
-          content: Json | null
+          content: Json
           created_at: string
           id: number
           is_generated: boolean | null
           segment_number: number
-          segment_title: string
           story_content_id: number | null
+          title: string
           updated_at: string
         }
         Insert: {
-          content?: Json | null
+          content: Json
           created_at?: string
-          id?: number
+          id?: never
           is_generated?: boolean | null
           segment_number: number
-          segment_title: string
           story_content_id?: number | null
+          title: string
           updated_at?: string
         }
         Update: {
-          content?: Json | null
+          content?: Json
           created_at?: string
-          id?: number
+          id?: never
           is_generated?: boolean | null
           segment_number?: number
-          segment_title?: string
           story_content_id?: number | null
+          title?: string
           updated_at?: string
         }
         Relationships: [
