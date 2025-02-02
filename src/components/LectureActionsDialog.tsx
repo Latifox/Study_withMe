@@ -80,20 +80,20 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             Highlights
           </Button>
           <Button
-            onClick={handleQuizAction}
-            className="flex items-center gap-2 w-full"
-            size="lg"
-          >
-            <HelpCircle className="w-5 h-5" />
-            Quiz
-          </Button>
-          <Button
             onClick={handleFlashcardsAction}
             className="flex items-center gap-2 w-full"
             size="lg"
           >
             <BookOpen className="w-5 h-5" />
             Flashcards
+          </Button>
+          <Button
+            onClick={handleQuizAction}
+            className="flex items-center gap-2 w-full"
+            size="lg"
+          >
+            <HelpCircle className="w-5 h-5" />
+            Quiz
           </Button>
           <Button
             onClick={handleResourcesAction}
