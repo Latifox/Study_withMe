@@ -126,10 +126,16 @@ export const useSegmentContent = (
         throw new Error('Invalid generated content structure');
       }
 
+      // Convert SegmentContent to a plain object that satisfies the Json type
+      const jsonContent = {
+        slides: content.slides,
+        questions: content.questions
+      };
+
       const { error: updateError } = await supabase
         .from('story_segment_contents')
         .update({
-          content: content,
+          content: jsonContent,
           is_generated: true
         })
         .eq('segment_number', segmentNumber);
