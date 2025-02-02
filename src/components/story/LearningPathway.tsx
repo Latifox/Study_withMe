@@ -48,19 +48,20 @@ const LearningPathway = ({
   };
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto py-8">
+    <div className="relative w-full mx-auto py-4">
       <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2" />
       
-      <div className="relative space-y-12">
+      <div className="relative space-y-4">
         {nodes.map((node, index) => {
           const status = getNodeStatus(node);
           const isActive = currentNode === node.id;
+          const hasPrerequisites = node.prerequisites.length > 0;
           
           return (
             <motion.div
               key={node.id}
               className="relative flex items-center justify-center"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
@@ -72,7 +73,7 @@ const LearningPathway = ({
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
                       className={cn(
-                        "relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all",
+                        "relative z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all",
                         status === "locked" ? "bg-gray-100 cursor-not-allowed" : "hover:scale-110",
                         status === "completed" ? "bg-green-100" : "",
                         status === "available" ? "bg-blue-100" : "",
@@ -80,20 +81,30 @@ const LearningPathway = ({
                       )}
                       disabled={status === "locked"}
                     >
-                      {status === "locked" && <Lock className="w-5 h-5 text-gray-400" />}
-                      {status === "completed" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                      {status === "available" && <Circle className="w-5 h-5 text-blue-500" />}
+                      {status === "locked" && <Lock className="w-4 h-4 text-gray-400" />}
+                      {status === "completed" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      {status === "available" && <Circle className="w-4 h-4 text-blue-500" />}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="p-2 space-y-1">
-                      <p className="font-semibold">{node.title}</p>
-                      <p className="text-sm text-gray-500">{node.description}</p>
+                  <TooltipContent side="right" className="max-w-[200px]">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-sm">{node.title}</p>
+                      <p className="text-xs text-gray-500">{node.description}</p>
                       <p className="text-xs text-primary">Points: {node.points}</p>
-                      {status === "locked" && (
-                        <p className="text-xs text-red-500">
-                          Complete previous nodes to unlock
-                        </p>
+                      {status === "locked" && hasPrerequisites && (
+                        <div className="text-xs text-red-500">
+                          <p>Prerequisites needed:</p>
+                          <ul className="list-disc list-inside">
+                            {node.prerequisites.map(prereq => {
+                              const prereqNode = nodes.find(n => n.id === prereq);
+                              return (
+                                <li key={prereq}>
+                                  {prereqNode?.title || prereq}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
                       )}
                     </div>
                   </TooltipContent>
