@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageSquare, FileText, HelpCircle, BookOpen, Network } from "lucide-react";
+import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface LectureActionsDialogProps {
@@ -40,6 +40,11 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
 
   const handleMindmapAction = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/mindmap`);
+    onClose();
+  };
+
+  const handleResourcesAction = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/resources`);
     onClose();
   };
 
@@ -89,6 +94,14 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           >
             <BookOpen className="w-5 h-5" />
             Flashcards
+          </Button>
+          <Button
+            onClick={handleResourcesAction}
+            className="flex items-center gap-2 w-full"
+            size="lg"
+          >
+            <Link className="w-5 h-5" />
+            Additional Resources
           </Button>
         </div>
       </DialogContent>
