@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Settings } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,7 +46,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       }
       return data;
     },
-    enabled: !!lectureId && isOpen, // Only fetch when we have a lectureId and dialog is open
+    enabled: !!lectureId && isOpen,
   });
 
   // Update local state when config is fetched
@@ -74,13 +73,19 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       setIsSaving(true);
       const { error } = await supabase
         .from("lecture_ai_configs")
-        .upsert({
-          lecture_id: lectureId,
-          temperature: temperature[0],
-          creativity_level: creativity[0],
-          detail_level: detailLevel[0],
-          custom_instructions: customInstructions,
-        });
+        .upsert(
+          {
+            lecture_id: lectureId,
+            temperature: temperature[0],
+            creativity_level: creativity[0],
+            detail_level: detailLevel[0],
+            custom_instructions: customInstructions,
+          },
+          {
+            onConflict: 'lecture_id',
+            ignoreDuplicates: false
+          }
+        );
 
       if (error) throw error;
 
