@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import UploadedCourses from "./pages/UploadedCourses";
+import InvitedCourses from "./pages/InvitedCourses";
 import Course from "./pages/Course";
 import LectureChat from "./pages/LectureChat";
 import LectureSummary from "./pages/LectureSummary";
@@ -24,6 +26,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/uploaded-courses" element={<UploadedCourses />} />
+          <Route path="/invited-courses" element={<InvitedCourses />} />
           <Route path="/course/:courseId" element={<Course />} />
           <Route path="/course/:courseId/lecture/:lectureId/chat" element={<LectureChat />} />
           <Route path="/course/:courseId/lecture/:lectureId/summary" element={<LectureSummary />} />
