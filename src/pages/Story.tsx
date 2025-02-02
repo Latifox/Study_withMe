@@ -150,12 +150,11 @@ const Story = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-2">
-        <Card className="p-3">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        </Card>
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+          <p className="text-sm text-muted-foreground">Loading story content...</p>
+        </div>
       </div>
     );
   }
