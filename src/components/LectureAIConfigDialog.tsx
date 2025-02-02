@@ -33,17 +33,21 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const { data: config } = useQuery({
     queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
+      if (!lectureId) return null;
+      
       const { data, error } = await supabase
         .from("lecture_ai_configs")
         .select("*")
         .eq("lecture_id", lectureId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
+        console.error("Error fetching AI config:", error);
         throw error;
       }
       return data;
     },
+    enabled: !!lectureId && isOpen, // Only fetch when we have a lectureId and dialog is open
   });
 
   // Update local state when config is fetched
@@ -57,6 +61,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   }, [config]);
 
   const handleSave = async () => {
+    if (!lectureId) {
+      toast({
+        title: "Error",
+        description: "Invalid lecture ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSaving(true);
       const { error } = await supabase
