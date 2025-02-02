@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId, message } = await req.json();
+    console.log('Processing chat for lecture:', lectureId, 'with message:', message);
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -21,7 +22,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content and AI config
+    // Fetch lecture content and AI config in parallel
     const [lectureResponse, configResponse] = await Promise.all([
       supabaseClient
         .from('lectures')
@@ -32,10 +33,11 @@ serve(async (req) => {
         .from('lecture_ai_configs')
         .select('*')
         .eq('lecture_id', lectureId)
-        .single()
+        .maybeSingle()
     ]);
 
     if (lectureResponse.error) {
+      console.error('Error fetching lecture:', lectureResponse.error);
       throw new Error('Failed to fetch lecture content');
     }
 
@@ -47,14 +49,13 @@ serve(async (req) => {
       custom_instructions: ''
     };
 
+    console.log('Using AI config:', config);
+
     if (!lecture.content) {
       throw new Error('No lecture content available');
     }
 
-    console.log('Fetched lecture content:', lecture.content.substring(0, 100) + '...');
-    console.log('Using AI config:', config);
-
-    // Build system message with custom instructions
+    // Build system message with custom instructions and configuration
     let systemMessage = `You are a helpful AI assistant that helps students understand their lecture content. 
     You have access to the following lecture content titled "${lecture.title}":
     
@@ -70,6 +71,8 @@ serve(async (req) => {
     if (config.custom_instructions) {
       systemMessage += `\n\nAdditional instructions for handling this lecture:\n${config.custom_instructions}`;
     }
+
+    console.log('Sending request to OpenAI with temperature:', config.temperature);
 
     // Call OpenAI API with configured parameters
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -88,12 +91,15 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      console.error('OpenAI API error:', data);
+      console.error('OpenAI API error:', response.status);
+      const errorText = await response.text();
+      console.error('OpenAI API error details:', errorText);
       throw new Error('Failed to generate response');
     }
+
+    const data = await response.json();
+    console.log('Successfully generated response');
 
     return new Response(JSON.stringify({
       response: data.choices[0].message.content
