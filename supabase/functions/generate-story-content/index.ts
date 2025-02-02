@@ -36,40 +36,38 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    // Generate initial segments structure with proper typing
+    // Generate segments with proper content structure
     const segments = Array.from({ length: 3 }, (_, i) => ({
       id: `segment-${i + 1}`,
       title: `Part ${i + 1}`,
       description: `Description for part ${i + 1}`,
-      content: {
-        slides: [
-          {
-            id: `slide-${i}-1`,
-            content: "# Introduction\n\nThis is the first slide of the segment."
-          },
-          {
-            id: `slide-${i}-2`,
-            content: "# Key Points\n\n- Point 1\n- Point 2\n- Point 3"
-          }
-        ],
-        questions: [
-          {
-            id: `question-${i}-1`,
-            type: "true_false",
-            question: "Is this a sample question?",
-            correctAnswer: true,
-            explanation: "This is a sample explanation for the true/false question."
-          },
-          {
-            id: `question-${i}-2`,
-            type: "multiple_choice",
-            question: "Which option is correct?",
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: "Option A",
-            explanation: "This is a sample explanation for the multiple choice question."
-          }
-        ]
-      }
+      slides: [
+        {
+          id: `slide-${i}-1`,
+          content: "# Introduction\n\nThis is the first slide of the segment."
+        },
+        {
+          id: `slide-${i}-2`,
+          content: "# Key Points\n\n- Point 1\n- Point 2\n- Point 3"
+        }
+      ],
+      questions: [
+        {
+          id: `question-${i}-1`,
+          type: "true_false",
+          question: "Is this a sample question?",
+          correctAnswer: true,
+          explanation: "This is a sample explanation for the true/false question."
+        },
+        {
+          id: `question-${i}-2`,
+          type: "multiple_choice",
+          question: "Which option is correct?",
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: "Option A",
+          explanation: "This is a sample explanation for the multiple choice question."
+        }
+      ]
     }));
 
     // Create story content entry
@@ -91,12 +89,15 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Create segment entries with proper content structure
+    // Create segment entries
     const segmentInserts = segments.map((segment, index) => ({
       story_content_id: storyContent.id,
       segment_number: index,
       segment_title: segment.title,
-      content: segment.content,
+      content: {
+        slides: segment.slides,
+        questions: segment.questions
+      },
       is_generated: true
     }));
 

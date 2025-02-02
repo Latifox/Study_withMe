@@ -9,6 +9,8 @@ export interface StorySegment {
   id: string;
   title: string;
   description: string;
+  slides?: SegmentContent['slides'];
+  questions?: SegmentContent['questions'];
 }
 
 export interface SegmentContent {
@@ -54,16 +56,18 @@ export const useStoryContent = (lectureId: string | undefined) => {
         return generatedContent.storyContent;
       }
 
-      // Return existing content
+      // Return existing content with segment content included
       const sortedSegments = storyContent.story_segment_contents
-        .sort((a: any, b: any) => a.segment_number - b.segment_number);
-
-      return {
-        segments: sortedSegments.map((segment: any) => ({
+        .sort((a: any, b: any) => a.segment_number - b.segment_number)
+        .map((segment: any) => ({
           id: `segment-${segment.segment_number + 1}`,
           title: segment.segment_title,
-          description: segment.description || ''
-        }))
+          description: segment.description || '',
+          ...segment.content
+        }));
+
+      return {
+        segments: sortedSegments
       };
     },
     gcTime: 1000 * 60 * 60,
@@ -97,8 +101,8 @@ export const useSegmentContent = (
         throw new Error('No segment content found');
       }
 
-      // Ensure the content matches the SegmentContent interface
-      const content = segment.content as SegmentContent;
+      // Type assertion after validating structure
+      const content = segment.content as unknown as SegmentContent;
       if (!content.slides || !content.questions) {
         throw new Error('Invalid segment content structure');
       }
