@@ -16,13 +16,11 @@ serve(async (req) => {
     const { lectureId, message } = await req.json();
     console.log('Processing chat for lecture:', lectureId, 'with message:', message);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content and AI config in parallel
     const [lectureResponse, configResponse] = await Promise.all([
       supabaseClient
         .from('lectures')
@@ -49,13 +47,6 @@ serve(async (req) => {
       custom_instructions: ''
     };
 
-    console.log('Using AI config:', config);
-
-    if (!lecture.content) {
-      throw new Error('No lecture content available');
-    }
-
-    // Build system message with custom instructions and configuration
     let systemMessage = `You are a helpful AI assistant that helps students understand their lecture content. 
     You have access to the following lecture content titled "${lecture.title}":
     
@@ -72,9 +63,6 @@ serve(async (req) => {
       systemMessage += `\n\nAdditional instructions for handling this lecture:\n${config.custom_instructions}`;
     }
 
-    console.log('Sending request to OpenAI with temperature:', config.temperature);
-
-    // Call OpenAI API with configured parameters
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -88,30 +76,18 @@ serve(async (req) => {
           { role: 'user', content: message }
         ],
         temperature: config.temperature,
+        stream: true,
       }),
     });
 
-    if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
-      const errorText = await response.text();
-      console.error('OpenAI API error details:', errorText);
-      throw new Error('Failed to generate response');
-    }
-
-    const data = await response.json();
-    console.log('Successfully generated response');
-
-    return new Response(JSON.stringify({
-      response: data.choices[0].message.content
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Return the stream directly
+    return new Response(response.body, {
+      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
     });
 
   } catch (error) {
     console.error('Error in chat-with-lecture function:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message 
-    }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -5,9 +5,10 @@ interface ChatMessageProps {
     role: 'user' | 'assistant';
     content: string;
   };
+  isStreaming?: boolean;
 }
 
-const ChatMessage = ({ message }: ChatMessageProps) => {
+const ChatMessage = ({ message, isStreaming }: ChatMessageProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -17,7 +18,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           isUser
             ? 'bg-blue-500 text-white'
             : 'bg-gray-100 text-gray-800'
-        }`}
+        } ${isStreaming ? 'animate-fade-in' : ''}`}
       >
         <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
           {message.content}

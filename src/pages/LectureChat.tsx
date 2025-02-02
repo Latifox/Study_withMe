@@ -20,6 +20,7 @@ const LectureChat = () => {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -27,7 +28,7 @@ const LectureChat = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]); // Scroll when messages update
+  }, [messages, currentStreamingMessage]);
 
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
@@ -49,14 +50,45 @@ const LectureChat = () => {
     try {
       setIsLoading(true);
       setMessages(prev => [...prev, { role: 'user', content: inputMessage }]);
+      setCurrentStreamingMessage("");
       
-      const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
+      const response = await supabase.functions.invoke('chat-with-lecture', {
         body: { lectureId, message: inputMessage }
+      }, {
+        responseType: 'stream'
       });
 
-      if (error) throw error;
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+      if (!reader) throw new Error("No reader available");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices[0]?.delta?.content || '';
+              setCurrentStreamingMessage(prev => prev + content);
+            } catch (e) {
+              console.error('Error parsing chunk:', e);
+            }
+          }
+        }
+      }
+
+      // After streaming is complete, add the full message to the messages array
+      setMessages(prev => [...prev, { role: 'assistant', content: currentStreamingMessage }]);
+      setCurrentStreamingMessage("");
       setInputMessage("");
     } catch (error) {
       toast({
@@ -92,14 +124,20 @@ const LectureChat = () => {
             {messages.map((message, index) => (
               <ChatMessage key={index} message={message} />
             ))}
-            <div ref={messagesEndRef} /> {/* Scroll anchor */}
+            {currentStreamingMessage && (
+              <ChatMessage 
+                message={{ role: 'assistant', content: currentStreamingMessage }} 
+                isStreaming={true}
+              />
+            )}
+            <div ref={messagesEndRef} />
           </div>
           <div className="flex gap-2">
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder="Type your message..."
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
               disabled={isLoading}
             />
             <Button onClick={handleSendMessage} disabled={isLoading}>
