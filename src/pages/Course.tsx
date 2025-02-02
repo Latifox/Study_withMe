@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Upload, ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Upload, ArrowLeft, Settings } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import LectureActionsDialog from "@/components/LectureActionsDialog";
 import { DeleteLectureDialog } from "@/components/DeleteLectureDialog";
+import LectureAIConfigDialog from "@/components/LectureAIConfigDialog";
 
 const Course = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
   const [selectedLectureId, setSelectedLectureId] = useState<number | null>(null);
+  const [showAIConfig, setShowAIConfig] = useState<number | null>(null);
   
   const { data: course } = useQuery({
     queryKey: ['course', courseId],
@@ -104,6 +106,16 @@ const Course = () => {
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setShowAIConfig(lecture.id);
+                      }}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configure AI
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedLectureId(lecture.id);
                       }}
                     >
@@ -127,6 +139,12 @@ const Course = () => {
           isOpen={!!selectedLectureId}
           onClose={() => setSelectedLectureId(null)}
           lectureId={selectedLectureId!}
+        />
+
+        <LectureAIConfigDialog
+          isOpen={!!showAIConfig}
+          onClose={() => setShowAIConfig(null)}
+          lectureId={showAIConfig!}
         />
       </div>
     </div>
