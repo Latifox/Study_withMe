@@ -9,38 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      course_invites: {
-        Row: {
-          course_id: number | null
-          created_at: string
-          id: number
-          invite_code: string
-          updated_at: string
-        }
-        Insert: {
-          course_id?: number | null
-          created_at?: string
-          id?: number
-          invite_code: string
-          updated_at?: string
-        }
-        Update: {
-          course_id?: number | null
-          created_at?: string
-          id?: number
-          invite_code?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_invites_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       courses: {
         Row: {
           created_at: string
@@ -57,62 +25,6 @@ export type Database = {
         Update: {
           created_at?: string
           id?: number
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      invited_course_access: {
-        Row: {
-          created_at: string
-          id: number
-          invited_course_id: number | null
-          updated_at: string
-          user_email: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          invited_course_id?: number | null
-          updated_at?: string
-          user_email: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          invited_course_id?: number | null
-          updated_at?: string
-          user_email?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invited_course_access_invited_course_id_fkey"
-            columns: ["invited_course_id"]
-            isOneToOne: false
-            referencedRelation: "invited_courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invited_courses: {
-        Row: {
-          created_at: string
-          id: number
-          invite_code: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          invite_code: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          invite_code?: string
           title?: string
           updated_at?: string
         }
