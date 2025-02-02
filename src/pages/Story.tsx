@@ -1,41 +1,11 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import TheorySlide from "@/components/story/TheorySlide";
-import StoryQuiz from "@/components/story/StoryQuiz";
-import SegmentProgress from "@/components/story/SegmentProgress";
 import LearningPathway from "@/components/story/LearningPathway";
-import StoryProgress from "@/components/story/StoryProgress";
-
-interface Slide {
-  id: string;
-  content: string;
-}
-
-interface Question {
-  id: string;
-  type: "multiple_choice" | "true_false";
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  explanation: string;
-}
-
-interface Segment {
-  id: string;
-  title: string;
-  slides: Slide[];
-  questions: Question[];
-}
-
-interface StoryContent {
-  segments: Segment[];
-}
+import { useStoryContent } from "@/hooks/useStoryContent";
 
 const POINTS_PER_CORRECT_ANSWER = 5;
 const REQUIRED_SCORE_PERCENTAGE = 75;
@@ -52,54 +22,7 @@ const Story = () => {
   const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
 
-  const { data: storyContent, isLoading, error } = useQuery({
-    queryKey: ['story-content', lectureId],
-    queryFn: async () => {
-      if (!lectureId) throw new Error('Lecture ID is required');
-      const numericLectureId = parseInt(lectureId, 10);
-      if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
-
-      // First, try to get existing story content
-      const { data: existingContent } = await supabase
-        .from('story_contents')
-        .select('content')
-        .eq('lecture_id', numericLectureId)
-        .single();
-
-      if (existingContent) {
-        const content = existingContent.content as StoryContent;
-        if (!content.segments) throw new Error('Invalid story content structure');
-        return content;
-      }
-
-      // If no existing content, generate new content
-      const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
-        body: { lectureId: numericLectureId }
-      });
-
-      if (error) throw error;
-      if (!generatedContent?.storyContent?.segments?.length) {
-        throw new Error('Invalid story content structure');
-      }
-
-      // Store the generated content
-      const { error: insertError } = await supabase
-        .from('story_contents')
-        .insert({
-          lecture_id: numericLectureId,
-          content: generatedContent.storyContent
-        });
-
-      if (insertError) throw insertError;
-
-      return generatedContent.storyContent as StoryContent;
-    },
-    gcTime: 1000 * 60 * 60, // Cache for 1 hour (renamed from cacheTime)
-    staleTime: Infinity, // Content won't become stale
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false
-  });
+  const { data: storyContent, isLoading, error } = useStoryContent(lectureId);
 
   const handleContinue = () => {
     if (!storyContent?.segments) return;
@@ -211,19 +134,13 @@ const Story = () => {
   }
 
   const currentSegmentData = storyContent.segments[currentSegment];
-  const isSlide = currentStep < 2;
-  const slideIndex = currentStep;
-  const questionIndex = currentStep - 2;
-  const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
-  const currentScore = segmentScores[currentSegmentData.id] || 0;
-
   const pathwayNodes = storyContent.segments.map((segment, index) => ({
     id: segment.id,
     title: segment.title,
     type: "concept" as const,
     difficulty: "intermediate" as const,
     prerequisites: index > 0 ? [storyContent.segments[index - 1].id] : [],
-    points: maxScore,
+    points: TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER,
     description: `Complete this segment about ${segment.title}`,
   }));
 
@@ -260,38 +177,15 @@ const Story = () => {
         </div>
 
         <div className="md:col-span-2">
-          <Card className="p-2">
-            <div className="mb-2">
-              <SegmentProgress
-                currentSegment={currentSegment}
-                totalSegments={storyContent.segments.length}
-                currentStep={currentStep}
-                totalSteps={4}
-              />
-            </div>
-
-            <div className="mb-2">
-              <StoryProgress
-                currentPoints={currentScore}
-                maxPoints={maxScore}
-              />
-            </div>
-
-            <h2 className="text-base font-bold mb-2">{currentSegmentData.title}</h2>
-            
-            {isSlide ? (
-              <TheorySlide
-                content={currentSegmentData.slides[slideIndex].content}
-                onContinue={handleContinue}
-              />
-            ) : (
-              <StoryQuiz
-                question={currentSegmentData.questions[questionIndex]}
-                onCorrectAnswer={handleCorrectAnswer}
-                onWrongAnswer={handleWrongAnswer}
-              />
-            )}
-          </Card>
+          <StoryContainer
+            storyContent={storyContent}
+            currentSegment={currentSegment}
+            currentStep={currentStep}
+            segmentScores={segmentScores}
+            onContinue={handleContinue}
+            onCorrectAnswer={handleCorrectAnswer}
+            onWrongAnswer={handleWrongAnswer}
+          />
         </div>
       </div>
     </div>
