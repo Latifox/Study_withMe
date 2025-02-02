@@ -21,11 +21,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content, title')
-      .eq('id', lectureId)
-      .single();
+    // Fetch both lecture content and AI configuration
+    const [{ data: lecture, error: lectureError }, { data: aiConfig }] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
 
     if (lectureError) {
       console.error('Error fetching lecture:', lectureError);
@@ -36,8 +44,17 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
+    // Use default values if no AI config is found
+    const config = aiConfig || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
+
     console.log('Fetched lecture title:', lecture.title);
     console.log('Content length:', lecture.content.length);
+    console.log('Using AI config:', config);
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -46,11 +63,25 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4-1106-preview',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
             content: `You are an expert at creating educational content. Create an engaging learning journey based on lecture material. 
+            
+            Important parameters to consider:
+            - Temperature: ${config.temperature} (higher means more varied and creative responses)
+            - Creativity Level: ${config.creativity_level} (higher means more creative and engaging content)
+            - Detail Level: ${config.detail_level} (higher means more detailed explanations)
+            ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
+            
+            Requirements:
+            - Create EXACTLY 10 segments
+            - Each segment must have EXACTLY 2 theory slides and 2 quiz questions
+            - Keep the original language of the lecture content
+            - Make content progressively more challenging
+            - Ensure logical flow between segments
+            
             Return ONLY a raw JSON object (no markdown, no code blocks) with this structure:
             {
               "segments": [
@@ -60,29 +91,29 @@ serve(async (req) => {
                   "slides": [
                     {
                       "id": "slide-1-1",
-                      "content": "Slide content in markdown format"
+                      "content": "Slide content in the lecture's original language"
                     },
                     {
                       "id": "slide-1-2",
-                      "content": "Slide content in markdown format"
+                      "content": "Slide content in the lecture's original language"
                     }
                   ],
                   "questions": [
                     {
                       "id": "question-1-1",
                       "type": "multiple_choice",
-                      "question": "Question text",
+                      "question": "Question text in the lecture's original language",
                       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
                       "correctAnswer": "Correct option text",
-                      "explanation": "Explanation of the correct answer"
+                      "explanation": "Explanation in the lecture's original language"
                     },
                     {
                       "id": "question-1-2",
                       "type": "multiple_choice",
-                      "question": "Question text",
+                      "question": "Question text in the lecture's original language",
                       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
                       "correctAnswer": "Correct option text",
-                      "explanation": "Explanation of the correct answer"
+                      "explanation": "Explanation in the lecture's original language"
                     }
                   ]
                 }
@@ -91,10 +122,10 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Create a story-based learning journey for this lecture titled "${lecture.title}". Here's the content to teach: ${lecture.content}`
+            content: `Create a comprehensive learning journey with 10 segments for this lecture titled "${lecture.title}". Here's the content to teach: ${lecture.content}`
           }
         ],
-        temperature: 0.7,
+        temperature: config.temperature,
         max_tokens: 4000,
       }),
     });
@@ -133,6 +164,10 @@ serve(async (req) => {
       }
 
       // Validate each segment
+      if (storyContent.segments.length !== 10) {
+        throw new Error(`Invalid number of segments: expected 10, got ${storyContent.segments.length}`);
+      }
+
       storyContent.segments.forEach((segment: any, index: number) => {
         if (!segment.id || !segment.title || !Array.isArray(segment.slides) || !Array.isArray(segment.questions)) {
           throw new Error(`Invalid segment structure at index ${index}`);
@@ -142,7 +177,7 @@ serve(async (req) => {
         }
       });
 
-      console.log('Successfully validated story content structure');
+      console.log('Successfully validated story content structure with 10 segments');
 
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
