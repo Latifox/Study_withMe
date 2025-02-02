@@ -45,33 +45,49 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at creating interactive learning content. Analyze the lecture content and create a concept map with detailed information. 
+            content: `You are an expert at creating interactive learning content. Analyze the lecture content and create a structured learning journey. 
             
             Important: Return ONLY valid JSON without any markdown formatting or additional text.
             
             The response should follow this exact structure:
             {
-              "concepts": [
+              "chapters": [
                 {
-                  "id": "string",
-                  "title": "string",
-                  "description": "detailed explanation",
-                  "quotes": ["relevant quote 1", "relevant quote 2"],
-                  "position": { "x": number, "y": number },
-                  "connections": ["id-of-related-concept"],
-                  "quiz": {
-                    "trueFalse": {
+                  "id": "string (unique identifier)",
+                  "title": "string (key concept name)",
+                  "mainDescription": "string (detailed explanation of the concept)",
+                  "initialQuizzes": [
+                    {
+                      "type": "true_false",
                       "question": "string",
-                      "answer": boolean,
-                      "explanation": "string"
+                      "correctAnswer": boolean,
+                      "explanation": "string (detailed explanation for wrong answers)"
                     },
-                    "multipleChoice": {
+                    {
+                      "type": "multiple_choice",
                       "question": "string",
-                      "options": ["string", "string", "string", "string"],
-                      "correctAnswer": "string",
-                      "explanation": "string"
+                      "options": ["array of 4 strings"],
+                      "correctAnswer": "string (must match one of the options)",
+                      "explanation": "string (detailed explanation for wrong answers)"
                     }
-                  }
+                  ],
+                  "relatedConcepts": [
+                    {
+                      "id": "string (unique identifier)",
+                      "title": "string",
+                      "description": "string (detailed explanation)"
+                    }
+                  ],
+                  "finalQuizzes": [
+                    {
+                      "type": "multiple_choice",
+                      "question": "string",
+                      "options": ["array of 4 strings"],
+                      "correctAnswer": "string (must match one of the options)",
+                      "explanation": "string (detailed explanation for wrong answers)",
+                      "relatedConceptIds": ["array of concept ids this question relates to"]
+                    }
+                  ]
                 }
               ]
             }`
@@ -97,7 +113,6 @@ serve(async (req) => {
 
     let storyContent;
     try {
-      // Remove any potential markdown formatting and clean the string
       const cleanContent = data.choices[0].message.content
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
