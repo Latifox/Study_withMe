@@ -41,7 +41,7 @@ const Story = () => {
   const { toast } = useToast();
   
   const [currentSegment, setCurrentSegment] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0); // 0,1 for slides, 2,3 for questions
+  const [currentStep, setCurrentStep] = useState(0);
   const [score, setScore] = useState(0);
 
   const { data: storyContent, isLoading, error } = useQuery({
@@ -57,13 +57,18 @@ const Story = () => {
         throw error;
       }
 
+      if (!data?.storyContent?.segments?.length) {
+        console.error('Invalid story content structure:', data);
+        throw new Error('Invalid story content structure');
+      }
+
       console.log('Received story content:', data);
       return data.storyContent as StoryContent;
     }
   });
 
   const handleContinue = () => {
-    if (!storyContent) return;
+    if (!storyContent?.segments) return;
 
     const totalSteps = 4; // 2 slides + 2 questions
     if (currentStep < totalSteps - 1) {
@@ -109,7 +114,7 @@ const Story = () => {
     );
   }
 
-  if (error || !storyContent) {
+  if (error || !storyContent?.segments?.length) {
     return (
       <div className="container mx-auto p-4">
         <Card className="p-6">
@@ -127,6 +132,22 @@ const Story = () => {
   }
 
   const currentSegmentData = storyContent.segments[currentSegment];
+  if (!currentSegmentData) {
+    console.error('Invalid segment index:', currentSegment);
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Segment</h2>
+          <p className="text-muted-foreground mb-4">Failed to load segment content</p>
+          <Button onClick={handleBack} variant="outline">
+            <ArrowLeft className="mr-2" />
+            Back to Course
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
