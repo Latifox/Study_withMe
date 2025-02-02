@@ -55,20 +55,26 @@ const Story = () => {
   const { data: storyContent, isLoading, error } = useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
+      if (!lectureId) throw new Error('Lecture ID is required');
+      const numericLectureId = parseInt(lectureId, 10);
+      if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
+
       // First, try to get existing story content
       const { data: existingContent } = await supabase
         .from('story_contents')
         .select('content')
-        .eq('lecture_id', lectureId)
+        .eq('lecture_id', numericLectureId)
         .single();
 
       if (existingContent) {
-        return existingContent.content as StoryContent;
+        const content = existingContent.content as StoryContent;
+        if (!content.segments) throw new Error('Invalid story content structure');
+        return content;
       }
 
       // If no existing content, generate new content
       const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
-        body: { lectureId }
+        body: { lectureId: numericLectureId }
       });
 
       if (error) throw error;
@@ -80,7 +86,7 @@ const Story = () => {
       const { error: insertError } = await supabase
         .from('story_contents')
         .insert({
-          lecture_id: lectureId,
+          lecture_id: numericLectureId,
           content: generatedContent.storyContent
         });
 
@@ -88,8 +94,8 @@ const Story = () => {
 
       return generatedContent.storyContent as StoryContent;
     },
+    gcTime: 1000 * 60 * 60, // Cache for 1 hour (renamed from cacheTime)
     staleTime: Infinity, // Content won't become stale
-    cacheTime: 1000 * 60 * 60, // Cache for 1 hour
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false

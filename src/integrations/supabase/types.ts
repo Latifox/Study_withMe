@@ -68,7 +68,7 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "lectures"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       lectures: {
@@ -106,7 +106,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       story_contents: {
@@ -138,7 +138,7 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "lectures"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
     }
