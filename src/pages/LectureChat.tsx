@@ -52,22 +52,19 @@ const LectureChat = () => {
       setMessages(prev => [...prev, { role: 'user', content: inputMessage }]);
       setCurrentStreamingMessage("");
       
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-with-lecture`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ lectureId, message: inputMessage })
-        }
-      );
+      // Use the Supabase client to invoke the function
+      const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
+        body: { lectureId, message: inputMessage }
+      });
 
-      if (!response.ok) {
-        console.error('Response not OK:', response);
-        throw new Error(`Failed to get response from AI: ${response.statusText}`);
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
       }
+
+      const response = new Response(JSON.stringify(data), {
+        headers: { 'Content-Type': 'text/event-stream' }
+      });
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
