@@ -15,6 +15,7 @@ import TakeQuiz from "./pages/TakeQuiz";
 import Flashcards from "./pages/Flashcards";
 import Mindmap from "./pages/Mindmap";
 import Resources from "./pages/Resources";
+import Story from "./pages/Story";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/course/:courseId/lecture/:lectureId/flashcards" element={<Flashcards />} />
           <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<Mindmap />} />
           <Route path="/course/:courseId/lecture/:lectureId/resources" element={<Resources />} />
+          <Route path="/course/:courseId/lecture/:lectureId/story" element={<Story />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
