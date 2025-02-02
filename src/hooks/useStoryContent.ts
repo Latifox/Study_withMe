@@ -40,9 +40,18 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       console.log('Fetching story content for lecture:', numericLectureId);
 
+      // First, check if story content exists
       const { data: storyContent, error: contentError } = await supabase
         .from('story_contents')
-        .select('*, story_segment_contents(segment_number, segment_title, content)')
+        .select(`
+          *,
+          story_segment_contents (
+            id,
+            segment_number,
+            segment_title,
+            content
+          )
+        `)
         .eq('lecture_id', numericLectureId)
         .maybeSingle();
 
@@ -50,6 +59,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
         console.error('Error fetching story content:', contentError);
         throw contentError;
       }
+
+      console.log('Raw story content from DB:', storyContent);
 
       if (!storyContent) {
         console.log('No content exists, triggering generation');
@@ -61,23 +72,27 @@ export const useStoryContent = (lectureId: string | undefined) => {
         return generatedContent.storyContent;
       }
 
-      console.log('Raw story content:', storyContent);
-
-      // Return existing content with segment content included
+      // Process and validate segment content
       const sortedSegments = storyContent.story_segment_contents
         .sort((a: any, b: any) => a.segment_number - b.segment_number)
         .map((segment: any) => {
           console.log('Processing segment:', segment);
-          return {
+          const content = segment.content || {};
+          
+          // Ensure we have the required structure
+          const processedSegment = {
             id: `segment-${segment.segment_number + 1}`,
             title: segment.segment_title,
-            description: segment.content?.description || '',
-            slides: segment.content?.slides || [],
-            questions: segment.content?.questions || []
+            description: content.description || '',
+            slides: Array.isArray(content.slides) ? content.slides : [],
+            questions: Array.isArray(content.questions) ? content.questions : []
           };
+          
+          console.log('Processed segment:', processedSegment);
+          return processedSegment;
         });
 
-      console.log('Processed segments:', sortedSegments);
+      console.log('Final processed segments:', sortedSegments);
 
       return {
         segments: sortedSegments

@@ -89,7 +89,7 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Create segment entries
+    // Create segment entries with proper content structure
     const segmentInserts = segments.map((segment, index) => ({
       story_content_id: storyContent.id,
       segment_number: index,
@@ -112,7 +112,15 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ storyContent: { segments } }),
+      JSON.stringify({ 
+        storyContent: { 
+          segments: segments.map(segment => ({
+            ...segment,
+            slides: segment.slides,
+            questions: segment.questions
+          }))
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
