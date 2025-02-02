@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link } from "lucide-react";
+import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface LectureActionsDialogProps {
@@ -89,7 +89,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             className="flex items-center gap-2 w-full"
             size="lg"
           >
-            <FileText className="w-5 h-5" />
+            <Activity className="w-5 h-5" />
             Flashcards
           </Button>
           <Button
