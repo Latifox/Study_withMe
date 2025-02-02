@@ -114,7 +114,9 @@ export type Database = {
           content: Json
           created_at: string
           current_segment: number | null
+          generation_status: string | null
           id: number
+          is_generated: boolean | null
           lecture_id: number | null
           total_segments: number | null
           updated_at: string
@@ -123,7 +125,9 @@ export type Database = {
           content: Json
           created_at?: string
           current_segment?: number | null
+          generation_status?: string | null
           id?: number
+          is_generated?: boolean | null
           lecture_id?: number | null
           total_segments?: number | null
           updated_at?: string
@@ -132,7 +136,9 @@ export type Database = {
           content?: Json
           created_at?: string
           current_segment?: number | null
+          generation_status?: string | null
           id?: number
+          is_generated?: boolean | null
           lecture_id?: number | null
           total_segments?: number | null
           updated_at?: string

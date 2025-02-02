@@ -36,7 +36,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
       const numericLectureId = parseInt(lectureId, 10);
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
-      const { data: existingContent, error: contentError } = await supabase
+      const { data: storyContent, error: contentError } = await supabase
         .from('story_contents')
         .select('*, story_segment_contents(*)')
         .eq('lecture_id', numericLectureId)
@@ -44,27 +44,27 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       if (contentError) throw contentError;
 
-      if (existingContent) {
-        const sortedSegments = existingContent.story_segment_contents
-          .sort((a: any, b: any) => a.segment_number - b.segment_number);
+      if (!storyContent) {
+        // If no content exists, trigger generation
+        const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
+          body: { lectureId: numericLectureId }
+        });
 
-        return {
-          segments: sortedSegments.map((segment: any) => ({
-            id: `segment-${segment.segment_number + 1}`,
-            title: segment.segment_title,
-            description: segment.description || ''
-          }))
-        };
+        if (error) throw error;
+        return generatedContent.storyContent;
       }
 
-      console.log('No existing content found, generating new content...');
+      // Return existing content
+      const sortedSegments = storyContent.story_segment_contents
+        .sort((a: any, b: any) => a.segment_number - b.segment_number);
 
-      const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
-        body: { lectureId: numericLectureId }
-      });
-
-      if (error) throw error;
-      return generatedContent.storyContent;
+      return {
+        segments: sortedSegments.map((segment: any) => ({
+          id: `segment-${segment.segment_number + 1}`,
+          title: segment.segment_title,
+          description: segment.description || ''
+        }))
+      };
     },
     gcTime: 1000 * 60 * 60,
     staleTime: Infinity,
@@ -86,63 +86,17 @@ export const useSegmentContent = (
       const numericLectureId = parseInt(lectureId, 10);
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
-      const { data: existingSegment } = await supabase
+      const { data: segment } = await supabase
         .from('story_segment_contents')
         .select('content')
         .eq('segment_number', segmentNumber)
         .single();
 
-      if (existingSegment?.content) {
-        // Type assertion to ensure the content matches SegmentContent interface
-        const content = existingSegment.content as unknown as SegmentContent;
-        if (!content.slides || !content.questions) {
-          throw new Error('Invalid segment content structure');
-        }
-        return content;
+      if (!segment?.content) {
+        throw new Error('No segment content found');
       }
 
-      const { data: lecture } = await supabase
-        .from('lectures')
-        .select('content')
-        .eq('id', numericLectureId)
-        .single();
-
-      if (!lecture?.content) throw new Error('No lecture content found');
-
-      const { data: generatedContent, error } = await supabase.functions.invoke('generate-segment-content', {
-        body: {
-          lectureId: numericLectureId,
-          segmentNumber,
-          segmentTitle,
-          lectureContent: lecture.content
-        }
-      });
-
-      if (error) throw error;
-
-      // Type assertion after validating the structure
-      const content = generatedContent.content as unknown as SegmentContent;
-      if (!content.slides || !content.questions) {
-        throw new Error('Invalid generated content structure');
-      }
-
-      // Convert SegmentContent to a plain object that satisfies the Json type
-      const jsonContent = {
-        slides: content.slides,
-        questions: content.questions
-      };
-
-      const { error: updateError } = await supabase
-        .from('story_segment_contents')
-        .update({
-          content: jsonContent,
-          is_generated: true
-        })
-        .eq('segment_number', segmentNumber);
-
-      if (updateError) throw updateError;
-
-      return content;
+      return segment.content as SegmentContent;
     },
     enabled: !!lectureId && segmentNumber >= 0 && !!segmentTitle,
     gcTime: 1000 * 60 * 60,

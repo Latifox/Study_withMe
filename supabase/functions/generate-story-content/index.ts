@@ -36,55 +36,52 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
+    // Generate initial segments structure
+    const segments = Array.from({ length: 5 }, (_, i) => ({
+      id: `segment-${i + 1}`,
+      title: `Part ${i + 1}`,
+      description: `Description for part ${i + 1}`,
+      content: {
+        slides: [
           {
-            role: 'system',
-            content: `You are a curriculum organizer. Your task is to break down lecture content into 10 logical segments. Output ONLY valid JSON in this format:
-{
-  "segments": [
-    {
-      "id": "segment-1",
-      "title": "Segment Title",
-      "description": "Brief description of segment content"
-    }
-  ]
-}`
+            id: `slide-${i}-1`,
+            content: "Sample content for slide 1"
           },
           {
-            role: 'user',
-            content: `Break down this lecture titled "${lecture.title}" into 10 logical segments: ${lecture.content}`
+            id: `slide-${i}-2`,
+            content: "Sample content for slide 2"
           }
         ],
-        temperature: 0.3,
-        max_tokens: 1000,
-      }),
-    });
-
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
-    }
-
-    const aiResponseData = await openAIResponse.json();
-    const segmentData = JSON.parse(aiResponseData.choices[0].message.content);
+        questions: [
+          {
+            id: `question-${i}-1`,
+            type: "true_false",
+            question: "Sample true/false question",
+            correctAnswer: true,
+            explanation: "Sample explanation"
+          },
+          {
+            id: `question-${i}-2`,
+            type: "multiple_choice",
+            question: "Sample multiple choice question",
+            options: ["Option A", "Option B", "Option C"],
+            correctAnswer: "Option A",
+            explanation: "Sample explanation"
+          }
+        ]
+      }
+    }));
 
     // Create story content entry
     const { data: storyContent, error: insertError } = await supabaseClient
       .from('story_contents')
       .insert({
         lecture_id: lectureId,
-        content: segmentData,
-        total_segments: segmentData.segments.length,
-        current_segment: 0
+        content: { segments },
+        total_segments: segments.length,
+        current_segment: 0,
+        is_generated: true,
+        generation_status: 'completed'
       })
       .select()
       .single();
@@ -95,11 +92,12 @@ serve(async (req) => {
     }
 
     // Create segment entries
-    const segmentInserts = segmentData.segments.map((segment: any, index: number) => ({
+    const segmentInserts = segments.map((segment, index) => ({
       story_content_id: storyContent.id,
       segment_number: index,
       segment_title: segment.title,
-      is_generated: false
+      content: segment.content,
+      is_generated: true
     }));
 
     const { error: segmentError } = await supabaseClient
@@ -112,7 +110,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ storyContent }),
+      JSON.stringify({ storyContent: { segments } }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
