@@ -53,15 +53,14 @@ const LectureChat = () => {
       setCurrentStreamingMessage("");
       
       const response = await supabase.functions.invoke('chat-with-lecture', {
-        body: { lectureId, message: inputMessage }
-      }, {
+        body: { lectureId, message: inputMessage },
         responseType: 'stream'
       });
 
-      const reader = response.body?.getReader();
+      if (response.error) throw new Error(response.error.message);
+      
+      const reader = response.data.getReader();
       const decoder = new TextDecoder();
-
-      if (!reader) throw new Error("No reader available");
 
       while (true) {
         const { done, value } = await reader.read();
