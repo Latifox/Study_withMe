@@ -48,6 +48,11 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
     onClose();
   };
 
+  const handleStoryModeAction = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/story`);
+    onClose();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -102,6 +107,14 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           >
             <Link className="w-5 h-5" />
             Additional Resources
+          </Button>
+          <Button
+            onClick={handleStoryModeAction}
+            className="flex items-center gap-2 w-full"
+            size="lg"
+          >
+            <BookOpen className="w-5 h-5" />
+            Story Mode
           </Button>
         </div>
       </DialogContent>
