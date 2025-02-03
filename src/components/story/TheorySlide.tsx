@@ -37,13 +37,15 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
               li: ({ node, ...props }) => <li className="mb-1" {...props} />,
               code: ({ node, inline, className, children, ...props }: CodeProps) => 
                 inline ? (
-                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm" {...props}>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
                     {children}
                   </code>
                 ) : (
-                  <code className="block bg-gray-100 dark:bg-gray-700 p-4 rounded-lg my-4 text-sm overflow-x-auto" {...props}>
-                    {children}
-                  </code>
+                  <pre className="relative">
+                    <code className="block bg-gray-50 dark:bg-gray-900 p-4 rounded-lg my-4 text-sm font-mono leading-relaxed overflow-x-auto border border-gray-200 dark:border-gray-700 shadow-sm" {...props}>
+                      {children}
+                    </code>
+                  </pre>
                 ),
               blockquote: ({ node, ...props }) => (
                 <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-gray-600 dark:text-gray-300" {...props} />
