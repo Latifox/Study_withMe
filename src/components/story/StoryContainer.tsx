@@ -75,7 +75,6 @@ export const StoryContainer = ({
 
       setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
       
-      // Save progress to database
       if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
         
@@ -88,7 +87,7 @@ export const StoryContainer = ({
           .eq('segment_number', segmentNumber)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (progressError) {
           console.error('Error fetching current progress:', progressError);
@@ -100,7 +99,7 @@ export const StoryContainer = ({
         
         const { error: updateError } = await supabase
           .from('user_progress')
-          .upsert({
+          .insert({
             user_id: user.id,
             lecture_id: parseInt(lectureId),
             segment_number: segmentNumber,
@@ -122,7 +121,18 @@ export const StoryContainer = ({
           title: "🎯 Correct!",
           description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
         });
-        handleContinue();
+
+        // Only proceed to next step if we haven't reached max score yet
+        if (newScore < maxScore) {
+          handleContinue();
+        } else {
+          // If we've reached max score, call onCorrectAnswer to trigger segment completion
+          onCorrectAnswer();
+          toast({
+            title: "🌟 Segment Complete!",
+            description: "Great job! Moving to the next segment.",
+          });
+        }
       }
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);
