@@ -29,42 +29,53 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a helpful teaching assistant. Generate educational content based on the provided lecture content.
-            Focus on the following segment: "${segmentTitle}".
+            content: `You are an educational content creator. Create structured, easy-to-follow content for the segment "${segmentTitle}".
             
-            Create:
-            1. Two theory slides with 3 paragraphs each
-            2. Two quiz questions (one multiple choice, one true/false)
+            Rules for content creation:
+            1. Theory slides should be highly structured with:
+               - Clear bullet points
+               - Numbered lists for steps/processes
+               - Short, concise paragraphs
+               - Key terms in bold
+               - Examples where relevant
             
-            Return the response in this exact JSON format:
+            2. Quiz questions should:
+               - Test understanding of specific concepts from the theory slides
+               - Include clear explanations for why answers are correct/incorrect
+               - Mix of multiple choice and true/false questions
+               - Gradually increase in difficulty
+            
+            Return the content in this exact JSON format:
             {
               "slides": [
                 {
                   "id": "slide-1",
-                  "content": "First slide content with 3 paragraphs"
+                  "content": "Structured content with bullet points and lists"
                 },
                 {
                   "id": "slide-2",
-                  "content": "Second slide content with 3 paragraphs"
+                  "content": "More structured content focusing on examples and applications"
                 }
               ],
               "questions": [
                 {
+                  "id": "q1",
                   "type": "multiple_choice",
-                  "question": "Question text",
+                  "question": "Question testing a specific concept from the slides",
                   "options": ["Option A", "Option B", "Option C", "Option D"],
                   "correctAnswer": "Correct option",
-                  "explanation": "Why this is correct"
+                  "explanation": "Detailed explanation referencing the theory"
                 },
                 {
+                  "id": "q2",
                   "type": "true_false",
-                  "question": "True/False question text",
+                  "question": "True/False question about a key concept",
                   "correctAnswer": true,
-                  "explanation": "Why this is true/false"
+                  "explanation": "Explanation linking back to the theory"
                 }
               ]
             }`
@@ -110,7 +121,7 @@ serve(async (req) => {
 
     // Store the generated segment content
     const { data: segmentContent, error: segmentError } = await supabaseClient
-      .from('story_segment_contents')
+      .from('story_segments')
       .upsert({
         story_content_id: storyContent.id,
         segment_number: segmentNumber,

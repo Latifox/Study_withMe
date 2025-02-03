@@ -38,21 +38,42 @@ serve(async (req) => {
       throw new Error('Lecture content is empty or not found');
     }
 
-    // Generate default segment titles
-    const segmentTitles = [
-      "Introduction and Overview",
-      "Key Concepts Part 1",
-      "Key Concepts Part 2",
-      "Detailed Analysis Part 1",
-      "Detailed Analysis Part 2",
-      "Practical Applications Part 1",
-      "Practical Applications Part 2",
-      "Advanced Topics",
-      "Case Studies",
-      "Summary and Conclusion"
-    ];
+    // Generate segment titles using OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `Analyze the lecture content and generate 10 meaningful segment titles that:
+            1. Follow a logical progression
+            2. Use specific, descriptive names based on the actual content
+            3. Help learners understand what they'll learn in each segment
+            
+            Return ONLY a JSON array of 10 titles, no other text.`
+          },
+          {
+            role: 'user',
+            content: lecture.content
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
 
-    console.log('Creating story content entry...');
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const openAIResponse = await response.json();
+    const segmentTitles = JSON.parse(openAIResponse.choices[0].message.content);
+
+    console.log('Generated segment titles:', segmentTitles);
     
     // Create new story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
