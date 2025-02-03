@@ -47,6 +47,11 @@ export const StoryContainer = ({
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
+  const handleContinue = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onContinue();
+  };
+
   const handleCorrectAnswer = async () => {
     try {
       // First check if user is authenticated
@@ -130,6 +135,7 @@ export const StoryContainer = ({
   };
 
   const handleWrongAnswer = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
     onWrongAnswer();
     toast({
@@ -139,7 +145,6 @@ export const StoryContainer = ({
     });
   };
 
-  // Loading state
   if (!currentSegmentData.slides || !currentSegmentData.questions) {
     return (
       <Card className="p-2">
@@ -201,7 +206,7 @@ export const StoryContainer = ({
       {isSlide ? (
         <TheorySlide
           content={currentSegmentData.slides[slideIndex].content}
-          onContinue={onContinue}
+          onContinue={handleContinue}
         />
       ) : (
         <StoryQuiz
