@@ -41,15 +41,31 @@ serve(async (req) => {
       throw new Error('Lecture content not found');
     }
 
-    // Get story structure
-    const { data: storyStructure, error: structureError } = await supabaseClient
+    // Get or create story structure
+    let storyStructure;
+    const { data: existingStructure, error: structureError } = await supabaseClient
       .from('story_structures')
       .select('id')
       .eq('lecture_id', lectureId)
       .single();
 
-    if (structureError) {
+    if (structureError && structureError.code !== 'PGRST116') {
       throw new Error(`Failed to fetch story structure: ${structureError.message}`);
+    }
+
+    if (!existingStructure) {
+      const { data: newStructure, error: createError } = await supabaseClient
+        .from('story_structures')
+        .insert([{ lecture_id: lectureId }])
+        .select()
+        .single();
+
+      if (createError) {
+        throw new Error(`Failed to create story structure: ${createError.message}`);
+      }
+      storyStructure = newStructure;
+    } else {
+      storyStructure = existingStructure;
     }
 
     console.log('Calling OpenAI API...');
@@ -123,20 +139,47 @@ serve(async (req) => {
       throw new Error(`Failed to parse generated content: ${error.message}`);
     }
 
-    // Get the next ID from the sequence
-    const { data: nextId, error: nextIdError } = await supabaseClient.rpc('get_next_segment_content_id');
-    
-    if (nextIdError) {
-      throw new Error(`Failed to get next ID: ${nextIdError.message}`);
+    // Check if segment content already exists
+    const { data: existingContent } = await supabaseClient
+      .from('segment_contents')
+      .select('id')
+      .eq('story_structure_id', storyStructure.id)
+      .eq('segment_number', segmentNumber)
+      .single();
+
+    if (existingContent) {
+      // Update existing content
+      const { data: updatedContent, error: updateError } = await supabaseClient
+        .from('segment_contents')
+        .update({
+          theory_slide_1: content.theory_slide_1,
+          theory_slide_2: content.theory_slide_2,
+          quiz_question_1: content.quiz_question_1,
+          quiz_question_2: content.quiz_question_2
+        })
+        .eq('id', existingContent.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update segment content: ${updateError.message}`);
+      }
+
+      return new Response(
+        JSON.stringify({ segmentContent: updatedContent }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Create new segment content
+    const { data: nextId } = await supabaseClient.rpc('get_next_segment_content_id');
     
-    // Store the segment content
-    const { data: segmentContent, error: segmentError } = await supabaseClient
+    const { data: segmentContent, error: insertError } = await supabaseClient
       .from('segment_contents')
       .insert({
         id: nextId,
         story_structure_id: storyStructure.id,
-        segment_number: segmentNumber + 1,
+        segment_number: segmentNumber,
         theory_slide_1: content.theory_slide_1,
         theory_slide_2: content.theory_slide_2,
         quiz_question_1: content.quiz_question_1,
@@ -145,8 +188,8 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (segmentError) {
-      throw new Error(`Failed to store segment content: ${segmentError.message}`);
+    if (insertError) {
+      throw new Error(`Failed to store segment content: ${insertError.message}`);
     }
 
     return new Response(
