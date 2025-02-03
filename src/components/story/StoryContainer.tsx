@@ -95,7 +95,8 @@ export const StoryContainer = ({
         }
 
         const currentScore = currentProgress?.score || 0;
-        const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
+        // Ensure we don't exceed the maximum score
+        const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, maxScore);
         
         const { error: updateError } = await supabase
           .from('user_progress')
