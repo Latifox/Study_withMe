@@ -41,7 +41,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
       // Check if story structure exists
       const { data: storyStructure, error: structureError } = await supabase
         .from('story_structures')
-        .select('*')
+        .select('*, segment_contents(*)')
         .eq('lecture_id', numericLectureId)
         .maybeSingle();
 
@@ -74,10 +74,29 @@ export const useStoryContent = (lectureId: string | undefined) => {
 const processStoryStructure = (structure: any) => {
   const segments = [];
   for (let i = 1; i <= 10; i++) {
+    const segmentContent = structure.segment_contents?.find(
+      (content: any) => content.segment_number === i
+    );
+
+    const processedContent = segmentContent ? {
+      slides: [
+        { id: 'slide-1', content: segmentContent.theory_slide_1 },
+        { id: 'slide-2', content: segmentContent.theory_slide_2 }
+      ],
+      questions: [
+        { id: 'q1', ...segmentContent.quiz_question_1 },
+        { id: 'q2', ...segmentContent.quiz_question_2 }
+      ]
+    } : undefined;
+
     segments.push({
       id: `segment-${i}`,
       title: structure[`segment_${i}_title`],
       description: '',
+      ...(processedContent && {
+        slides: processedContent.slides,
+        questions: processedContent.questions
+      })
     });
   }
   return { segments };
