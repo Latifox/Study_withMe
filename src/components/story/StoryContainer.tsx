@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import TheorySlide from "./TheorySlide";
 import StoryQuiz from "./StoryQuiz";
 import SegmentProgress from "./SegmentProgress";
 import StoryProgress from "./StoryProgress";
 import { StoryContent, SegmentContent } from "@/hooks/useStoryContent";
+import { supabase } from "@/integrations/supabase/client";
+import { useParams } from "react-router-dom";
 
 interface StoryContainerProps {
   storyContent: {
@@ -36,12 +38,44 @@ export const StoryContainer = ({
   onCorrectAnswer,
   onWrongAnswer
 }: StoryContainerProps) => {
+  const { lectureId } = useParams();
   const currentSegmentData = storyContent.segments[currentSegment];
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
   const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
   const currentScore = segmentScores[currentSegmentData.id] || 0;
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
+
+  const handleCorrectAnswer = async () => {
+    setAnsweredQuestions(prev => new Set(prev).add(questionIndex));
+    onCorrectAnswer();
+    
+    // Save progress to database
+    if (lectureId) {
+      try {
+        const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
+        const { error } = await supabase
+          .from('user_progress')
+          .upsert({
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            lecture_id: parseInt(lectureId),
+            segment_number: segmentNumber,
+            score: currentScore + POINTS_PER_CORRECT_ANSWER,
+            completed_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error saving progress:', error);
+      }
+    }
+  };
+
+  const handleWrongAnswer = () => {
+    setAnsweredQuestions(prev => new Set(prev).add(questionIndex));
+    onWrongAnswer();
+  };
 
   // Loading state
   if (!currentSegmentData.slides || !currentSegmentData.questions) {
@@ -110,8 +144,9 @@ export const StoryContainer = ({
       ) : (
         <StoryQuiz
           question={currentSegmentData.questions[questionIndex]}
-          onCorrectAnswer={onCorrectAnswer}
-          onWrongAnswer={onWrongAnswer}
+          onCorrectAnswer={handleCorrectAnswer}
+          onWrongAnswer={handleWrongAnswer}
+          isAnswered={answeredQuestions.has(questionIndex)}
         />
       )}
     </Card>
