@@ -73,12 +73,13 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
               {["true", "false"].map((option) => (
                 <motion.div
                   key={option}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: hasSubmitted || isAnswered ? 1 : 1.02 }}
+                  whileTap={{ scale: hasSubmitted || isAnswered ? 1 : 0.98 }}
                   className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer
                     ${selectedAnswer === option ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}
                     ${(hasSubmitted || isAnswered) && option === question.correctAnswer.toString() ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
                     ${(hasSubmitted || isAnswered) && selectedAnswer === option && option !== question.correctAnswer.toString() ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
+                    ${hasSubmitted || isAnswered ? 'cursor-not-allowed' : ''}
                   `}
                 >
                   <RadioGroupItem value={option} id={option} />
@@ -99,12 +100,13 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
               {question.options?.map((option) => (
                 <motion.div
                   key={option}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: hasSubmitted || isAnswered ? 1 : 1.02 }}
+                  whileTap={{ scale: hasSubmitted || isAnswered ? 1 : 0.98 }}
                   className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer
                     ${selectedAnswer === option ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}
                     ${(hasSubmitted || isAnswered) && option === question.correctAnswer ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
                     ${(hasSubmitted || isAnswered) && selectedAnswer === option && option !== question.correctAnswer ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
+                    ${hasSubmitted || isAnswered ? 'cursor-not-allowed' : ''}
                   `}
                 >
                   <RadioGroupItem value={option} id={option} />
@@ -123,8 +125,8 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
       </div>
 
       <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: !selectedAnswer || hasSubmitted || isAnswered ? 1 : 1.02 }}
+        whileTap={{ scale: !selectedAnswer || hasSubmitted || isAnswered ? 1 : 0.98 }}
         onClick={handleSubmit}
         disabled={!selectedAnswer || hasSubmitted || isAnswered}
         className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-lg font-semibold shadow-md transition-all duration-200 transform hover:-translate-y-0.5"

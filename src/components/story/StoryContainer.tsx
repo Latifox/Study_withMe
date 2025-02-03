@@ -48,7 +48,7 @@ export const StoryContainer = ({
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
 
   const handleCorrectAnswer = async () => {
-    setAnsweredQuestions(prev => new Set(prev).add(questionIndex));
+    setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
     onCorrectAnswer();
     
     // Save progress to database
@@ -73,7 +73,7 @@ export const StoryContainer = ({
   };
 
   const handleWrongAnswer = () => {
-    setAnsweredQuestions(prev => new Set(prev).add(questionIndex));
+    setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
     onWrongAnswer();
   };
 
