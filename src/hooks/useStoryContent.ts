@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StoryContent {
@@ -29,8 +29,6 @@ export interface SegmentContent {
 }
 
 export const useStoryContent = (lectureId: string | undefined) => {
-  const queryClient = useQueryClient();
-
   return useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
@@ -40,8 +38,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       console.log('Fetching story content for lecture:', numericLectureId);
 
-      // First, check if story content exists
-      const { data: storyContent, error: contentError } = await supabase
+      // Check if content exists
+      const { data: existingContent, error: contentError } = await supabase
         .from('story_contents')
         .select(`
           *,
@@ -60,9 +58,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
         throw contentError;
       }
 
-      console.log('Raw story content from DB:', storyContent);
-
-      if (!storyContent) {
+      if (!existingContent) {
         console.log('No content exists, triggering generation');
         const { data: generatedContent, error } = await supabase.functions.invoke('generate-story-content', {
           body: { lectureId: numericLectureId }
@@ -72,32 +68,26 @@ export const useStoryContent = (lectureId: string | undefined) => {
         return generatedContent.storyContent;
       }
 
-      // Process and validate segment content
-      const sortedSegments = storyContent.story_segment_contents
+      // Process existing content
+      const sortedSegments = existingContent.story_segment_contents
         ?.sort((a: any, b: any) => a.segment_number - b.segment_number)
-        .map((segment: any) => {
-          console.log('Processing segment:', segment);
-          const content = segment.content || {};
-          
-          return {
-            id: `segment-${segment.segment_number + 1}`,
-            title: segment.title,
-            description: content.description || '',
-            slides: content.slides || [],
-            questions: content.questions || []
-          };
-        }) || [];
-
-      console.log('Final processed segments:', sortedSegments);
+        .map((segment: any) => ({
+          id: `segment-${segment.segment_number + 1}`,
+          title: segment.title,
+          description: segment.content.description || '',
+          slides: segment.content.slides || [],
+          questions: segment.content.questions || []
+        })) || [];
 
       return {
         segments: sortedSegments
       };
     },
-    gcTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60, // 1 hour
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: false
+    refetchOnReconnect: false,
+    retry: 1
   });
 };

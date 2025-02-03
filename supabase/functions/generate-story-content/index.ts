@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log('Generating story segments for lecture:', lectureId);
+    console.log('Starting story generation for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -28,18 +28,12 @@ serve(async (req) => {
       .eq('id', lectureId)
       .maybeSingle();
 
-    if (lectureError) {
+    if (lectureError || !lecture) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
-    if (!lecture?.content) {
-      throw new Error('No lecture content found');
-    }
-
-    console.log('Fetched lecture content, generating segments...');
-
-    // Generate segments using OpenAI
+    console.log('Generating content with OpenAI...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -48,18 +42,16 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: `Generate educational content from lecture material. Return a JSON object with a "segments" array containing exactly 10 segments. Each segment should have:
+            content: `You are a story content generator. Generate exactly 10 educational segments based on the provided lecture content. Each segment must have:
+- A clear title
+- A brief description
+- 2 theory slides with markdown content
+- 2 quiz questions (1 multiple choice, 1 true/false)
 
-1. A title summarizing the topic
-2. A brief description
-3. Two theory slides with markdown content
-4. Two quiz questions (one multiple choice, one true/false)
-
-Format:
+Follow this exact JSON structure:
 {
   "segments": [
     {
@@ -88,7 +80,7 @@ Format:
           "id": "q2",
           "type": "true_false",
           "question": "string",
-          "correctAnswer": true,
+          "correctAnswer": boolean,
           "explanation": "string"
         }
       ]
@@ -107,28 +99,18 @@ Format:
     });
 
     if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
       throw new Error(`OpenAI API error: ${openAIResponse.status}`);
     }
 
     const aiResponseData = await openAIResponse.json();
-    console.log('Received OpenAI response');
-    
-    let generatedContent;
-    try {
-      generatedContent = aiResponseData.choices[0].message.content;
-      console.log('Parsed content:', generatedContent);
-      
-      if (!generatedContent.segments || !Array.isArray(generatedContent.segments)) {
-        throw new Error('Invalid content structure');
-      }
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      throw new Error('Failed to parse generated content');
+    const generatedContent = JSON.parse(aiResponseData.choices[0].message.content);
+
+    console.log('Validating generated content...');
+    if (!generatedContent.segments || !Array.isArray(generatedContent.segments) || generatedContent.segments.length !== 10) {
+      throw new Error('Invalid content structure or wrong number of segments');
     }
 
-    // Create story content entry
+    console.log('Creating story content entry...');
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
@@ -147,9 +129,7 @@ Format:
       throw storyError;
     }
 
-    console.log('Created story content:', storyContent);
-
-    // Generate segments with proper content structure
+    console.log('Creating segment contents...');
     const segments = generatedContent.segments.map((segment: any, index: number) => ({
       story_content_id: storyContent.id,
       segment_number: index,
@@ -171,11 +151,10 @@ Format:
       throw segmentError;
     }
 
-    console.log('Successfully inserted all segments');
-
-    // Return the processed content
+    console.log('Successfully generated and stored all content');
     return new Response(
       JSON.stringify({ 
+        success: true,
         storyContent: { 
           segments: segments.map(segment => ({
             id: `segment-${segment.segment_number + 1}`,
