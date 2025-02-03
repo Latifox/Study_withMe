@@ -25,10 +25,11 @@ const StoryContent = () => {
   const { toast } = useToast();
 
   const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) : null;
+  const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
   useEffect(() => {
     const fetchExistingProgress = async () => {
-      if (!segmentNumber) return;
+      if (!segmentNumber || !numericLectureId) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -37,7 +38,7 @@ const StoryContent = () => {
         .from('user_progress')
         .select('score')
         .eq('segment_number', segmentNumber)
-        .eq('lecture_id', lectureId)
+        .eq('lecture_id', numericLectureId)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -50,7 +51,7 @@ const StoryContent = () => {
     };
 
     fetchExistingProgress();
-  }, [nodeId, lectureId, segmentNumber]);
+  }, [nodeId, numericLectureId, segmentNumber]);
 
   const isValidQuizQuestion = (question: any): question is QuizQuestion => {
     return (
@@ -65,10 +66,10 @@ const StoryContent = () => {
   };
 
   const { data: content, isLoading, error } = useQuery({
-    queryKey: ['segment-content', lectureId, nodeId],
+    queryKey: ['segment-content', numericLectureId, nodeId],
     queryFn: async () => {
-      if (!lectureId || !nodeId) throw new Error('Lecture ID and Node ID are required');
-      console.log('Fetching content for:', { lectureId, nodeId });
+      if (!numericLectureId || !nodeId) throw new Error('Lecture ID and Node ID are required');
+      console.log('Fetching content for:', { lectureId: numericLectureId, nodeId });
 
       const segmentNumber = parseInt(nodeId.split('_')[1]);
       if (isNaN(segmentNumber)) throw new Error('Invalid segment number');
@@ -77,7 +78,7 @@ const StoryContent = () => {
       const { data: storyStructure, error: structureError } = await supabase
         .from('story_structures')
         .select('*, segment_contents(*)')
-        .eq('lecture_id', parseInt(lectureId))
+        .eq('lecture_id', numericLectureId)
         .single();
 
       if (structureError) throw structureError;
@@ -92,7 +93,7 @@ const StoryContent = () => {
         console.log('No content found, triggering generation...');
         const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
           body: {
-            lectureId: parseInt(lectureId),
+            lectureId: numericLectureId,
             segmentNumber,
             segmentTitle: storyStructure[`segment_${segmentNumber}_title`]
           }
@@ -145,6 +146,7 @@ const StoryContent = () => {
         }]
       };
     },
+    enabled: Boolean(numericLectureId && nodeId),
     retry: 1
   });
 
@@ -178,7 +180,7 @@ const StoryContent = () => {
   };
 
   const handleCorrectAnswer = async () => {
-    if (!nodeId || !lectureId || !segmentNumber) return;
+    if (!nodeId || !numericLectureId || !segmentNumber) return;
 
     const newScore = (segmentScores[nodeId] || 0) + 5;
     setSegmentScores(prev => ({
@@ -194,7 +196,7 @@ const StoryContent = () => {
       .from('user_progress')
       .upsert({
         user_id: user.id,
-        lecture_id: parseInt(lectureId),
+        lecture_id: numericLectureId,
         segment_number: segmentNumber,
         score: newScore,
         completed_at: newScore >= 10 ? new Date().toISOString() : null
