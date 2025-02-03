@@ -9,7 +9,7 @@ interface StoryLayoutProps {
 const StoryLayout = ({ pathwaySection, contentSection }: StoryLayoutProps) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
     <div className="md:col-span-1">
-      <Card className="p-2">
+      <Card>
         {pathwaySection}
       </Card>
     </div>
