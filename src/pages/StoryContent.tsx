@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Trophy, Star, Gauge } from "lucide-react";
+import { ArrowLeft, Trophy, Star, Gauge, Award, ArrowLeftCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -24,6 +24,19 @@ const StoryContent = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
   const { toast } = useToast();
+
+  // Helper function to validate quiz question structure
+  const isValidQuizQuestion = (question: any): question is QuizQuestion => {
+    return (
+      question &&
+      typeof question === 'object' &&
+      (question.type === 'multiple_choice' || question.type === 'true_false') &&
+      typeof question.question === 'string' &&
+      (typeof question.correctAnswer === 'string' || typeof question.correctAnswer === 'boolean') &&
+      typeof question.explanation === 'string' &&
+      (!question.options || Array.isArray(question.options))
+    );
+  };
 
   const { data: content, isLoading, error } = useQuery({
     queryKey: ['segment-content', lectureId, nodeId],
@@ -117,19 +130,6 @@ const StoryContent = () => {
     retry: 1
   });
 
-  // Helper function to validate quiz question structure
-  const isValidQuizQuestion = (question: any): question is QuizQuestion => {
-    return (
-      question &&
-      typeof question === 'object' &&
-      (question.type === 'multiple_choice' || question.type === 'true_false') &&
-      typeof question.question === 'string' &&
-      (typeof question.correctAnswer === 'string' || typeof question.correctAnswer === 'boolean') &&
-      typeof question.explanation === 'string' &&
-      (!question.options || Array.isArray(question.options))
-    );
-  };
-
   const handleBack = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
   };
@@ -138,6 +138,7 @@ const StoryContent = () => {
     setCurrentStep(prev => {
       const newStep = prev + 1;
       if (newStep === 4) {
+        // Show completion message using toast
         toast({
           title: "🎉 Segment Completed!",
           description: "Great job! You've completed this learning segment.",
@@ -189,6 +190,28 @@ const StoryContent = () => {
   }
 
   const currentScore = segmentScores[nodeId || ''] || 0;
+
+  // Show completion card when all steps are done
+  if (currentStep >= 4) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="p-6 text-center space-y-6">
+          <Award className="w-16 h-16 mx-auto text-yellow-400" />
+          <h2 className="text-2xl font-bold">🎉 Hooray! Node Completed!</h2>
+          <p className="text-muted-foreground">
+            You've successfully completed this learning segment.
+          </p>
+          <Button 
+            onClick={handleBack}
+            className="gap-2"
+          >
+            <ArrowLeftCircle className="w-4 h-4" />
+            Return to Learning Path
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 space-y-6">
