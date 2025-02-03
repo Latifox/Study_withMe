@@ -21,6 +21,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Fetch lecture content first
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -43,7 +44,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert educational content organizer. Generate exactly 10 clear, descriptive segment titles for this lecture content.
+            content: `You are an expert educational content organizer. Generate exactly 10 clear, descriptive segment titles for this lecture content in the same language as the lecture content.
             
             Rules for titles:
             1. Each title should be concise but descriptive (3-7 words)
@@ -51,13 +52,15 @@ serve(async (req) => {
             3. Use professional, academic language
             4. Avoid technical jargon unless necessary
             5. Ensure titles are engaging and clear
+            6. Use the same language as the lecture content
             
-            Return ONLY a JSON object with exactly 10 numbered titles in this format:
+            Return a JSON object with exactly 10 numbered titles. DO NOT include any markdown formatting or code block indicators.
+            Example format:
             {
               "segment_1_title": "Introduction to [Topic]",
               "segment_2_title": "Basic Concepts and Definitions",
               ...
-              "segment_10_title": "Advanced Applications and Future Trends"
+              "segment_10_title": "Advanced Applications"
             }`
           },
           {
@@ -80,7 +83,9 @@ serve(async (req) => {
     let titles;
     try {
       const content = data.choices[0].message.content;
-      titles = JSON.parse(content);
+      // Remove any potential markdown formatting
+      const cleanContent = content.replace(/```json\n|\n```/g, '');
+      titles = JSON.parse(cleanContent);
       
       if (!titles || Object.keys(titles).length !== 10) {
         throw new Error('Invalid titles object - must have exactly 10 segments');
