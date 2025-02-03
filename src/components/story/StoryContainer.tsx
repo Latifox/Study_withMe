@@ -43,6 +43,7 @@ export const StoryContainer = ({
   const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
   const currentScore = segmentScores[currentSegmentData.id] || 0;
 
+  // Loading state
   if (!currentSegmentData.slides || !currentSegmentData.questions) {
     return (
       <Card className="p-2">
@@ -50,6 +51,31 @@ export const StoryContainer = ({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           <p className="ml-3 text-sm text-muted-foreground">
             Loading segment content...
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  // Check if we have the required slide or question for the current step
+  if (isSlide && !currentSegmentData.slides[slideIndex]) {
+    return (
+      <Card className="p-2">
+        <div className="flex items-center justify-center h-32">
+          <p className="text-sm text-muted-foreground">
+            Slide content not found.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!isSlide && !currentSegmentData.questions[questionIndex]) {
+    return (
+      <Card className="p-2">
+        <div className="flex items-center justify-center h-32">
+          <p className="text-sm text-muted-foreground">
+            Question content not found.
           </p>
         </div>
       </Card>
