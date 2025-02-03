@@ -46,12 +46,22 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a story content generator. Generate exactly 10 segments for this lecture content.
+            IMPORTANT: Analyze the language of the provided lecture content and generate all content (titles, descriptions, slides, questions) in the SAME LANGUAGE as the lecture.
+            
             Each segment should have:
-            - A clear, descriptive title
+            - A clear, descriptive title in the same language as the lecture
             - 2 theory slides with bullet points and examples
             - 2 quiz questions (mix of multiple choice and true/false)
             
-            Format the response as a clean JSON array with 10 segments, each containing:
+            Rules for content:
+            1. Keep all content in the same language as the lecture
+            2. Make content engaging and story-like
+            3. Ensure questions test understanding progressively
+            4. Include practical examples in slides
+            5. Make sure all 10 segments are generated
+            6. Questions should be challenging but fair
+            
+            Format the response as a clean JSON array with exactly 10 segments, each containing:
             {
               "id": "segment-[number]",
               "title": "Clear segment title",
@@ -114,10 +124,21 @@ serve(async (req) => {
       segments = JSON.parse(cleanContent);
       
       if (!Array.isArray(segments) || segments.length !== 10) {
-        throw new Error('Invalid segments array');
+        console.error('Invalid segments array length:', segments?.length);
+        throw new Error('Invalid segments array - must have exactly 10 segments');
       }
       
-      console.log('Successfully parsed segments:', segments);
+      // Validate each segment
+      segments.forEach((segment, index) => {
+        if (!segment.slides || segment.slides.length !== 2) {
+          throw new Error(`Segment ${index + 1} must have exactly 2 slides`);
+        }
+        if (!segment.questions || segment.questions.length !== 2) {
+          throw new Error(`Segment ${index + 1} must have exactly 2 questions`);
+        }
+      });
+      
+      console.log('Successfully parsed and validated segments:', segments);
     } catch (error) {
       console.error('Error parsing segments:', error);
       throw new Error(`Failed to parse segments: ${error.message}`);
@@ -152,7 +173,7 @@ serve(async (req) => {
     });
 
     await Promise.all(segmentPromises);
-    console.log('Successfully created all segments');
+    console.log('Successfully created all 10 segments');
 
     return new Response(
       JSON.stringify({ storyContent: { segments } }),
