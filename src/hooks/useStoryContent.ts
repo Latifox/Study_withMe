@@ -46,7 +46,6 @@ export const useStoryContent = (lectureId: string | undefined) => {
           story_segment_contents (
             id,
             segment_number,
-            title,
             content
           )
         `)
@@ -69,15 +68,13 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       // Process existing content
-      const sortedSegments = existingContent.story_segment_contents
-        ?.sort((a: any, b: any) => a.segment_number - b.segment_number)
-        .map((segment: any) => ({
-          id: `segment-${segment.segment_number + 1}`,
-          title: segment.title,
-          description: segment.content.description || '',
-          slides: segment.content.slides || [],
-          questions: segment.content.questions || []
-        })) || [];
+      const sortedSegments = Array.from({ length: 10 }, (_, i) => ({
+        id: `segment-${i + 1}`,
+        title: existingContent[`segment_${i + 1}_title`],
+        description: '',
+        slides: existingContent.story_segment_contents?.find(s => s.segment_number === i)?.content?.slides || [],
+        questions: existingContent.story_segment_contents?.find(s => s.segment_number === i)?.content?.questions || []
+      }));
 
       return {
         segments: sortedSegments

@@ -112,45 +112,57 @@ export type Database = {
       story_contents: {
         Row: {
           created_at: string
-          current_segment: number | null
-          description: string | null
-          generation_status: string | null
           id: number
-          is_generated: boolean | null
           lecture_id: number | null
-          title: string
-          total_segments: number | null
+          segment_1_title: string | null
+          segment_10_title: string | null
+          segment_2_title: string | null
+          segment_3_title: string | null
+          segment_4_title: string | null
+          segment_5_title: string | null
+          segment_6_title: string | null
+          segment_7_title: string | null
+          segment_8_title: string | null
+          segment_9_title: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
-          current_segment?: number | null
-          description?: string | null
-          generation_status?: string | null
           id?: never
-          is_generated?: boolean | null
           lecture_id?: number | null
-          title: string
-          total_segments?: number | null
+          segment_1_title?: string | null
+          segment_10_title?: string | null
+          segment_2_title?: string | null
+          segment_3_title?: string | null
+          segment_4_title?: string | null
+          segment_5_title?: string | null
+          segment_6_title?: string | null
+          segment_7_title?: string | null
+          segment_8_title?: string | null
+          segment_9_title?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
-          current_segment?: number | null
-          description?: string | null
-          generation_status?: string | null
           id?: never
-          is_generated?: boolean | null
           lecture_id?: number | null
-          title?: string
-          total_segments?: number | null
+          segment_1_title?: string | null
+          segment_10_title?: string | null
+          segment_2_title?: string | null
+          segment_3_title?: string | null
+          segment_4_title?: string | null
+          segment_5_title?: string | null
+          segment_6_title?: string | null
+          segment_7_title?: string | null
+          segment_8_title?: string | null
+          segment_9_title?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "story_contents_lecture_id_fkey"
             columns: ["lecture_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "lectures"
             referencedColumns: ["id"]
           },
@@ -164,7 +176,6 @@ export type Database = {
           is_generated: boolean | null
           segment_number: number
           story_content_id: number | null
-          title: string
           updated_at: string
         }
         Insert: {
@@ -174,7 +185,6 @@ export type Database = {
           is_generated?: boolean | null
           segment_number: number
           story_content_id?: number | null
-          title: string
           updated_at?: string
         }
         Update: {
@@ -184,7 +194,6 @@ export type Database = {
           is_generated?: boolean | null
           segment_number?: number
           story_content_id?: number | null
-          title?: string
           updated_at?: string
         }
         Relationships: [

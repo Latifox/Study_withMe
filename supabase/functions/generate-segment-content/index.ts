@@ -82,7 +82,34 @@ serve(async (req) => {
     const aiResponseData = await openAIResponse.json();
     const content = JSON.parse(aiResponseData.choices[0].message.content);
 
-    return new Response(JSON.stringify({ content }), {
+    // Get the story content id
+    const { data: storyContent, error: storyError } = await supabaseClient
+      .from('story_contents')
+      .select('id')
+      .eq('lecture_id', lectureId)
+      .single();
+
+    if (storyError) {
+      throw new Error('Failed to fetch story content');
+    }
+
+    // Store the generated segment content
+    const { data: segmentContent, error: segmentError } = await supabaseClient
+      .from('story_segment_contents')
+      .insert({
+        story_content_id: storyContent.id,
+        segment_number: segmentNumber,
+        content,
+        is_generated: true
+      })
+      .select()
+      .single();
+
+    if (segmentError) {
+      throw new Error('Failed to store segment content');
+    }
+
+    return new Response(JSON.stringify({ content: segmentContent }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log('Starting story generation for lecture:', lectureId);
+    console.log('Starting story titles generation for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -33,7 +33,7 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Generating content with OpenAI...');
+    console.log('Generating segment titles with OpenAI...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -45,57 +45,23 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a story content generator. First, identify 10 key segments from the lecture content. 
-            For each segment, create:
-            - A clear title that summarizes the segment
-            - A brief description
-            - 2 theory slides, each containing 3 paragraphs of content (can be text, lists, or other markdown-formatted content)
-            - 2 quiz questions (1 multiple choice, 1 true/false)
+            content: `You are a curriculum designer. Analyze the lecture content and identify 10 key segments or topics that form a logical learning progression. Return ONLY a JSON array of 10 segment titles, no other text.
 
-            Follow this exact JSON structure:
-            {
-              "segments": [
-                {
-                  "title": "string (clear, concise segment title)",
-                  "description": "string (brief overview of the segment)",
-                  "slides": [
-                    {
-                      "id": "slide-1",
-                      "content": "markdown content with 3 distinct paragraphs or sections"
-                    },
-                    {
-                      "id": "slide-2",
-                      "content": "markdown content with 3 distinct paragraphs or sections"
-                    }
-                  ],
-                  "questions": [
-                    {
-                      "id": "q1",
-                      "type": "multiple_choice",
-                      "question": "string",
-                      "options": ["string", "string", "string", "string"],
-                      "correctAnswer": "string",
-                      "explanation": "string"
-                    },
-                    {
-                      "id": "q2",
-                      "type": "true_false",
-                      "question": "string",
-                      "correctAnswer": boolean,
-                      "explanation": "string"
-                    }
-                  ]
-                }
-              ]
-            }`
+            Example format:
+            ["Introduction to Topic", "Basic Concepts", "Advanced Theory", ...]
+
+            Rules:
+            - Exactly 10 titles
+            - Each title should be clear and concise (3-6 words)
+            - Titles should follow a logical progression
+            - Return only the JSON array, no other text`
           },
           {
             role: 'user',
-            content: `Generate 10 educational segments based on this lecture content. Make sure each theory slide has exactly 3 paragraphs or sections of content: ${lecture.content}`
+            content: lecture.content
           }
         ],
         temperature: 0.7,
-        max_tokens: 4000,
       }),
     });
 
@@ -108,36 +74,27 @@ serve(async (req) => {
     const aiResponseData = await openAIResponse.json();
     console.log('Raw OpenAI response:', aiResponseData.choices[0].message.content);
     
-    const generatedContent = JSON.parse(aiResponseData.choices[0].message.content);
+    const segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
 
-    console.log('Validating generated content...');
-    if (!generatedContent.segments || !Array.isArray(generatedContent.segments) || generatedContent.segments.length !== 10) {
-      throw new Error('Invalid content structure or wrong number of segments');
+    if (!Array.isArray(segmentTitles) || segmentTitles.length !== 10) {
+      throw new Error('Invalid segment titles generated');
     }
-
-    // Validate each segment's structure
-    generatedContent.segments.forEach((segment: any, index: number) => {
-      if (!segment.slides?.length === 2 || !segment.questions?.length === 2) {
-        throw new Error(`Segment ${index + 1} has invalid number of slides or questions`);
-      }
-      
-      segment.slides.forEach((slide: any) => {
-        if (!slide.content.includes('\n\n')) {
-          throw new Error(`Slide ${slide.id} in segment ${index + 1} doesn't have enough paragraphs`);
-        }
-      });
-    });
 
     console.log('Creating story content entry...');
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
         lecture_id: lectureId,
-        title: lecture.title,
-        total_segments: 10,
-        current_segment: 0,
-        is_generated: true,
-        generation_status: 'completed'
+        segment_1_title: segmentTitles[0],
+        segment_2_title: segmentTitles[1],
+        segment_3_title: segmentTitles[2],
+        segment_4_title: segmentTitles[3],
+        segment_5_title: segmentTitles[4],
+        segment_6_title: segmentTitles[5],
+        segment_7_title: segmentTitles[6],
+        segment_8_title: segmentTitles[7],
+        segment_9_title: segmentTitles[8],
+        segment_10_title: segmentTitles[9]
       })
       .select()
       .single();
@@ -147,42 +104,9 @@ serve(async (req) => {
       throw storyError;
     }
 
-    console.log('Creating segment contents...');
-    const segments = generatedContent.segments.map((segment: any, index: number) => ({
-      story_content_id: storyContent.id,
-      segment_number: index,
-      title: segment.title,
-      content: {
-        description: segment.description,
-        slides: segment.slides,
-        questions: segment.questions
-      },
-      is_generated: true
-    }));
-
-    const { error: segmentError } = await supabaseClient
-      .from('story_segment_contents')
-      .insert(segments);
-
-    if (segmentError) {
-      console.error('Error inserting segments:', segmentError);
-      throw segmentError;
-    }
-
-    console.log('Successfully generated and stored all content');
+    console.log('Successfully generated and stored segment titles');
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        storyContent: { 
-          segments: segments.map(segment => ({
-            id: `segment-${segment.segment_number + 1}`,
-            title: segment.title,
-            description: segment.content.description,
-            slides: segment.content.slides,
-            questions: segment.content.questions
-          }))
-        }
-      }),
+      JSON.stringify({ success: true, storyContent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
