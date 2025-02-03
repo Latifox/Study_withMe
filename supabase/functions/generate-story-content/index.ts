@@ -28,17 +28,14 @@ serve(async (req) => {
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) {
+    if (lectureError || !lecture?.content) {
       console.error('Error fetching lecture:', lectureError);
-      throw new Error(`Failed to fetch lecture content: ${lectureError.message}`);
+      throw new Error('Lecture content not found');
     }
 
-    if (!lecture || !lecture.content) {
-      console.error('No lecture content found for ID:', lectureId);
-      throw new Error('Lecture content is empty or not found');
-    }
+    console.log('Fetched lecture content, generating segments...');
 
-    // Generate segment titles using OpenAI
+    // Generate segment titles
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -46,17 +43,14 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are an educational content creator. Analyze the lecture content and create 5 meaningful segment titles that:
-            1. Follow a logical progression through the material
-            2. Use specific, descriptive names based on the actual content
-            3. Help learners understand the topic progression
-            
-            Return the titles as a simple JSON array of strings, with no additional formatting or markdown.
-            Example format: ["Title 1", "Title 2", "Title 3", "Title 4", "Title 5"]`
+            content: `Analyze the lecture content and create 5 meaningful segment titles that follow a logical progression. Return ONLY a JSON array of strings, no markdown or additional text.
+
+            Example of expected format:
+            ["Introduction to Key Concepts", "Understanding Core Principles", "Advanced Applications", "Case Studies", "Future Implications"]`
           },
           {
             role: 'user',
@@ -68,24 +62,24 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const openAIResponse = await response.json();
-    console.log('Raw OpenAI response:', openAIResponse);
+    console.log('Raw OpenAI response for titles:', openAIResponse);
     
     let segmentTitles;
     try {
-      // Extract the content and parse it as JSON, removing any markdown formatting
       const content = openAIResponse.choices[0].message.content.trim();
-      segmentTitles = JSON.parse(content);
+      segmentTitles = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
       console.log('Parsed segment titles:', segmentTitles);
     } catch (error) {
       console.error('Error parsing segment titles:', error);
-      throw new Error('Failed to parse segment titles from OpenAI response');
+      throw new Error('Failed to parse segment titles');
     }
 
-    // Create new story content entry
+    // Create story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
@@ -99,17 +93,10 @@ serve(async (req) => {
       throw storyError;
     }
 
-    // Split content into segments
-    const contentWords = lecture.content.split(' ');
-    const wordsPerSegment = Math.ceil(contentWords.length / segmentTitles.length);
-    
-    // Create segments
-    for (let i = 0; i < segmentTitles.length; i++) {
-      const start = i * wordsPerSegment;
-      const end = Math.min((i + 1) * wordsPerSegment, contentWords.length);
-      const segmentContent = contentWords.slice(start, end).join(' ');
+    console.log('Created story content, generating segments...');
 
-      // Generate structured content for this segment
+    // Create segments with structured content
+    for (let i = 0; i < segmentTitles.length; i++) {
       const structuredResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -117,57 +104,45 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
-              content: `Create structured educational content for the segment "${segmentTitles[i]}". The content should include:
+              content: `Create structured educational content for the segment "${segmentTitles[i]}". Return ONLY a JSON object with this exact structure, no markdown:
 
-              1. Two theory slides that:
-                 - Use clear bullet points and numbered lists
-                 - Highlight key terms in **bold**
-                 - Include examples where relevant
-                 - Keep points concise and focused
-              
-              2. Two quiz questions that:
-                 - Test understanding of specific concepts from the slides
-                 - Include clear explanations for correct/incorrect answers
-                 - Mix true/false and multiple choice formats
-              
-              Return the content as a JSON object with this exact structure (no markdown formatting):
               {
                 "slides": [
                   {
                     "id": "slide-1",
-                    "content": "• Point 1\\n• Point 2\\n• Point 3"
+                    "content": "• Main point 1\\n  - Subpoint 1.1\\n  - Subpoint 1.2\\n• Main point 2\\n  - Subpoint 2.1\\n  - Subpoint 2.2"
                   },
                   {
                     "id": "slide-2",
-                    "content": "1. Step one\\n2. Step two\\n3. Step three"
+                    "content": "1. Step one explanation\\n2. Step two explanation\\n3. Step three explanation"
                   }
                 ],
                 "questions": [
                   {
                     "id": "q1",
                     "type": "multiple_choice",
-                    "question": "Question text",
+                    "question": "Question about the content from slides?",
                     "options": ["Option A", "Option B", "Option C", "Option D"],
                     "correctAnswer": "Option A",
-                    "explanation": "Explanation text"
+                    "explanation": "Explanation referencing the theory"
                   },
                   {
                     "id": "q2",
                     "type": "true_false",
-                    "question": "Question text",
+                    "question": "True/False question about key concept",
                     "correctAnswer": true,
-                    "explanation": "Explanation text"
+                    "explanation": "Explanation linking to theory"
                   }
                 ]
               }`
             },
             {
               role: 'user',
-              content: segmentContent
+              content: `Create educational content about: ${segmentTitles[i]}\n\nContext: ${lecture.content}`
             }
           ],
           temperature: 0.7,
@@ -175,11 +150,22 @@ serve(async (req) => {
       });
 
       if (!structuredResponse.ok) {
+        console.error(`OpenAI API error for segment ${i}:`, structuredResponse.status);
         throw new Error(`OpenAI API error for segment ${i}: ${structuredResponse.status}`);
       }
 
       const structuredData = await structuredResponse.json();
-      const content = JSON.parse(structuredData.choices[0].message.content);
+      console.log(`Raw OpenAI response for segment ${i}:`, structuredData);
+
+      let content;
+      try {
+        const rawContent = structuredData.choices[0].message.content.trim();
+        content = JSON.parse(rawContent.replace(/```json\n?|\n?```/g, '').trim());
+        console.log(`Parsed content for segment ${i}:`, content);
+      } catch (error) {
+        console.error(`Error parsing content for segment ${i}:`, error);
+        throw new Error(`Failed to parse content for segment ${i}`);
+      }
 
       const { error: segmentError } = await supabaseClient
         .from('story_segments')
@@ -195,9 +181,11 @@ serve(async (req) => {
         console.error(`Error creating segment ${i}:`, segmentError);
         throw segmentError;
       }
+
+      console.log(`Successfully created segment ${i}`);
     }
 
-    console.log('Successfully generated and stored all segments');
+    console.log('Successfully generated all segments');
     return new Response(
       JSON.stringify({ success: true, storyContent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
