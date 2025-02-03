@@ -46,31 +46,28 @@ const Story = () => {
     try {
       setIsGeneratingContent(true);
       
-      const { data: lecture } = await supabase
-        .from('lectures')
-        .select('content')
-        .eq('id', numericLectureId)
-        .single();
-
-      if (!lecture?.content) {
-        throw new Error('Lecture content not found');
+      if (!numericLectureId) {
+        throw new Error('Lecture ID is required');
       }
 
-      toast({
-        title: "Generating Content",
-        description: "Please wait while we prepare the content for this segment...",
+      console.log('Generating content for:', {
+        lectureId: numericLectureId,
+        segmentNumber,
+        segmentTitle
       });
 
       const { data, error } = await supabase.functions.invoke('generate-segment-content', {
         body: {
           lectureId: numericLectureId,
           segmentNumber,
-          segmentTitle,
-          lectureContent: lecture.content
+          segmentTitle
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error generating segment content:', error);
+        throw error;
+      }
 
       await queryClient.invalidateQueries({ 
         queryKey: ['story-content', numericLectureId?.toString()] 
@@ -89,6 +86,7 @@ const Story = () => {
         description: "Failed to generate segment content. Please try again.",
         variant: "destructive",
       });
+      throw error;
     } finally {
       setIsGeneratingContent(false);
     }
