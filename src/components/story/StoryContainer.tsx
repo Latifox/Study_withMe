@@ -46,29 +46,64 @@ export const StoryContainer = ({
   const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
   const currentScore = segmentScores[currentSegmentData.id] || 0;
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
+  const { toast } = useToast();
 
   const handleCorrectAnswer = async () => {
-    setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
-    onCorrectAnswer();
-    
-    // Save progress to database
-    if (lectureId) {
-      try {
+    try {
+      // First check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Authentication error:', authError);
+        toast({
+          title: "Authentication Error",
+          description: "Please make sure you're logged in to save progress.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
+      
+      // Save progress to database
+      if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
-        const { error } = await supabase
+        const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
+        
+        const { error: progressError } = await supabase
           .from('user_progress')
           .upsert({
-            user_id: (await supabase.auth.getUser()).data.user?.id,
+            user_id: user.id,
             lecture_id: parseInt(lectureId),
             segment_number: segmentNumber,
-            score: currentScore + POINTS_PER_CORRECT_ANSWER,
-            completed_at: new Date().toISOString()
+            score: newScore,
+            completed_at: newScore >= 10 ? new Date().toISOString() : null
           });
 
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error saving progress:', error);
+        if (progressError) {
+          console.error('Error saving progress:', progressError);
+          toast({
+            title: "Error",
+            description: "Failed to save progress. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // If successfully saved, call onCorrectAnswer
+        onCorrectAnswer();
+        toast({
+          title: "🎯 Correct!",
+          description: `+${POINTS_PER_CORRECT_ANSWER} points earned!`,
+        });
       }
+    } catch (error) {
+      console.error('Error in handleCorrectAnswer:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
