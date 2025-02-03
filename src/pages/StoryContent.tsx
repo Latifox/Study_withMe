@@ -21,29 +21,54 @@ const StoryContent = () => {
     queryKey: ['segment-content', lectureId, nodeId],
     queryFn: async () => {
       if (!lectureId || !nodeId) throw new Error('Lecture ID and Node ID are required');
+      console.log('Fetching content for:', { lectureId, nodeId });
 
       const segmentNumber = parseInt(nodeId.split('_')[1]);
+      if (isNaN(segmentNumber)) throw new Error('Invalid segment number');
 
+      // First, get the story structure
       const { data: storyStructure, error: structureError } = await supabase
         .from('story_structures')
         .select('*, segment_contents(*)')
         .eq('lecture_id', parseInt(lectureId))
         .single();
 
-      if (structureError) throw structureError;
+      if (structureError) {
+        console.error('Error fetching story structure:', structureError);
+        throw structureError;
+      }
       if (!storyStructure) throw new Error('Story structure not found');
 
+      // Find the segment content
       const segmentContent = storyStructure.segment_contents?.find(
         content => content.segment_number === segmentNumber
       );
 
       if (!segmentContent) {
+        // If no content exists, trigger generation
+        console.log('No content found, triggering generation...');
+        const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
+          body: {
+            lectureId: parseInt(lectureId),
+            segmentNumber,
+            segmentTitle: storyStructure[`segment_${segmentNumber}_title`]
+          }
+        });
+
+        if (generationError) throw generationError;
+        
         return {
           segments: [{
             id: nodeId,
-            title: storyStructure[`segment_${segmentNumber}_title`] || '',
-            slides: [],
-            questions: []
+            title: storyStructure[`segment_${segmentNumber}_title`] || `Segment ${segmentNumber}`,
+            slides: [
+              { id: 'slide-1', content: generatedContent.segmentContent.theory_slide_1 },
+              { id: 'slide-2', content: generatedContent.segmentContent.theory_slide_2 }
+            ],
+            questions: [
+              { id: 'q1', ...generatedContent.segmentContent.quiz_question_1 },
+              { id: 'q2', ...generatedContent.segmentContent.quiz_question_2 }
+            ]
           }]
         };
       }
@@ -51,36 +76,19 @@ const StoryContent = () => {
       return {
         segments: [{
           id: nodeId,
-          title: storyStructure[`segment_${segmentNumber}_title`] || '',
+          title: storyStructure[`segment_${segmentNumber}_title`] || `Segment ${segmentNumber}`,
           slides: [
-            { id: 'slide-1', content: segmentContent.theory_slide_1 || '' },
-            { id: 'slide-2', content: segmentContent.theory_slide_2 || '' }
+            { id: 'slide-1', content: segmentContent.theory_slide_1 },
+            { id: 'slide-2', content: segmentContent.theory_slide_2 }
           ],
           questions: [
-            {
-              id: 'q1',
-              ...(segmentContent.quiz_question_1 as {
-                type: "multiple_choice" | "true_false";
-                question: string;
-                options?: string[];
-                correctAnswer: string | boolean;
-                explanation: string;
-              })
-            },
-            {
-              id: 'q2',
-              ...(segmentContent.quiz_question_2 as {
-                type: "multiple_choice" | "true_false";
-                question: string;
-                options?: string[];
-                correctAnswer: string | boolean;
-                explanation: string;
-              })
-            }
+            { id: 'q1', ...segmentContent.quiz_question_1 },
+            { id: 'q2', ...segmentContent.quiz_question_2 }
           ]
         }]
       };
-    }
+    },
+    retry: 1
   });
 
   const handleBack = () => {
