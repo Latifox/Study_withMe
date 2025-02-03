@@ -14,6 +14,7 @@ const StoryNodes = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const [completedNodes] = useState(new Set<string>());
+  const [loadingNode, setLoadingNode] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: storyContent, isLoading, error } = useQuery({
@@ -78,7 +79,7 @@ const StoryNodes = () => {
   };
 
   const handleNodeSelect = async (nodeId: string) => {
-    // Extract segment number from nodeId (e.g., "segment_1" -> 1)
+    setLoadingNode(nodeId);
     const segmentNumber = parseInt(nodeId.split('_')[1]);
     const segmentTitle = storyContent?.segments[segmentNumber - 1]?.title;
 
@@ -88,11 +89,16 @@ const StoryNodes = () => {
         description: "Could not find segment title",
         variant: "destructive"
       });
+      setLoadingNode(null);
       return;
     }
 
     try {
-      // Generate content for the selected segment
+      toast({
+        title: "Generating content...",
+        description: "Please wait while we prepare your learning materials.",
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-segment-content', {
         body: {
           lectureId: parseInt(lectureId!),
@@ -120,6 +126,8 @@ const StoryNodes = () => {
         description: "Failed to load segment content",
         variant: "destructive"
       });
+    } finally {
+      setLoadingNode(null);
     }
   };
 
@@ -157,7 +165,7 @@ const StoryNodes = () => {
         <LearningPathway
           nodes={storyContent.segments}
           completedNodes={completedNodes}
-          currentNode={null}
+          currentNode={loadingNode}
           onNodeSelect={handleNodeSelect}
         />
       </Card>

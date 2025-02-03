@@ -8,18 +8,13 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { lectureId, segmentNumber, segmentTitle } = await req.json();
-    console.log('Received parameters:', { lectureId, segmentNumber, segmentTitle });
-
-    if (!lectureId || segmentNumber === undefined || !segmentTitle) {
-      throw new Error('Missing required parameters');
-    }
+    console.log('Generating content for:', { lectureId, segmentNumber, segmentTitle });
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -33,18 +28,11 @@ serve(async (req) => {
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) {
-      console.error('Error fetching lecture:', lectureError);
-      throw new Error(`Failed to fetch lecture: ${lectureError.message}`);
-    }
-
-    if (!lecture?.content) {
-      throw new Error('Lecture content not found');
-    }
+    if (lectureError) throw new Error(`Failed to fetch lecture: ${lectureError.message}`);
+    if (!lecture?.content) throw new Error('Lecture content not found');
 
     // Get or create story structure
-    let storyStructure;
-    const { data: existingStructure, error: structureError } = await supabaseClient
+    const { data: storyStructure, error: structureError } = await supabaseClient
       .from('story_structures')
       .select('id')
       .eq('lecture_id', lectureId)
@@ -54,22 +42,7 @@ serve(async (req) => {
       throw new Error(`Failed to fetch story structure: ${structureError.message}`);
     }
 
-    if (!existingStructure) {
-      const { data: newStructure, error: createError } = await supabaseClient
-        .from('story_structures')
-        .insert([{ lecture_id: lectureId }])
-        .select()
-        .single();
-
-      if (createError) {
-        throw new Error(`Failed to create story structure: ${createError.message}`);
-      }
-      storyStructure = newStructure;
-    } else {
-      storyStructure = existingStructure;
-    }
-
-    console.log('Calling OpenAI API...');
+    console.log('Calling OpenAI API for detailed content generation...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -77,108 +50,70 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `Generate educational content for the segment "${segmentTitle}" in the same language as the lecture content.
+            content: `Generate comprehensive educational content for the segment "${segmentTitle}". 
+            The content should be extremely detailed, including:
+            - In-depth explanations of core concepts
+            - Real-world examples and applications
+            - Clear definitions of technical terms
+            - Step-by-step breakdowns of complex ideas
+            - Visual descriptions where relevant
             
-            Return a JSON object with the following structure (DO NOT include markdown formatting or code blocks):
+            Return a JSON object with the following structure (DO NOT include markdown formatting):
             {
-              "theory_slide_1": "First slide content with clear explanations",
-              "theory_slide_2": "Second slide content with examples",
+              "theory_slide_1": "Detailed introduction and core concept explanation (at least 300 words)",
+              "theory_slide_2": "Comprehensive examples and practical applications (at least 300 words)",
               "quiz_question_1": {
                 "type": "multiple_choice",
-                "question": "Question text",
+                "question": "Challenging question that tests deep understanding",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
                 "correctAnswer": "Correct option",
-                "explanation": "Why this is correct"
+                "explanation": "Detailed explanation of why this answer is correct"
               },
               "quiz_question_2": {
                 "type": "true_false",
-                "question": "True/false question",
+                "question": "Complex true/false question",
                 "correctAnswer": true,
-                "explanation": "Why this is true/false"
+                "explanation": "Comprehensive explanation of the correct answer"
               }
             }`
           },
           {
             role: 'user',
-            content: `Generate content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
+            content: `Generate detailed educational content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
           }
         ],
         temperature: 0.7,
+        max_tokens: 4000,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
 
     const data = await response.json();
-    console.log('Raw OpenAI response:', data);
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid OpenAI response format');
-    }
+    console.log('Successfully received OpenAI response');
 
     let content;
     try {
-      // Remove any markdown formatting
       const cleanContent = data.choices[0].message.content.replace(/```json\n|\n```/g, '');
       content = JSON.parse(cleanContent);
       
-      // Validate content structure
       if (!content.theory_slide_1 || !content.theory_slide_2 || 
           !content.quiz_question_1 || !content.quiz_question_2) {
         throw new Error('Missing required content fields');
       }
-      
-      console.log('Successfully parsed content');
     } catch (error) {
       console.error('Error parsing content:', error);
       throw new Error(`Failed to parse generated content: ${error.message}`);
     }
 
-    // Check if segment content already exists
-    const { data: existingContent } = await supabaseClient
-      .from('segment_contents')
-      .select('id')
-      .eq('story_structure_id', storyStructure.id)
-      .eq('segment_number', segmentNumber)
-      .single();
-
-    if (existingContent) {
-      // Update existing content
-      const { data: updatedContent, error: updateError } = await supabaseClient
-        .from('segment_contents')
-        .update({
-          theory_slide_1: content.theory_slide_1,
-          theory_slide_2: content.theory_slide_2,
-          quiz_question_1: content.quiz_question_1,
-          quiz_question_2: content.quiz_question_2
-        })
-        .eq('id', existingContent.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Failed to update segment content: ${updateError.message}`);
-      }
-
-      return new Response(
-        JSON.stringify({ segmentContent: updatedContent }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create new segment content
-    const { data: nextId } = await supabaseClient.rpc('get_next_segment_content_id');
-    
+    // Store the content
     const { data: segmentContent, error: insertError } = await supabaseClient
       .from('segment_contents')
-      .insert({
-        id: nextId,
+      .upsert({
         story_structure_id: storyStructure.id,
         segment_number: segmentNumber,
         theory_slide_1: content.theory_slide_1,
