@@ -41,56 +41,57 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a story content generator. Generate exactly 10 educational segments based on the provided lecture content. Each segment must have:
-- A clear title
-- A brief description
-- 2 theory slides with markdown content
-- 2 quiz questions (1 multiple choice, 1 true/false)
+            content: `You are a story content generator. First, identify 10 key segments from the lecture content. 
+            For each segment, create:
+            - A clear title that summarizes the segment
+            - A brief description
+            - 2 theory slides, each containing 3 paragraphs of content (can be text, lists, or other markdown-formatted content)
+            - 2 quiz questions (1 multiple choice, 1 true/false)
 
-Follow this exact JSON structure:
-{
-  "segments": [
-    {
-      "title": "string",
-      "description": "string",
-      "slides": [
-        {
-          "id": "slide-1",
-          "content": "markdown content"
-        },
-        {
-          "id": "slide-2",
-          "content": "markdown content"
-        }
-      ],
-      "questions": [
-        {
-          "id": "q1",
-          "type": "multiple_choice",
-          "question": "string",
-          "options": ["string", "string", "string", "string"],
-          "correctAnswer": "string",
-          "explanation": "string"
-        },
-        {
-          "id": "q2",
-          "type": "true_false",
-          "question": "string",
-          "correctAnswer": boolean,
-          "explanation": "string"
-        }
-      ]
-    }
-  ]
-}`
+            Follow this exact JSON structure:
+            {
+              "segments": [
+                {
+                  "title": "string (clear, concise segment title)",
+                  "description": "string (brief overview of the segment)",
+                  "slides": [
+                    {
+                      "id": "slide-1",
+                      "content": "markdown content with 3 distinct paragraphs or sections"
+                    },
+                    {
+                      "id": "slide-2",
+                      "content": "markdown content with 3 distinct paragraphs or sections"
+                    }
+                  ],
+                  "questions": [
+                    {
+                      "id": "q1",
+                      "type": "multiple_choice",
+                      "question": "string",
+                      "options": ["string", "string", "string", "string"],
+                      "correctAnswer": "string",
+                      "explanation": "string"
+                    },
+                    {
+                      "id": "q2",
+                      "type": "true_false",
+                      "question": "string",
+                      "correctAnswer": boolean,
+                      "explanation": "string"
+                    }
+                  ]
+                }
+              ]
+            }`
           },
           {
             role: 'user',
-            content: `Generate 10 educational segments based on this lecture content: ${lecture.content}`
+            content: `Generate 10 educational segments based on this lecture content. Make sure each theory slide has exactly 3 paragraphs or sections of content: ${lecture.content}`
           }
         ],
         temperature: 0.7,
@@ -99,16 +100,33 @@ Follow this exact JSON structure:
     });
 
     if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API error:', errorText);
       throw new Error(`OpenAI API error: ${openAIResponse.status}`);
     }
 
     const aiResponseData = await openAIResponse.json();
+    console.log('Raw OpenAI response:', aiResponseData.choices[0].message.content);
+    
     const generatedContent = JSON.parse(aiResponseData.choices[0].message.content);
 
     console.log('Validating generated content...');
     if (!generatedContent.segments || !Array.isArray(generatedContent.segments) || generatedContent.segments.length !== 10) {
       throw new Error('Invalid content structure or wrong number of segments');
     }
+
+    // Validate each segment's structure
+    generatedContent.segments.forEach((segment: any, index: number) => {
+      if (!segment.slides?.length === 2 || !segment.questions?.length === 2) {
+        throw new Error(`Segment ${index + 1} has invalid number of slides or questions`);
+      }
+      
+      segment.slides.forEach((slide: any) => {
+        if (!slide.content.includes('\n\n')) {
+          throw new Error(`Slide ${slide.id} in segment ${index + 1} doesn't have enough paragraphs`);
+        }
+      });
+    });
 
     console.log('Creating story content entry...');
     const { data: storyContent, error: storyError } = await supabaseClient
