@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export interface StoryContent {
   segments: StorySegment[];
@@ -26,6 +27,15 @@ export interface SegmentContent {
     correctAnswer: string | boolean;
     explanation: string;
   }[];
+}
+
+interface SegmentContentRow {
+  id: number;
+  segment_number: number;
+  content: {
+    slides: SegmentContent['slides'];
+    questions: SegmentContent['questions'];
+  };
 }
 
 export const useStoryContent = (lectureId: string | undefined) => {
@@ -68,13 +78,19 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       // Process existing content
-      const sortedSegments = Array.from({ length: 10 }, (_, i) => ({
-        id: `segment-${i + 1}`,
-        title: existingContent[`segment_${i + 1}_title`],
-        description: '',
-        slides: existingContent.story_segment_contents?.find(s => s.segment_number === i)?.content?.slides || [],
-        questions: existingContent.story_segment_contents?.find(s => s.segment_number === i)?.content?.questions || []
-      }));
+      const sortedSegments = Array.from({ length: 10 }, (_, i) => {
+        const segmentContent = existingContent.story_segment_contents?.find(
+          (s: SegmentContentRow) => s.segment_number === i
+        );
+        
+        return {
+          id: `segment-${i + 1}`,
+          title: existingContent[`segment_${i + 1}_title` as keyof typeof existingContent] as string,
+          description: '',
+          slides: segmentContent?.content?.slides || [],
+          questions: segmentContent?.content?.questions || []
+        };
+      });
 
       return {
         segments: sortedSegments
