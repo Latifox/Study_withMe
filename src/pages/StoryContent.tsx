@@ -10,6 +10,14 @@ import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
 import { useToast } from "@/hooks/use-toast";
 
+interface QuizQuestion {
+  type: "multiple_choice" | "true_false";
+  question: string;
+  options?: string[];
+  correctAnswer: string | boolean;
+  explanation: string;
+}
+
 const StoryContent = () => {
   const { courseId, lectureId, nodeId } = useParams();
   const navigate = useNavigate();
@@ -57,6 +65,9 @@ const StoryContent = () => {
 
         if (generationError) throw generationError;
         
+        const quiz1 = generatedContent.segmentContent.quiz_question_1 as QuizQuestion;
+        const quiz2 = generatedContent.segmentContent.quiz_question_2 as QuizQuestion;
+        
         return {
           segments: [{
             id: nodeId,
@@ -66,12 +77,15 @@ const StoryContent = () => {
               { id: 'slide-2', content: generatedContent.segmentContent.theory_slide_2 }
             ],
             questions: [
-              { id: 'q1', ...generatedContent.segmentContent.quiz_question_1 },
-              { id: 'q2', ...generatedContent.segmentContent.quiz_question_2 }
+              { id: 'q1', ...quiz1 },
+              { id: 'q2', ...quiz2 }
             ]
           }]
         };
       }
+
+      const quiz1 = segmentContent.quiz_question_1 as QuizQuestion;
+      const quiz2 = segmentContent.quiz_question_2 as QuizQuestion;
 
       return {
         segments: [{
@@ -82,8 +96,8 @@ const StoryContent = () => {
             { id: 'slide-2', content: segmentContent.theory_slide_2 }
           ],
           questions: [
-            { id: 'q1', ...segmentContent.quiz_question_1 },
-            { id: 'q2', ...segmentContent.quiz_question_2 }
+            { id: 'q1', ...quiz1 },
+            { id: 'q2', ...quiz2 }
           ]
         }]
       };
