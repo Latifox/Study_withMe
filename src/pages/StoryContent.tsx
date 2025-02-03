@@ -27,6 +27,17 @@ const StoryContent = () => {
   const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) : null;
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
+  // Reset score when starting/restarting a node
+  useEffect(() => {
+    if (nodeId) {
+      setSegmentScores(prev => ({
+        ...prev,
+        [nodeId]: 0
+      }));
+    }
+  }, [nodeId]);
+
+  // Fetch existing progress only if user has completed the node before
   useEffect(() => {
     const fetchExistingProgress = async () => {
       if (!segmentNumber || !numericLectureId) return;
@@ -36,13 +47,14 @@ const StoryContent = () => {
 
       const { data: progress } = await supabase
         .from('user_progress')
-        .select('score')
+        .select('score, completed_at')
         .eq('segment_number', segmentNumber)
         .eq('lecture_id', numericLectureId)
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (progress) {
+      // Only set the score if the node was previously completed
+      if (progress?.completed_at) {
         setSegmentScores(prev => ({
           ...prev,
           [nodeId || '']: progress.score || 0
