@@ -50,12 +50,13 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Analyze the lecture content and generate 10 meaningful segment titles that:
-            1. Follow a logical progression
+            content: `You are an educational content creator. Analyze the lecture content and create 5 meaningful segment titles that:
+            1. Follow a logical progression through the material
             2. Use specific, descriptive names based on the actual content
-            3. Help learners understand what they'll learn in each segment
+            3. Help learners understand the topic progression
             
-            Return ONLY a JSON array of 10 titles, no other text.`
+            Return the titles as a simple JSON array of strings, with no additional formatting or markdown.
+            Example format: ["Title 1", "Title 2", "Title 3", "Title 4", "Title 5"]`
           },
           {
             role: 'user',
@@ -71,10 +72,19 @@ serve(async (req) => {
     }
 
     const openAIResponse = await response.json();
-    const segmentTitles = JSON.parse(openAIResponse.choices[0].message.content);
-
-    console.log('Generated segment titles:', segmentTitles);
+    console.log('Raw OpenAI response:', openAIResponse);
     
+    let segmentTitles;
+    try {
+      // Extract the content and parse it as JSON, removing any markdown formatting
+      const content = openAIResponse.choices[0].message.content.trim();
+      segmentTitles = JSON.parse(content);
+      console.log('Parsed segment titles:', segmentTitles);
+    } catch (error) {
+      console.error('Error parsing segment titles:', error);
+      throw new Error('Failed to parse segment titles from OpenAI response');
+    }
+
     // Create new story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
@@ -89,15 +99,87 @@ serve(async (req) => {
       throw storyError;
     }
 
-    // Split content into roughly equal segments
+    // Split content into segments
     const contentWords = lecture.content.split(' ');
-    const wordsPerSegment = Math.ceil(contentWords.length / 10);
+    const wordsPerSegment = Math.ceil(contentWords.length / segmentTitles.length);
     
     // Create segments
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < segmentTitles.length; i++) {
       const start = i * wordsPerSegment;
       const end = Math.min((i + 1) * wordsPerSegment, contentWords.length);
       const segmentContent = contentWords.slice(start, end).join(' ');
+
+      // Generate structured content for this segment
+      const structuredResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: `Create structured educational content for the segment "${segmentTitles[i]}". The content should include:
+
+              1. Two theory slides that:
+                 - Use clear bullet points and numbered lists
+                 - Highlight key terms in **bold**
+                 - Include examples where relevant
+                 - Keep points concise and focused
+              
+              2. Two quiz questions that:
+                 - Test understanding of specific concepts from the slides
+                 - Include clear explanations for correct/incorrect answers
+                 - Mix true/false and multiple choice formats
+              
+              Return the content as a JSON object with this exact structure (no markdown formatting):
+              {
+                "slides": [
+                  {
+                    "id": "slide-1",
+                    "content": "• Point 1\\n• Point 2\\n• Point 3"
+                  },
+                  {
+                    "id": "slide-2",
+                    "content": "1. Step one\\n2. Step two\\n3. Step three"
+                  }
+                ],
+                "questions": [
+                  {
+                    "id": "q1",
+                    "type": "multiple_choice",
+                    "question": "Question text",
+                    "options": ["Option A", "Option B", "Option C", "Option D"],
+                    "correctAnswer": "Option A",
+                    "explanation": "Explanation text"
+                  },
+                  {
+                    "id": "q2",
+                    "type": "true_false",
+                    "question": "Question text",
+                    "correctAnswer": true,
+                    "explanation": "Explanation text"
+                  }
+                ]
+              }`
+            },
+            {
+              role: 'user',
+              content: segmentContent
+            }
+          ],
+          temperature: 0.7,
+        }),
+      });
+
+      if (!structuredResponse.ok) {
+        throw new Error(`OpenAI API error for segment ${i}: ${structuredResponse.status}`);
+      }
+
+      const structuredData = await structuredResponse.json();
+      const content = JSON.parse(structuredData.choices[0].message.content);
 
       const { error: segmentError } = await supabaseClient
         .from('story_segments')
@@ -105,35 +187,7 @@ serve(async (req) => {
           story_content_id: storyContent.id,
           segment_number: i,
           title: segmentTitles[i],
-          content: {
-            slides: [
-              {
-                id: `slide-1-segment-${i}`,
-                content: segmentContent
-              },
-              {
-                id: `slide-2-segment-${i}`,
-                content: "Review and practice what you've learned in this segment."
-              }
-            ],
-            questions: [
-              {
-                id: `question-1-segment-${i}`,
-                type: "true_false",
-                question: "Did you understand the content of this segment?",
-                correctAnswer: true,
-                explanation: "This is a self-assessment question to help you track your understanding."
-              },
-              {
-                id: `question-2-segment-${i}`,
-                type: "multiple_choice",
-                question: "How well did you grasp the concepts in this segment?",
-                options: ["Very well", "Somewhat well", "Need more review", "Not sure"],
-                correctAnswer: "Very well",
-                explanation: "This helps you assess your confidence with the material."
-              }
-            ]
-          },
+          content,
           is_generated: true
         });
 
