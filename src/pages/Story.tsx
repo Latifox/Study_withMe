@@ -26,6 +26,7 @@ const Story = () => {
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
   const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
   // Convert lectureId to number before passing to useStoryContent
   const numericLectureId = lectureId ? parseInt(lectureId, 10) : undefined;
@@ -38,6 +39,7 @@ const Story = () => {
 
   const generateSegmentContent = async (segmentNumber: number, segmentTitle: string) => {
     try {
+      setIsGeneratingContent(true);
       // Fetch lecture content first
       const { data: lecture } = await supabase
         .from('lectures')
@@ -48,6 +50,11 @@ const Story = () => {
       if (!lecture?.content) {
         throw new Error('Lecture content not found');
       }
+
+      toast({
+        title: "Generating Content",
+        description: "Please wait while we prepare the content for this segment...",
+      });
 
       // Generate content for this segment
       const { data, error } = await supabase.functions.invoke('generate-segment-content', {
@@ -64,6 +71,11 @@ const Story = () => {
       // Invalidate the query to refetch the content
       queryClient.invalidateQueries({ queryKey: ['story-content', numericLectureId?.toString()] });
 
+      toast({
+        title: "Content Ready",
+        description: "The segment content has been generated successfully.",
+      });
+
       return data;
     } catch (error) {
       console.error('Error generating segment content:', error);
@@ -72,6 +84,8 @@ const Story = () => {
         description: "Failed to generate segment content. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingContent(false);
     }
   };
 
@@ -85,11 +99,6 @@ const Story = () => {
     
     // If content doesn't exist for this segment, generate it
     if (!segment.slides || !segment.questions) {
-      toast({
-        title: "Generating Content",
-        description: "Please wait while we prepare the content...",
-      });
-      
       await generateSegmentContent(index, segment.title);
     }
 
@@ -171,7 +180,7 @@ const Story = () => {
     handleContinue();
   };
 
-  if (isLoadingStory) {
+  if (isLoadingStory || isGeneratingContent) {
     return (
       <div className="container mx-auto p-2">
         <StoryLoading />

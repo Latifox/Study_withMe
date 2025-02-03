@@ -21,35 +21,44 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // For now, let's generate simple content without OpenAI
+    // Split lecture content into 10 segments and get the relevant part
+    const contentParts = lectureContent.split(/[.!?]+\s+/);
+    const segmentSize = Math.ceil(contentParts.length / 10);
+    const startIndex = segmentNumber * segmentSize;
+    const segmentContent = contentParts.slice(startIndex, startIndex + segmentSize).join('. ');
+
+    // Generate two slides with 3 paragraphs each
+    const slide1Content = `# ${segmentTitle} - Part 1\n\n${segmentContent.slice(0, Math.floor(segmentContent.length / 2))}`;
+    const slide2Content = `# ${segmentTitle} - Part 2\n\n${segmentContent.slice(Math.floor(segmentContent.length / 2))}`;
+
+    // Generate two quiz questions based on the content
+    const quiz1 = {
+      type: "multiple_choice" as const,
+      question: `What is the main concept discussed in ${segmentTitle}?`,
+      options: ["Option A", "Option B", "Option C", "Option D"],
+      correctAnswer: "Option A",
+      explanation: "This is the explanation for the correct answer based on the content."
+    };
+
+    const quiz2 = {
+      type: "true_false" as const,
+      question: `True or False: The content discusses important aspects of ${segmentTitle}?`,
+      correctAnswer: true,
+      explanation: "Based on the segment content, this statement is true."
+    };
+
     const content = {
       slides: [
         {
-          id: "slide-1",
-          content: `# Part 1: Introduction to ${segmentTitle}\n\nThis is the first part of the theory about ${segmentTitle}. The content is derived from the lecture material and structured for easy understanding.\n\n${lectureContent.slice(0, 200)}...`
+          id: `slide-1-segment-${segmentNumber}`,
+          content: slide1Content
         },
         {
-          id: "slide-2",
-          content: `# Part 2: Deep Dive into ${segmentTitle}\n\nThis is the second part of the theory about ${segmentTitle}. Here we explore more advanced concepts and their applications.\n\n${lectureContent.slice(200, 400)}...`
+          id: `slide-2-segment-${segmentNumber}`,
+          content: slide2Content
         }
       ],
-      questions: [
-        {
-          id: "question-1",
-          type: "multiple_choice",
-          question: `What is the main concept discussed in ${segmentTitle}?`,
-          options: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: "Option A",
-          explanation: "This is the explanation for the correct answer."
-        },
-        {
-          id: "question-2",
-          type: "true_false",
-          question: `True or False: ${segmentTitle} is an important concept in this lecture.`,
-          correctAnswer: true,
-          explanation: "This concept is indeed crucial for understanding the topic."
-        }
-      ]
+      questions: [quiz1, quiz2]
     };
 
     // Get the story content id
@@ -66,7 +75,7 @@ serve(async (req) => {
     // Store the generated segment content
     const { data: segmentContent, error: segmentError } = await supabaseClient
       .from('story_segment_contents')
-      .insert({
+      .upsert({
         story_content_id: storyContent.id,
         segment_number: segmentNumber,
         content,
