@@ -9,6 +9,13 @@ interface TheorySlideProps {
   onContinue: () => void;
 }
 
+interface CodeProps {
+  node?: any;
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   return (
     <motion.div 
@@ -28,11 +35,15 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
               ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
               ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
               li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-              code: ({ node, inline, ...props }) => 
+              code: ({ node, inline, className, children, ...props }: CodeProps) => 
                 inline ? (
-                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm" {...props} />
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm" {...props}>
+                    {children}
+                  </code>
                 ) : (
-                  <code className="block bg-gray-100 dark:bg-gray-700 p-4 rounded-lg my-4 text-sm overflow-x-auto" {...props} />
+                  <code className="block bg-gray-100 dark:bg-gray-700 p-4 rounded-lg my-4 text-sm overflow-x-auto" {...props}>
+                    {children}
+                  </code>
                 ),
               blockquote: ({ node, ...props }) => (
                 <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-gray-600 dark:text-gray-300" {...props} />
