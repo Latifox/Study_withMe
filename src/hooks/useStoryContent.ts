@@ -85,7 +85,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
           (s: SegmentContentRow) => s.segment_number === i
         );
         
-        const content = segmentContent?.content as DatabaseSegmentContent | undefined;
+        // First cast to unknown, then to DatabaseSegmentContent to satisfy TypeScript
+        const content = segmentContent?.content as unknown as DatabaseSegmentContent;
         
         return {
           id: `segment-${i + 1}`,
