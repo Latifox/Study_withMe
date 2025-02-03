@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStoryContent } from "@/hooks/useStoryContent";
-import { StoryContainer } from "@/components/story/StoryContainer";
+import LearningPathwayComponent from "@/components/story/LearningPathway";
 import StoryHeader from "@/components/story/StoryHeader";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
 
-const Story = () => {
-  const { courseId, lectureId, segment: segmentParam } = useParams();
+const LearningPathway = () => {
+  const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
-
-  const currentSegment = segmentParam ? parseInt(segmentParam, 10) : 0;
+  const [completedNodes] = useState(new Set<string>());
 
   const { 
     data: storyContent,
@@ -21,25 +18,14 @@ const Story = () => {
   } = useStoryContent(lectureId);
 
   const handleBack = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/story`);
+    navigate(`/course/${courseId}`);
   };
 
-  const handleContinue = () => {
-    setCurrentStep(prev => prev + 1);
-  };
-
-  const handleCorrectAnswer = () => {
+  const handleNodeSelect = (nodeId: string) => {
     if (!storyContent?.segments) return;
-    const currentSegmentData = storyContent.segments[currentSegment];
-    setSegmentScores(prev => ({
-      ...prev,
-      [currentSegmentData.id]: (prev[currentSegmentData.id] || 0) + 5
-    }));
-    handleContinue();
-  };
-
-  const handleWrongAnswer = () => {
-    handleContinue();
+    const index = storyContent.segments.findIndex(s => s.id === nodeId);
+    if (index === -1) return;
+    navigate(`/course/${courseId}/lecture/${lectureId}/story/segment/${index}`);
   };
 
   if (isLoadingStory) {
@@ -69,22 +55,27 @@ const Story = () => {
     );
   }
 
+  const pathwayNodes = storyContent.segments.map((segment, index) => ({
+    id: segment.id,
+    title: segment.title,
+    type: "concept" as const,
+    difficulty: "intermediate" as const,
+    prerequisites: index > 0 ? [storyContent.segments[index - 1].id] : [],
+    points: 10,
+    description: segment.description,
+  }));
+
   return (
     <div className="container mx-auto p-2">
       <StoryHeader onBack={handleBack} />
-      <StoryContainer
-        storyContent={{
-          segments: [storyContent.segments[currentSegment]]
-        }}
-        currentSegment={0}
-        currentStep={currentStep}
-        segmentScores={segmentScores}
-        onContinue={handleContinue}
-        onCorrectAnswer={handleCorrectAnswer}
-        onWrongAnswer={handleWrongAnswer}
+      <LearningPathwayComponent
+        nodes={pathwayNodes}
+        completedNodes={completedNodes}
+        currentNode={null}
+        onNodeSelect={handleNodeSelect}
       />
     </div>
   );
 };
 
-export default Story;
+export default LearningPathway;
