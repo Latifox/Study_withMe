@@ -61,9 +61,11 @@ const LearningPathway = ({
 
   const isNodeAvailable = (node: LessonNode) => {
     if (node.prerequisites.length === 0) return true;
+    
     return node.prerequisites.every(prereq => {
       const prereqScore = nodeProgress[prereq] || 0;
-      return prereqScore >= 10; // Node is completed when user has 10 XP
+      // Node is only available if the prerequisite node has been completed (score >= 10)
+      return prereqScore >= 10;
     });
   };
 
@@ -84,7 +86,7 @@ const LearningPathway = ({
       
       toast({
         title: "Node Locked",
-        description: `Complete ${prerequisiteNodes.join(", ")} first to unlock this node.`,
+        description: `Complete ${prerequisiteNodes.join(", ")} first to unlock this node. You need 10 XP in each prerequisite node.`,
         variant: "destructive",
       });
       return;
