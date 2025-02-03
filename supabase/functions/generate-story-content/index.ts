@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log('Generating detailed story content for lecture:', lectureId);
+    console.log('Generating story structure for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -39,76 +39,25 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are an expert educational content creator. Generate exactly 10 highly detailed segments for this lecture content.
+            content: `You are an expert educational content organizer. Generate exactly 10 clear, descriptive segment titles for this lecture content.
             
-            Each segment should have:
-            1. A clear, descriptive title that accurately represents the topic
-            2. Two comprehensive theory slides that include:
-               - In-depth explanations with real-world examples and case studies
-               - Clear definitions of key terms in **bold**
-               - Step-by-step breakdowns of processes and concepts
-               - Multiple practical examples and applications
-               - Relevant analogies to aid understanding
-               - Visual descriptions (diagrams, charts) where helpful
-               - Citations or references to important sources
-               - Bullet points for easy reading
-               - Numbered lists for sequential information
-               - Code snippets or formulas where relevant
-               - Pros and cons analysis where applicable
-               - Common misconceptions and how to avoid them
-               - Industry best practices and standards
-               - Historical context and evolution of concepts
-               - Future trends and developments
-            3. Two challenging but fair quiz questions that test deep understanding
+            Rules for titles:
+            1. Each title should be concise but descriptive (3-7 words)
+            2. Titles should follow a logical progression
+            3. Use professional, academic language
+            4. Avoid technical jargon unless necessary
+            5. Ensure titles are engaging and clear
             
-            Rules for content:
-            1. Make content engaging and story-like while maintaining academic rigor
-            2. Ensure questions test deep understanding progressively
-            3. Include detailed, practical examples in slides
-            4. Make sure all 10 segments are generated
-            5. Questions should be challenging but fair
-            6. Use markdown formatting for better readability
-            7. Include both theoretical and practical aspects
-            8. Add cross-references between related concepts
-            9. Highlight key takeaways at the end of each slide
-            10. Include thought-provoking discussion points
-            
-            Format the response as a clean JSON array with exactly 10 segments, each containing:
+            Return ONLY a JSON object with exactly 10 numbered titles in this format:
             {
-              "id": "segment-[number]",
-              "title": "Clear segment title",
-              "description": "Comprehensive segment description",
-              "slides": [
-                {
-                  "id": "slide-1",
-                  "content": "Detailed, structured content with examples"
-                },
-                {
-                  "id": "slide-2",
-                  "content": "More structured content with practical applications"
-                }
-              ],
-              "questions": [
-                {
-                  "id": "q1",
-                  "type": "multiple_choice",
-                  "question": "Detailed question testing deep understanding",
-                  "options": ["Option A", "Option B", "Option C", "Option D"],
-                  "correctAnswer": "Correct option",
-                  "explanation": "Comprehensive explanation of the correct answer"
-                },
-                {
-                  "id": "q2",
-                  "type": "true_false",
-                  "question": "Challenging true/false question",
-                  "correctAnswer": true,
-                  "explanation": "Detailed explanation linking to theory"
-                }
-              ]
+              "segment_1_title": "Introduction to [Topic]",
+              "segment_2_title": "Basic Concepts and Definitions",
+              ...
+              "segment_10_title": "Advanced Applications and Future Trends"
             }`
           },
           {
@@ -128,67 +77,40 @@ serve(async (req) => {
     const data = await response.json();
     console.log('Raw OpenAI response:', data);
 
-    let segments;
+    let titles;
     try {
       const content = data.choices[0].message.content;
-      const cleanContent = content
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
+      titles = JSON.parse(content);
       
-      segments = JSON.parse(cleanContent);
-      
-      if (!Array.isArray(segments) || segments.length !== 10) {
-        console.error('Invalid segments array length:', segments?.length);
-        throw new Error('Invalid segments array - must have exactly 10 segments');
+      if (!titles || Object.keys(titles).length !== 10) {
+        throw new Error('Invalid titles object - must have exactly 10 segments');
       }
       
-      segments.forEach((segment, index) => {
-        if (!segment.slides || segment.slides.length !== 2) {
-          throw new Error(`Segment ${index + 1} must have exactly 2 slides`);
-        }
-        if (!segment.questions || segment.questions.length !== 2) {
-          throw new Error(`Segment ${index + 1} must have exactly 2 questions`);
-        }
-      });
-      
-      console.log('Successfully parsed and validated segments:', segments);
+      console.log('Successfully parsed titles:', titles);
     } catch (error) {
-      console.error('Error parsing segments:', error);
-      throw new Error(`Failed to parse segments: ${error.message}`);
+      console.error('Error parsing titles:', error);
+      throw new Error(`Failed to parse titles: ${error.message}`);
     }
 
-    const { data: storyContent, error: storyError } = await supabaseClient
-      .from('story_contents')
-      .insert([{ lecture_id: lectureId }])
+    // Store the story structure
+    const { data: storyStructure, error: storyError } = await supabaseClient
+      .from('story_structures')
+      .insert([{
+        lecture_id: lectureId,
+        ...titles
+      }])
       .select()
       .single();
 
     if (storyError) {
-      console.error('Error creating story content:', storyError);
-      throw new Error('Failed to create story content');
+      console.error('Error creating story structure:', storyError);
+      throw new Error('Failed to create story structure');
     }
 
-    const segmentPromises = segments.map((segment: any, index: number) => {
-      return supabaseClient
-        .from('story_segments')
-        .insert([{
-          story_content_id: storyContent.id,
-          segment_number: index,
-          title: segment.title,
-          content: {
-            slides: segment.slides,
-            questions: segment.questions
-          },
-          is_generated: true
-        }]);
-    });
-
-    await Promise.all(segmentPromises);
-    console.log('Successfully created all 10 segments with detailed content');
+    console.log('Successfully created story structure with titles');
 
     return new Response(
-      JSON.stringify({ storyContent: { segments } }),
+      JSON.stringify({ storyStructure }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

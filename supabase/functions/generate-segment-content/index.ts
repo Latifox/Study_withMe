@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, segmentNumber, segmentTitle, lectureContent } = await req.json();
+    const { lectureId, segmentNumber, segmentTitle } = await req.json();
     console.log(`Generating content for segment ${segmentNumber}: ${segmentTitle}`);
 
     const supabaseClient = createClient(
@@ -21,7 +21,24 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Generate content using OpenAI
+    // Get the lecture content and story structure
+    const [{ data: lecture }, { data: storyStructure }] = await Promise.all([
+      supabaseClient
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureId)
+        .single(),
+      supabaseClient
+        .from('story_structures')
+        .select('id')
+        .eq('lecture_id', lectureId)
+        .single()
+    ]);
+
+    if (!lecture?.content || !storyStructure?.id) {
+      throw new Error('Failed to fetch required data');
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -33,56 +50,44 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an educational content creator. Create structured, easy-to-follow content for the segment "${segmentTitle}".
+            content: `Generate detailed content for the segment "${segmentTitle}".
             
-            Rules for content creation:
-            1. Theory slides should be highly structured with:
-               - Clear bullet points
-               - Numbered lists for steps/processes
-               - Short, concise paragraphs
-               - Key terms in bold
-               - Examples where relevant
+            Rules for content:
+            1. Theory slides should include:
+               - Clear explanations with examples
+               - Key terms in **bold**
+               - Step-by-step breakdowns
+               - Practical examples
+               - Visual descriptions
+               - Bullet points and numbered lists
             
             2. Quiz questions should:
-               - Test understanding of specific concepts from the theory slides
-               - Include clear explanations for why answers are correct/incorrect
-               - Mix of multiple choice and true/false questions
-               - Gradually increase in difficulty
+               - Test understanding of specific concepts
+               - Include clear explanations
+               - Be challenging but fair
             
-            Return the content in this exact JSON format:
+            Return content in this exact format:
             {
-              "slides": [
-                {
-                  "id": "slide-1",
-                  "content": "Structured content with bullet points and lists"
-                },
-                {
-                  "id": "slide-2",
-                  "content": "More structured content focusing on examples and applications"
-                }
-              ],
-              "questions": [
-                {
-                  "id": "q1",
-                  "type": "multiple_choice",
-                  "question": "Question testing a specific concept from the slides",
-                  "options": ["Option A", "Option B", "Option C", "Option D"],
-                  "correctAnswer": "Correct option",
-                  "explanation": "Detailed explanation referencing the theory"
-                },
-                {
-                  "id": "q2",
-                  "type": "true_false",
-                  "question": "True/False question about a key concept",
-                  "correctAnswer": true,
-                  "explanation": "Explanation linking back to the theory"
-                }
-              ]
+              "theory_slide_1": "Markdown formatted content",
+              "theory_slide_2": "More markdown formatted content",
+              "quiz_question_1": {
+                "type": "multiple_choice",
+                "question": "Question text",
+                "options": ["A", "B", "C", "D"],
+                "correctAnswer": "Correct option",
+                "explanation": "Why this is correct"
+              },
+              "quiz_question_2": {
+                "type": "true_false",
+                "question": "True/false question",
+                "correctAnswer": true,
+                "explanation": "Why this is true/false"
+              }
             }`
           },
           {
             role: 'user',
-            content: lectureContent
+            content: lecture.content
           }
         ],
         temperature: 0.7,
@@ -94,39 +99,25 @@ serve(async (req) => {
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const openAIResponse = await response.json();
-    console.log('Raw OpenAI response:', openAIResponse);
+    const data = await response.json();
+    console.log('Raw OpenAI response:', data);
 
     let content;
     try {
-      const contentStr = openAIResponse.choices[0].message.content;
-      content = JSON.parse(contentStr);
+      content = JSON.parse(data.choices[0].message.content);
       console.log('Parsed content:', content);
     } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
+      console.error('Error parsing content:', error);
       throw new Error('Failed to parse generated content');
     }
 
-    // Get the story content id
-    const { data: storyContent, error: storyError } = await supabaseClient
-      .from('story_contents')
-      .select('id')
-      .eq('lecture_id', lectureId)
-      .single();
-
-    if (storyError) {
-      console.error('Error fetching story content:', storyError);
-      throw new Error('Failed to fetch story content');
-    }
-
-    // Store the generated segment content
+    // Store the segment content
     const { data: segmentContent, error: segmentError } = await supabaseClient
-      .from('story_segments')
+      .from('segment_contents')
       .upsert({
-        story_content_id: storyContent.id,
+        story_structure_id: storyStructure.id,
         segment_number: segmentNumber,
-        content,
-        is_generated: true
+        ...content
       })
       .select()
       .single();
@@ -139,16 +130,16 @@ serve(async (req) => {
     console.log('Successfully generated and stored content for segment:', segmentNumber);
     
     return new Response(
-      JSON.stringify({ content: segmentContent }), 
+      JSON.stringify({ segmentContent }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in generate-segment-content function:', error);
+    console.error('Error in generate-segment-content:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

@@ -19,3 +19,6 @@ verify_jwt = false
 
 [functions.generate-story-content]
 verify_jwt = false
+
+[functions.generate-segment-content]
+verify_jwt = false
