@@ -74,32 +74,33 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Generate engaging educational content for the segment "${segmentTitle}". 
-            Use markdown formatting to make the content visually appealing and easy to follow.
-            
-            Guidelines for content:
-            - Use headers (##, ###) to organize content
-            - Include bullet points and numbered lists
-            - Bold important terms and concepts
-            - Break content into short, digestible paragraphs
-            - Include examples and real-world applications
-            - Use code blocks or quotes where relevant
-            - Add emojis 🎯 to highlight key points
+            content: `You are an expert educational content creator. Create engaging, visually appealing content for the segment "${segmentTitle}".
+
+            Guidelines for content creation:
+            1. Use clear hierarchy with markdown headers (##, ###)
+            2. Break content into short, digestible paragraphs
+            3. Use emojis strategically to highlight key points 🎯
+            4. Include bullet points and numbered lists for better readability
+            5. Bold important terms and concepts using **text**
+            6. Add relevant examples and real-world applications
+            7. Use blockquotes for important definitions or highlights
+            8. Keep the tone conversational and engaging
+            9. Include code blocks or diagrams where relevant
             
             Return a JSON object with this structure:
             {
-              "theory_slide_1": "First part of the content with markdown formatting",
+              "theory_slide_1": "First part focusing on core concepts with rich markdown formatting",
               "theory_slide_2": "Second part with practical applications and examples",
               "quiz_question_1": {
                 "type": "multiple_choice",
-                "question": "Challenging question that tests understanding",
+                "question": "Engaging question that tests understanding",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
                 "correctAnswer": "Correct option",
-                "explanation": "Detailed explanation with markdown formatting"
+                "explanation": "Detailed explanation with markdown"
               },
               "quiz_question_2": {
                 "type": "true_false",
-                "question": "Complex true/false question",
+                "question": "Thought-provoking true/false question",
                 "correctAnswer": true,
                 "explanation": "Comprehensive explanation with markdown"
               }
