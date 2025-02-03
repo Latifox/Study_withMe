@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Lock, CheckCircle2, Circle, Trophy, Star, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface LessonNode {
   id: string;
@@ -28,23 +30,70 @@ const LearningPathway = ({
   onNodeSelect 
 }: LearningPathwayProps) => {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [nodeProgress, setNodeProgress] = useState<{ [key: string]: number }>({});
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchUserProgress = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: progress } = await supabase
+        .from('user_progress')
+        .select('segment_number, score')
+        .order('segment_number');
+
+      if (progress) {
+        const progressMap: { [key: string]: number } = {};
+        progress.forEach(p => {
+          progressMap[`segment_${p.segment_number}`] = p.score || 0;
+        });
+        setNodeProgress(progressMap);
+      }
+    };
+
+    fetchUserProgress();
+  }, []);
 
   const isNodeAvailable = (node: LessonNode) => {
     if (node.prerequisites.length === 0) return true;
-    return node.prerequisites.every(prereq => completedNodes.has(prereq));
+    return node.prerequisites.every(prereq => {
+      const prereqScore = nodeProgress[prereq] || 0;
+      return prereqScore >= 10; // Node is completed when user has 10 XP
+    });
   };
 
   const getNodeStatus = (node: LessonNode) => {
-    if (completedNodes.has(node.id)) return "completed";
+    const nodeScore = nodeProgress[node.id] || 0;
+    if (nodeScore >= 10) return "completed";
     if (isNodeAvailable(node)) return "available";
     return "locked";
   };
 
-  const handleNodeClick = (node: LessonNode) => {
+  const handleNodeClick = async (node: LessonNode) => {
     const status = getNodeStatus(node);
-    if (status !== "locked") {
-      onNodeSelect(node.id);
+    if (status === "locked") {
+      const prerequisiteNodes = node.prerequisites.map(prereq => {
+        const prereqNode = nodes.find(n => n.id === prereq);
+        return prereqNode?.title || prereq;
+      });
+      
+      toast({
+        title: "Node Locked",
+        description: `Complete ${prerequisiteNodes.join(", ")} first to unlock this node.`,
+        variant: "destructive",
+      });
+      return;
     }
+
+    const currentScore = nodeProgress[node.id] || 0;
+    if (currentScore >= 10 && status === "completed") {
+      toast({
+        description: "You've already completed this node with full points! You can still retry it if you want.",
+      });
+    }
+
+    onNodeSelect(node.id);
   };
 
   const getNodeIcon = (status: string, isHovered: boolean) => {
@@ -77,6 +126,7 @@ const LearningPathway = ({
             const status = getNodeStatus(node);
             const isActive = currentNode === node.id;
             const isHovered = hoveredNode === node.id;
+            const currentScore = nodeProgress[node.id] || 0;
             
             return (
               <motion.div
@@ -127,7 +177,7 @@ const LearningPathway = ({
                               </span>
                               <div className="flex items-center space-x-1">
                                 <Star className="w-4 h-4 text-yellow-400" />
-                                <span className="text-sm text-gray-600">{node.points} XP</span>
+                                <span className="text-sm text-gray-600">{currentScore}/10 XP</span>
                               </div>
                             </div>
                           </div>
@@ -148,9 +198,10 @@ const LearningPathway = ({
                             <ul className="list-disc list-inside">
                               {node.prerequisites.map(prereq => {
                                 const prereqNode = nodes.find(n => n.id === prereq);
+                                const prereqScore = nodeProgress[prereq] || 0;
                                 return (
                                   <li key={prereq}>
-                                    {prereqNode?.title || prereq}
+                                    {prereqNode?.title || prereq} ({prereqScore}/10 XP)
                                   </li>
                                 );
                               })}

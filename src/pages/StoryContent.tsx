@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,34 @@ const StoryContent = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
   const { toast } = useToast();
+
+  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) : null;
+
+  useEffect(() => {
+    const fetchExistingProgress = async () => {
+      if (!segmentNumber) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: progress } = await supabase
+        .from('user_progress')
+        .select('score')
+        .eq('segment_number', segmentNumber)
+        .eq('lecture_id', lectureId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (progress) {
+        setSegmentScores(prev => ({
+          ...prev,
+          [nodeId || '']: progress.score || 0
+        }));
+      }
+    };
+
+    fetchExistingProgress();
+  }, [nodeId, lectureId, segmentNumber]);
 
   const isValidQuizQuestion = (question: any): question is QuizQuestion => {
     return (
@@ -52,10 +80,7 @@ const StoryContent = () => {
         .eq('lecture_id', parseInt(lectureId))
         .single();
 
-      if (structureError) {
-        console.error('Error fetching story structure:', structureError);
-        throw structureError;
-      }
+      if (structureError) throw structureError;
       if (!storyStructure) throw new Error('Story structure not found');
 
       // Find the segment content
@@ -64,7 +89,6 @@ const StoryContent = () => {
       );
 
       if (!segmentContent) {
-        // If no content exists, trigger generation
         console.log('No content found, triggering generation...');
         const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
           body: {
@@ -76,11 +100,9 @@ const StoryContent = () => {
 
         if (generationError) throw generationError;
 
-        // Validate and cast the quiz questions
         const quiz1 = generatedContent.segmentContent.quiz_question_1 as unknown as QuizQuestion;
         const quiz2 = generatedContent.segmentContent.quiz_question_2 as unknown as QuizQuestion;
 
-        // Validate required fields
         if (!isValidQuizQuestion(quiz1) || !isValidQuizQuestion(quiz2)) {
           throw new Error('Invalid quiz question format received from generation');
         }
@@ -101,11 +123,9 @@ const StoryContent = () => {
         };
       }
 
-      // Validate and cast the existing quiz questions
       const quiz1 = segmentContent.quiz_question_1 as unknown as QuizQuestion;
       const quiz2 = segmentContent.quiz_question_2 as unknown as QuizQuestion;
 
-      // Validate required fields
       if (!isValidQuizQuestion(quiz1) || !isValidQuizQuestion(quiz2)) {
         throw new Error('Invalid quiz question format in database');
       }
@@ -136,24 +156,63 @@ const StoryContent = () => {
     setCurrentStep(prev => {
       const newStep = prev + 1;
       if (newStep === 4) {
-        toast({
-          title: "🎉 Segment Completed!",
-          description: "Great job! You've completed this learning segment.",
-        });
+        const totalScore = segmentScores[nodeId || ''] || 0;
+        if (totalScore < 10) {
+          toast({
+            title: "Not enough points!",
+            description: `You need 10 XP to complete this node. Current: ${totalScore} XP. Try again!`,
+            variant: "destructive",
+          });
+          // Reset progress for this node
+          setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
+          return 0; // Reset to beginning
+        } else {
+          toast({
+            title: "🎉 Node Completed!",
+            description: "Great job! You've mastered this node.",
+          });
+        }
       }
       return newStep;
     });
   };
 
-  const handleCorrectAnswer = () => {
-    if (!nodeId) return;
+  const handleCorrectAnswer = async () => {
+    if (!nodeId || !lectureId || !segmentNumber) return;
+
+    const newScore = (segmentScores[nodeId] || 0) + 5;
     setSegmentScores(prev => ({
       ...prev,
-      [nodeId]: (prev[nodeId] || 0) + 5
+      [nodeId]: newScore
     }));
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Update progress in database
+    const { error } = await supabase
+      .from('user_progress')
+      .upsert({
+        user_id: user.id,
+        lecture_id: parseInt(lectureId),
+        segment_number: segmentNumber,
+        score: newScore,
+        completed_at: newScore >= 10 ? new Date().toISOString() : null
+      });
+
+    if (error) {
+      console.error('Error updating progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save progress. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "🌟 Correct Answer!",
-      description: "+5 XP points earned!",
+      description: `+5 XP points earned! Total: ${newScore}/10 XP`,
     });
     handleContinue();
   };
@@ -188,7 +247,7 @@ const StoryContent = () => {
 
   const currentScore = segmentScores[nodeId || ''] || 0;
 
-  if (currentStep >= 4) {
+  if (currentStep >= 4 && currentScore >= 10) {
     return <StoryCompletionScreen onBack={handleBack} />;
   }
 
