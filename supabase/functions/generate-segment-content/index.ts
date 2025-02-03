@@ -16,13 +16,18 @@ serve(async (req) => {
     const { lectureId, segmentNumber, segmentTitle } = await req.json();
     console.log(`Generating content for segment ${segmentNumber}: ${segmentTitle}`);
 
+    if (!lectureId || !segmentNumber || !segmentTitle) {
+      throw new Error('Missing required parameters');
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Get the lecture content and story structure
-    const [{ data: lecture }, { data: storyStructure }] = await Promise.all([
+    console.log('Fetching lecture content and story structure...');
+    const [{ data: lecture, error: lectureError }, { data: storyStructure, error: structureError }] = await Promise.all([
       supabaseClient
         .from('lectures')
         .select('content')
@@ -35,11 +40,22 @@ serve(async (req) => {
         .single()
     ]);
 
-    if (!lecture?.content || !storyStructure?.id) {
-      console.error('Failed to fetch required data:', { lecture, storyStructure });
-      throw new Error('Failed to fetch required data');
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
+      throw new Error(`Failed to fetch lecture: ${lectureError.message}`);
     }
 
+    if (structureError) {
+      console.error('Error fetching story structure:', structureError);
+      throw new Error(`Failed to fetch story structure: ${structureError.message}`);
+    }
+
+    if (!lecture?.content || !storyStructure?.id) {
+      console.error('Failed to fetch required data:', { lecture, storyStructure });
+      throw new Error('Required data not found');
+    }
+
+    console.log('Calling OpenAI API...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -96,7 +112,7 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
+      console.error('OpenAI API error:', response.status, await response.text());
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
@@ -113,23 +129,35 @@ serve(async (req) => {
     }
 
     // Get the next ID from the sequence
-    const { data: nextId } = await supabaseClient.rpc('get_next_segment_content_id');
+    console.log('Getting next segment content ID...');
+    const { data: nextId, error: nextIdError } = await supabaseClient.rpc('get_next_segment_content_id');
+    
+    if (nextIdError) {
+      console.error('Error getting next ID:', nextIdError);
+      throw new Error(`Failed to get next ID: ${nextIdError.message}`);
+    }
+
+    console.log('Next ID:', nextId);
     
     // Store the segment content with the next ID
+    console.log('Storing segment content...');
     const { data: segmentContent, error: segmentError } = await supabaseClient
       .from('segment_contents')
       .insert({
         id: nextId,
         story_structure_id: storyStructure.id,
         segment_number: segmentNumber,
-        ...content
+        theory_slide_1: content.theory_slide_1,
+        theory_slide_2: content.theory_slide_2,
+        quiz_question_1: content.quiz_question_1,
+        quiz_question_2: content.quiz_question_2
       })
       .select()
       .single();
 
     if (segmentError) {
       console.error('Error storing segment content:', segmentError);
-      throw new Error('Failed to store segment content');
+      throw new Error(`Failed to store segment content: ${segmentError.message}`);
     }
 
     console.log('Successfully generated and stored content for segment:', segmentNumber);
