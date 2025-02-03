@@ -14,45 +14,52 @@ serve(async (req) => {
 
   try {
     const { lectureId, segmentNumber, segmentTitle } = await req.json();
-    console.log(`Generating content for segment ${segmentNumber}: ${segmentTitle}`);
+    console.log('Received parameters:', { lectureId, segmentNumber, segmentTitle });
 
-    if (!lectureId || !segmentNumber || !segmentTitle) {
+    // Validate parameters
+    if (!lectureId || segmentNumber === undefined || !segmentTitle) {
+      console.error('Missing parameters:', { lectureId, segmentNumber, segmentTitle });
       throw new Error('Missing required parameters');
     }
+
+    // Adjust segmentNumber to be 1-based for database operations
+    const adjustedSegmentNumber = segmentNumber + 1;
+    console.log('Adjusted segment number:', adjustedSegmentNumber);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the lecture content and story structure
-    console.log('Fetching lecture content and story structure...');
-    const [{ data: lecture, error: lectureError }, { data: storyStructure, error: structureError }] = await Promise.all([
-      supabaseClient
-        .from('lectures')
-        .select('content')
-        .eq('id', lectureId)
-        .single(),
-      supabaseClient
-        .from('story_structures')
-        .select('id')
-        .eq('lecture_id', lectureId)
-        .single()
-    ]);
+    // Get the lecture content
+    console.log('Fetching lecture content...');
+    const { data: lecture, error: lectureError } = await supabaseClient
+      .from('lectures')
+      .select('content')
+      .eq('id', lectureId)
+      .single();
 
     if (lectureError) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error(`Failed to fetch lecture: ${lectureError.message}`);
     }
 
+    if (!lecture?.content) {
+      console.error('No lecture content found');
+      throw new Error('Lecture content not found');
+    }
+
+    // Get story structure
+    console.log('Fetching story structure...');
+    const { data: storyStructure, error: structureError } = await supabaseClient
+      .from('story_structures')
+      .select('id')
+      .eq('lecture_id', lectureId)
+      .single();
+
     if (structureError) {
       console.error('Error fetching story structure:', structureError);
       throw new Error(`Failed to fetch story structure: ${structureError.message}`);
-    }
-
-    if (!lecture?.content || !storyStructure?.id) {
-      console.error('Failed to fetch required data:', { lecture, storyStructure });
-      throw new Error('Required data not found');
     }
 
     console.log('Calling OpenAI API...');
@@ -139,14 +146,14 @@ serve(async (req) => {
 
     console.log('Next ID:', nextId);
     
-    // Store the segment content with the next ID
+    // Store the segment content
     console.log('Storing segment content...');
     const { data: segmentContent, error: segmentError } = await supabaseClient
       .from('segment_contents')
       .insert({
         id: nextId,
         story_structure_id: storyStructure.id,
-        segment_number: segmentNumber,
+        segment_number: adjustedSegmentNumber,
         theory_slide_1: content.theory_slide_1,
         theory_slide_2: content.theory_slide_2,
         quiz_question_1: content.quiz_question_1,
@@ -160,7 +167,7 @@ serve(async (req) => {
       throw new Error(`Failed to store segment content: ${segmentError.message}`);
     }
 
-    console.log('Successfully generated and stored content for segment:', segmentNumber);
+    console.log('Successfully generated and stored content for segment:', adjustedSegmentNumber);
     
     return new Response(
       JSON.stringify({ segmentContent }), 
