@@ -33,11 +33,14 @@ const Story = () => {
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
 
+  // Convert lectureId to number before passing to useStoryContent
+  const numericLectureId = lectureId ? parseInt(lectureId, 10) : undefined;
+
   const { 
     data: storyContent, 
     isLoading: isLoadingStory,
     error: storyError,
-  } = useStoryContent(lectureId);
+  } = useStoryContent(numericLectureId?.toString());
 
   const generateSegmentContent = async (segmentNumber: number, segmentTitle: string) => {
     try {
@@ -46,7 +49,7 @@ const Story = () => {
       const { data: lecture } = await supabase
         .from('lectures')
         .select('content')
-        .eq('id', lectureId)
+        .eq('id', numericLectureId)
         .single();
 
       if (!lecture?.content) {
@@ -60,7 +63,7 @@ const Story = () => {
 
       const { data, error } = await supabase.functions.invoke('generate-segment-content', {
         body: {
-          lectureId,
+          lectureId: numericLectureId,
           segmentNumber,
           segmentTitle,
           lectureContent: lecture.content
@@ -70,7 +73,7 @@ const Story = () => {
       if (error) throw error;
 
       await queryClient.invalidateQueries({ 
-        queryKey: ['story-content', lectureId?.toString()] 
+        queryKey: ['story-content', numericLectureId?.toString()] 
       });
 
       toast({
