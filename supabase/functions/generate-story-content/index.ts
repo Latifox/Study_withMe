@@ -14,14 +14,13 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
-    console.log('Generating story content for lecture:', lectureId);
+    console.log('Generating detailed story content for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -33,7 +32,6 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    // Generate segments using OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -45,52 +43,62 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a story content generator. Generate exactly 10 segments for this lecture content.
+            content: `You are an expert educational content creator. Generate exactly 10 highly detailed segments for this lecture content.
             IMPORTANT: Analyze the language of the provided lecture content and generate all content (titles, descriptions, slides, questions) in the SAME LANGUAGE as the lecture.
             
             Each segment should have:
-            - A clear, descriptive title in the same language as the lecture
-            - 2 theory slides with bullet points and examples
-            - 2 quiz questions (mix of multiple choice and true/false)
+            1. A clear, descriptive title that accurately represents the topic
+            2. Two comprehensive theory slides that include:
+               - Detailed explanations of concepts with real-world examples
+               - Clear definitions of key terms in bold
+               - Step-by-step breakdowns of processes where applicable
+               - Relevant analogies to aid understanding
+               - Practical applications and use cases
+               - Visual descriptions (diagrams, charts) where helpful
+               - Citations or references to important sources if relevant
+               - Bullet points for easy reading
+               - Numbered lists for sequential information
+            3. Two challenging but fair quiz questions
             
             Rules for content:
             1. Keep all content in the same language as the lecture
-            2. Make content engaging and story-like
-            3. Ensure questions test understanding progressively
-            4. Include practical examples in slides
+            2. Make content engaging and story-like while maintaining academic rigor
+            3. Ensure questions test deep understanding progressively
+            4. Include detailed, practical examples in slides
             5. Make sure all 10 segments are generated
             6. Questions should be challenging but fair
+            7. Use markdown formatting for better readability
             
             Format the response as a clean JSON array with exactly 10 segments, each containing:
             {
               "id": "segment-[number]",
               "title": "Clear segment title",
-              "description": "Brief segment description",
+              "description": "Comprehensive segment description",
               "slides": [
                 {
                   "id": "slide-1",
-                  "content": "Structured content with bullet points"
+                  "content": "Detailed, structured content with examples"
                 },
                 {
                   "id": "slide-2",
-                  "content": "More structured content"
+                  "content": "More structured content with practical applications"
                 }
               ],
               "questions": [
                 {
                   "id": "q1",
                   "type": "multiple_choice",
-                  "question": "Question text",
+                  "question": "Detailed question testing deep understanding",
                   "options": ["Option A", "Option B", "Option C", "Option D"],
                   "correctAnswer": "Correct option",
-                  "explanation": "Why this is correct"
+                  "explanation": "Comprehensive explanation of the correct answer"
                 },
                 {
                   "id": "q2",
                   "type": "true_false",
-                  "question": "True/false question",
+                  "question": "Challenging true/false question",
                   "correctAnswer": true,
-                  "explanation": "Explanation why"
+                  "explanation": "Detailed explanation linking to theory"
                 }
               ]
             }`
@@ -115,7 +123,6 @@ serve(async (req) => {
     let segments;
     try {
       const content = data.choices[0].message.content;
-      // Clean the content string and parse JSON
       const cleanContent = content
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
@@ -128,7 +135,6 @@ serve(async (req) => {
         throw new Error('Invalid segments array - must have exactly 10 segments');
       }
       
-      // Validate each segment
       segments.forEach((segment, index) => {
         if (!segment.slides || segment.slides.length !== 2) {
           throw new Error(`Segment ${index + 1} must have exactly 2 slides`);
@@ -144,7 +150,6 @@ serve(async (req) => {
       throw new Error(`Failed to parse segments: ${error.message}`);
     }
 
-    // Create story content
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert([{ lecture_id: lectureId }])
@@ -156,7 +161,6 @@ serve(async (req) => {
       throw new Error('Failed to create story content');
     }
 
-    // Create story segments
     const segmentPromises = segments.map((segment: any, index: number) => {
       return supabaseClient
         .from('story_segments')
@@ -173,7 +177,7 @@ serve(async (req) => {
     });
 
     await Promise.all(segmentPromises);
-    console.log('Successfully created all 10 segments');
+    console.log('Successfully created all 10 segments with detailed content');
 
     return new Response(
       JSON.stringify({ storyContent: { segments } }),
