@@ -212,6 +212,47 @@ export type Database = {
           },
         ]
       }
+      user_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: number
+          lecture_id: number | null
+          score: number | null
+          segment_number: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: never
+          lecture_id?: number | null
+          score?: number | null
+          segment_number: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: never
+          lecture_id?: number | null
+          score?: number | null
+          segment_number?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
