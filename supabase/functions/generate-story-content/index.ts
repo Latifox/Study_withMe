@@ -35,7 +35,7 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    console.log('Generating segment titles with OpenAI...');
+    console.log('Detecting language and generating segment titles with OpenAI...');
     
     // Add retry logic for rate limits
     let retries = 3;
@@ -54,7 +54,7 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: `You are a curriculum designer. Analyze the lecture content and identify 10 key segments or topics that form a logical learning progression. Return ONLY a JSON array of 10 segment titles, no other text.
+                content: `You are a curriculum designer. First, detect the language of the lecture content. Then, analyze the lecture content and identify 10 key segments or topics that form a logical learning progression. Return ONLY a JSON array of 10 segment titles IN THE SAME LANGUAGE as the lecture content, no other text.
 
                 Example format:
                 ["Introduction to Topic", "Basic Concepts", "Advanced Theory", ...]
@@ -63,6 +63,7 @@ serve(async (req) => {
                 - Exactly 10 titles
                 - Each title should be clear and concise (3-6 words)
                 - Titles should follow a logical progression
+                - Titles MUST be in the same language as the lecture content
                 - Return only the JSON array, no other text`
               },
               {
@@ -78,7 +79,6 @@ serve(async (req) => {
           console.log(`Rate limited, retries left: ${retries - 1}`);
           retries--;
           if (retries > 0) {
-            // Wait for 2 seconds before retrying
             await delay(2000);
             continue;
           }
@@ -90,7 +90,7 @@ serve(async (req) => {
           throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
         }
 
-        break; // Success, exit the retry loop
+        break;
       } catch (error) {
         console.error('Error in OpenAI request:', error);
         retries--;
@@ -112,7 +112,18 @@ serve(async (req) => {
       throw new Error('Invalid segment titles generated');
     }
 
-    console.log('Creating story content entry...');
+    // Delete existing story content if any
+    const { error: deleteError } = await supabaseClient
+      .from('story_contents')
+      .delete()
+      .eq('lecture_id', lectureId);
+
+    if (deleteError) {
+      console.error('Error deleting existing story content:', deleteError);
+      throw deleteError;
+    }
+
+    console.log('Creating new story content entry...');
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
