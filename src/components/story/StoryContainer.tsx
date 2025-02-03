@@ -44,7 +44,6 @@ export const StoryContainer = ({
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
   const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
-  const currentScore = segmentScores[currentSegmentData.id] || 0;
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
@@ -63,25 +62,48 @@ export const StoryContainer = ({
         return;
       }
 
+      // Check if this question was already answered correctly
+      if (answeredQuestions.has(questionIndex)) {
+        console.log('Question already answered correctly');
+        onCorrectAnswer();
+        return;
+      }
+
       setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
       
       // Save progress to database
       if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
+        
+        // Fetch current progress first
+        const { data: currentProgress, error: progressError } = await supabase
+          .from('user_progress')
+          .select('score')
+          .eq('user_id', user.id)
+          .eq('lecture_id', parseInt(lectureId))
+          .eq('segment_number', segmentNumber)
+          .maybeSingle();
+
+        if (progressError) {
+          console.error('Error fetching current progress:', progressError);
+          return;
+        }
+
+        const currentScore = currentProgress?.score || 0;
         const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
         
-        const { error: progressError } = await supabase
+        const { error: updateError } = await supabase
           .from('user_progress')
           .upsert({
             user_id: user.id,
             lecture_id: parseInt(lectureId),
             segment_number: segmentNumber,
             score: newScore,
-            completed_at: newScore >= 10 ? new Date().toISOString() : null
+            completed_at: newScore >= maxScore ? new Date().toISOString() : null
           });
 
-        if (progressError) {
-          console.error('Error saving progress:', progressError);
+        if (updateError) {
+          console.error('Error saving progress:', updateError);
           toast({
             title: "Error",
             description: "Failed to save progress. Please try again.",
@@ -94,7 +116,7 @@ export const StoryContainer = ({
         onCorrectAnswer();
         toast({
           title: "🎯 Correct!",
-          description: `+${POINTS_PER_CORRECT_ANSWER} points earned!`,
+          description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
         });
       }
     } catch (error) {
@@ -110,6 +132,11 @@ export const StoryContainer = ({
   const handleWrongAnswer = () => {
     setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
     onWrongAnswer();
+    toast({
+      title: "Keep trying!",
+      description: "Don't worry, mistakes help us learn.",
+      variant: "destructive"
+    });
   };
 
   // Loading state
@@ -164,7 +191,7 @@ export const StoryContainer = ({
 
       <div className="mb-2">
         <StoryProgress
-          currentPoints={currentScore}
+          currentPoints={segmentScores[currentSegmentData.id] || 0}
           maxPoints={maxScore}
         />
       </div>
