@@ -46,52 +46,51 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
+        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: `You are an educational content generator. Your task is to create 10 learning segments from lecture content.
-            Each segment must follow this exact structure:
+            content: `You are an educational content generator. Your task is to create an array of 10 learning segments from lecture content.
+            Return a valid JSON array where each segment object has this structure:
             {
-              "title": "Clear, concise segment title",
-              "description": "Brief overview of what will be covered",
+              "title": "string - clear, concise segment title",
+              "description": "string - brief overview of what will be covered",
               "slides": [
                 {
-                  "id": "slide-{segment-number}-1",
-                  "content": "Detailed markdown content explaining the first part of this concept"
+                  "id": "string - slide-{segment-number}-1",
+                  "content": "string - detailed markdown content explaining the first part"
                 },
                 {
-                  "id": "slide-{segment-number}-2",
-                  "content": "Detailed markdown content explaining the second part of this concept"
+                  "id": "string - slide-{segment-number}-2",
+                  "content": "string - detailed markdown content explaining the second part"
                 }
               ],
               "questions": [
                 {
-                  "id": "question-{segment-number}-1",
+                  "id": "string - question-{segment-number}-1",
                   "type": "multiple_choice",
-                  "question": "Specific question about the concept",
-                  "options": ["option1", "option2", "option3", "option4"],
-                  "correctAnswer": "correct option",
-                  "explanation": "Detailed explanation of why this is correct"
+                  "question": "string - specific question about the concept",
+                  "options": ["string array - 4 possible answers"],
+                  "correctAnswer": "string - one of the options",
+                  "explanation": "string - detailed explanation of why this is correct"
                 },
                 {
-                  "id": "question-{segment-number}-2",
+                  "id": "string - question-{segment-number}-2",
                   "type": "true_false",
-                  "question": "True/false question about the concept",
-                  "correctAnswer": true or false,
-                  "explanation": "Detailed explanation of why this is true or false"
+                  "question": "string - true/false question about the concept",
+                  "correctAnswer": "boolean - true or false",
+                  "explanation": "string - detailed explanation of why this is true or false"
                 }
               ]
             }
 
-            Important guidelines:
-            1. Each slide's content must be detailed and use proper markdown formatting
-            2. Content must be directly derived from the lecture material
-            3. Questions must test understanding of the specific segment's content
-            4. Ensure progressive difficulty across segments
-            5. Make content engaging and educational
-            6. Use examples and analogies where appropriate
-            7. Include code snippets or technical details if present in the lecture
-            8. Maintain consistent formatting across all segments`
+            Important:
+            1. Content must be directly derived from the lecture material
+            2. Questions must test understanding of the specific segment's content
+            3. Ensure progressive difficulty across segments
+            4. Make content engaging and educational
+            5. Include code snippets or technical details if present in the lecture
+            6. Return ONLY the JSON array, no markdown or other formatting`
           },
           {
             role: 'user',
@@ -109,9 +108,22 @@ serve(async (req) => {
     }
 
     const aiResponseData = await openAIResponse.json();
-    console.log('Generated content:', aiResponseData.choices[0].message.content);
+    console.log('Raw OpenAI response:', JSON.stringify(aiResponseData));
     
-    const generatedContent = JSON.parse(aiResponseData.choices[0].message.content);
+    let generatedContent;
+    try {
+      // Extract the content from the message and parse it
+      const contentString = aiResponseData.choices[0].message.content;
+      console.log('Content string:', contentString);
+      generatedContent = JSON.parse(contentString);
+      
+      if (!Array.isArray(generatedContent)) {
+        throw new Error('Generated content is not an array');
+      }
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Failed to parse generated content');
+    }
 
     // Create story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
