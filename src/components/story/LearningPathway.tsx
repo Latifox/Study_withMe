@@ -52,8 +52,6 @@ const LearningPathway = ({
 
   return (
     <div className="relative w-full h-[calc(100vh-14rem)] flex items-center justify-center px-4">
-      <div className="absolute left-[65%] h-full w-0.5 bg-gray-200 -translate-x-1/2" />
-      
       <div className="relative flex flex-col justify-between h-full py-8 ml-[65%] -translate-x-1/2">
         {nodes.map((node, index) => {
           const status = getNodeStatus(node);
