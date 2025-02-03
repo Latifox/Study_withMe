@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import { motion } from 'framer-motion';
 
 interface TheorySlideProps {
   content: string;
@@ -7,17 +8,24 @@ interface TheorySlideProps {
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   return (
-    <div className="space-y-3">
-      <div className="prose prose-sm dark:prose-invert max-w-none">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
+      <div className="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
-      <button
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={onContinue}
-        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 rounded-lg text-sm"
+        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 px-6 py-3 rounded-lg font-semibold shadow-md transition-all duration-200 transform hover:-translate-y-0.5"
       >
         Continue
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 };
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trophy, Star, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -8,12 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { StoryContainer } from "@/components/story/StoryContainer";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
+import { useToast } from "@/hooks/use-toast";
 
 const StoryContent = () => {
   const { courseId, lectureId, nodeId } = useParams();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
+  const { toast } = useToast();
 
   const { data: content, isLoading, error } = useQuery({
     queryKey: ['segment-content', lectureId, nodeId],
@@ -86,7 +88,16 @@ const StoryContent = () => {
   };
 
   const handleContinue = () => {
-    setCurrentStep(prev => prev + 1);
+    setCurrentStep(prev => {
+      const newStep = prev + 1;
+      if (newStep === 4) {
+        toast({
+          title: "🎉 Segment Completed!",
+          description: "Great job! You've completed this learning segment.",
+        });
+      }
+      return newStep;
+    });
   };
 
   const handleCorrectAnswer = () => {
@@ -95,10 +106,19 @@ const StoryContent = () => {
       ...prev,
       [nodeId]: (prev[nodeId] || 0) + 5
     }));
+    toast({
+      title: "🌟 Correct Answer!",
+      description: "+5 XP points earned!",
+    });
     handleContinue();
   };
 
   const handleWrongAnswer = () => {
+    toast({
+      title: "Keep trying!",
+      description: "Don't worry, mistakes help us learn.",
+      variant: "destructive"
+    });
     handleContinue();
   };
 
@@ -121,18 +141,36 @@ const StoryContent = () => {
     );
   }
 
-  return (
-    <div className="container mx-auto p-2">
-      <Button
-        variant="ghost"
-        onClick={handleBack}
-        className="mb-4"
-      >
-        <ArrowLeft className="mr-2" />
-        Back to Learning Pathway
-      </Button>
+  const currentScore = segmentScores[nodeId || ''] || 0;
 
-      <Card className="p-4">
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          className="hover:scale-105 transition-transform"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Learning Pathway
+        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-400" />
+            <span className="font-bold">{currentScore} XP</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-purple-500" />
+            <span className="font-bold">{Math.floor(currentScore / 10)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-blue-500" />
+            <span className="font-bold">{currentStep}/4</span>
+          </div>
+        </div>
+      </div>
+
+      <Card className="p-6 shadow-lg transform hover:scale-[1.01] transition-transform duration-200 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
         <StoryContainer
           storyContent={content}
           currentSegment={0}
