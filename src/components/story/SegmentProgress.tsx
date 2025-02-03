@@ -9,7 +9,6 @@ const SegmentProgress = ({ currentSegment, totalSegments, currentStep, totalStep
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm text-muted-foreground">
-        <span>Segment {currentSegment + 1} of {totalSegments}</span>
         <span>Step {currentStep + 1} of {totalSteps}</span>
       </div>
       <div className="w-full bg-muted rounded-full h-2">
