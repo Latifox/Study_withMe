@@ -16,15 +16,9 @@ serve(async (req) => {
     const { lectureId, segmentNumber, segmentTitle } = await req.json();
     console.log('Received parameters:', { lectureId, segmentNumber, segmentTitle });
 
-    // Validate parameters
     if (!lectureId || segmentNumber === undefined || !segmentTitle) {
-      console.error('Missing parameters:', { lectureId, segmentNumber, segmentTitle });
       throw new Error('Missing required parameters');
     }
-
-    // Adjust segmentNumber to be 1-based for database operations
-    const adjustedSegmentNumber = segmentNumber + 1;
-    console.log('Adjusted segment number:', adjustedSegmentNumber);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,7 +26,6 @@ serve(async (req) => {
     );
 
     // Get the lecture content
-    console.log('Fetching lecture content...');
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -45,12 +38,10 @@ serve(async (req) => {
     }
 
     if (!lecture?.content) {
-      console.error('No lecture content found');
       throw new Error('Lecture content not found');
     }
 
     // Get story structure
-    console.log('Fetching story structure...');
     const { data: storyStructure, error: structureError } = await supabaseClient
       .from('story_structures')
       .select('id')
@@ -58,7 +49,6 @@ serve(async (req) => {
       .single();
 
     if (structureError) {
-      console.error('Error fetching story structure:', structureError);
       throw new Error(`Failed to fetch story structure: ${structureError.message}`);
     }
 
@@ -74,30 +64,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Generate detailed content for the segment "${segmentTitle}".
+            content: `Generate educational content for the segment "${segmentTitle}" in the same language as the lecture content.
             
-            Rules for content:
-            1. Theory slides should include:
-               - Clear explanations with examples
-               - Key terms in **bold**
-               - Step-by-step breakdowns
-               - Practical examples
-               - Visual descriptions
-               - Bullet points and numbered lists
-            
-            2. Quiz questions should:
-               - Test understanding of specific concepts
-               - Include clear explanations
-               - Be challenging but fair
-            
-            Return content in this exact format:
+            Return a JSON object with the following structure (DO NOT include markdown formatting or code blocks):
             {
-              "theory_slide_1": "Markdown formatted content",
-              "theory_slide_2": "More markdown formatted content",
+              "theory_slide_1": "First slide content with clear explanations",
+              "theory_slide_2": "Second slide content with examples",
               "quiz_question_1": {
                 "type": "multiple_choice",
                 "question": "Question text",
-                "options": ["A", "B", "C", "D"],
+                "options": ["Option A", "Option B", "Option C", "Option D"],
                 "correctAnswer": "Correct option",
                 "explanation": "Why this is correct"
               },
@@ -111,7 +87,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: lecture.content
+            content: `Generate content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
           }
         ],
         temperature: 0.7,
@@ -119,7 +95,6 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status, await response.text());
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
@@ -127,57 +102,41 @@ serve(async (req) => {
     console.log('Raw OpenAI response:', data);
 
     if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid OpenAI response format:', data);
       throw new Error('Invalid OpenAI response format');
     }
 
     let content;
     try {
-      content = JSON.parse(data.choices[0].message.content);
+      // Remove any markdown formatting
+      const cleanContent = data.choices[0].message.content.replace(/```json\n|\n```/g, '');
+      content = JSON.parse(cleanContent);
       
-      // Validate the content structure
+      // Validate content structure
       if (!content.theory_slide_1 || !content.theory_slide_2 || 
           !content.quiz_question_1 || !content.quiz_question_2) {
         throw new Error('Missing required content fields');
       }
       
-      // Validate quiz question formats
-      if (!content.quiz_question_1.type || !content.quiz_question_1.question || 
-          !content.quiz_question_1.correctAnswer || !content.quiz_question_1.explanation) {
-        throw new Error('Invalid quiz_question_1 format');
-      }
-      
-      if (!content.quiz_question_2.type || !content.quiz_question_2.question || 
-          content.quiz_question_2.correctAnswer === undefined || !content.quiz_question_2.explanation) {
-        throw new Error('Invalid quiz_question_2 format');
-      }
-
-      console.log('Successfully parsed and validated content');
+      console.log('Successfully parsed content');
     } catch (error) {
-      console.error('Error parsing or validating content:', error);
-      console.error('Raw content:', data.choices[0].message.content);
-      throw new Error(`Failed to parse or validate generated content: ${error.message}`);
+      console.error('Error parsing content:', error);
+      throw new Error(`Failed to parse generated content: ${error.message}`);
     }
 
     // Get the next ID from the sequence
-    console.log('Getting next segment content ID...');
     const { data: nextId, error: nextIdError } = await supabaseClient.rpc('get_next_segment_content_id');
     
     if (nextIdError) {
-      console.error('Error getting next ID:', nextIdError);
       throw new Error(`Failed to get next ID: ${nextIdError.message}`);
     }
-
-    console.log('Next ID:', nextId);
     
     // Store the segment content
-    console.log('Storing segment content...');
     const { data: segmentContent, error: segmentError } = await supabaseClient
       .from('segment_contents')
       .insert({
         id: nextId,
         story_structure_id: storyStructure.id,
-        segment_number: adjustedSegmentNumber,
+        segment_number: segmentNumber + 1,
         theory_slide_1: content.theory_slide_1,
         theory_slide_2: content.theory_slide_2,
         quiz_question_1: content.quiz_question_1,
@@ -187,12 +146,9 @@ serve(async (req) => {
       .single();
 
     if (segmentError) {
-      console.error('Error storing segment content:', segmentError);
       throw new Error(`Failed to store segment content: ${segmentError.message}`);
     }
 
-    console.log('Successfully generated and stored content for segment:', adjustedSegmentNumber);
-    
     return new Response(
       JSON.stringify({ segmentContent }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
