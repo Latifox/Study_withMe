@@ -7,6 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -34,41 +36,71 @@ serve(async (req) => {
     }
 
     console.log('Generating segment titles with OpenAI...');
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a curriculum designer. Analyze the lecture content and identify 10 key segments or topics that form a logical learning progression. Return ONLY a JSON array of 10 segment titles, no other text.
-
-            Example format:
-            ["Introduction to Topic", "Basic Concepts", "Advanced Theory", ...]
-
-            Rules:
-            - Exactly 10 titles
-            - Each title should be clear and concise (3-6 words)
-            - Titles should follow a logical progression
-            - Return only the JSON array, no other text`
+    
+    // Add retry logic for rate limits
+    let retries = 3;
+    let openAIResponse;
+    
+    while (retries > 0) {
+      try {
+        openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
           },
-          {
-            role: 'user',
-            content: lecture.content
-          }
-        ],
-        temperature: 0.7,
-      }),
-    });
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: `You are a curriculum designer. Analyze the lecture content and identify 10 key segments or topics that form a logical learning progression. Return ONLY a JSON array of 10 segment titles, no other text.
 
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
+                Example format:
+                ["Introduction to Topic", "Basic Concepts", "Advanced Theory", ...]
+
+                Rules:
+                - Exactly 10 titles
+                - Each title should be clear and concise (3-6 words)
+                - Titles should follow a logical progression
+                - Return only the JSON array, no other text`
+              },
+              {
+                role: 'user',
+                content: lecture.content
+              }
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (openAIResponse.status === 429) {
+          console.log(`Rate limited, retries left: ${retries - 1}`);
+          retries--;
+          if (retries > 0) {
+            // Wait for 2 seconds before retrying
+            await delay(2000);
+            continue;
+          }
+        }
+        
+        if (!openAIResponse.ok) {
+          const errorText = await openAIResponse.text();
+          console.error('OpenAI API error:', errorText);
+          throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
+        }
+
+        break; // Success, exit the retry loop
+      } catch (error) {
+        console.error('Error in OpenAI request:', error);
+        retries--;
+        if (retries === 0) throw error;
+        await delay(2000);
+      }
+    }
+
+    if (!openAIResponse || !openAIResponse.ok) {
+      throw new Error('Failed to generate content after retries');
     }
 
     const aiResponseData = await openAIResponse.json();
