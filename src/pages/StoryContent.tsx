@@ -39,7 +39,7 @@ const StoryContent = () => {
         return {
           segments: [{
             id: nodeId,
-            title: storyStructure[`segment_${segmentNumber}_title`],
+            title: storyStructure[`segment_${segmentNumber}_title`] || '',
             slides: [],
             questions: []
           }]
@@ -49,14 +49,32 @@ const StoryContent = () => {
       return {
         segments: [{
           id: nodeId,
-          title: storyStructure[`segment_${segmentNumber}_title`],
+          title: storyStructure[`segment_${segmentNumber}_title`] || '',
           slides: [
-            { content: segmentContent.theory_slide_1 || '' },
-            { content: segmentContent.theory_slide_2 || '' }
+            { id: 'slide-1', content: segmentContent.theory_slide_1 || '' },
+            { id: 'slide-2', content: segmentContent.theory_slide_2 || '' }
           ],
           questions: [
-            segmentContent.quiz_question_1,
-            segmentContent.quiz_question_2
+            {
+              id: 'q1',
+              ...(segmentContent.quiz_question_1 as {
+                type: "multiple_choice" | "true_false";
+                question: string;
+                options?: string[];
+                correctAnswer: string | boolean;
+                explanation: string;
+              })
+            },
+            {
+              id: 'q2',
+              ...(segmentContent.quiz_question_2 as {
+                type: "multiple_choice" | "true_false";
+                question: string;
+                options?: string[];
+                correctAnswer: string | boolean;
+                explanation: string;
+              })
+            }
           ]
         }]
       };
