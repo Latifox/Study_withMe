@@ -28,13 +28,19 @@ serve(async (req) => {
       .from('lectures')
       .select('content, title')
       .eq('id', lectureId)
-      .maybeSingle();
+      .single();
 
-    if (lectureError || !lecture) {
+    if (lectureError) {
       console.error('Error fetching lecture:', lectureError);
-      throw new Error('Failed to fetch lecture content');
+      throw new Error(`Failed to fetch lecture content: ${lectureError.message}`);
     }
 
+    if (!lecture || !lecture.content) {
+      console.error('No lecture content found for ID:', lectureId);
+      throw new Error('Lecture content is empty or not found');
+    }
+
+    console.log('Successfully fetched lecture. Content length:', lecture.content.length);
     console.log('Detecting language and generating segment titles with OpenAI...');
     
     // Add retry logic for rate limits
@@ -106,23 +112,21 @@ serve(async (req) => {
     const aiResponseData = await openAIResponse.json();
     console.log('Raw OpenAI response:', aiResponseData.choices[0].message.content);
     
-    const segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
+    let segmentTitles;
+    try {
+      segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
+      console.log('Parsed segment titles:', segmentTitles);
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Invalid response format from OpenAI');
+    }
 
     if (!Array.isArray(segmentTitles) || segmentTitles.length !== 10) {
+      console.error('Invalid segment titles structure:', segmentTitles);
       throw new Error('Invalid segment titles generated');
     }
 
-    // Delete existing story content if any
-    const { error: deleteError } = await supabaseClient
-      .from('story_contents')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (deleteError) {
-      console.error('Error deleting existing story content:', deleteError);
-      throw deleteError;
-    }
-
+    // Create new story content entry
     console.log('Creating new story content entry...');
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
