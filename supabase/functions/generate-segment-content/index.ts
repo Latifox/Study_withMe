@@ -28,18 +28,41 @@ serve(async (req) => {
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) throw new Error(`Failed to fetch lecture: ${lectureError.message}`);
-    if (!lecture?.content) throw new Error('Lecture content not found');
+    if (lectureError) {
+      console.error('Failed to fetch lecture:', lectureError);
+      throw new Error(`Failed to fetch lecture: ${lectureError.message}`);
+    }
+    if (!lecture?.content) {
+      console.error('Lecture content not found');
+      throw new Error('Lecture content not found');
+    }
 
-    // Get or create story structure
+    // Get story structure
     const { data: storyStructure, error: structureError } = await supabaseClient
       .from('story_structures')
       .select('id')
       .eq('lecture_id', lectureId)
       .single();
 
-    if (structureError && structureError.code !== 'PGRST116') {
+    if (structureError) {
+      console.error('Failed to fetch story structure:', structureError);
       throw new Error(`Failed to fetch story structure: ${structureError.message}`);
+    }
+
+    // Check if content already exists
+    const { data: existingContent } = await supabaseClient
+      .from('segment_contents')
+      .select('*')
+      .eq('story_structure_id', storyStructure.id)
+      .eq('segment_number', segmentNumber)
+      .single();
+
+    if (existingContent) {
+      console.log('Content already exists, returning existing content');
+      return new Response(
+        JSON.stringify({ segmentContent: existingContent }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Calling OpenAI API for detailed content generation...');
@@ -50,13 +73,13 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
             content: `Generate comprehensive educational content for the segment "${segmentTitle}". 
             The content should be extremely detailed, including:
-            - In-depth explanations of core concepts
+            - In-depth explanations of core concepts (minimum 500 words)
             - Real-world examples and applications
             - Clear definitions of technical terms
             - Step-by-step breakdowns of complex ideas
@@ -64,8 +87,8 @@ serve(async (req) => {
             
             Return a JSON object with the following structure (DO NOT include markdown formatting):
             {
-              "theory_slide_1": "Detailed introduction and core concept explanation (at least 300 words)",
-              "theory_slide_2": "Comprehensive examples and practical applications (at least 300 words)",
+              "theory_slide_1": "Detailed introduction and core concept explanation (at least 500 words)",
+              "theory_slide_2": "Comprehensive examples and practical applications (at least 500 words)",
               "quiz_question_1": {
                 "type": "multiple_choice",
                 "question": "Challenging question that tests deep understanding",
@@ -83,7 +106,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Generate detailed educational content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
+            content: `Generate extremely detailed educational content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
           }
         ],
         temperature: 0.7,
@@ -91,7 +114,10 @@ serve(async (req) => {
       }),
     });
 
-    if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
 
     const data = await response.json();
     console.log('Successfully received OpenAI response');
@@ -113,7 +139,7 @@ serve(async (req) => {
     // Store the content
     const { data: segmentContent, error: insertError } = await supabaseClient
       .from('segment_contents')
-      .upsert({
+      .insert({
         story_structure_id: storyStructure.id,
         segment_number: segmentNumber,
         theory_slide_1: content.theory_slide_1,
@@ -125,6 +151,7 @@ serve(async (req) => {
       .single();
 
     if (insertError) {
+      console.error('Error storing segment content:', insertError);
       throw new Error(`Failed to store segment content: ${insertError.message}`);
     }
 
