@@ -70,7 +70,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -126,13 +126,37 @@ serve(async (req) => {
     const data = await response.json();
     console.log('Raw OpenAI response:', data);
 
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid OpenAI response format:', data);
+      throw new Error('Invalid OpenAI response format');
+    }
+
     let content;
     try {
       content = JSON.parse(data.choices[0].message.content);
-      console.log('Parsed content:', content);
+      
+      // Validate the content structure
+      if (!content.theory_slide_1 || !content.theory_slide_2 || 
+          !content.quiz_question_1 || !content.quiz_question_2) {
+        throw new Error('Missing required content fields');
+      }
+      
+      // Validate quiz question formats
+      if (!content.quiz_question_1.type || !content.quiz_question_1.question || 
+          !content.quiz_question_1.correctAnswer || !content.quiz_question_1.explanation) {
+        throw new Error('Invalid quiz_question_1 format');
+      }
+      
+      if (!content.quiz_question_2.type || !content.quiz_question_2.question || 
+          content.quiz_question_2.correctAnswer === undefined || !content.quiz_question_2.explanation) {
+        throw new Error('Invalid quiz_question_2 format');
+      }
+
+      console.log('Successfully parsed and validated content');
     } catch (error) {
-      console.error('Error parsing content:', error);
-      throw new Error('Failed to parse generated content');
+      console.error('Error parsing or validating content:', error);
+      console.error('Raw content:', data.choices[0].message.content);
+      throw new Error(`Failed to parse or validate generated content: ${error.message}`);
     }
 
     // Get the next ID from the sequence
