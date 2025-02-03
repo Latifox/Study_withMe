@@ -47,7 +47,7 @@ serve(async (req) => {
     }
 
     console.log('Successfully fetched lecture. Content length:', lecture.content.length);
-    console.log('Detecting language and generating segment titles with OpenAI...');
+    console.log('Generating segment titles with OpenAI...');
     
     // Add retry logic for rate limits
     let retries = 3;
@@ -86,6 +86,7 @@ serve(async (req) => {
               }
             ],
             temperature: 0.7,
+            max_tokens: 1000,
           }),
         });
 
@@ -97,13 +98,13 @@ serve(async (req) => {
         }
 
         const aiResponseData = await openAIResponse.json();
+        console.log('OpenAI response:', JSON.stringify(aiResponseData));
+
         if (!aiResponseData.choices?.[0]?.message?.content) {
           console.error('Invalid OpenAI response structure:', aiResponseData);
           throw new Error('Invalid response structure from OpenAI');
         }
 
-        console.log('Raw OpenAI response:', aiResponseData.choices[0].message.content);
-        
         let segmentTitles;
         try {
           segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
@@ -156,7 +157,7 @@ serve(async (req) => {
           console.log(`Retrying in 2 seconds... ${retries} attempts remaining`);
           await delay(2000);
         } else {
-          throw new Error(lastError || error.message);
+          throw error;
         }
       }
     }
