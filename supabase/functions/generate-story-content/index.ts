@@ -15,6 +15,12 @@ serve(async (req) => {
   }
 
   try {
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
+      throw new Error('OpenAI API key not configured');
+    }
+
     const { lectureId } = await req.json();
     console.log('Starting story titles generation for lecture:', lectureId);
 
@@ -46,13 +52,15 @@ serve(async (req) => {
     // Add retry logic for rate limits
     let retries = 3;
     let openAIResponse;
+    let lastError;
     
     while (retries > 0) {
       try {
+        console.log(`Attempt ${4 - retries} to call OpenAI API`);
         openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Authorization': `Bearer ${openAIApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -81,81 +89,79 @@ serve(async (req) => {
           }),
         });
 
-        if (openAIResponse.status === 429) {
-          console.log(`Rate limited, retries left: ${retries - 1}`);
-          retries--;
-          if (retries > 0) {
-            await delay(2000);
-            continue;
-          }
-        }
-        
         if (!openAIResponse.ok) {
           const errorText = await openAIResponse.text();
-          console.error('OpenAI API error:', errorText);
-          throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
+          console.error('OpenAI API error:', openAIResponse.status, errorText);
+          lastError = `OpenAI API error: ${openAIResponse.status} - ${errorText}`;
+          throw new Error(lastError);
         }
 
-        break;
+        const aiResponseData = await openAIResponse.json();
+        if (!aiResponseData.choices?.[0]?.message?.content) {
+          console.error('Invalid OpenAI response structure:', aiResponseData);
+          throw new Error('Invalid response structure from OpenAI');
+        }
+
+        console.log('Raw OpenAI response:', aiResponseData.choices[0].message.content);
+        
+        let segmentTitles;
+        try {
+          segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
+          console.log('Parsed segment titles:', segmentTitles);
+        } catch (error) {
+          console.error('Error parsing OpenAI response:', error);
+          throw new Error('Invalid response format from OpenAI');
+        }
+
+        if (!Array.isArray(segmentTitles) || segmentTitles.length !== 10) {
+          console.error('Invalid segment titles structure:', segmentTitles);
+          throw new Error('Invalid segment titles generated');
+        }
+
+        // Create new story content entry
+        console.log('Creating new story content entry...');
+        const { data: storyContent, error: storyError } = await supabaseClient
+          .from('story_contents')
+          .insert({
+            lecture_id: lectureId,
+            segment_1_title: segmentTitles[0],
+            segment_2_title: segmentTitles[1],
+            segment_3_title: segmentTitles[2],
+            segment_4_title: segmentTitles[3],
+            segment_5_title: segmentTitles[4],
+            segment_6_title: segmentTitles[5],
+            segment_7_title: segmentTitles[6],
+            segment_8_title: segmentTitles[7],
+            segment_9_title: segmentTitles[8],
+            segment_10_title: segmentTitles[9]
+          })
+          .select()
+          .single();
+
+        if (storyError) {
+          console.error('Error creating story content:', storyError);
+          throw storyError;
+        }
+
+        console.log('Successfully generated and stored segment titles');
+        return new Response(
+          JSON.stringify({ success: true, storyContent }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
       } catch (error) {
-        console.error('Error in OpenAI request:', error);
+        console.error(`Attempt ${4 - retries} failed:`, error);
         retries--;
-        if (retries === 0) throw error;
-        await delay(2000);
+        if (retries > 0) {
+          console.log(`Retrying in 2 seconds... ${retries} attempts remaining`);
+          await delay(2000);
+        } else {
+          throw new Error(lastError || error.message);
+        }
       }
     }
 
-    if (!openAIResponse || !openAIResponse.ok) {
-      throw new Error('Failed to generate content after retries');
-    }
-
-    const aiResponseData = await openAIResponse.json();
-    console.log('Raw OpenAI response:', aiResponseData.choices[0].message.content);
-    
-    let segmentTitles;
-    try {
-      segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
-      console.log('Parsed segment titles:', segmentTitles);
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      throw new Error('Invalid response format from OpenAI');
-    }
-
-    if (!Array.isArray(segmentTitles) || segmentTitles.length !== 10) {
-      console.error('Invalid segment titles structure:', segmentTitles);
-      throw new Error('Invalid segment titles generated');
-    }
-
-    // Create new story content entry
-    console.log('Creating new story content entry...');
-    const { data: storyContent, error: storyError } = await supabaseClient
-      .from('story_contents')
-      .insert({
-        lecture_id: lectureId,
-        segment_1_title: segmentTitles[0],
-        segment_2_title: segmentTitles[1],
-        segment_3_title: segmentTitles[2],
-        segment_4_title: segmentTitles[3],
-        segment_5_title: segmentTitles[4],
-        segment_6_title: segmentTitles[5],
-        segment_7_title: segmentTitles[6],
-        segment_8_title: segmentTitles[7],
-        segment_9_title: segmentTitles[8],
-        segment_10_title: segmentTitles[9]
-      })
-      .select()
-      .single();
-
-    if (storyError) {
-      console.error('Error creating story content:', storyError);
-      throw storyError;
-    }
-
-    console.log('Successfully generated and stored segment titles');
-    return new Response(
-      JSON.stringify({ success: true, storyContent }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    throw new Error('Failed to generate content after all retries');
 
   } catch (error) {
     console.error('Error in generate-story-content function:', error);
