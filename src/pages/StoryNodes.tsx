@@ -31,8 +31,12 @@ const StoryNodes = () => {
       return {
         segments: Array.from({ length: 10 }, (_, i) => ({
           id: `segment_${i + 1}`,
-          title: storyStructure[`segment_${i + 1}_title`],
-          description: `Learn about ${storyStructure[`segment_${i + 1}_title`]}`,
+          title: storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`,
+          type: "concept",
+          difficulty: i < 3 ? "beginner" : i < 7 ? "intermediate" : "advanced",
+          prerequisites: i === 0 ? [] : [`segment_${i}`],
+          points: (i + 1) * 10,
+          description: `Master the concepts of ${storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`}`,
         }))
       };
     }
@@ -48,7 +52,7 @@ const StoryNodes = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-2">
+      <div className="container mx-auto p-4">
         <StoryLoading />
       </div>
     );
@@ -56,7 +60,7 @@ const StoryNodes = () => {
 
   if (error || !storyContent) {
     return (
-      <div className="container mx-auto p-2">
+      <div className="container mx-auto p-4">
         <StoryError 
           message={error instanceof Error ? error.message : "Failed to load story content"}
           onBack={handleBack}
@@ -66,28 +70,19 @@ const StoryNodes = () => {
   }
 
   return (
-    <div className="container mx-auto p-2">
+    <div className="container mx-auto p-4">
       <Button
         variant="ghost"
         onClick={handleBack}
-        className="mb-4"
+        className="mb-6"
       >
-        <ArrowLeft className="mr-2" />
+        <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Course
       </Button>
 
-      <Card className="p-4">
-        <h1 className="text-2xl font-bold mb-6">Learning Pathway</h1>
+      <Card className="p-6 bg-white/50 backdrop-blur-sm">
         <LearningPathway
-          nodes={storyContent.segments.map(segment => ({
-            id: segment.id,
-            title: segment.title || '',
-            type: "concept",
-            difficulty: "intermediate",
-            prerequisites: [],
-            points: 10,
-            description: segment.description || '',
-          }))}
+          nodes={storyContent.segments}
           completedNodes={completedNodes}
           currentNode={null}
           onNodeSelect={handleNodeSelect}
