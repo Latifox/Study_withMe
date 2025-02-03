@@ -113,6 +113,7 @@ export type Database = {
         Row: {
           created_at: string
           current_segment: number | null
+          description: string | null
           generation_status: string | null
           id: number
           is_generated: boolean | null
@@ -124,6 +125,7 @@ export type Database = {
         Insert: {
           created_at?: string
           current_segment?: number | null
+          description?: string | null
           generation_status?: string | null
           id?: never
           is_generated?: boolean | null
@@ -135,6 +137,7 @@ export type Database = {
         Update: {
           created_at?: string
           current_segment?: number | null
+          description?: string | null
           generation_status?: string | null
           id?: never
           is_generated?: boolean | null
@@ -165,7 +168,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          content: Json
+          content?: Json
           created_at?: string
           id?: never
           is_generated?: boolean | null
