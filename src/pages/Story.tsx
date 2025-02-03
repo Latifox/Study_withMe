@@ -14,6 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 const POINTS_PER_CORRECT_ANSWER = 5;
 const TOTAL_QUESTIONS_PER_SEGMENT = 2;
 const REQUIRED_SCORE_PERCENTAGE = 75;
+const TOTAL_SEGMENTS = 10;
+const TOTAL_QUESTIONS = TOTAL_SEGMENTS * TOTAL_QUESTIONS_PER_SEGMENT;
+const MAX_POSSIBLE_SCORE = TOTAL_QUESTIONS * POINTS_PER_CORRECT_ANSWER;
+const REQUIRED_POINTS = Math.ceil((REQUIRED_SCORE_PERCENTAGE / 100) * MAX_POSSIBLE_SCORE);
 
 const Story = () => {
   const { courseId, lectureId } = useParams();
@@ -27,25 +31,22 @@ const Story = () => {
   const [attemptedQuestions, setAttemptedQuestions] = useState<Set<string>>(new Set());
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
-
-  // Convert lectureId to number for database operations
-  const numericLectureId = lectureId ? parseInt(lectureId, 10) : undefined;
+  const [totalScore, setTotalScore] = useState(0);
 
   const { 
     data: storyContent, 
     isLoading: isLoadingStory,
     error: storyError,
-  } = useStoryContent(numericLectureId?.toString());
+  } = useStoryContent(lectureId);
 
   const generateSegmentContent = async (segmentNumber: number, segmentTitle: string) => {
     try {
       setIsGeneratingContent(true);
       
-      // Fetch lecture content
       const { data: lecture } = await supabase
         .from('lectures')
         .select('content')
-        .eq('id', numericLectureId)
+        .eq('id', lectureId)
         .single();
 
       if (!lecture?.content) {
@@ -57,24 +58,19 @@ const Story = () => {
         description: "Please wait while we prepare the content for this segment...",
       });
 
-      // Generate content using the edge function
       const { data, error } = await supabase.functions.invoke('generate-segment-content', {
         body: {
-          lectureId: numericLectureId,
+          lectureId,
           segmentNumber,
           segmentTitle,
           lectureContent: lecture.content
         },
       });
 
-      if (error) {
-        console.error('Error generating content:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Invalidate the query to refetch the content
       await queryClient.invalidateQueries({ 
-        queryKey: ['story-content', numericLectureId?.toString()] 
+        queryKey: ['story-content', lectureId?.toString()] 
       });
 
       toast({
@@ -103,7 +99,6 @@ const Story = () => {
 
     const segment = storyContent.segments[index];
     
-    // If content doesn't exist for this segment, generate it
     if (!segment.slides || !segment.questions) {
       await generateSegmentContent(index, segment.title);
     }
@@ -116,42 +111,46 @@ const Story = () => {
     navigate(`/course/${courseId}`);
   };
 
+  const checkCompletion = () => {
+    const currentTotalScore = Object.values(segmentScores).reduce((sum, score) => sum + score, 0);
+    setTotalScore(currentTotalScore);
+
+    if (currentTotalScore < REQUIRED_POINTS) {
+      toast({
+        title: "Story Incomplete",
+        description: `You need at least ${REQUIRED_POINTS} points to complete the story. Your current score is ${currentTotalScore}. Please try again.`,
+        variant: "destructive",
+      });
+      // Reset progress
+      setCurrentSegment(0);
+      setCurrentStep(0);
+      setSegmentScores({});
+      setAttemptedQuestions(new Set());
+      setCompletedNodes(new Set());
+    } else {
+      toast({
+        title: "Congratulations!",
+        description: `You've completed the story with ${currentTotalScore} points!`,
+      });
+      navigate(`/course/${courseId}`);
+    }
+  };
+
   const handleContinue = () => {
     if (!storyContent?.segments) return;
 
-    const totalSteps = 4;
+    const totalSteps = 4; // 2 slides + 2 questions
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       const currentSegmentData = storyContent.segments[currentSegment];
-      const segmentScore = segmentScores[currentSegmentData.id] || 0;
-      const maxPossibleScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
-      const scorePercentage = (segmentScore / maxPossibleScore) * 100;
-
-      if (scorePercentage >= REQUIRED_SCORE_PERCENTAGE) {
-        setCompletedNodes(prev => new Set([...prev, currentSegmentData.id]));
-        if (currentSegment < storyContent.segments.length - 1) {
-          setCurrentSegment(prev => prev + 1);
-          setCurrentStep(0);
-          toast({
-            title: "Segment Completed!",
-            description: `You've completed this segment with ${scorePercentage}% score.`,
-          });
-        } else {
-          toast({
-            title: "Congratulations!",
-            description: "You've completed all segments of this lecture!",
-          });
-        }
-      } else {
-        toast({
-          title: "Score Too Low",
-          description: `You need at least ${REQUIRED_SCORE_PERCENTAGE}% to proceed. Current score: ${scorePercentage}%. Try again!`,
-          variant: "destructive",
-        });
+      setCompletedNodes(prev => new Set([...prev, currentSegmentData.id]));
+      
+      if (currentSegment < storyContent.segments.length - 1) {
+        setCurrentSegment(prev => prev + 1);
         setCurrentStep(0);
-        setSegmentScores(prev => ({ ...prev, [currentSegmentData.id]: 0 }));
-        setAttemptedQuestions(new Set());
+      } else {
+        checkCompletion();
       }
     }
   };
