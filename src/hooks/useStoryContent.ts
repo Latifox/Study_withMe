@@ -32,10 +32,12 @@ export interface SegmentContent {
 interface SegmentContentRow {
   id: number;
   segment_number: number;
-  content: {
-    slides: SegmentContent['slides'];
-    questions: SegmentContent['questions'];
-  };
+  content: Json;
+}
+
+interface DatabaseSegmentContent {
+  slides: SegmentContent['slides'];
+  questions: SegmentContent['questions'];
 }
 
 export const useStoryContent = (lectureId: string | undefined) => {
@@ -83,12 +85,14 @@ export const useStoryContent = (lectureId: string | undefined) => {
           (s: SegmentContentRow) => s.segment_number === i
         );
         
+        const content = segmentContent?.content as DatabaseSegmentContent | undefined;
+        
         return {
           id: `segment-${i + 1}`,
           title: existingContent[`segment_${i + 1}_title` as keyof typeof existingContent] as string,
           description: '',
-          slides: segmentContent?.content?.slides || [],
-          questions: segmentContent?.content?.questions || []
+          slides: content?.slides || [],
+          questions: content?.questions || []
         };
       });
 
