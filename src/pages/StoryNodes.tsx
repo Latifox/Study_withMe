@@ -32,7 +32,7 @@ const StoryNodes = () => {
         segments: Array.from({ length: 10 }, (_, i) => ({
           id: `segment_${i + 1}`,
           title: storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`,
-          type: "concept",
+          type: (i % 3 === 0 ? "quiz" : "concept") as "concept" | "quiz" | "challenge",
           difficulty: i < 3 ? "beginner" : i < 7 ? "intermediate" : "advanced",
           prerequisites: i === 0 ? [] : [`segment_${i}`],
           points: (i + 1) * 10,
