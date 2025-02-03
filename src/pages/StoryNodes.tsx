@@ -77,8 +77,50 @@ const StoryNodes = () => {
     navigate(`/course/${courseId}`);
   };
 
-  const handleNodeSelect = (nodeId: string) => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
+  const handleNodeSelect = async (nodeId: string) => {
+    // Extract segment number from nodeId (e.g., "segment_1" -> 1)
+    const segmentNumber = parseInt(nodeId.split('_')[1]);
+    const segmentTitle = storyContent?.segments[segmentNumber - 1]?.title;
+
+    if (!segmentTitle) {
+      toast({
+        title: "Error",
+        description: "Could not find segment title",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Generate content for the selected segment
+      const { data, error } = await supabase.functions.invoke('generate-segment-content', {
+        body: {
+          lectureId: parseInt(lectureId!),
+          segmentNumber,
+          segmentTitle
+        }
+      });
+
+      if (error) {
+        console.error('Error generating segment content:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate segment content",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Navigate to the content page
+      navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
+    } catch (error) {
+      console.error('Error handling node selection:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load segment content",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {
