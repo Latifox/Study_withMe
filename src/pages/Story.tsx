@@ -9,6 +9,7 @@ import StoryHeader from "@/components/story/StoryHeader";
 import StoryLayout from "@/components/story/StoryLayout";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
+import { supabase } from "@/integrations/supabase/client";
 
 const POINTS_PER_CORRECT_ANSWER = 5;
 const TOTAL_QUESTIONS_PER_SEGMENT = 2;
@@ -32,16 +33,66 @@ const Story = () => {
     error: storyError,
   } = useStoryContent(lectureId);
 
-  // Prefetch next segment
-  useEffect(() => {
-    if (storyContent?.segments && currentSegment < storyContent.segments.length - 1) {
-      const nextSegment = currentSegment + 1;
-      queryClient.prefetchQuery({
-        queryKey: ['story-content', lectureId, nextSegment],
-        queryFn: () => fetch(`/api/segment-content/${lectureId}/${nextSegment}`).then(res => res.json())
+  const generateSegmentContent = async (segmentNumber: number, segmentTitle: string) => {
+    try {
+      // Fetch lecture content first
+      const { data: lecture } = await supabase
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureId)
+        .single();
+
+      if (!lecture?.content) {
+        throw new Error('Lecture content not found');
+      }
+
+      // Generate content for this segment
+      const { data, error } = await supabase.functions.invoke('generate-segment-content', {
+        body: {
+          lectureId,
+          segmentNumber,
+          segmentTitle,
+          lectureContent: lecture.content
+        },
+      });
+
+      if (error) throw error;
+
+      // Invalidate the query to refetch the content
+      queryClient.invalidateQueries({ queryKey: ['story-content', lectureId] });
+
+      return data;
+    } catch (error) {
+      console.error('Error generating segment content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate segment content. Please try again.",
+        variant: "destructive",
       });
     }
-  }, [currentSegment, storyContent, lectureId, queryClient]);
+  };
+
+  const handleNodeSelect = async (nodeId: string) => {
+    if (!storyContent?.segments) return;
+    
+    const index = storyContent.segments.findIndex(s => s.id === nodeId);
+    if (index === -1) return;
+
+    const segment = storyContent.segments[index];
+    
+    // If content doesn't exist for this segment, generate it
+    if (!segment.slides || !segment.questions) {
+      toast({
+        title: "Generating Content",
+        description: "Please wait while we prepare the content...",
+      });
+      
+      await generateSegmentContent(index, segment.title);
+    }
+
+    setCurrentSegment(index);
+    setCurrentStep(0);
+  };
 
   const handleBack = () => {
     navigate(`/course/${courseId}`);
@@ -164,13 +215,7 @@ const Story = () => {
             nodes={pathwayNodes}
             completedNodes={completedNodes}
             currentNode={currentSegmentData.id}
-            onNodeSelect={(nodeId) => {
-              const index = storyContent.segments.findIndex(s => s.id === nodeId);
-              if (index !== -1 && completedNodes.has(storyContent.segments[index].id)) {
-                setCurrentSegment(index);
-                setCurrentStep(0);
-              }
-            }}
+            onNodeSelect={handleNodeSelect}
           />
         }
         contentSection={

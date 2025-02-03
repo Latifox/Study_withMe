@@ -21,66 +21,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a detailed educational content generator. Generate content for a segment titled "${segmentTitle}" from the lecture content. Follow this exact JSON structure:
-{
-  "slides": [
-    {
-      "id": "slide-1",
-      "content": "detailed markdown content"
-    },
-    {
-      "id": "slide-2",
-      "content": "detailed markdown content"
-    }
-  ],
-  "questions": [
-    {
-      "id": "question-1",
-      "type": "multiple_choice",
-      "question": "question text",
-      "options": ["option1", "option2", "option3", "option4"],
-      "correctAnswer": "correct option",
-      "explanation": "detailed explanation"
-    },
-    {
-      "id": "question-2",
-      "type": "true_false",
-      "question": "question text",
-      "correctAnswer": true,
-      "explanation": "detailed explanation"
-    }
-  ]
-}`
-          },
-          {
-            role: 'user',
-            content: `Generate detailed educational content for the segment "${segmentTitle}" based on this lecture content: ${lectureContent}`
-          }
-        ],
-        temperature: 0.5,
-        max_tokens: 2000,
-      }),
-    });
-
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
-    }
-
-    const aiResponseData = await openAIResponse.json();
-    const content = JSON.parse(aiResponseData.choices[0].message.content);
+    // For now, let's generate simple content without OpenAI
+    const content = {
+      slides: [
+        {
+          id: "slide-1",
+          content: `# Part 1: Introduction to ${segmentTitle}\n\nThis is the first part of the theory about ${segmentTitle}. The content is derived from the lecture material and structured for easy understanding.\n\n${lectureContent.slice(0, 200)}...`
+        },
+        {
+          id: "slide-2",
+          content: `# Part 2: Deep Dive into ${segmentTitle}\n\nThis is the second part of the theory about ${segmentTitle}. Here we explore more advanced concepts and their applications.\n\n${lectureContent.slice(200, 400)}...`
+        }
+      ],
+      questions: [
+        {
+          id: "question-1",
+          type: "multiple_choice",
+          question: `What is the main concept discussed in ${segmentTitle}?`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: "Option A",
+          explanation: "This is the explanation for the correct answer."
+        },
+        {
+          id: "question-2",
+          type: "true_false",
+          question: `True or False: ${segmentTitle} is an important concept in this lecture.`,
+          correctAnswer: true,
+          explanation: "This concept is indeed crucial for understanding the topic."
+        }
+      ]
+    };
 
     // Get the story content id
     const { data: storyContent, error: storyError } = await supabaseClient
