@@ -78,7 +78,7 @@ export const StoryContainer = ({
       if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
         
-        // Get the most recent progress entry
+        // Get the most recent progress entry for this specific lecture and segment
         const { data: currentProgress, error: progressError } = await supabase
           .from('user_progress')
           .select('score')

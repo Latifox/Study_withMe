@@ -5,6 +5,7 @@ import { Lock, CheckCircle2, Circle, Trophy, Star, Sparkles } from "lucide-react
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useParams } from "react-router-dom";
 
 interface LessonNode {
   id: string;
@@ -32,16 +33,19 @@ const LearningPathway = ({
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [nodeProgress, setNodeProgress] = useState<{ [key: string]: number }>({});
   const { toast } = useToast();
+  const { lectureId } = useParams();
 
   useEffect(() => {
     const fetchUserProgress = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !lectureId) return;
 
       const { data: progress } = await supabase
         .from('user_progress')
         .select('segment_number, score')
-        .order('segment_number');
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .order('created_at', { ascending: false });
 
       if (progress) {
         const progressMap: { [key: string]: number } = {};
@@ -53,7 +57,7 @@ const LearningPathway = ({
     };
 
     fetchUserProgress();
-  }, []);
+  }, [lectureId]);
 
   const isNodeAvailable = (node: LessonNode) => {
     if (node.prerequisites.length === 0) return true;
