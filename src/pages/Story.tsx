@@ -28,7 +28,7 @@ const Story = () => {
   const [completedNodes, setCompletedNodes] = useState(new Set<string>());
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
-  // Convert lectureId to number before passing to useStoryContent
+  // Convert lectureId to number for database operations
   const numericLectureId = lectureId ? parseInt(lectureId, 10) : undefined;
 
   const { 
@@ -40,7 +40,8 @@ const Story = () => {
   const generateSegmentContent = async (segmentNumber: number, segmentTitle: string) => {
     try {
       setIsGeneratingContent(true);
-      // Fetch lecture content first
+      
+      // Fetch lecture content
       const { data: lecture } = await supabase
         .from('lectures')
         .select('content')
@@ -56,7 +57,7 @@ const Story = () => {
         description: "Please wait while we prepare the content for this segment...",
       });
 
-      // Generate content for this segment
+      // Generate content using the edge function
       const { data, error } = await supabase.functions.invoke('generate-segment-content', {
         body: {
           lectureId: numericLectureId,
@@ -66,10 +67,15 @@ const Story = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error generating content:', error);
+        throw error;
+      }
 
       // Invalidate the query to refetch the content
-      queryClient.invalidateQueries({ queryKey: ['story-content', numericLectureId?.toString()] });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['story-content', numericLectureId?.toString()] 
+      });
 
       toast({
         title: "Content Ready",

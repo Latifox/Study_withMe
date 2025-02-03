@@ -21,45 +21,80 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Split lecture content into 10 segments and get the relevant part
-    const contentParts = lectureContent.split(/[.!?]+\s+/);
-    const segmentSize = Math.ceil(contentParts.length / 10);
-    const startIndex = segmentNumber * segmentSize;
-    const segmentContent = contentParts.slice(startIndex, startIndex + segmentSize).join('. ');
+    // Generate content using OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful teaching assistant. Generate educational content based on the provided lecture content.
+            Focus on the following segment: "${segmentTitle}".
+            
+            Create:
+            1. Two theory slides with 3 paragraphs each
+            2. Two quiz questions (one multiple choice, one true/false)
+            
+            Return the response in this exact JSON format:
+            {
+              "slides": [
+                {
+                  "id": "slide-1",
+                  "content": "First slide content with 3 paragraphs"
+                },
+                {
+                  "id": "slide-2",
+                  "content": "Second slide content with 3 paragraphs"
+                }
+              ],
+              "questions": [
+                {
+                  "type": "multiple_choice",
+                  "question": "Question text",
+                  "options": ["Option A", "Option B", "Option C", "Option D"],
+                  "correctAnswer": "Correct option",
+                  "explanation": "Why this is correct"
+                },
+                {
+                  "type": "true_false",
+                  "question": "True/False question text",
+                  "correctAnswer": true,
+                  "explanation": "Why this is true/false"
+                }
+              ]
+            }`
+          },
+          {
+            role: 'user',
+            content: lectureContent
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
 
-    // Generate two slides with 3 paragraphs each
-    const slide1Content = `# ${segmentTitle} - Part 1\n\n${segmentContent.slice(0, Math.floor(segmentContent.length / 2))}`;
-    const slide2Content = `# ${segmentTitle} - Part 2\n\n${segmentContent.slice(Math.floor(segmentContent.length / 2))}`;
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
 
-    // Generate two quiz questions based on the content
-    const quiz1 = {
-      type: "multiple_choice" as const,
-      question: `What is the main concept discussed in ${segmentTitle}?`,
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option A",
-      explanation: "This is the explanation for the correct answer based on the content."
-    };
+    const openAIResponse = await response.json();
+    console.log('Raw OpenAI response:', openAIResponse);
 
-    const quiz2 = {
-      type: "true_false" as const,
-      question: `True or False: The content discusses important aspects of ${segmentTitle}?`,
-      correctAnswer: true,
-      explanation: "Based on the segment content, this statement is true."
-    };
-
-    const content = {
-      slides: [
-        {
-          id: `slide-1-segment-${segmentNumber}`,
-          content: slide1Content
-        },
-        {
-          id: `slide-2-segment-${segmentNumber}`,
-          content: slide2Content
-        }
-      ],
-      questions: [quiz1, quiz2]
-    };
+    let content;
+    try {
+      const contentStr = openAIResponse.choices[0].message.content;
+      content = JSON.parse(contentStr);
+      console.log('Parsed content:', content);
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Failed to parse generated content');
+    }
 
     // Get the story content id
     const { data: storyContent, error: storyError } = await supabaseClient
@@ -69,6 +104,7 @@ serve(async (req) => {
       .single();
 
     if (storyError) {
+      console.error('Error fetching story content:', storyError);
       throw new Error('Failed to fetch story content');
     }
 
@@ -85,17 +121,21 @@ serve(async (req) => {
       .single();
 
     if (segmentError) {
+      console.error('Error storing segment content:', segmentError);
       throw new Error('Failed to store segment content');
     }
 
-    return new Response(JSON.stringify({ content: segmentContent }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.log('Successfully generated and stored content for segment:', segmentNumber);
+    
+    return new Response(
+      JSON.stringify({ content: segmentContent }), 
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error in generate-segment-content function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
+      { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
