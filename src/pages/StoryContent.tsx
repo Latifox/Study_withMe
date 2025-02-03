@@ -64,9 +64,15 @@ const StoryContent = () => {
         });
 
         if (generationError) throw generationError;
-        
-        const quiz1 = generatedContent.segmentContent.quiz_question_1 as QuizQuestion;
-        const quiz2 = generatedContent.segmentContent.quiz_question_2 as QuizQuestion;
+
+        // Validate and cast the quiz questions
+        const quiz1 = generatedContent.segmentContent.quiz_question_1 as unknown as QuizQuestion;
+        const quiz2 = generatedContent.segmentContent.quiz_question_2 as unknown as QuizQuestion;
+
+        // Validate required fields
+        if (!isValidQuizQuestion(quiz1) || !isValidQuizQuestion(quiz2)) {
+          throw new Error('Invalid quiz question format received from generation');
+        }
         
         return {
           segments: [{
@@ -84,8 +90,14 @@ const StoryContent = () => {
         };
       }
 
-      const quiz1 = segmentContent.quiz_question_1 as QuizQuestion;
-      const quiz2 = segmentContent.quiz_question_2 as QuizQuestion;
+      // Validate and cast the existing quiz questions
+      const quiz1 = segmentContent.quiz_question_1 as unknown as QuizQuestion;
+      const quiz2 = segmentContent.quiz_question_2 as unknown as QuizQuestion;
+
+      // Validate required fields
+      if (!isValidQuizQuestion(quiz1) || !isValidQuizQuestion(quiz2)) {
+        throw new Error('Invalid quiz question format in database');
+      }
 
       return {
         segments: [{
@@ -104,6 +116,19 @@ const StoryContent = () => {
     },
     retry: 1
   });
+
+  // Helper function to validate quiz question structure
+  const isValidQuizQuestion = (question: any): question is QuizQuestion => {
+    return (
+      question &&
+      typeof question === 'object' &&
+      (question.type === 'multiple_choice' || question.type === 'true_false') &&
+      typeof question.question === 'string' &&
+      (typeof question.correctAnswer === 'string' || typeof question.correctAnswer === 'boolean') &&
+      typeof question.explanation === 'string' &&
+      (!question.options || Array.isArray(question.options))
+    );
+  };
 
   const handleBack = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
