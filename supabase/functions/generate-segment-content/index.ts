@@ -36,6 +36,7 @@ serve(async (req) => {
     ]);
 
     if (!lecture?.content || !storyStructure?.id) {
+      console.error('Failed to fetch required data:', { lecture, storyStructure });
       throw new Error('Failed to fetch required data');
     }
 
@@ -111,10 +112,14 @@ serve(async (req) => {
       throw new Error('Failed to parse generated content');
     }
 
-    // Store the segment content
+    // Get the next ID from the sequence
+    const { data: nextId } = await supabaseClient.rpc('get_next_segment_content_id');
+    
+    // Store the segment content with the next ID
     const { data: segmentContent, error: segmentError } = await supabaseClient
       .from('segment_contents')
-      .upsert({
+      .insert({
+        id: nextId,
         story_structure_id: storyStructure.id,
         segment_number: segmentNumber,
         ...content
