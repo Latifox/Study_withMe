@@ -54,7 +54,6 @@ export const StoryContainer = ({
 
   const handleCorrectAnswer = async () => {
     try {
-      // First check if user is authenticated
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
@@ -70,7 +69,7 @@ export const StoryContainer = ({
       // Check if this question was already answered correctly
       if (answeredQuestions.has(questionIndex)) {
         console.log('Question already answered correctly');
-        onCorrectAnswer();
+        handleContinue();
         return;
       }
 
@@ -80,14 +79,16 @@ export const StoryContainer = ({
       if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
         
-        // Fetch current progress first
+        // Get the most recent progress entry
         const { data: currentProgress, error: progressError } = await supabase
           .from('user_progress')
           .select('score')
           .eq('user_id', user.id)
           .eq('lecture_id', parseInt(lectureId))
           .eq('segment_number', segmentNumber)
-          .maybeSingle();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
         if (progressError) {
           console.error('Error fetching current progress:', progressError);
@@ -117,12 +118,11 @@ export const StoryContainer = ({
           return;
         }
 
-        // If successfully saved, call onCorrectAnswer
-        onCorrectAnswer();
         toast({
           title: "🎯 Correct!",
           description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
         });
+        handleContinue();
       }
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);
