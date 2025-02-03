@@ -37,6 +37,8 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
+    console.log('Fetched lecture content, generating segments...');
+
     // Generate segments using OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -50,47 +52,49 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an educational content generator. Your task is to create an array of 10 learning segments from lecture content.
-            Return a valid JSON array where each segment object has this structure:
-            {
-              "title": "string - clear, concise segment title",
-              "description": "string - brief overview of what will be covered",
-              "slides": [
-                {
-                  "id": "string - slide-{segment-number}-1",
-                  "content": "string - detailed markdown content explaining the first part"
-                },
-                {
-                  "id": "string - slide-{segment-number}-2",
-                  "content": "string - detailed markdown content explaining the second part"
-                }
-              ],
-              "questions": [
-                {
-                  "id": "string - question-{segment-number}-1",
-                  "type": "multiple_choice",
-                  "question": "string - specific question about the concept",
-                  "options": ["string array - 4 possible answers"],
-                  "correctAnswer": "string - one of the options",
-                  "explanation": "string - detailed explanation of why this is correct"
-                },
-                {
-                  "id": "string - question-{segment-number}-2",
-                  "type": "true_false",
-                  "question": "string - true/false question about the concept",
-                  "correctAnswer": "boolean - true or false",
-                  "explanation": "string - detailed explanation of why this is true or false"
-                }
-              ]
-            }
+            content: `Generate educational content from lecture material. Return a JSON object with a "segments" array containing exactly 10 segments. Each segment should have:
 
-            Important:
-            1. Content must be directly derived from the lecture material
-            2. Questions must test understanding of the specific segment's content
-            3. Ensure progressive difficulty across segments
-            4. Make content engaging and educational
-            5. Include code snippets or technical details if present in the lecture
-            6. Return ONLY the JSON array, no markdown or other formatting`
+1. A title summarizing the topic
+2. A brief description
+3. Two theory slides with markdown content
+4. Two quiz questions (one multiple choice, one true/false)
+
+Format:
+{
+  "segments": [
+    {
+      "title": "string",
+      "description": "string",
+      "slides": [
+        {
+          "id": "slide-1",
+          "content": "markdown content"
+        },
+        {
+          "id": "slide-2",
+          "content": "markdown content"
+        }
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "type": "multiple_choice",
+          "question": "string",
+          "options": ["string", "string", "string", "string"],
+          "correctAnswer": "string",
+          "explanation": "string"
+        },
+        {
+          "id": "q2",
+          "type": "true_false",
+          "question": "string",
+          "correctAnswer": true,
+          "explanation": "string"
+        }
+      ]
+    }
+  ]
+}`
           },
           {
             role: 'user',
@@ -98,6 +102,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
+        max_tokens: 4000,
       }),
     });
 
@@ -108,17 +113,15 @@ serve(async (req) => {
     }
 
     const aiResponseData = await openAIResponse.json();
-    console.log('Raw OpenAI response:', JSON.stringify(aiResponseData));
+    console.log('Received OpenAI response');
     
     let generatedContent;
     try {
-      // Extract the content from the message and parse it
-      const contentString = aiResponseData.choices[0].message.content;
-      console.log('Content string:', contentString);
-      generatedContent = JSON.parse(contentString);
+      generatedContent = aiResponseData.choices[0].message.content;
+      console.log('Parsed content:', generatedContent);
       
-      if (!Array.isArray(generatedContent)) {
-        throw new Error('Generated content is not an array');
+      if (!generatedContent.segments || !Array.isArray(generatedContent.segments)) {
+        throw new Error('Invalid content structure');
       }
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
@@ -144,25 +147,17 @@ serve(async (req) => {
       throw storyError;
     }
 
+    console.log('Created story content:', storyContent);
+
     // Generate segments with proper content structure
-    const segments = generatedContent.map((segment: any, index: number) => ({
+    const segments = generatedContent.segments.map((segment: any, index: number) => ({
       story_content_id: storyContent.id,
       segment_number: index,
       title: segment.title,
       content: {
         description: segment.description,
-        slides: segment.slides.map((slide: any, slideIndex: number) => ({
-          id: `slide-${index}-${slideIndex}`,
-          content: slide.content
-        })),
-        questions: segment.questions.map((question: any, questionIndex: number) => ({
-          id: `question-${index}-${questionIndex}`,
-          type: question.type,
-          question: question.question,
-          options: question.options,
-          correctAnswer: question.correctAnswer,
-          explanation: question.explanation
-        }))
+        slides: segment.slides,
+        questions: segment.questions
       },
       is_generated: true
     }));
@@ -176,18 +171,20 @@ serve(async (req) => {
       throw segmentError;
     }
 
-    // Return the processed content
-    const processedSegments = segments.map(segment => ({
-      id: `segment-${segment.segment_number + 1}`,
-      title: segment.title,
-      description: segment.content.description,
-      slides: segment.content.slides,
-      questions: segment.content.questions
-    }));
+    console.log('Successfully inserted all segments');
 
+    // Return the processed content
     return new Response(
       JSON.stringify({ 
-        storyContent: { segments: processedSegments }
+        storyContent: { 
+          segments: segments.map(segment => ({
+            id: `segment-${segment.segment_number + 1}`,
+            title: segment.title,
+            description: segment.content.description,
+            slides: segment.content.slides,
+            questions: segment.content.questions
+          }))
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
