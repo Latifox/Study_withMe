@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Trophy, Star, Gauge, Award, ArrowLeftCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StoryContainer } from "@/components/story/StoryContainer";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
+import StoryScoreHeader from "@/components/story/StoryScoreHeader";
+import StoryCompletionScreen from "@/components/story/StoryCompletionScreen";
+import StoryMainContent from "@/components/story/StoryMainContent";
 import { useToast } from "@/hooks/use-toast";
 
 interface QuizQuestion {
@@ -25,7 +24,6 @@ const StoryContent = () => {
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
   const { toast } = useToast();
 
-  // Helper function to validate quiz question structure
   const isValidQuizQuestion = (question: any): question is QuizQuestion => {
     return (
       question &&
@@ -138,7 +136,6 @@ const StoryContent = () => {
     setCurrentStep(prev => {
       const newStep = prev + 1;
       if (newStep === 4) {
-        // Show completion message using toast
         toast({
           title: "🎉 Segment Completed!",
           description: "Great job! You've completed this learning segment.",
@@ -191,66 +188,25 @@ const StoryContent = () => {
 
   const currentScore = segmentScores[nodeId || ''] || 0;
 
-  // Show completion card when all steps are done
   if (currentStep >= 4) {
-    return (
-      <div className="container mx-auto p-4">
-        <Card className="p-6 text-center space-y-6">
-          <Award className="w-16 h-16 mx-auto text-yellow-400" />
-          <h2 className="text-2xl font-bold">🎉 Hooray! Node Completed!</h2>
-          <p className="text-muted-foreground">
-            You've successfully completed this learning segment.
-          </p>
-          <Button 
-            onClick={handleBack}
-            className="gap-2"
-          >
-            <ArrowLeftCircle className="w-4 h-4" />
-            Return to Learning Path
-          </Button>
-        </Card>
-      </div>
-    );
+    return <StoryCompletionScreen onBack={handleBack} />;
   }
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="hover:scale-105 transition-transform"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Learning Pathway
-        </Button>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-400" />
-            <span className="font-bold">{currentScore} XP</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-purple-500" />
-            <span className="font-bold">{Math.floor(currentScore / 10)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Gauge className="h-5 w-5 text-blue-500" />
-            <span className="font-bold">{currentStep}/4</span>
-          </div>
-        </div>
-      </div>
-
-      <Card className="p-6 shadow-lg transform hover:scale-[1.01] transition-transform duration-200 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
-        <StoryContainer
-          storyContent={content}
-          currentSegment={0}
-          currentStep={currentStep}
-          segmentScores={segmentScores}
-          onContinue={handleContinue}
-          onCorrectAnswer={handleCorrectAnswer}
-          onWrongAnswer={handleWrongAnswer}
-        />
-      </Card>
+      <StoryScoreHeader
+        currentScore={currentScore}
+        currentStep={currentStep}
+        onBack={handleBack}
+      />
+      <StoryMainContent
+        content={content}
+        currentStep={currentStep}
+        segmentScores={segmentScores}
+        onContinue={handleContinue}
+        onCorrectAnswer={handleCorrectAnswer}
+        onWrongAnswer={handleWrongAnswer}
+      />
     </div>
   );
 };

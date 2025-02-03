@@ -1,0 +1,30 @@
+import { Award, ArrowLeftCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+interface StoryCompletionScreenProps {
+  onBack: () => void;
+}
+
+const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
+  return (
+    <div className="container mx-auto p-4">
+      <Card className="p-6 text-center space-y-6">
+        <Award className="w-16 h-16 mx-auto text-yellow-400" />
+        <h2 className="text-2xl font-bold">🎉 Hooray! Node Completed!</h2>
+        <p className="text-muted-foreground">
+          You've successfully completed this learning segment.
+        </p>
+        <Button 
+          onClick={onBack}
+          className="gap-2"
+        >
+          <ArrowLeftCircle className="w-4 h-4" />
+          Return to Learning Path
+        </Button>
+      </Card>
+    </div>
+  );
+};
+
+export default StoryCompletionScreen;
