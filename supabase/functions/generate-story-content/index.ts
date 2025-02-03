@@ -21,11 +21,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content, title')
       .eq('id', lectureId)
-      .single();
+      .maybeSingle();
 
     if (lectureError) {
       console.error('Error fetching lecture:', lectureError);
@@ -48,13 +49,49 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an educational content generator. Generate 10 learning segments for a lecture. 
-            Each segment should build upon previous knowledge and include:
-            - A clear title that reflects the segment's focus
-            - 2 theory slides with engaging markdown content
-            - 2 quiz questions (mix of multiple choice and true/false)
-            
-            The content should follow a logical progression from basic to advanced concepts.`
+            content: `You are an educational content generator. Your task is to create 10 learning segments from lecture content.
+            Each segment must follow this exact structure:
+            {
+              "title": "Clear, concise segment title",
+              "description": "Brief overview of what will be covered",
+              "slides": [
+                {
+                  "id": "slide-{segment-number}-1",
+                  "content": "Detailed markdown content explaining the first part of this concept"
+                },
+                {
+                  "id": "slide-{segment-number}-2",
+                  "content": "Detailed markdown content explaining the second part of this concept"
+                }
+              ],
+              "questions": [
+                {
+                  "id": "question-{segment-number}-1",
+                  "type": "multiple_choice",
+                  "question": "Specific question about the concept",
+                  "options": ["option1", "option2", "option3", "option4"],
+                  "correctAnswer": "correct option",
+                  "explanation": "Detailed explanation of why this is correct"
+                },
+                {
+                  "id": "question-{segment-number}-2",
+                  "type": "true_false",
+                  "question": "True/false question about the concept",
+                  "correctAnswer": true or false,
+                  "explanation": "Detailed explanation of why this is true or false"
+                }
+              ]
+            }
+
+            Important guidelines:
+            1. Each slide's content must be detailed and use proper markdown formatting
+            2. Content must be directly derived from the lecture material
+            3. Questions must test understanding of the specific segment's content
+            4. Ensure progressive difficulty across segments
+            5. Make content engaging and educational
+            6. Use examples and analogies where appropriate
+            7. Include code snippets or technical details if present in the lecture
+            8. Maintain consistent formatting across all segments`
           },
           {
             role: 'user',
@@ -72,6 +109,8 @@ serve(async (req) => {
     }
 
     const aiResponseData = await openAIResponse.json();
+    console.log('Generated content:', aiResponseData.choices[0].message.content);
+    
     const generatedContent = JSON.parse(aiResponseData.choices[0].message.content);
 
     // Create story content entry
