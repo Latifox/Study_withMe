@@ -114,48 +114,18 @@ export type Database = {
           created_at: string
           id: number
           lecture_id: number | null
-          segment_1_title: string | null
-          segment_10_title: string | null
-          segment_2_title: string | null
-          segment_3_title: string | null
-          segment_4_title: string | null
-          segment_5_title: string | null
-          segment_6_title: string | null
-          segment_7_title: string | null
-          segment_8_title: string | null
-          segment_9_title: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: never
           lecture_id?: number | null
-          segment_1_title?: string | null
-          segment_10_title?: string | null
-          segment_2_title?: string | null
-          segment_3_title?: string | null
-          segment_4_title?: string | null
-          segment_5_title?: string | null
-          segment_6_title?: string | null
-          segment_7_title?: string | null
-          segment_8_title?: string | null
-          segment_9_title?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: never
           lecture_id?: number | null
-          segment_1_title?: string | null
-          segment_10_title?: string | null
-          segment_2_title?: string | null
-          segment_3_title?: string | null
-          segment_4_title?: string | null
-          segment_5_title?: string | null
-          segment_6_title?: string | null
-          segment_7_title?: string | null
-          segment_8_title?: string | null
-          segment_9_title?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -168,7 +138,7 @@ export type Database = {
           },
         ]
       }
-      story_segment_contents: {
+      story_segments: {
         Row: {
           content: Json
           created_at: string
@@ -176,6 +146,7 @@ export type Database = {
           is_generated: boolean | null
           segment_number: number
           story_content_id: number | null
+          title: string
           updated_at: string
         }
         Insert: {
@@ -185,6 +156,7 @@ export type Database = {
           is_generated?: boolean | null
           segment_number: number
           story_content_id?: number | null
+          title: string
           updated_at?: string
         }
         Update: {
@@ -194,11 +166,12 @@ export type Database = {
           is_generated?: boolean | null
           segment_number?: number
           story_content_id?: number | null
+          title?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "story_segment_contents_story_content_id_fkey"
+            foreignKeyName: "story_segments_story_content_id_fkey"
             columns: ["story_content_id"]
             isOneToOne: false
             referencedRelation: "story_contents"

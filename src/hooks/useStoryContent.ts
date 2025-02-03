@@ -29,12 +29,6 @@ export interface SegmentContent {
   }[];
 }
 
-interface SegmentContentRow {
-  id: number;
-  segment_number: number;
-  content: Json;
-}
-
 interface DatabaseSegmentContent {
   slides: SegmentContent['slides'];
   questions: SegmentContent['questions'];
@@ -55,9 +49,10 @@ export const useStoryContent = (lectureId: string | undefined) => {
         .from('story_contents')
         .select(`
           *,
-          story_segment_contents (
+          story_segments (
             id,
             segment_number,
+            title,
             content
           )
         `)
@@ -80,25 +75,22 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       // Process existing content
-      const sortedSegments = Array.from({ length: 10 }, (_, i) => {
-        const segmentContent = existingContent.story_segment_contents?.find(
-          (s: SegmentContentRow) => s.segment_number === i
-        );
-        
-        // First cast to unknown, then to DatabaseSegmentContent to satisfy TypeScript
-        const content = segmentContent?.content as unknown as DatabaseSegmentContent;
+      const segments = existingContent.story_segments?.map((segment: any) => {
+        const content = segment.content as unknown as DatabaseSegmentContent;
         
         return {
-          id: `segment-${i + 1}`,
-          title: existingContent[`segment_${i + 1}_title` as keyof typeof existingContent] as string,
+          id: `segment-${segment.segment_number}`,
+          title: segment.title,
           description: '',
           slides: content?.slides || [],
           questions: content?.questions || []
         };
-      });
+      }) || [];
 
       return {
-        segments: sortedSegments
+        segments: segments.sort((a, b) => 
+          parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1])
+        )
       };
     },
     gcTime: 1000 * 60 * 60, // 1 hour

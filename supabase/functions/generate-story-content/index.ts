@@ -38,8 +38,7 @@ serve(async (req) => {
       throw new Error('Lecture content is empty or not found');
     }
 
-    // Generate default segment titles based on lecture content length
-    const content = lecture.content;
+    // Generate default segment titles
     const segmentTitles = [
       "Introduction and Overview",
       "Key Concepts Part 1",
@@ -53,23 +52,13 @@ serve(async (req) => {
       "Summary and Conclusion"
     ];
 
-    console.log('Creating story content entry with default segments...');
+    console.log('Creating story content entry...');
     
     // Create new story content entry
     const { data: storyContent, error: storyError } = await supabaseClient
       .from('story_contents')
       .insert({
-        lecture_id: lectureId,
-        segment_1_title: segmentTitles[0],
-        segment_2_title: segmentTitles[1],
-        segment_3_title: segmentTitles[2],
-        segment_4_title: segmentTitles[3],
-        segment_5_title: segmentTitles[4],
-        segment_6_title: segmentTitles[5],
-        segment_7_title: segmentTitles[6],
-        segment_8_title: segmentTitles[7],
-        segment_9_title: segmentTitles[8],
-        segment_10_title: segmentTitles[9]
+        lecture_id: lectureId
       })
       .select()
       .single();
@@ -80,20 +69,21 @@ serve(async (req) => {
     }
 
     // Split content into roughly equal segments
-    const contentWords = content.split(' ');
+    const contentWords = lecture.content.split(' ');
     const wordsPerSegment = Math.ceil(contentWords.length / 10);
     
-    // Create segment contents
+    // Create segments
     for (let i = 0; i < 10; i++) {
       const start = i * wordsPerSegment;
       const end = Math.min((i + 1) * wordsPerSegment, contentWords.length);
       const segmentContent = contentWords.slice(start, end).join(' ');
 
       const { error: segmentError } = await supabaseClient
-        .from('story_segment_contents')
+        .from('story_segments')
         .insert({
           story_content_id: storyContent.id,
           segment_number: i,
+          title: segmentTitles[i],
           content: {
             slides: [
               {
