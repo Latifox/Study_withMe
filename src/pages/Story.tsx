@@ -233,7 +233,7 @@ const Story = () => {
             nodes={pathwayNodes}
             completedNodes={completedNodes}
             currentNode={currentSegmentData.id}
-            onNodeSelect={handleNodeClick}
+            onNodeSelect={handleNodeSelect}
           />
         }
         contentSection={
