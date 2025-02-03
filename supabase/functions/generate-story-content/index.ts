@@ -7,22 +7,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not found');
-      throw new Error('OpenAI API key not configured');
-    }
-
     const { lectureId } = await req.json();
-    console.log('Starting story titles generation for lecture:', lectureId);
+    console.log('Starting story generation for lecture:', lectureId);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -46,123 +38,105 @@ serve(async (req) => {
       throw new Error('Lecture content is empty or not found');
     }
 
-    console.log('Successfully fetched lecture. Content length:', lecture.content.length);
-    console.log('Generating segment titles with OpenAI...');
+    // Generate default segment titles based on lecture content length
+    const content = lecture.content;
+    const segmentTitles = [
+      "Introduction and Overview",
+      "Key Concepts Part 1",
+      "Key Concepts Part 2",
+      "Detailed Analysis Part 1",
+      "Detailed Analysis Part 2",
+      "Practical Applications Part 1",
+      "Practical Applications Part 2",
+      "Advanced Topics",
+      "Case Studies",
+      "Summary and Conclusion"
+    ];
+
+    console.log('Creating story content entry with default segments...');
     
-    // Add retry logic for rate limits
-    let retries = 3;
-    let openAIResponse;
-    let lastError;
+    // Create new story content entry
+    const { data: storyContent, error: storyError } = await supabaseClient
+      .from('story_contents')
+      .insert({
+        lecture_id: lectureId,
+        segment_1_title: segmentTitles[0],
+        segment_2_title: segmentTitles[1],
+        segment_3_title: segmentTitles[2],
+        segment_4_title: segmentTitles[3],
+        segment_5_title: segmentTitles[4],
+        segment_6_title: segmentTitles[5],
+        segment_7_title: segmentTitles[6],
+        segment_8_title: segmentTitles[7],
+        segment_9_title: segmentTitles[8],
+        segment_10_title: segmentTitles[9]
+      })
+      .select()
+      .single();
+
+    if (storyError) {
+      console.error('Error creating story content:', storyError);
+      throw storyError;
+    }
+
+    // Split content into roughly equal segments
+    const contentWords = content.split(' ');
+    const wordsPerSegment = Math.ceil(contentWords.length / 10);
     
-    while (retries > 0) {
-      try {
-        console.log(`Attempt ${4 - retries} to call OpenAI API`);
-        openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
+    // Create segment contents
+    for (let i = 0; i < 10; i++) {
+      const start = i * wordsPerSegment;
+      const end = Math.min((i + 1) * wordsPerSegment, contentWords.length);
+      const segmentContent = contentWords.slice(start, end).join(' ');
+
+      const { error: segmentError } = await supabaseClient
+        .from('story_segment_contents')
+        .insert({
+          story_content_id: storyContent.id,
+          segment_number: i,
+          content: {
+            slides: [
               {
-                role: 'system',
-                content: `You are a curriculum designer. First, detect the language of the lecture content. Then, analyze the lecture content and identify 10 key segments or topics that form a logical learning progression. Return ONLY a JSON array of 10 segment titles IN THE SAME LANGUAGE as the lecture content, no other text.
-
-                Example format:
-                ["Introduction to Topic", "Basic Concepts", "Advanced Theory", ...]
-
-                Rules:
-                - Exactly 10 titles
-                - Each title should be clear and concise (3-6 words)
-                - Titles should follow a logical progression
-                - Titles MUST be in the same language as the lecture content
-                - Return only the JSON array, no other text`
+                id: `slide-1-segment-${i}`,
+                content: segmentContent
               },
               {
-                role: 'user',
-                content: lecture.content
+                id: `slide-2-segment-${i}`,
+                content: "Review and practice what you've learned in this segment."
               }
             ],
-            temperature: 0.7,
-            max_tokens: 500,
-          }),
+            questions: [
+              {
+                id: `question-1-segment-${i}`,
+                type: "true_false",
+                question: "Did you understand the content of this segment?",
+                correctAnswer: true,
+                explanation: "This is a self-assessment question to help you track your understanding."
+              },
+              {
+                id: `question-2-segment-${i}`,
+                type: "multiple_choice",
+                question: "How well did you grasp the concepts in this segment?",
+                options: ["Very well", "Somewhat well", "Need more review", "Not sure"],
+                correctAnswer: "Very well",
+                explanation: "This helps you assess your confidence with the material."
+              }
+            ]
+          },
+          is_generated: true
         });
 
-        if (!openAIResponse.ok) {
-          const errorText = await openAIResponse.text();
-          console.error('OpenAI API error:', openAIResponse.status, errorText);
-          lastError = `OpenAI API error: ${openAIResponse.status} - ${errorText}`;
-          throw new Error(lastError);
-        }
-
-        const aiResponseData = await openAIResponse.json();
-        console.log('OpenAI response:', JSON.stringify(aiResponseData));
-
-        if (!aiResponseData.choices?.[0]?.message?.content) {
-          console.error('Invalid OpenAI response structure:', aiResponseData);
-          throw new Error('Invalid response structure from OpenAI');
-        }
-
-        let segmentTitles;
-        try {
-          segmentTitles = JSON.parse(aiResponseData.choices[0].message.content);
-          console.log('Parsed segment titles:', segmentTitles);
-        } catch (error) {
-          console.error('Error parsing OpenAI response:', error);
-          throw new Error('Invalid response format from OpenAI');
-        }
-
-        if (!Array.isArray(segmentTitles) || segmentTitles.length !== 10) {
-          console.error('Invalid segment titles structure:', segmentTitles);
-          throw new Error('Invalid segment titles generated');
-        }
-
-        // Create new story content entry
-        console.log('Creating new story content entry...');
-        const { data: storyContent, error: storyError } = await supabaseClient
-          .from('story_contents')
-          .insert({
-            lecture_id: lectureId,
-            segment_1_title: segmentTitles[0],
-            segment_2_title: segmentTitles[1],
-            segment_3_title: segmentTitles[2],
-            segment_4_title: segmentTitles[3],
-            segment_5_title: segmentTitles[4],
-            segment_6_title: segmentTitles[5],
-            segment_7_title: segmentTitles[6],
-            segment_8_title: segmentTitles[7],
-            segment_9_title: segmentTitles[8],
-            segment_10_title: segmentTitles[9]
-          })
-          .select()
-          .single();
-
-        if (storyError) {
-          console.error('Error creating story content:', storyError);
-          throw storyError;
-        }
-
-        console.log('Successfully generated and stored segment titles');
-        return new Response(
-          JSON.stringify({ success: true, storyContent }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
-      } catch (error) {
-        console.error(`Attempt ${4 - retries} failed:`, error);
-        retries--;
-        if (retries > 0) {
-          console.log(`Retrying in 2 seconds... ${retries} attempts remaining`);
-          await delay(2000);
-        } else {
-          throw error;
-        }
+      if (segmentError) {
+        console.error(`Error creating segment ${i}:`, segmentError);
+        throw segmentError;
       }
     }
 
-    throw new Error('Failed to generate content after all retries');
+    console.log('Successfully generated and stored all segments');
+    return new Response(
+      JSON.stringify({ success: true, storyContent }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error in generate-story-content function:', error);
