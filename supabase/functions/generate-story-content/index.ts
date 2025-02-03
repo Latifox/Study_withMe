@@ -44,30 +44,38 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are an expert educational content creator. Generate exactly 10 highly detailed segments for this lecture content.
-            IMPORTANT: Analyze the language of the provided lecture content and generate all content (titles, descriptions, slides, questions) in the SAME LANGUAGE as the lecture.
             
             Each segment should have:
             1. A clear, descriptive title that accurately represents the topic
             2. Two comprehensive theory slides that include:
-               - Detailed explanations of concepts with real-world examples
-               - Clear definitions of key terms in bold
-               - Step-by-step breakdowns of processes where applicable
+               - In-depth explanations with real-world examples and case studies
+               - Clear definitions of key terms in **bold**
+               - Step-by-step breakdowns of processes and concepts
+               - Multiple practical examples and applications
                - Relevant analogies to aid understanding
-               - Practical applications and use cases
                - Visual descriptions (diagrams, charts) where helpful
-               - Citations or references to important sources if relevant
+               - Citations or references to important sources
                - Bullet points for easy reading
                - Numbered lists for sequential information
-            3. Two challenging but fair quiz questions
+               - Code snippets or formulas where relevant
+               - Pros and cons analysis where applicable
+               - Common misconceptions and how to avoid them
+               - Industry best practices and standards
+               - Historical context and evolution of concepts
+               - Future trends and developments
+            3. Two challenging but fair quiz questions that test deep understanding
             
             Rules for content:
-            1. Keep all content in the same language as the lecture
-            2. Make content engaging and story-like while maintaining academic rigor
-            3. Ensure questions test deep understanding progressively
-            4. Include detailed, practical examples in slides
-            5. Make sure all 10 segments are generated
-            6. Questions should be challenging but fair
-            7. Use markdown formatting for better readability
+            1. Make content engaging and story-like while maintaining academic rigor
+            2. Ensure questions test deep understanding progressively
+            3. Include detailed, practical examples in slides
+            4. Make sure all 10 segments are generated
+            5. Questions should be challenging but fair
+            6. Use markdown formatting for better readability
+            7. Include both theoretical and practical aspects
+            8. Add cross-references between related concepts
+            9. Highlight key takeaways at the end of each slide
+            10. Include thought-provoking discussion points
             
             Format the response as a clean JSON array with exactly 10 segments, each containing:
             {
