@@ -21,7 +21,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -37,7 +36,6 @@ serve(async (req) => {
       throw new Error('Lecture content not found');
     }
 
-    // Get story structure
     const { data: storyStructure, error: structureError } = await supabaseClient
       .from('story_structures')
       .select('id')
@@ -49,7 +47,6 @@ serve(async (req) => {
       throw new Error(`Failed to fetch story structure: ${structureError.message}`);
     }
 
-    // Check if content already exists
     const { data: existingContent } = await supabaseClient
       .from('segment_contents')
       .select('*')
@@ -77,36 +74,40 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Generate comprehensive educational content for the segment "${segmentTitle}". 
-            The content should be extremely detailed, including:
-            - In-depth explanations of core concepts (minimum 500 words)
-            - Real-world examples and applications
-            - Clear definitions of technical terms
-            - Step-by-step breakdowns of complex ideas
-            - Visual descriptions where relevant
+            content: `Generate engaging educational content for the segment "${segmentTitle}". 
+            Use markdown formatting to make the content visually appealing and easy to follow.
             
-            Return a JSON object with the following structure (DO NOT include markdown formatting):
+            Guidelines for content:
+            - Use headers (##, ###) to organize content
+            - Include bullet points and numbered lists
+            - Bold important terms and concepts
+            - Break content into short, digestible paragraphs
+            - Include examples and real-world applications
+            - Use code blocks or quotes where relevant
+            - Add emojis 🎯 to highlight key points
+            
+            Return a JSON object with this structure:
             {
-              "theory_slide_1": "Detailed introduction and core concept explanation (at least 500 words)",
-              "theory_slide_2": "Comprehensive examples and practical applications (at least 500 words)",
+              "theory_slide_1": "First part of the content with markdown formatting",
+              "theory_slide_2": "Second part with practical applications and examples",
               "quiz_question_1": {
                 "type": "multiple_choice",
-                "question": "Challenging question that tests deep understanding",
+                "question": "Challenging question that tests understanding",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
                 "correctAnswer": "Correct option",
-                "explanation": "Detailed explanation of why this answer is correct"
+                "explanation": "Detailed explanation with markdown formatting"
               },
               "quiz_question_2": {
                 "type": "true_false",
                 "question": "Complex true/false question",
                 "correctAnswer": true,
-                "explanation": "Comprehensive explanation of the correct answer"
+                "explanation": "Comprehensive explanation with markdown"
               }
             }`
           },
           {
             role: 'user',
-            content: `Generate extremely detailed educational content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
+            content: `Generate engaging, markdown-formatted educational content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
           }
         ],
         temperature: 0.7,
@@ -136,7 +137,6 @@ serve(async (req) => {
       throw new Error(`Failed to parse generated content: ${error.message}`);
     }
 
-    // Store the content
     const { data: segmentContent, error: insertError } = await supabaseClient
       .from('segment_contents')
       .insert({

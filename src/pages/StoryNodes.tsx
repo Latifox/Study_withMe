@@ -80,55 +80,8 @@ const StoryNodes = () => {
 
   const handleNodeSelect = async (nodeId: string) => {
     setLoadingNode(nodeId);
-    const segmentNumber = parseInt(nodeId.split('_')[1]);
-    const segmentTitle = storyContent?.segments[segmentNumber - 1]?.title;
-
-    if (!segmentTitle) {
-      toast({
-        title: "Error",
-        description: "Could not find segment title",
-        variant: "destructive"
-      });
-      setLoadingNode(null);
-      return;
-    }
-
-    try {
-      toast({
-        title: "Generating content...",
-        description: "Please wait while we prepare your learning materials.",
-      });
-
-      const { data, error } = await supabase.functions.invoke('generate-segment-content', {
-        body: {
-          lectureId: parseInt(lectureId!),
-          segmentNumber,
-          segmentTitle
-        }
-      });
-
-      if (error) {
-        console.error('Error generating segment content:', error);
-        toast({
-          title: "Error",
-          description: "Failed to generate segment content",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Navigate to the content page
-      navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
-    } catch (error) {
-      console.error('Error handling node selection:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load segment content",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingNode(null);
-    }
+    // Navigate immediately to the content page with loading state
+    navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
   };
 
   if (isLoading) {

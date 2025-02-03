@@ -1,5 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ChevronRight } from "lucide-react";
 
 interface TheorySlideProps {
   content: string;
@@ -14,17 +17,42 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
-      <div className="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-        <ReactMarkdown>{content}</ReactMarkdown>
-      </div>
-      <motion.button
+      <Card className="p-6 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-200">
+        <div className="prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
+          <ReactMarkdown
+            components={{
+              h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mb-4" {...props} />,
+              h2: ({ node, ...props }) => <h2 className="text-2xl font-semibold mb-3" {...props} />,
+              h3: ({ node, ...props }) => <h3 className="text-xl font-medium mb-2" {...props} />,
+              p: ({ node, ...props }) => <p className="mb-4" {...props} />,
+              ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4" {...props} />,
+              ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4" {...props} />,
+              li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+              code: ({ node, ...props }) => (
+                <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded" {...props} />
+              ),
+              blockquote: ({ node, ...props }) => (
+                <blockquote className="border-l-4 border-primary pl-4 italic" {...props} />
+              ),
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      </Card>
+      
+      <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={onContinue}
-        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 px-6 py-3 rounded-lg font-semibold shadow-md transition-all duration-200 transform hover:-translate-y-0.5"
       >
-        Continue
-      </motion.button>
+        <Button
+          onClick={onContinue}
+          className="w-full bg-gradient-to-r from-primary/80 to-primary hover:from-primary hover:to-primary/90 text-white shadow-md"
+        >
+          Continue
+          <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </motion.div>
     </motion.div>
   );
 };
