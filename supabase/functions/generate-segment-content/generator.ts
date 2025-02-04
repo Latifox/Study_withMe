@@ -1,3 +1,5 @@
+import { GeneratedContent, SegmentRequest } from "./types.ts";
+
 export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any, previousSegments: any[] = []) => {
   const sanitizedContent = lectureContent
     .replace(/[\n\r]/g, ' ')
@@ -33,32 +35,28 @@ AI Configuration Settings:
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-REQUIREMENTS:
-1. Use only information that appears in the lecture content provided
-2. Format markdown and LaTeX properly:
-   - Use single line breaks with proper spacing
-   - Format mathematical formulas with clear presentation:
-     * Block formulas: use double dollars and spacing
-       For example: 
-       $$ 
-       \\vec{r}(t) = x(t)\\hat{i} + y(t)\\hat{j} + z(t)\\hat{k} 
-       $$
-     * Inline formulas: use single dollars and proper spacing
-       For example: $\\vec{v} = \\frac{d\\vec{r}}{dt}$
-   - Always use proper LaTeX spacing commands (\\;, \\quad, etc)
-   - Use proper vector notation (\\vec{v}, \\hat{i}, etc)
-   - Use proper fractions (\\frac{numerator}{denominator})
-   - Always escape backslashes in JSON (\\\\)
-3. Content MUST be UNIQUE:
-   - NEVER repeat concepts or examples from previous segments
-   - Each segment should cover a distinct subtopic
-   - Break down complex topics into separate, non-overlapping segments
-   - Focus on different aspects/applications in each segment
-   - Never duplicate formulas or explanations between segments
-4. Add relevant emoji markers for key points
-5. Create proper visual hierarchy with clear headings
-6. Provide detailed explanations and examples
-7. Each segment should be self-contained but part of a logical progression
+LATEX AND MARKDOWN FORMATTING REQUIREMENTS:
+1. Always wrap inline math expressions in single dollar signs: $x$, $y$, $\\vec{v}$
+2. Always wrap block math expressions in double dollar signs with proper spacing:
+   $$
+   F = ma
+   $$
+3. Always escape special characters in LaTeX:
+   - Use \\vec for vectors: $\\vec{v}$
+   - Use \\frac{num}{den} for fractions
+   - Use proper subscripts with underscore: $v_x$
+   - Use ^ for superscripts: $x^2$
+4. Never use Unicode characters in math mode
+5. Always use proper LaTeX commands for:
+   - Greek letters: $\\alpha$, $\\beta$
+   - Mathematical operators: $\\sin$, $\\cos$
+   - Special symbols: $\\partial$, $\\nabla$
+6. Ensure all LaTeX expressions are properly closed
+7. Use proper markdown for text formatting:
+   - Headers with proper spacing
+   - Lists with proper indentation
+   - Code blocks with proper fencing
+8. Avoid using special Unicode characters in math mode
 
 Required JSON Structure:
 {

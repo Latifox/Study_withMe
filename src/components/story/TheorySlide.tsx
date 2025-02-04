@@ -1,4 +1,3 @@
-
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,28 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionOl = createMotionComponent('ol');
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
+
+  // Process content to ensure proper LaTeX formatting
+  const processContent = (rawContent: string) => {
+    console.log('Processing content:', rawContent);
+    
+    return rawContent
+      // Ensure proper spacing around block math
+      .replace(/\$\$(.*?)\$\$/gs, (match, formula) => {
+        return `\n\n$$\n${formula.trim()}\n$$\n\n`;
+      })
+      // Ensure proper spacing around inline math
+      .replace(/\$(.*?)\$/g, (match, formula) => {
+        return `$${formula.trim()}$`;
+      })
+      // Fix common LaTeX issues
+      .replace(/\\vec{([^}]+)}/g, '\\vec{$1}')
+      .replace(/\\frac{([^}]+)}{([^}]+)}/g, '\\frac{$1}{$2}')
+      .trim();
+  };
+
+  const processedContent = processContent(content);
+  console.log('Processed content:', processedContent);
 
   return (
     <motion.div 
@@ -139,7 +160,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 )
               }}
             >
-              {content}
+              {processedContent}
             </ReactMarkdown>
           </div>
         </div>
@@ -164,4 +185,3 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 };
 
 export default TheorySlide;
-
