@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -65,43 +66,61 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = `Create educational content for segment "${segmentTitle}". Format the response as a STRICT JSON object with NO markdown code blocks or special formatting.
+      const prompt = `Create highly engaging and detailed educational content for the segment "${segmentTitle}". Format the response as a STRICT JSON object with carefully escaped strings.
 
-REQUIREMENTS:
-1. ONLY return a valid JSON object
-2. Use proper string escaping for quotes and special characters
-3. Avoid any markdown code block formatting
-4. Keep all strings properly terminated
+REQUIREMENTS FOR CONTENT STYLE:
+1. Make content addictive and engaging using storytelling techniques
+2. Use markdown formatting extensively for visual hierarchy:
+   - **Bold** for key concepts and important terms
+   - ## Headers for main sections
+   - * Bullet points for lists
+   - > Blockquotes for important insights
+   - --- for section breaks
+   - \`code\` for technical terms or specific vocabulary
+3. Include real-world examples and analogies
+4. Break down complex concepts into digestible chunks
+5. Use a conversational, engaging tone
+6. Include "Did you know?" sections for interesting facts
+7. Add emojis 🎯 strategically to highlight key points
+8. Create clear visual hierarchy with markdown
 
-Content Structure:
-1. Two theory slides in markdown format:
-   - First slide: Core concepts and fundamentals
-   - Second slide: Applications and examples
-
-2. Two quiz questions:
-   - One multiple choice question
-   - One true/false question
-
-Required JSON Structure:
+Required JSON Structure (with proper string escaping):
 {
-  "theory_slide_1": "string with markdown (escaped quotes)",
-  "theory_slide_2": "string with markdown (escaped quotes)",
+  "theory_slide_1": "string with markdown (escaped quotes) - Introduction and core concepts",
+  "theory_slide_2": "string with markdown (escaped quotes) - Detailed examples and applications",
   "quiz_question_1": {
     "type": "multiple_choice",
     "question": "string",
     "options": ["string array"],
     "correctAnswer": "string matching one option",
-    "explanation": "string"
+    "explanation": "string with markdown"
   },
   "quiz_question_2": {
     "type": "true_false",
     "question": "string",
     "correctAnswer": boolean,
-    "explanation": "string"
+    "explanation": "string with markdown"
   }
 }
 
-Base content on this lecture material: ${lecture.content.replace(/"/g, '\\"')}`;
+THEORY SLIDE STRUCTURE GUIDELINES:
+Slide 1 (Core Concepts):
+- Start with an engaging hook or question
+- Use ## Main Concept as header
+- Break down key points with **bold** terms
+- Include a > blockquote for key insight
+- Add a "Did you know? 🤔" section
+- End with a real-world connection
+
+Slide 2 (Applications):
+- Begin with a practical scenario
+- Use bullet points for examples
+- Include code examples if relevant
+- Add a "Pro Tip 💡" section
+- Conclude with practical applications
+- Use emojis for visual engagement
+
+Base the content on this lecture material: ${lecture.content.replace(/"/g, '\\"')}`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -111,11 +130,11 @@ Base content on this lecture material: ${lecture.content.replace(/"/g, '\\"')}`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4o',
           messages: [
             {
               role: 'system',
-              content: 'You are an expert educational content creator. Return ONLY a valid JSON object with proper string escaping. NO markdown code blocks or formatting.'
+              content: 'You are an expert educational content creator specializing in creating engaging, addictive learning experiences. Return ONLY a valid JSON object with proper string escaping. NO markdown code blocks.'
             },
             {
               role: 'user',
@@ -123,7 +142,7 @@ Base content on this lecture material: ${lecture.content.replace(/"/g, '\\"')}`;
             }
           ],
           temperature: 0.7,
-          max_tokens: 1000,
+          max_tokens: 1500,
         }),
       });
 
