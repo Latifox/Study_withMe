@@ -79,35 +79,22 @@ export const StoryContainer = ({
       if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
         
-        // Get the current progress for this specific lecture and segment
-        const { data: currentProgress, error: progressError } = await supabase
-          .from('user_progress')
-          .select('score')
-          .eq('user_id', user.id)
-          .eq('lecture_id', parseInt(lectureId))
-          .eq('segment_number', segmentNumber)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (progressError) {
-          console.error('Error fetching current progress:', progressError);
-          return;
-        }
-
         // Calculate new score - add points for this correct answer
-        const currentScore = currentProgress?.score || 0;
+        const currentScore = segmentScores[currentSegmentData.id] || 0;
         const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, maxScore);
-        
-        // Update progress in database
+
+        // Use upsert operation with the unique constraint
         const { error: updateError } = await supabase
           .from('user_progress')
-          .insert({
+          .upsert({
             user_id: user.id,
             lecture_id: parseInt(lectureId),
             segment_number: segmentNumber,
             score: newScore,
-            completed_at: newScore >= maxScore ? new Date().toISOString() : null
+            completed_at: newScore >= maxScore ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,lecture_id,segment_number'
           });
 
         if (updateError) {
