@@ -1,17 +1,22 @@
-
-export const generatePrompt = (segmentTitle: string, lectureContent: string) => {
+export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any) => {
   const sanitizedContent = lectureContent
-    .replace(/[\n\r]/g, ' ')  // Replace newlines with spaces
-    .replace(/[\t]/g, ' ')    // Replace tabs with spaces
-    .replace(/\\/g, '\\\\')   // Escape backslashes properly
-    .replace(/"/g, '\\"')     // Escape quotes properly
-    .replace(/'/g, "\\'")     // Escape single quotes
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-    .replace(/[\u2018\u2019]/g, "'")  // Replace smart quotes
-    .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
-    .trim(); // Remove leading/trailing whitespace
+    .replace(/[\n\r]/g, ' ')
+    .replace(/[\t]/g, ' ')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/'/g, "\\'")
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .trim();
 
   return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". Do not repeat content from other segments. Format as a STRICT JSON object with carefully escaped strings.
+
+AI Configuration Settings:
+- Temperature: ${aiConfig.temperature} (higher means more random/creative responses)
+- Creativity Level: ${aiConfig.creativity_level} (higher means more creative and exploratory content)
+- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
+${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
 REQUIREMENTS:
 1. Use only information that appears in the lecture content provided
@@ -73,7 +78,7 @@ export const generateContent = async (prompt: string) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4-0125-preview',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -178,4 +183,3 @@ export const cleanGeneratedContent = (content: string): string => {
     throw new Error(`Failed to parse or validate generated content: ${error.message}`);
   }
 };
-
