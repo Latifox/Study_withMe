@@ -76,31 +76,41 @@ export const StoryContainer = ({
 
       console.log('Recording quiz completion:', { segmentNumber, quizNumber });
 
-      // Record the quiz completion
-      const { error: quizProgressError } = await supabase
+      // First, check if quiz progress already exists
+      const { data: existingQuizProgress } = await supabase
         .from('quiz_progress')
-        .upsert({
-          user_id: user.id,
-          lecture_id: parseInt(lectureId),
-          segment_number: segmentNumber,
-          quiz_number: quizNumber,
-          completed_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
-        });
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .eq('segment_number', segmentNumber)
+        .eq('quiz_number', quizNumber)
+        .maybeSingle();
 
-      if (quizProgressError) {
-        console.error('Error saving quiz progress:', quizProgressError);
-        toast({
-          title: "Error",
-          description: "Failed to save quiz progress. Please try again.",
-          variant: "destructive",
-        });
-        return;
+      // If quiz progress doesn't exist, create it
+      if (!existingQuizProgress) {
+        const { error: quizProgressError } = await supabase
+          .from('quiz_progress')
+          .insert({
+            user_id: user.id,
+            lecture_id: parseInt(lectureId),
+            segment_number: segmentNumber,
+            quiz_number: quizNumber,
+            completed_at: new Date().toISOString()
+          });
+
+        if (quizProgressError) {
+          console.error('Error saving quiz progress:', quizProgressError);
+          toast({
+            title: "Error",
+            description: "Failed to save quiz progress. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       // Get current total score for this segment
-      const { data: existingProgress, error: progressError } = await supabase
+      const { data: existingProgress } = await supabase
         .from('user_progress')
         .select('score')
         .eq('user_id', user.id)
@@ -108,31 +118,45 @@ export const StoryContainer = ({
         .eq('segment_number', segmentNumber)
         .maybeSingle();
 
-      // If there's an error other than no rows found
-      if (progressError && progressError.code !== 'PGRST116') {
-        console.error('Error fetching progress:', progressError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch progress. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const currentScore = existingProgress?.score || 0;
       const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
 
-      // Update overall segment progress with new score
-      const { error: updateError } = await supabase
+      // Check if user_progress already exists
+      const { data: existingUserProgress } = await supabase
         .from('user_progress')
-        .upsert({
-          user_id: user.id,
-          lecture_id: parseInt(lectureId),
-          segment_number: segmentNumber,
-          score: newScore,
-          completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString()
-        });
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .eq('segment_number', segmentNumber)
+        .maybeSingle();
+
+      let updateError;
+      if (existingUserProgress) {
+        // Update existing progress
+        const { error } = await supabase
+          .from('user_progress')
+          .update({
+            score: newScore,
+            completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .eq('lecture_id', parseInt(lectureId))
+          .eq('segment_number', segmentNumber);
+        updateError = error;
+      } else {
+        // Insert new progress
+        const { error } = await supabase
+          .from('user_progress')
+          .insert({
+            user_id: user.id,
+            lecture_id: parseInt(lectureId),
+            segment_number: segmentNumber,
+            score: newScore,
+            completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null
+          });
+        updateError = error;
+      }
 
       if (updateError) {
         console.error('Error updating progress:', updateError);
