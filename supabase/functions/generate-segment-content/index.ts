@@ -63,37 +63,33 @@ serve(async (req) => {
 
     console.log('Calling OpenAI API for content generation...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // Reduced to 20 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased to 45 second timeout
 
     try {
-      const prompt = `Create engaging, visually appealing content for segment "${segmentTitle}" from this lecture: ${lecture.content}
+      const prompt = `Create educational content for segment "${segmentTitle}". Content should include:
+1. Two theory slides with markdown
+2. Two quiz questions
 
-Guidelines:
-1. Use markdown headers (##, ###)
-2. Break content into digestible paragraphs
-3. Use emojis for key points 🎯
-4. Include bullet points and lists
-5. Bold important terms
-6. Add examples where relevant
-
-Return a JSON object with:
+Return JSON:
 {
-  "theory_slide_1": "Core concepts with markdown",
-  "theory_slide_2": "Applications and examples",
+  "theory_slide_1": "Core concepts (markdown)",
+  "theory_slide_2": "Examples (markdown)",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "Test question",
+    "question": "Question text",
     "options": ["A", "B", "C", "D"],
     "correctAnswer": "Answer",
     "explanation": "Why"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "True/false question",
+    "question": "Question",
     "correctAnswer": true,
     "explanation": "Why"
   }
-}`;
+}
+
+Base the content on this lecture material: ${lecture.content}`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -107,7 +103,7 @@ Return a JSON object with:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert educational content creator.'
+              content: 'You are an expert educational content creator. Create concise, clear content.'
             },
             {
               role: 'user',
@@ -115,7 +111,7 @@ Return a JSON object with:
             }
           ],
           temperature: 0.7,
-          max_tokens: 1500,
+          max_tokens: 1000, // Reduced token limit for faster response
         }),
       });
 
