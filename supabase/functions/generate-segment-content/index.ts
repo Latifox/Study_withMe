@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureContent, saveSegmentContent } from "./db.ts";
 import { validateContent } from "./validator.ts";
-import { generatePrompt, generateContent, cleanGeneratedContent } from "./generator.ts";
+import { generatePrompt, generateContent } from "./generator.ts";
 import { GeneratedContent, SegmentRequest } from "./types.ts";
 
 const corsHeaders = {
@@ -86,11 +86,7 @@ serve(async (req) => {
       console.log('Successfully received OpenAI response');
       console.log('Raw response content:', responseContent);
       
-      // Clean and parse the content
-      const cleanContent = cleanGeneratedContent(responseContent);
-      console.log('Cleaned content:', cleanContent);
-      
-      const content = JSON.parse(cleanContent) as GeneratedContent;
+      const content = JSON.parse(responseContent) as GeneratedContent;
       
       // Validate the content structure
       validateContent(content);
