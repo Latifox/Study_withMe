@@ -67,7 +67,7 @@ const LearningPathway = ({
 
     fetchUserProgress();
 
-    // Subscribe to real-time updates with proper typing
+    // Subscribe to real-time updates
     const channel = supabase
       .channel('user-progress-updates')
       .on(
@@ -79,7 +79,7 @@ const LearningPathway = ({
           filter: `lecture_id=eq.${lectureId}`
         },
         (payload: RealtimePostgresChangesPayload<UserProgressPayload>) => {
-          if (payload.new?.segment_number !== undefined && payload.new?.score !== undefined) {
+          if (payload.new && payload.new.segment_number !== undefined && payload.new.score !== undefined) {
             const segmentKey = `segment_${payload.new.segment_number}`;
             setNodeProgress(prev => ({
               ...prev,
@@ -100,7 +100,6 @@ const LearningPathway = ({
     
     return node.prerequisites.every(prereq => {
       const prereqScore = nodeProgress[prereq] || 0;
-      // Node is only available if the prerequisite node has been completed (score >= 10)
       return prereqScore >= 10;
     });
   };
