@@ -63,33 +63,75 @@ serve(async (req) => {
 
     console.log('Calling OpenAI API for content generation...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased to 45 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = `Create educational content for segment "${segmentTitle}". Content should include:
-1. Two theory slides with markdown
-2. Two quiz questions
+      const prompt = `Create comprehensive educational content for segment "${segmentTitle}". The content should be thorough yet accessible.
 
-Return JSON:
+REQUIREMENTS:
+
+For Theory Slides:
+1. Each slide should use proper markdown formatting
+2. Include clear headings (##, ###)
+3. Break content into digestible paragraphs
+4. Use bullet points and numbered lists where appropriate
+5. Highlight key terms using **bold**
+6. Add relevant emojis 🎯 to emphasize important points
+7. Include practical examples and real-world applications
+8. Ensure content flows logically from basic to advanced concepts
+
+Theory Slide 1 should focus on:
+- Core concepts and definitions
+- Fundamental principles
+- Key terminology
+- Basic theoretical framework
+
+Theory Slide 2 should focus on:
+- Practical applications
+- Real-world examples
+- Case studies or scenarios
+- Common misconceptions and clarifications
+
+For Quiz Questions:
+1. Multiple Choice Question should:
+   - Test understanding, not just memorization
+   - Have clearly distinct options
+   - Include one clearly correct answer
+   - Have plausible but incorrect distractors
+   - Provide a detailed explanation
+
+2. True/False Question should:
+   - Test application of concepts
+   - Be unambiguous
+   - Include a thorough explanation
+   - Connect to the theory content
+
+Return JSON in this format:
 {
-  "theory_slide_1": "Core concepts (markdown)",
-  "theory_slide_2": "Examples (markdown)",
+  "theory_slide_1": "Core concepts and fundamentals in markdown",
+  "theory_slide_2": "Applications and examples in markdown",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "Question text",
-    "options": ["A", "B", "C", "D"],
-    "correctAnswer": "Answer",
-    "explanation": "Why"
+    "question": "Thought-provoking question",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": "Correct option",
+    "explanation": "Detailed explanation of why this is correct"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "Question",
+    "question": "Clear true/false statement",
     "correctAnswer": true,
-    "explanation": "Why"
+    "explanation": "Thorough explanation of the correct answer"
   }
 }
 
-Base the content on this lecture material: ${lecture.content}`;
+Base your content on this lecture material: ${lecture.content}
+
+Remember to:
+- Keep language clear and professional
+- Maintain consistent depth across all content
+- Ensure all content is directly relevant to "${segmentTitle}"
+- Make complex concepts accessible without oversimplifying`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -103,7 +145,7 @@ Base the content on this lecture material: ${lecture.content}`;
           messages: [
             {
               role: 'system',
-              content: 'You are an expert educational content creator. Create concise, clear content.'
+              content: 'You are an expert educational content creator. Create engaging, comprehensive, and clear content that follows best practices in educational design.'
             },
             {
               role: 'user',
@@ -111,7 +153,7 @@ Base the content on this lecture material: ${lecture.content}`;
             }
           ],
           temperature: 0.7,
-          max_tokens: 1000, // Reduced token limit for faster response
+          max_tokens: 1000,
         }),
       });
 
