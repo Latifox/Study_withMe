@@ -83,6 +83,8 @@ export const handleQuizProgress = async ({
         segment_number: segmentNumber,
         quiz_number: quizNumber,
         completed_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,lecture_id,segment_number,quiz_number'
       });
 
     if (quizProgressError) {
@@ -91,7 +93,7 @@ export const handleQuizProgress = async ({
       return;
     }
 
-    // Update user progress
+    // Update user progress with explicit onConflict handling
     const { error: upsertError } = await supabase
       .from('user_progress')
       .upsert({
@@ -101,6 +103,8 @@ export const handleQuizProgress = async ({
         score: newScore,
         completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,lecture_id,segment_number'
       });
 
     if (upsertError) {
