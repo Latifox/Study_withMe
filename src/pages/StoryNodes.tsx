@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Trophy } from "lucide-react";
+import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import LearningPathway from "@/components/story/LearningPathway";
@@ -105,6 +105,10 @@ const StoryNodes = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
   };
 
+  const handleStudyInDetail = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4">
@@ -130,12 +134,21 @@ const StoryNodes = () => {
         <Button
           variant="ghost"
           onClick={handleBack}
+          className="flex items-center gap-2"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" />
           Back to Course
         </Button>
 
         <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={handleStudyInDetail}
+            className="flex items-center gap-2"
+          >
+            <BookOpen className="h-4 w-4" />
+            Study the lecture in detail
+          </Button>
           <div className="flex items-center gap-2">
             <Star className="h-5 w-5 text-yellow-400" />
             <span className="font-bold">{totalXP} XP</span>
