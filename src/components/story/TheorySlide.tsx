@@ -82,7 +82,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="mb-4 leading-relaxed text-foreground/90 [&>*]:text-foreground/90"
+                    className="mb-4 leading-relaxed text-foreground/90 [&_*]:text-foreground/90"
                     {...props}
                   />
                 ),
