@@ -73,12 +73,13 @@ export const StoryContainer = ({
         return;
       }
 
+      // Add this question to answered set
       setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
       
       if (lectureId) {
         const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
         
-        // Get the most recent progress entry for this specific lecture and segment
+        // Get the current progress for this specific lecture and segment
         const { data: currentProgress, error: progressError } = await supabase
           .from('user_progress')
           .select('score')
@@ -94,10 +95,11 @@ export const StoryContainer = ({
           return;
         }
 
+        // Calculate new score - add points for this correct answer
         const currentScore = currentProgress?.score || 0;
-        // Ensure we don't exceed the maximum score
         const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, maxScore);
         
+        // Update progress in database
         const { error: updateError } = await supabase
           .from('user_progress')
           .insert({
@@ -118,21 +120,22 @@ export const StoryContainer = ({
           return;
         }
 
+        // Show success toast
         toast({
           title: "🎯 Correct!",
           description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
         });
 
-        // Only proceed to next step if we haven't reached max score yet
-        if (newScore < maxScore) {
-          handleContinue();
-        } else {
-          // If we've reached max score, call onCorrectAnswer to trigger segment completion
+        // If we've reached max score, call onCorrectAnswer to trigger segment completion
+        if (newScore >= maxScore) {
           onCorrectAnswer();
           toast({
             title: "🌟 Segment Complete!",
-            description: "Great job! Moving to the next segment.",
+            description: "Great job! You've mastered this node.",
           });
+        } else {
+          // Otherwise, continue to next question/step
+          handleContinue();
         }
       }
     } catch (error) {
