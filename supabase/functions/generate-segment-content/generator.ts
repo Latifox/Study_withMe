@@ -15,21 +15,30 @@ export const generatePrompt = (segmentTitle: string, lectureContent: string) => 
 
 REQUIREMENTS:
 1. Use only information that appears in the lecture content provided
-2. Format markdown properly:
+2. Format markdown and LaTeX properly:
    - Use single line breaks with proper spacing
-   - Properly escape special characters
-   - Use proper markdown syntax for headers and formatting
-   - Format mathematical formulas using LaTeX syntax within $$ delimiters for block formulas and $ for inline formulas
+   - Format mathematical formulas with clear presentation:
+     * Block formulas: use double dollars and spacing
+       For example: 
+       $$ 
+       \\vec{r}(t) = x(t)\\hat{i} + y(t)\\hat{j} + z(t)\\hat{k} 
+       $$
+     * Inline formulas: use single dollars and proper spacing
+       For example: $\\vec{v} = \\frac{d\\vec{r}}{dt}$
+   - Always use proper LaTeX spacing commands (\\;, \\quad, etc)
+   - Use proper vector notation (\\vec{v}, \\hat{i}, etc)
+   - Use proper fractions (\\frac{numerator}{denominator})
+   - Always escape backslashes in JSON (\\\\)
 3. Keep content focused and accurate to the lecture material
 4. Create UNIQUE content that does not overlap with other segments
 5. Add relevant emoji markers for key points
-6. Create proper visual hierarchy
+6. Create proper visual hierarchy with clear headings
 7. Provide detailed explanations and examples
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string containing properly formatted markdown - Core concepts and detailed formulas",
-  "theory_slide_2": "string containing properly formatted markdown - Examples and applications",
+  "theory_slide_1": "string containing properly formatted markdown with LaTeX - Core concepts and detailed formulas",
+  "theory_slide_2": "string containing properly formatted markdown with LaTeX - Examples and applications",
   "quiz_question_1": {
     "type": "multiple_choice",
     "question": "string asking about specific concepts from THIS segment only",
@@ -63,7 +72,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. Use clear spacing and proper mathematical notation in all formulas.'
         },
         {
           role: 'user',
