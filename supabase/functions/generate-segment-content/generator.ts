@@ -66,6 +66,8 @@ Base the content strictly on this lecture material: ${sanitizedContent}`;
 };
 
 export const generateContent = async (prompt: string) => {
+  console.log('Generating content with prompt:', prompt);
+  
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -77,7 +79,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. NO code blocks.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. NO code blocks, NO invalid characters.'
         },
         {
           role: 'user',
@@ -85,7 +87,7 @@ export const generateContent = async (prompt: string) => {
         }
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 3000, // Increased for more detailed content
     }),
   });
 
@@ -101,42 +103,56 @@ export const generateContent = async (prompt: string) => {
 };
 
 export const cleanGeneratedContent = (content: string): string => {
-  console.log('Content before cleaning:', JSON.stringify(content, null, 2)); // Improved logging
+  console.log('Content before cleaning:', content);
 
   try {
     // First try to parse as is - if it's already valid JSON, just return it
-    const directParse = JSON.parse(content);
+    const parsed = JSON.parse(content);
     console.log('Content was already valid JSON');
-    return JSON.stringify(directParse);
+    return JSON.stringify(parsed);
   } catch (error) {
     console.log('Direct parsing failed, attempting cleaning...');
   }
 
   // If direct parsing failed, try cleaning the content
   let cleanedContent = content
-    .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
-    .replace(/\\n/g, '\n')              // Convert escaped newlines to actual newlines
-    .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
-    .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
+    .replace(/```json\s*|\s*```/g, '') // Remove code blocks
+    .replace(/\\n/g, '\n')            // Convert escaped newlines to actual newlines
+    .replace(/[\u2018\u2019]/g, "'")  // Replace smart quotes
+    .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove all control characters
+    .replace(/\\\\/g, '\\')           // Fix double escaped backslashes
     .trim();
 
-  console.log('Content after initial cleaning:', JSON.stringify(cleanedContent, null, 2));
+  console.log('Content after cleaning:', cleanedContent);
 
-  // Try to parse and stringify to ensure valid JSON
   try {
+    // Try to parse and validate the structure
     const parsed = JSON.parse(cleanedContent);
     
-    // Validate the structure
+    // Validate required fields and structure
     if (!parsed.theory_slide_1 || !parsed.theory_slide_2 || !parsed.quiz_question_1 || !parsed.quiz_question_2) {
       throw new Error('Missing required fields in JSON structure');
     }
     
-    const stringified = JSON.stringify(parsed);
-    console.log('Successfully parsed and stringified JSON');
-    return stringified;
+    // Validate quiz questions
+    for (const quiz of [parsed.quiz_question_1, parsed.quiz_question_2]) {
+      if (!quiz.type || !quiz.question || !quiz.explanation) {
+        throw new Error('Invalid quiz question structure');
+      }
+      if (quiz.type === 'multiple_choice' && (!Array.isArray(quiz.options) || quiz.options.length < 4)) {
+        throw new Error('Multiple choice question must have at least 4 options');
+      }
+      if (quiz.type === 'true_false' && typeof quiz.correctAnswer !== 'boolean') {
+        throw new Error('True/False question must have a boolean correct answer');
+      }
+    }
+
+    // Return the validated and formatted JSON
+    return JSON.stringify(parsed);
   } catch (error) {
-    console.error('Error parsing cleaned content:', error);
-    console.error('Problematic content:', JSON.stringify(cleanedContent, null, 2));
-    throw new Error(`Failed to parse generated content as JSON: ${error.message}`);
+    console.error('Error parsing or validating cleaned content:', error);
+    console.error('Problematic content:', cleanedContent);
+    throw new Error(`Failed to parse or validate generated content: ${error.message}`);
   }
 };
