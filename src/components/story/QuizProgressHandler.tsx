@@ -49,7 +49,7 @@ export const handleQuizProgress = async ({
         .eq('user_id', userId)
         .eq('lecture_id', lectureId)
         .eq('segment_number', segmentNumber)
-        .single();
+        .maybeSingle();
 
       onSuccess(currentProgress?.score || 0);
       return;
