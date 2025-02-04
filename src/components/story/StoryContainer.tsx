@@ -122,72 +122,55 @@ export const StoryContainer = ({
         return;
       }
 
-      // Check quiz completions
-      const { data: quizCompletions, error: fetchError } = await supabase
-        .from('quiz_progress')
-        .select('quiz_number')
-        .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId))
-        .eq('segment_number', segmentNumber);
-
-      if (fetchError) {
-        console.error('Error fetching quiz completions:', fetchError);
-        return;
-      }
-
-      const completedQuizCount = quizCompletions?.length || 0;
-      console.log('Completed quiz count:', completedQuizCount);
-
-      // Show success toast
+      // Show success toast for current quiz
       toast({
         title: "🎯 Correct!",
         description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${MAX_SCORE} XP`,
       });
 
-      // If both quizzes are completed and we've reached max score
-      if (completedQuizCount >= TOTAL_QUESTIONS_PER_SEGMENT && newScore >= MAX_SCORE) {
-        onCorrectAnswer();
-        toast({
-          title: "🌟 Segment Complete!",
-          description: "Great job! You've mastered this node.",
-        });
-      } else {
-        // Continue to next question or handle completion
-        if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
-          if (newScore < MAX_SCORE) {
-            // Reset progress for this segment if not all answers were correct
-            await supabase
-              .from('quiz_progress')
-              .delete()
-              .eq('user_id', user.id)
-              .eq('lecture_id', parseInt(lectureId))
-              .eq('segment_number', segmentNumber);
-
-            await supabase
-              .from('user_progress')
-              .upsert({
-                user_id: user.id,
-                lecture_id: parseInt(lectureId),
-                segment_number: segmentNumber,
-                score: 0,
-                completed_at: null,
-                updated_at: new Date().toISOString()
-              }, {
-                onConflict: 'user_id, lecture_id, segment_number'
-              });
-
-            toast({
-              title: "Keep practicing!",
-              description: "You need to get both questions correct to advance. Let's try again!",
-              variant: "destructive",
-            });
-            
-            // Reset to beginning of segment
-            window.location.reload();
-          }
+      // If this is the second quiz, check total score
+      if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
+        if (newScore >= MAX_SCORE) {
+          // Both quizzes correct, complete the segment
+          onCorrectAnswer();
+          toast({
+            title: "🌟 Segment Complete!",
+            description: "Great job! You've mastered this node.",
+          });
         } else {
-          handleContinue();
+          // Not enough points, reset progress
+          await supabase
+            .from('quiz_progress')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('lecture_id', parseInt(lectureId))
+            .eq('segment_number', segmentNumber);
+
+          await supabase
+            .from('user_progress')
+            .upsert({
+              user_id: user.id,
+              lecture_id: parseInt(lectureId),
+              segment_number: segmentNumber,
+              score: 0,
+              completed_at: null,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id, lecture_id, segment_number'
+            });
+
+          toast({
+            title: "Keep practicing!",
+            description: "You need to get both questions correct to advance. Let's try again!",
+            variant: "destructive",
+          });
+          
+          // Reset to beginning of segment
+          window.location.reload();
         }
+      } else {
+        // First quiz correct, continue to second quiz
+        handleContinue();
       }
 
     } catch (error) {
@@ -200,16 +183,77 @@ export const StoryContainer = ({
     }
   };
 
-  const handleWrongAnswer = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
-    onWrongAnswer();
-    toast({
-      title: "Keep trying!",
-      description: "Don't worry, mistakes help us learn.",
-      variant: "destructive"
-    });
-    handleContinue();
+  const handleWrongAnswer = async () => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Authentication error:', authError);
+        return;
+      }
+
+      if (!lectureId) return;
+      const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
+      const quizNumber = questionIndex + 1;
+
+      // Record the failed quiz attempt
+      await supabase
+        .from('quiz_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: parseInt(lectureId),
+          segment_number: segmentNumber,
+          quiz_number: quizNumber,
+          completed_at: null
+        }, {
+          onConflict: 'user_id, lecture_id, segment_number, quiz_number'
+        });
+
+      // If this is the second quiz and first quiz was correct, reset progress
+      if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
+        await supabase
+          .from('quiz_progress')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('lecture_id', parseInt(lectureId))
+          .eq('segment_number', segmentNumber);
+
+        await supabase
+          .from('user_progress')
+          .upsert({
+            user_id: user.id,
+            lecture_id: parseInt(lectureId),
+            segment_number: segmentNumber,
+            score: 0,
+            completed_at: null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id, lecture_id, segment_number'
+          });
+
+        toast({
+          title: "Keep practicing!",
+          description: "You need to get both questions correct to advance. Let's try again!",
+          variant: "destructive",
+        });
+        
+        // Reset to beginning of segment
+        window.location.reload();
+      } else {
+        // First quiz wrong, continue to second quiz
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
+        onWrongAnswer();
+        toast({
+          title: "Keep trying!",
+          description: "Don't worry, mistakes help us learn.",
+          variant: "destructive"
+        });
+        handleContinue();
+      }
+    } catch (error) {
+      console.error('Error in handleWrongAnswer:', error);
+    }
   };
 
   if (!currentSegmentData.slides || !currentSegmentData.questions) {
