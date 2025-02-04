@@ -89,33 +89,47 @@ export const generateContent = async (prompt: string) => {
   }
 
   const data = await response.json();
-  console.log('Raw OpenAI response:', data.choices[0].message.content); // Added logging
+  console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2)); // Improved logging
   return data.choices[0].message.content;
 };
 
 export const cleanGeneratedContent = (content: string): string => {
-  console.log('Content before cleaning:', content); // Added logging
+  console.log('Content before cleaning:', JSON.stringify(content, null, 2)); // Improved logging
 
-  // More robust cleaning of the generated content
+  try {
+    // First try to parse as is - if it's already valid JSON, just return it
+    const directParse = JSON.parse(content);
+    console.log('Content was already valid JSON');
+    return JSON.stringify(directParse);
+  } catch (error) {
+    console.log('Direct parsing failed, attempting cleaning...');
+  }
+
+  // If direct parsing failed, try cleaning the content
   let cleanedContent = content
     .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
     .replace(/\\n/g, '\n')              // Convert escaped newlines to actual newlines
     .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
     .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
-    .replace(/\n{3,}/g, '\n\n')         // Replace multiple newlines with double newlines
     .trim();
 
-  console.log('Content after initial cleaning:', cleanedContent); // Added logging
+  console.log('Content after initial cleaning:', JSON.stringify(cleanedContent, null, 2));
 
   // Try to parse and stringify to ensure valid JSON
   try {
     const parsed = JSON.parse(cleanedContent);
+    
+    // Validate the structure
+    if (!parsed.theory_slide_1 || !parsed.theory_slide_2 || !parsed.quiz_question_1 || !parsed.quiz_question_2) {
+      throw new Error('Missing required fields in JSON structure');
+    }
+    
     const stringified = JSON.stringify(parsed);
-    console.log('Successfully parsed and stringified JSON'); // Added logging
+    console.log('Successfully parsed and stringified JSON');
     return stringified;
   } catch (error) {
     console.error('Error parsing cleaned content:', error);
-    console.error('Problematic content:', cleanedContent); // Added logging
-    throw new Error('Failed to parse generated content as JSON');
+    console.error('Problematic content:', JSON.stringify(cleanedContent, null, 2));
+    throw new Error(`Failed to parse generated content as JSON: ${error.message}`);
   }
 };
