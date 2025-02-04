@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useParams } from "react-router-dom";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 interface LessonNode {
   id: string;
@@ -24,16 +25,13 @@ interface LearningPathwayProps {
   onNodeSelect: (nodeId: string) => void;
 }
 
-interface UserProgressPayload {
+// Define the type for our user progress payload
+type UserProgressPayload = {
   new: {
     segment_number: number;
     score: number;
-  };
-  old: {
-    segment_number: number;
-    score: number;
   } | null;
-}
+};
 
 const LearningPathway = ({ 
   nodes, 
@@ -69,6 +67,7 @@ const LearningPathway = ({
 
     fetchUserProgress();
 
+    // Subscribe to real-time updates with proper typing
     const channel = supabase
       .channel('user-progress-updates')
       .on(
@@ -79,16 +78,12 @@ const LearningPathway = ({
           table: 'user_progress',
           filter: `lecture_id=eq.${lectureId}`
         },
-        (payload: { new: any }) => {
-          if (payload.new && 
-              'segment_number' in payload.new && 
-              'score' in payload.new && 
-              typeof payload.new.segment_number === 'number' && 
-              typeof payload.new.score === 'number') {
+        (payload: RealtimePostgresChangesPayload<UserProgressPayload>) => {
+          if (payload.new?.segment_number !== undefined && payload.new?.score !== undefined) {
             const segmentKey = `segment_${payload.new.segment_number}`;
             setNodeProgress(prev => ({
               ...prev,
-              [segmentKey]: payload.new.score
+              [segmentKey]: payload.new?.score || 0
             }));
           }
         }
@@ -280,6 +275,6 @@ const LearningPathway = ({
       </div>
     </div>
   );
-});
+};
 
 export default LearningPathway;
