@@ -62,7 +62,7 @@ export const handleQuizProgress = async ({
     const totalScore = quizScores.reduce((sum, quiz) => sum + (quiz.quiz_score || 0), 0);
     console.log('Total segment score:', totalScore);
 
-    // Update user progress with total score
+    // Update user progress with total score using upsert
     const { error: upsertError } = await supabase
       .from('user_progress')
       .upsert({
