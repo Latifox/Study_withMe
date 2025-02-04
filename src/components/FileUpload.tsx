@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -83,8 +84,11 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (dbError) throw dbError;
       console.log('Lecture saved successfully');
 
-      // Invalidate the lectures query to trigger a refresh
-      queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+      // Invalidate queries and wait a moment to ensure the UI updates
+      await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+      
+      // Small delay to ensure the UI has time to process the update
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       toast({
         title: "Success",
