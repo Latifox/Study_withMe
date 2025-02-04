@@ -8,7 +8,8 @@ import SegmentProgress from "./SegmentProgress";
 import StoryProgress from "./StoryProgress";
 import StoryFailDialog from "./StoryFailDialog";
 import StoryCompletionScreen from "./StoryCompletionScreen";
-import { StoryContent, SegmentContent } from "@/hooks/useStoryContent";
+import { QuizProgressHandler } from "./QuizProgressHandler";
+import { POINTS_PER_CORRECT_ANSWER, MAX_SCORE } from "@/utils/scoreUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StoryContainerProps {
@@ -16,8 +17,8 @@ interface StoryContainerProps {
     segments: Array<{
       id: string;
       title: string;
-      slides?: SegmentContent['slides'];
-      questions?: SegmentContent['questions'];
+      slides?: any;
+      questions?: any;
     }>;
   };
   currentSegment: number;
@@ -27,10 +28,6 @@ interface StoryContainerProps {
   onCorrectAnswer: () => void;
   onWrongAnswer: () => void;
 }
-
-const POINTS_PER_CORRECT_ANSWER = 5;
-const TOTAL_QUESTIONS_PER_SEGMENT = 2;
-const MAX_SCORE = POINTS_PER_CORRECT_ANSWER * TOTAL_QUESTIONS_PER_SEGMENT;
 
 export const StoryContainer = ({
   storyContent,
@@ -74,124 +71,42 @@ export const StoryContainer = ({
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
       const quizNumber = questionIndex + 1;
 
-      console.log('Recording quiz completion:', { segmentNumber, quizNumber });
-
-      // First, check if quiz progress already exists
-      const { data: existingQuizProgress } = await supabase
-        .from('quiz_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId))
-        .eq('segment_number', segmentNumber)
-        .eq('quiz_number', quizNumber)
-        .maybeSingle();
-
-      // If quiz progress doesn't exist, create it
-      if (!existingQuizProgress) {
-        const { error: quizProgressError } = await supabase
-          .from('quiz_progress')
-          .insert({
-            user_id: user.id,
-            lecture_id: parseInt(lectureId),
-            segment_number: segmentNumber,
-            quiz_number: quizNumber,
-            completed_at: new Date().toISOString()
+      const { handleQuizCompletion } = await QuizProgressHandler({
+        userId: user.id,
+        lectureId: parseInt(lectureId),
+        segmentNumber,
+        quizNumber,
+        onSuccess: (newScore) => {
+          toast({
+            title: "🎯 Correct!",
+            description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${MAX_SCORE} XP`,
           });
 
-        if (quizProgressError) {
-          console.error('Error saving quiz progress:', quizProgressError);
+          if (quizNumber === 2) {
+            if (newScore >= MAX_SCORE) {
+              setShowCompletionScreen(true);
+              onCorrectAnswer();
+              toast({
+                title: "🌟 Node Complete!",
+                description: "Great job! You've mastered this node.",
+              });
+            } else {
+              setShowFailDialog(true);
+            }
+          } else {
+            handleContinue();
+          }
+        },
+        onError: () => {
           toast({
             title: "Error",
-            description: "Failed to save quiz progress. Please try again.",
+            description: "Failed to save progress. Please try again.",
             variant: "destructive",
           });
-          return;
         }
-      }
-
-      // Get current total score for this segment
-      const { data: existingProgress } = await supabase
-        .from('user_progress')
-        .select('score')
-        .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId))
-        .eq('segment_number', segmentNumber)
-        .maybeSingle();
-
-      const currentScore = existingProgress?.score || 0;
-      const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
-
-      // Check if user_progress already exists
-      const { data: existingUserProgress } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId))
-        .eq('segment_number', segmentNumber)
-        .maybeSingle();
-
-      let updateError;
-      if (existingUserProgress) {
-        // Update existing progress
-        const { error } = await supabase
-          .from('user_progress')
-          .update({
-            score: newScore,
-            completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-          .eq('lecture_id', parseInt(lectureId))
-          .eq('segment_number', segmentNumber);
-        updateError = error;
-      } else {
-        // Insert new progress
-        const { error } = await supabase
-          .from('user_progress')
-          .insert({
-            user_id: user.id,
-            lecture_id: parseInt(lectureId),
-            segment_number: segmentNumber,
-            score: newScore,
-            completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null
-          });
-        updateError = error;
-      }
-
-      if (updateError) {
-        console.error('Error updating progress:', updateError);
-        toast({
-          title: "Error",
-          description: "Failed to save progress. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Show success toast for current quiz
-      toast({
-        title: "🎯 Correct!",
-        description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${MAX_SCORE} XP`,
       });
 
-      // If this is the second quiz, check total score
-      if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
-        if (newScore >= MAX_SCORE) {
-          // Both quizzes correct, show completion screen
-          setShowCompletionScreen(true);
-          onCorrectAnswer();
-          toast({
-            title: "🌟 Node Complete!",
-            description: "Great job! You've mastered this node.",
-          });
-        } else {
-          // Not enough points, show dialog
-          setShowFailDialog(true);
-        }
-      } else {
-        // First quiz correct, continue to second quiz
-        handleContinue();
-      }
+      await handleQuizCompletion();
 
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);
@@ -216,7 +131,6 @@ export const StoryContainer = ({
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
       const quizNumber = questionIndex + 1;
 
-      // Record the failed quiz attempt
       await supabase
         .from('quiz_progress')
         .upsert({
@@ -225,15 +139,11 @@ export const StoryContainer = ({
           segment_number: segmentNumber,
           quiz_number: quizNumber,
           completed_at: null
-        }, {
-          onConflict: 'user_id, lecture_id, segment_number, quiz_number'
         });
 
-      // If this is the second quiz and first quiz was correct, show dialog
-      if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
+      if (quizNumber === 2) {
         setShowFailDialog(true);
       } else {
-        // First quiz wrong, continue to second quiz
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
         onWrongAnswer();
