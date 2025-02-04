@@ -1,5 +1,13 @@
 
 export const generatePrompt = (segmentTitle: string, lectureContent: string) => {
+  // Sanitize the lecture content to prevent JSON parsing issues
+  const sanitizedContent = lectureContent
+    .replace(/[\n\r]/g, ' ')  // Replace newlines with spaces
+    .replace(/[\t]/g, ' ')    // Replace tabs with spaces
+    .replace(/\\/g, '\\\\')   // Escape backslashes
+    .replace(/"/g, '\\"')     // Escape quotes
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
+
   return `Create educational content based on this specific lecture material. Use the lecture's actual content to create two slides and quiz questions. Format as a STRICT JSON object with carefully escaped strings.
 
 REQUIREMENTS:
@@ -47,7 +55,7 @@ Slide 2:
 - Connect to real-world scenarios mentioned in the lecture
 - Summarize with practical takeaways
 
-Base the content strictly on this lecture material: ${lectureContent.replace(/"/g, '\\"')}`;
+Base the content strictly on this lecture material: ${sanitizedContent}`;
 };
 
 export const generateContent = async (prompt: string) => {
@@ -85,11 +93,21 @@ export const generateContent = async (prompt: string) => {
 };
 
 export const cleanGeneratedContent = (content: string): string => {
-  return content
+  // More robust cleaning of the generated content
+  let cleanedContent = content
     .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
     .replace(/\\n/g, '\n')              // Convert escaped newlines to actual newlines
     .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
     .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
     .replace(/\n{3,}/g, '\n\n')         // Replace multiple newlines with double newlines
     .trim();
+
+  // Try to parse and stringify to ensure valid JSON
+  try {
+    const parsed = JSON.parse(cleanedContent);
+    return JSON.stringify(parsed);
+  } catch (error) {
+    console.error('Error parsing cleaned content:', error);
+    throw new Error('Failed to parse generated content as JSON');
+  }
 };

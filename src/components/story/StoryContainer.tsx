@@ -10,8 +10,8 @@ interface StoryContainerProps {
     segments: Array<{
       id: string;
       title: string;
-      slides?: any;
-      questions?: any;
+      slides: any[];  // Changed from optional to required
+      questions: any[];  // Changed from optional to required
     }>;
   };
   currentSegment: number;
@@ -39,7 +39,8 @@ export const StoryContainer = ({
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[currentSegmentData?.id] || 0);
 
-  if (!currentSegmentData.slides || !currentSegmentData.questions) {
+  // If we don't have slides or questions yet, show loading state
+  if (!currentSegmentData || !Array.isArray(currentSegmentData.slides) || !Array.isArray(currentSegmentData.questions)) {
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
