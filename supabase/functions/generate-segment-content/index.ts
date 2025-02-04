@@ -8,14 +8,23 @@ import { GeneratedContent, SegmentRequest } from "./types.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    });
   }
 
   try {
+    if (req.method !== 'POST') {
+      throw new Error('Method not allowed');
+    }
+
     const { lectureId, segmentNumber, segmentTitle }: SegmentRequest = await req.json();
     console.log('Generating content for:', { lectureId, segmentNumber, segmentTitle });
 
@@ -29,7 +38,10 @@ serve(async (req) => {
       console.log('Content already exists, returning existing content');
       return new Response(
         JSON.stringify({ segmentContent: existingContent }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
       );
     }
 
@@ -91,9 +103,14 @@ serve(async (req) => {
         content
       );
 
+      clearTimeout(timeoutId);
+
       return new Response(
         JSON.stringify({ segmentContent }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
       );
     } catch (error) {
       clearTimeout(timeoutId);
