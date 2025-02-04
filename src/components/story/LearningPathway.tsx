@@ -79,8 +79,7 @@ const LearningPathway = ({
           table: 'user_progress',
           filter: `lecture_id=eq.${lectureId}`
         },
-        (payload) => {
-          // Type guard to ensure payload has the correct structure
+        (payload: { new: any }) => {
           if (payload.new && 
               'segment_number' in payload.new && 
               'score' in payload.new && 
@@ -281,6 +280,6 @@ const LearningPathway = ({
       </div>
     </div>
   );
-};
+});
 
 export default LearningPathway;
