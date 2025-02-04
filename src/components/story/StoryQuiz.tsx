@@ -35,10 +35,10 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
   const handleSubmit = () => {
     if (!selectedAnswer || hasSubmitted) return;
 
-    const isCorrect = 
-      question.type === "true_false" 
-        ? selectedAnswer === question.correctAnswer.toString()
-        : selectedAnswer === question.correctAnswer;
+    const normalizedSelectedAnswer = selectedAnswer.toLowerCase();
+    const normalizedCorrectAnswer = question.correctAnswer.toString().toLowerCase();
+
+    const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer;
 
     setIsCorrect(isCorrect);
     setHasSubmitted(true);
@@ -59,9 +59,9 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
     }
   };
 
-  // Convert options to proper format for true/false questions
+  // Convert options to proper format for true/false questions and ensure consistent casing
   const options = question.type === "true_false" 
-    ? ["true", "false"]
+    ? ["True", "False"]  // Keep UI display capitalized for better readability
     : question.options || [];
 
   return (
@@ -87,19 +87,19 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
               whileTap={{ scale: hasSubmitted ? 1 : 0.98 }}
               className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer
                 ${selectedAnswer === option ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}
-                ${hasSubmitted && option === question.correctAnswer.toString() ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                ${hasSubmitted && selectedAnswer === option && option !== question.correctAnswer.toString() ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
+                ${hasSubmitted && option.toLowerCase() === question.correctAnswer.toString().toLowerCase() ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
+                ${hasSubmitted && selectedAnswer === option && option.toLowerCase() !== question.correctAnswer.toString().toLowerCase() ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
                 ${hasSubmitted ? 'cursor-not-allowed' : ''}
               `}
             >
               <RadioGroupItem value={option} id={option} />
               <label htmlFor={option} className="flex-1 cursor-pointer">
-                {option.charAt(0).toUpperCase() + option.slice(1)}
+                {option}
               </label>
-              {hasSubmitted && option === question.correctAnswer.toString() && (
+              {hasSubmitted && option.toLowerCase() === question.correctAnswer.toString().toLowerCase() && (
                 <Check className="h-5 w-5 text-green-500" />
               )}
-              {hasSubmitted && selectedAnswer === option && option !== question.correctAnswer.toString() && (
+              {hasSubmitted && selectedAnswer === option && option.toLowerCase() !== question.correctAnswer.toString().toLowerCase() && (
                 <X className="h-5 w-5 text-red-500" />
               )}
             </motion.div>
