@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureContent, saveSegmentContent } from "./db.ts";
@@ -42,7 +41,7 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = generatePrompt(segmentTitle, lecture.content);
+      const prompt = await generatePrompt(segmentTitle, lecture.content, lectureId);
       const responseContent = await generateContent(prompt);
       
       console.log('Successfully received OpenAI response');
