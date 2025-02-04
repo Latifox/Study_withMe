@@ -11,7 +11,7 @@ ${JSON.stringify(segment.quiz_question_1)}
 ${JSON.stringify(segment.quiz_question_2)}
 `).join('\n\n');
 
-  return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". Do not repeat content from other segments. Format as a STRICT JSON object with carefully escaped strings.
+  return `Create comprehensive, detailed educational content for a physics lecture, focusing on the specific subtopic "${segmentTitle}". Each theory slide should be thorough and include multiple examples where appropriate. Format as a STRICT JSON object with carefully escaped strings.
 
 ${previousSegments.length > 0 ? `
 PREVIOUS SEGMENTS CONTEXT (DO NOT REPEAT THIS CONTENT):
@@ -24,9 +24,21 @@ AI Configuration Settings:
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-LATEX FORMATTING REQUIREMENTS:
+CONTENT REQUIREMENTS:
+1. Theory Slide 1 should:
+   - Begin with a clear introduction of the concept
+   - Provide detailed mathematical foundations
+   - Include step-by-step explanations
+   - Use clear, academic language
 
-1. Use ONLY these LaTeX commands and environments:
+2. Theory Slide 2 should:
+   - Focus on practical applications
+   - Include multiple worked examples
+   - Connect theory to real-world scenarios
+   - Provide detailed solution steps
+
+LATEX FORMATTING REQUIREMENTS:
+1. Use these LaTeX commands and environments:
    - \\text{} for text inside math mode
    - Math environments: align*, equation*, array
    - Greek letters: \\alpha, \\beta, \\theta, etc.
@@ -51,8 +63,8 @@ LATEX FORMATTING REQUIREMENTS:
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string with markdown and LaTeX - Core concepts and formulas",
-  "theory_slide_2": "string with markdown and LaTeX - Examples and applications",
+  "theory_slide_1": "string with markdown and LaTeX - Detailed core concepts and formulas",
+  "theory_slide_2": "string with markdown and LaTeX - Comprehensive examples and applications",
   "quiz_question_1": {
     "type": "multiple_choice",
     "question": "string testing concepts from THIS segment",
@@ -86,7 +98,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings with proper LaTeX notation.'
+          content: 'You are an expert physics educator specializing in creating detailed, comprehensive educational content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings with proper LaTeX notation.'
         },
         {
           role: 'user',
