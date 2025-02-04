@@ -83,12 +83,13 @@ const LearningPathway = ({
           table: 'user_progress',
           filter: `lecture_id=eq.${lectureId}`
         },
-        (payload: RealtimePostgresChangesPayload<UserProgressPayload>) => {
-          if (payload.new && 'segment_number' in payload.new && 'score' in payload.new) {
-            const segmentKey = `segment_${payload.new.segment_number}`;
+        (payload: RealtimePostgresChangesPayload<any>) => {
+          const data = payload.new as { segment_number: number; score: number } | null;
+          if (data && typeof data.segment_number === 'number' && typeof data.score === 'number') {
+            const segmentKey = `segment_${data.segment_number}`;
             setNodeProgress(prev => ({
               ...prev,
-              [segmentKey]: payload.new.score
+              [segmentKey]: data.score
             }));
           }
         }
