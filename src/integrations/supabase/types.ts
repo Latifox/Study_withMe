@@ -109,6 +109,47 @@ export type Database = {
           },
         ]
       }
+      quiz_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: number
+          lecture_id: number | null
+          quiz_number: number
+          segment_number: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: never
+          lecture_id?: number | null
+          quiz_number: number
+          segment_number: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: never
+          lecture_id?: number | null
+          quiz_number?: number
+          segment_number?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_progress_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       segment_contents: {
         Row: {
           created_at: string

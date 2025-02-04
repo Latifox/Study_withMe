@@ -66,65 +66,85 @@ export const StoryContainer = ({
         return;
       }
 
-      // Check if this question was already answered correctly
-      if (answeredQuestions.has(questionIndex)) {
-        console.log('Question already answered correctly');
-        handleContinue();
+      if (!lectureId) return;
+      const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
+      const quizNumber = questionIndex + 1; // Convert to 1-based index for quiz number
+
+      // Record the quiz completion
+      const { error: quizProgressError } = await supabase
+        .from('quiz_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: parseInt(lectureId),
+          segment_number: segmentNumber,
+          quiz_number: quizNumber,
+          completed_at: new Date().toISOString()
+        });
+
+      if (quizProgressError) {
+        console.error('Error saving quiz progress:', quizProgressError);
+        toast({
+          title: "Error",
+          description: "Failed to save quiz progress. Please try again.",
+          variant: "destructive",
+        });
         return;
       }
 
-      // Add this question to answered set
-      setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
-      
-      if (lectureId) {
-        const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
-        
-        // Calculate new score - add points for this correct answer
-        const currentScore = segmentScores[currentSegmentData.id] || 0;
-        const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, maxScore);
+      // Update overall segment progress
+      const currentScore = segmentScores[currentSegmentData.id] || 0;
+      const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, maxScore);
 
-        // Use upsert operation with the unique constraint
-        const { error: updateError } = await supabase
-          .from('user_progress')
-          .upsert({
-            user_id: user.id,
-            lecture_id: parseInt(lectureId),
-            segment_number: segmentNumber,
-            score: newScore,
-            completed_at: newScore >= maxScore ? new Date().toISOString() : null,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,lecture_id,segment_number'
-          });
-
-        if (updateError) {
-          console.error('Error saving progress:', updateError);
-          toast({
-            title: "Error",
-            description: "Failed to save progress. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Show success toast
-        toast({
-          title: "🎯 Correct!",
-          description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
+      const { error: progressError } = await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: parseInt(lectureId),
+          segment_number: segmentNumber,
+          score: newScore,
+          completed_at: newScore >= maxScore ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,lecture_id,segment_number'
         });
 
-        // If we've reached max score, call onCorrectAnswer to trigger segment completion
-        if (newScore >= maxScore) {
-          onCorrectAnswer();
-          toast({
-            title: "🌟 Segment Complete!",
-            description: "Great job! You've mastered this node.",
-          });
-        } else {
-          // Otherwise, continue to next question/step
-          handleContinue();
-        }
+      if (progressError) {
+        console.error('Error saving progress:', progressError);
+        toast({
+          title: "Error",
+          description: "Failed to save progress. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      // Check if both quizzes are completed
+      const { data: quizCompletions } = await supabase
+        .from('quiz_progress')
+        .select('quiz_number')
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .eq('segment_number', segmentNumber);
+
+      const completedQuizCount = quizCompletions?.length || 0;
+
+      // Show success toast
+      toast({
+        title: "🎯 Correct!",
+        description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
+      });
+
+      // If both quizzes are completed and we've reached max score
+      if (completedQuizCount >= 2 && newScore >= maxScore) {
+        onCorrectAnswer();
+        toast({
+          title: "🌟 Segment Complete!",
+          description: "Great job! You've mastered this node.",
+        });
+      } else {
+        handleContinue();
+      }
+
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);
       toast({
