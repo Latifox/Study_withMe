@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureContent, saveSegmentContent } from "./db.ts";
@@ -8,16 +9,11 @@ import { GeneratedContent, SegmentRequest } from "./types.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 204,
-      headers: corsHeaders 
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -46,7 +42,7 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = await generatePrompt(segmentTitle, lecture.content, lectureId);
+      const prompt = generatePrompt(segmentTitle, lecture.content);
       const responseContent = await generateContent(prompt);
       
       console.log('Successfully received OpenAI response');
@@ -84,7 +80,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in generate-segment-content:', error);
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ error: error.message }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

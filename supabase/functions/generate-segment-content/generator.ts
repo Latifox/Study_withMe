@@ -1,36 +1,17 @@
-import { supabase } from "./db.ts";
 
-export const generatePrompt = async (segmentTitle: string, lectureContent: string, lectureId: number) => {
-  // Fetch AI configuration
-  const { data: aiConfig } = await supabase
-    .from('lecture_ai_configs')
-    .select('*')
-    .eq('lecture_id', lectureId)
-    .single();
-
-  const config = aiConfig || {
-    temperature: 0.7,
-    creativity_level: 0.5,
-    detail_level: 0.6,
-    custom_instructions: ''
-  };
-
+export const generatePrompt = (segmentTitle: string, lectureContent: string) => {
   const sanitizedContent = lectureContent
-    .replace(/[\n\r]/g, ' ')
-    .replace(/[\t]/g, ' ')
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/'/g, "\\'")
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .trim();
+    .replace(/[\n\r]/g, ' ')  // Replace newlines with spaces
+    .replace(/[\t]/g, ' ')    // Replace tabs with spaces
+    .replace(/\\/g, '\\\\')   // Escape backslashes properly
+    .replace(/"/g, '\\"')     // Escape quotes properly
+    .replace(/'/g, "\\'")     // Escape single quotes
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+    .replace(/[\u2018\u2019]/g, "'")  // Replace smart quotes
+    .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
+    .trim(); // Remove leading/trailing whitespace
 
-  return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". 
-Adjust your output based on these parameters from the user's AI configuration:
-- Creativity Level: ${config.creativity_level} (higher means more creative and unique content)
-- Detail Level: ${config.detail_level} (higher means more comprehensive explanations)
-${config.custom_instructions ? `\nCustom Instructions from user:\n${config.custom_instructions}\n` : ''}
+  return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". Do not repeat content from other segments. Format as a STRICT JSON object with carefully escaped strings.
 
 REQUIREMENTS:
 1. Use only information that appears in the lecture content provided
@@ -121,7 +102,6 @@ export const generateContent = async (prompt: string) => {
 };
 
 export const cleanGeneratedContent = (content: string): string => {
-  // Content cleaning and validation functions
   console.log('Content before cleaning:', content);
 
   try {
@@ -198,3 +178,4 @@ export const cleanGeneratedContent = (content: string): string => {
     throw new Error(`Failed to parse or validate generated content: ${error.message}`);
   }
 };
+
