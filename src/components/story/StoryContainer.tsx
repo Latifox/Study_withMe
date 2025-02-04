@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import TheorySlide from "./TheorySlide";
 import StoryQuiz from "./StoryQuiz";
