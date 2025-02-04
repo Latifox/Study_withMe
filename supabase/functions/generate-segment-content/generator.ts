@@ -1,10 +1,6 @@
 import { GeneratedContent, SegmentRequest } from "./types.ts";
 
 export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any, previousSegments: any[] = []) => {
-  const sanitizedContent = lectureContent
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-    .trim();
-
   const previousSegmentsContext = previousSegments.map((segment, index) => `
 Previous Segment ${index + 1}: "${segment.title}"
 Theory Content:
@@ -73,7 +69,7 @@ Required JSON Structure:
 }
 
 Focus ONLY on content specifically related to: ${segmentTitle}
-Base the content strictly on this lecture material: ${sanitizedContent}`;
+Base the content strictly on this lecture material: ${lectureContent}`;
 };
 
 export const generateContent = async (prompt: string) => {
@@ -86,7 +82,7 @@ export const generateContent = async (prompt: string) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4',
       messages: [
         {
           role: 'system',
@@ -112,16 +108,4 @@ export const generateContent = async (prompt: string) => {
   const data = await response.json();
   console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2));
   return data.choices[0].message.content;
-};
-
-export const cleanGeneratedContent = (content: string): string => {
-  try {
-    // Only parse the JSON to validate it, but keep the exact string content
-    const parsed = JSON.parse(content);
-    console.log('Content is valid JSON:', JSON.stringify(parsed, null, 2));
-    return content; // Return the original string to preserve exact formatting
-  } catch (error) {
-    console.error('Error parsing content:', error);
-    throw new Error(`Failed to parse generated content: ${error.message}`);
-  }
 };

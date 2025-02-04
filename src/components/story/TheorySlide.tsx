@@ -33,17 +33,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
 
-  // Only ensure proper spacing around math blocks, no other modifications
-  const processContent = (rawContent: string) => {
-    return rawContent
-      .replace(/\$\$(.*?)\$\$/gs, (match, formula) => {
-        return `\n\n$$${formula}$$\n\n`;
-      })
-      .trim();
-  };
-
-  const processedContent = processContent(content);
-  console.log('Content being rendered:', processedContent);
+  console.log('Content being rendered:', content);
 
   return (
     <motion.div 
@@ -150,7 +140,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 )
               }}
             >
-              {processedContent}
+              {content}
             </ReactMarkdown>
           </div>
         </div>
