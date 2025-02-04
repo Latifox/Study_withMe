@@ -8,7 +8,7 @@ export const generatePrompt = (segmentTitle: string, lectureContent: string) => 
     .replace(/"/g, '\\"')     // Escape quotes
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
 
-  return `Create educational content based on this specific lecture material. Use the lecture's actual content to create two slides and quiz questions. Format as a STRICT JSON object with carefully escaped strings.
+  return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". Do not repeat content from other segments. Format as a STRICT JSON object with carefully escaped strings.
 
 REQUIREMENTS:
 1. Use only information that appears in the lecture content provided
@@ -16,45 +16,52 @@ REQUIREMENTS:
    - Use single line breaks with proper spacing
    - Properly escape special characters
    - Use proper markdown syntax for headers and formatting
+   - Format mathematical formulas using LaTeX syntax within $$ delimiters for block formulas and $ for inline formulas
 3. Keep content focused and accurate to the lecture material
-4. Use clear section breaks
+4. Create UNIQUE content that does not overlap with other segments
 5. Add relevant emoji markers for key points
 6. Create proper visual hierarchy
+7. Provide detailed explanations and examples
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string containing properly formatted markdown - Core concepts from lecture",
-  "theory_slide_2": "string containing properly formatted markdown - Examples and applications from lecture",
+  "theory_slide_1": "string containing properly formatted markdown - Core concepts and detailed formulas",
+  "theory_slide_2": "string containing properly formatted markdown - Examples and applications",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string",
-    "options": ["array of strings"],
+    "question": "string asking about specific concepts from THIS segment only",
+    "options": ["array of 4 distinct strings"],
     "correctAnswer": "string matching one option",
-    "explanation": "string with markdown"
+    "explanation": "string with markdown explaining the correct answer"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string",
+    "question": "string testing understanding of THIS segment's specific content",
     "correctAnswer": boolean,
-    "explanation": "string with markdown"
+    "explanation": "string with markdown explaining why true or false"
   }
 }
 
 SLIDE STRUCTURE:
-Slide 1:
+Slide 1 (Theory and Formulas):
 - Start with a clear ## Main Concept header
-- Present key definitions from the lecture
-- Use proper line spacing between elements
-- Include important formulas or principles
-- End with a key insight from the lecture
+- Present key definitions specific to this segment
+- Format mathematical formulas using LaTeX:
+  * Block formulas: $$formula$$
+  * Inline formulas: $formula$
+- Include all relevant mathematical formulas with explanations
+- Provide detailed explanations of each concept
+- End with key insights unique to this segment
 
-Slide 2:
-- Focus on examples from the lecture
-- Break down practical applications
-- Include any relevant calculations
-- Connect to real-world scenarios mentioned in the lecture
-- Summarize with practical takeaways
+Slide 2 (Applications):
+- Focus on practical examples specific to this segment
+- Include step-by-step problem solving if applicable
+- Show formula applications with numerical examples
+- Connect to real-world scenarios
+- Include practice calculations or worked examples
+- Summarize with practical applications
 
+Focus ONLY on content specifically related to: ${segmentTitle}
 Base the content strictly on this lecture material: ${sanitizedContent}`;
 };
 
@@ -70,7 +77,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks and markdown syntax. NO code blocks.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. NO code blocks.'
         },
         {
           role: 'user',
@@ -78,7 +85,7 @@ export const generateContent = async (prompt: string) => {
         }
       ],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 2000,
     }),
   });
 
@@ -89,7 +96,7 @@ export const generateContent = async (prompt: string) => {
   }
 
   const data = await response.json();
-  console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2)); // Improved logging
+  console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2));
   return data.choices[0].message.content;
 };
 
