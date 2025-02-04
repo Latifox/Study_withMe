@@ -36,27 +36,47 @@ AI Configuration Settings:
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
 LATEX AND MARKDOWN FORMATTING REQUIREMENTS:
-1. Always wrap inline math expressions in single dollar signs: $x$, $y$, $\\vec{v}$
-2. Always wrap block math expressions in double dollar signs with proper spacing:
-   $$
-   F = ma
-   $$
-3. Always escape special characters in LaTeX:
-   - Use \\vec for vectors: $\\vec{v}$
-   - Use \\frac{num}{den} for fractions
-   - Use proper subscripts with underscore: $v_x$
-   - Use ^ for superscripts: $x^2$
-4. Never use Unicode characters in math mode
-5. Always use proper LaTeX commands for:
-   - Greek letters: $\\alpha$, $\\beta$
-   - Mathematical operators: $\\sin$, $\\cos$
-   - Special symbols: $\\partial$, $\\nabla$
-6. Ensure all LaTeX expressions are properly closed
-7. Use proper markdown for text formatting:
-   - Headers with proper spacing
-   - Lists with proper indentation
-   - Code blocks with proper fencing
-8. Avoid using special Unicode characters in math mode
+
+1. Use ONLY valid LaTeX syntax and commands:
+   - Always use \\text{} for text inside math mode, NEVER use \\ext{}
+   - Always properly close environments with \\end{...}
+   - Use proper LaTeX environments: align*, equation, array, etc.
+
+2. Block Math Formatting:
+   - Wrap in double dollars with proper spacing:
+     $$
+     \\begin{align*}
+     x &= v_0t + x_0 \\\\
+     y &= h - \\frac{1}{2}gt^2
+     \\end{align*}
+     $$
+
+3. Inline Math Formatting:
+   - Wrap in single dollars: $\\vec{v} = \\frac{d\\vec{r}}{dt}$
+   - Use \\text{} for text: $\\text{where } v \\text{ is velocity}$
+
+4. LaTeX Commands and Symbols:
+   - Vectors: $\\vec{v}$, $\\vec{r}$
+   - Unit vectors: $\\hat{i}$, $\\hat{j}$, $\\hat{k}$
+   - Fractions: $\\frac{numerator}{denominator}$
+   - Greek letters: $\\alpha$, $\\beta$, $\\theta$
+   - Operators: $\\sin$, $\\cos$, $\\tan$
+   - Subscripts: $v_x$, $a_y$
+   - Superscripts: $x^2$, $v^n$
+   - Special symbols: $\\partial$, $\\nabla$, $\\infty$
+
+5. Common Mistakes to AVOID:
+   - NEVER use \\ext{} (use \\text{} instead)
+   - NEVER use ewline (use \\newline instead)
+   - NEVER leave environments unclosed
+   - NEVER use Unicode characters in math mode
+   - NEVER mix markdown and LaTeX incorrectly
+
+6. Markdown Formatting:
+   - Use proper headers (##, ###)
+   - Use proper lists (-, *)
+   - Use proper emphasis (**bold**)
+   - Keep code blocks properly fenced
 
 Required JSON Structure:
 {
