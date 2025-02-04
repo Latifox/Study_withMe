@@ -79,6 +79,8 @@ export const StoryContainer = ({
           segment_number: segmentNumber,
           quiz_number: quizNumber,
           completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id, lecture_id, segment_number, quiz_number'
         });
 
       if (quizProgressError) {
@@ -105,7 +107,7 @@ export const StoryContainer = ({
           completed_at: newScore >= maxScore ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id,lecture_id,segment_number'
+          onConflict: 'user_id, lecture_id, segment_number'
         });
 
       if (progressError) {
@@ -119,12 +121,17 @@ export const StoryContainer = ({
       }
 
       // Check if both quizzes are completed
-      const { data: quizCompletions } = await supabase
+      const { data: quizCompletions, error: fetchError } = await supabase
         .from('quiz_progress')
         .select('quiz_number')
         .eq('user_id', user.id)
         .eq('lecture_id', parseInt(lectureId))
         .eq('segment_number', segmentNumber);
+
+      if (fetchError) {
+        console.error('Error fetching quiz completions:', fetchError);
+        return;
+      }
 
       const completedQuizCount = quizCompletions?.length || 0;
 
