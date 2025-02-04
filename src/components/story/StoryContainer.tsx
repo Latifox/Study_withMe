@@ -5,6 +5,7 @@ import TheorySlide from "./TheorySlide";
 import StoryQuiz from "./StoryQuiz";
 import SegmentProgress from "./SegmentProgress";
 import StoryProgress from "./StoryProgress";
+import StoryFailDialog from "./StoryFailDialog";
 import { StoryContent, SegmentContent } from "@/hooks/useStoryContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
@@ -39,12 +40,13 @@ export const StoryContainer = ({
   onCorrectAnswer,
   onWrongAnswer
 }: StoryContainerProps) => {
-  const { lectureId } = useParams();
+  const { courseId, lectureId } = useParams();
   const currentSegmentData = storyContent.segments[currentSegment];
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
+  const [showFailDialog, setShowFailDialog] = useState(false);
   const { toast } = useToast();
 
   const handleContinue = () => {
@@ -138,35 +140,8 @@ export const StoryContainer = ({
             description: "Great job! You've mastered this node.",
           });
         } else {
-          // Not enough points, reset progress
-          await supabase
-            .from('quiz_progress')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('lecture_id', parseInt(lectureId))
-            .eq('segment_number', segmentNumber);
-
-          await supabase
-            .from('user_progress')
-            .upsert({
-              user_id: user.id,
-              lecture_id: parseInt(lectureId),
-              segment_number: segmentNumber,
-              score: 0,
-              completed_at: null,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'user_id, lecture_id, segment_number'
-            });
-
-          toast({
-            title: "Keep practicing!",
-            description: "You need to get both questions correct to advance. Let's try again!",
-            variant: "destructive",
-          });
-          
-          // Reset to beginning of segment
-          window.location.reload();
+          // Not enough points, show dialog
+          setShowFailDialog(true);
         }
       } else {
         // First quiz correct, continue to second quiz
@@ -209,36 +184,9 @@ export const StoryContainer = ({
           onConflict: 'user_id, lecture_id, segment_number, quiz_number'
         });
 
-      // If this is the second quiz and first quiz was correct, reset progress
+      // If this is the second quiz and first quiz was correct, show dialog
       if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
-        await supabase
-          .from('quiz_progress')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('lecture_id', parseInt(lectureId))
-          .eq('segment_number', segmentNumber);
-
-        await supabase
-          .from('user_progress')
-          .upsert({
-            user_id: user.id,
-            lecture_id: parseInt(lectureId),
-            segment_number: segmentNumber,
-            score: 0,
-            completed_at: null,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id, lecture_id, segment_number'
-          });
-
-        toast({
-          title: "Keep practicing!",
-          description: "You need to get both questions correct to advance. Let's try again!",
-          variant: "destructive",
-        });
-        
-        // Reset to beginning of segment
-        window.location.reload();
+        setShowFailDialog(true);
       } else {
         // First quiz wrong, continue to second quiz
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -253,6 +201,47 @@ export const StoryContainer = ({
       }
     } catch (error) {
       console.error('Error in handleWrongAnswer:', error);
+    }
+  };
+
+  const handleRestartNode = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !lectureId) return;
+
+      const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
+
+      // Reset quiz progress
+      await supabase
+        .from('quiz_progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .eq('segment_number', segmentNumber);
+
+      // Reset user progress
+      await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: parseInt(lectureId),
+          segment_number: segmentNumber,
+          score: 0,
+          completed_at: null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id, lecture_id, segment_number'
+        });
+
+      setShowFailDialog(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error resetting progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset progress. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -302,6 +291,14 @@ export const StoryContainer = ({
           isAnswered={answeredQuestions.has(questionIndex)}
         />
       )}
+
+      <StoryFailDialog
+        isOpen={showFailDialog}
+        onClose={() => setShowFailDialog(false)}
+        onRestart={handleRestartNode}
+        courseId={courseId || ""}
+        score={segmentScores[currentSegmentData.id] || 0}
+      />
     </Card>
   );
 };
