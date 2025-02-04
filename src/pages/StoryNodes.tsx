@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
@@ -45,16 +44,20 @@ const StoryNodes = () => {
       if (!lectureId) throw new Error('Lecture ID is required');
       console.log('Fetching story structure for lecture:', lectureId);
 
-      const { data: storyStructure, error: structureError } = await supabase
+      // Get the most recent story structure
+      const { data: storyStructures, error: structureError } = await supabase
         .from('story_structures')
         .select('*')
         .eq('lecture_id', parseInt(lectureId))
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (structureError) {
         console.error('Error fetching story structure:', structureError);
         throw structureError;
       }
+
+      const storyStructure = storyStructures?.[0];
 
       if (!storyStructure) {
         console.log('No story structure found, generating new content...');
