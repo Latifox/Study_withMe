@@ -100,7 +100,7 @@ export const StoryContainer = ({
       }
 
       // Get current total score for this segment
-      const { data: existingProgress } = await supabase
+      const { data: existingProgress, error: progressError } = await supabase
         .from('user_progress')
         .select('score')
         .eq('user_id', user.id)
@@ -108,11 +108,16 @@ export const StoryContainer = ({
         .eq('segment_number', segmentNumber)
         .single();
 
+      if (progressError && progressError.code !== 'PGRST116') {
+        console.error('Error fetching progress:', progressError);
+        return;
+      }
+
       const currentScore = existingProgress?.score || 0;
       const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
 
       // Update overall segment progress with new score
-      const { error: progressError } = await supabase
+      const { error: updateError } = await supabase
         .from('user_progress')
         .upsert({
           user_id: user.id,
@@ -122,11 +127,11 @@ export const StoryContainer = ({
           completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id, lecture_id, segment_number'
+          onConflict: 'user_id,lecture_id,segment_number'
         });
 
-      if (progressError) {
-        console.error('Error saving progress:', progressError);
+      if (updateError) {
+        console.error('Error updating progress:', updateError);
         toast({
           title: "Error",
           description: "Failed to save progress. Please try again.",
