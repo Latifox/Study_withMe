@@ -26,8 +26,9 @@ interface StoryContainerProps {
   onWrongAnswer: () => void;
 }
 
-const TOTAL_QUESTIONS_PER_SEGMENT = 2;
 const POINTS_PER_CORRECT_ANSWER = 5;
+const TOTAL_QUESTIONS_PER_SEGMENT = 2;
+const MAX_SCORE = POINTS_PER_CORRECT_ANSWER * TOTAL_QUESTIONS_PER_SEGMENT;
 
 export const StoryContainer = ({
   storyContent,
@@ -43,7 +44,6 @@ export const StoryContainer = ({
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
-  const maxScore = TOTAL_QUESTIONS_PER_SEGMENT * POINTS_PER_CORRECT_ANSWER;
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
@@ -68,7 +68,9 @@ export const StoryContainer = ({
 
       if (!lectureId) return;
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
-      const quizNumber = questionIndex + 1; // Convert to 1-based index for quiz number
+      const quizNumber = questionIndex + 1;
+
+      console.log('Recording quiz completion:', { segmentNumber, quizNumber });
 
       // Record the quiz completion
       const { error: quizProgressError } = await supabase
@@ -93,9 +95,9 @@ export const StoryContainer = ({
         return;
       }
 
-      // Update overall segment progress
+      // Update overall segment progress with new score
       const currentScore = segmentScores[currentSegmentData.id] || 0;
-      const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, maxScore);
+      const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
 
       const { error: progressError } = await supabase
         .from('user_progress')
@@ -104,7 +106,7 @@ export const StoryContainer = ({
           lecture_id: parseInt(lectureId),
           segment_number: segmentNumber,
           score: newScore,
-          completed_at: newScore >= maxScore ? new Date().toISOString() : null,
+          completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id, lecture_id, segment_number'
@@ -120,7 +122,7 @@ export const StoryContainer = ({
         return;
       }
 
-      // Check if both quizzes are completed
+      // Check quiz completions
       const { data: quizCompletions, error: fetchError } = await supabase
         .from('quiz_progress')
         .select('quiz_number')
@@ -134,21 +136,53 @@ export const StoryContainer = ({
       }
 
       const completedQuizCount = quizCompletions?.length || 0;
+      console.log('Completed quiz count:', completedQuizCount);
 
       // Show success toast
       toast({
         title: "🎯 Correct!",
-        description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${maxScore} XP`,
+        description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${MAX_SCORE} XP`,
       });
 
       // If both quizzes are completed and we've reached max score
-      if (completedQuizCount >= 2 && newScore >= maxScore) {
+      if (completedQuizCount >= TOTAL_QUESTIONS_PER_SEGMENT && newScore >= MAX_SCORE) {
         onCorrectAnswer();
         toast({
           title: "🌟 Segment Complete!",
           description: "Great job! You've mastered this node.",
         });
+      } else if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT && newScore < MAX_SCORE) {
+        // If this was the second quiz but total score is not max, reset progress
+        toast({
+          title: "Keep practicing!",
+          description: "You need to get both questions correct to advance. Let's try again!",
+          variant: "destructive",
+        });
+        // Reset progress for this segment
+        await supabase
+          .from('quiz_progress')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('lecture_id', parseInt(lectureId))
+          .eq('segment_number', segmentNumber);
+
+        await supabase
+          .from('user_progress')
+          .upsert({
+            user_id: user.id,
+            lecture_id: parseInt(lectureId),
+            segment_number: segmentNumber,
+            score: 0,
+            completed_at: null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id, lecture_id, segment_number'
+          });
+
+        // Reset to beginning of segment
+        window.location.reload();
       } else {
+        // Continue to next question
         handleContinue();
       }
 
@@ -171,6 +205,7 @@ export const StoryContainer = ({
       description: "Don't worry, mistakes help us learn.",
       variant: "destructive"
     });
+    handleContinue();
   };
 
   if (!currentSegmentData.slides || !currentSegmentData.questions) {
@@ -180,31 +215,6 @@ export const StoryContainer = ({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           <p className="ml-3 text-sm text-muted-foreground">
             Loading segment content...
-          </p>
-        </div>
-      </Card>
-    );
-  }
-
-  // Check if we have the required slide or question for the current step
-  if (isSlide && !currentSegmentData.slides[slideIndex]) {
-    return (
-      <Card className="p-2">
-        <div className="flex items-center justify-center h-32">
-          <p className="text-sm text-muted-foreground">
-            Slide content not found.
-          </p>
-        </div>
-      </Card>
-    );
-  }
-
-  if (!isSlide && !currentSegmentData.questions[questionIndex]) {
-    return (
-      <Card className="p-2">
-        <div className="flex items-center justify-center h-32">
-          <p className="text-sm text-muted-foreground">
-            Question content not found.
           </p>
         </div>
       </Card>
@@ -225,7 +235,7 @@ export const StoryContainer = ({
       <div className="mb-2">
         <StoryProgress
           currentPoints={segmentScores[currentSegmentData.id] || 0}
-          maxPoints={maxScore}
+          maxPoints={MAX_SCORE}
         />
       </div>
 
