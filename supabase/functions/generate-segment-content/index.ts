@@ -22,7 +22,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check for existing content first to avoid unnecessary API calls
+    // Check for existing content first
     const { data: storyStructure, error: structureError } = await supabaseClient
       .from('story_structures')
       .select('id')
@@ -49,7 +49,7 @@ serve(async (req) => {
       );
     }
 
-    // If no existing content, fetch lecture content
+    // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -63,9 +63,38 @@ serve(async (req) => {
 
     console.log('Calling OpenAI API for content generation...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // Reduced to 20 second timeout
 
     try {
+      const prompt = `Create engaging, visually appealing content for segment "${segmentTitle}" from this lecture: ${lecture.content}
+
+Guidelines:
+1. Use markdown headers (##, ###)
+2. Break content into digestible paragraphs
+3. Use emojis for key points 🎯
+4. Include bullet points and lists
+5. Bold important terms
+6. Add examples where relevant
+
+Return a JSON object with:
+{
+  "theory_slide_1": "Core concepts with markdown",
+  "theory_slide_2": "Applications and examples",
+  "quiz_question_1": {
+    "type": "multiple_choice",
+    "question": "Test question",
+    "options": ["A", "B", "C", "D"],
+    "correctAnswer": "Answer",
+    "explanation": "Why"
+  },
+  "quiz_question_2": {
+    "type": "true_false",
+    "question": "True/false question",
+    "correctAnswer": true,
+    "explanation": "Why"
+  }
+}`;
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         signal: controller.signal,
@@ -78,45 +107,15 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: `You are an expert educational content creator. Create engaging, visually appealing content for the segment "${segmentTitle}".
-
-              Guidelines for content creation:
-              1. Use clear hierarchy with markdown headers (##, ###)
-              2. Break content into short, digestible paragraphs
-              3. Use emojis strategically to highlight key points 🎯
-              4. Include bullet points and numbered lists for better readability
-              5. Bold important terms and concepts using **text**
-              6. Add relevant examples and real-world applications
-              7. Use blockquotes for important definitions or highlights
-              8. Keep the tone conversational and engaging
-              9. Include code blocks or diagrams where relevant
-              
-              Return a JSON object with this structure:
-              {
-                "theory_slide_1": "First part focusing on core concepts with rich markdown formatting",
-                "theory_slide_2": "Second part with practical applications and examples",
-                "quiz_question_1": {
-                  "type": "multiple_choice",
-                  "question": "Engaging question that tests understanding",
-                  "options": ["Option A", "Option B", "Option C", "Option D"],
-                  "correctAnswer": "Correct option",
-                  "explanation": "Detailed explanation with markdown"
-                },
-                "quiz_question_2": {
-                  "type": "true_false",
-                  "question": "Thought-provoking true/false question",
-                  "correctAnswer": true,
-                  "explanation": "Comprehensive explanation with markdown"
-                }
-              }`
+              content: 'You are an expert educational content creator.'
             },
             {
               role: 'user',
-              content: `Generate engaging, markdown-formatted educational content for segment "${segmentTitle}" based on this lecture content: ${lecture.content}`
+              content: prompt
             }
           ],
           temperature: 0.7,
-          max_tokens: 2000,
+          max_tokens: 1500,
         }),
       });
 
@@ -170,6 +169,7 @@ serve(async (req) => {
     } catch (error) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
+        console.error('Request timed out while generating content');
         throw new Error('Request timed out while generating content');
       }
       throw error;
