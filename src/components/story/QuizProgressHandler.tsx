@@ -84,7 +84,8 @@ export const handleQuizProgress = async ({
         quiz_number: quizNumber,
         completed_at: new Date().toISOString()
       }, {
-        onConflict: 'user_id,lecture_id,segment_number,quiz_number'
+        onConflict: 'user_id,lecture_id,segment_number,quiz_number',
+        ignoreDuplicates: false
       });
 
     if (quizProgressError) {
@@ -104,7 +105,8 @@ export const handleQuizProgress = async ({
         completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'user_id,lecture_id,segment_number'
+        onConflict: 'user_id,lecture_id,segment_number',
+        ignoreDuplicates: false
       });
 
     if (upsertError) {
