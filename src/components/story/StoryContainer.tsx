@@ -46,6 +46,7 @@ export const StoryContainer = ({
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const [showFailDialog, setShowFailDialog] = useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+  const [currentScore, setCurrentScore] = useState(segmentScores[currentSegmentData?.id] || 0);
   const { toast } = useToast();
 
   const handleContinue = () => {
@@ -78,12 +79,9 @@ export const StoryContainer = ({
         quizNumber,
         isCorrect: true,
         onSuccess: (newScore) => {
-          // Update the local state to reflect the new score
-          const updatedSegmentScores = {
-            ...segmentScores,
-            [currentSegmentData.id]: newScore
-          };
-
+          // Immediately update the local score state
+          setCurrentScore(newScore);
+          
           toast({
             title: "🎯 Correct!",
             description: `+5 points earned! Total: ${newScore}/10 XP`,
@@ -143,6 +141,9 @@ export const StoryContainer = ({
         quizNumber,
         isCorrect: false,
         onSuccess: (newScore) => {
+          // Update the local score state
+          setCurrentScore(newScore);
+          
           if (quizNumber === 2 && newScore < 10) {
             setShowFailDialog(true);
           } else {
@@ -200,7 +201,7 @@ export const StoryContainer = ({
 
       <div className="mb-2">
         <StoryProgress
-          currentPoints={segmentScores[currentSegmentData.id] || 0}
+          currentPoints={currentScore}
           maxPoints={MAX_SCORE}
         />
       </div>
@@ -226,7 +227,7 @@ export const StoryContainer = ({
         onClose={() => setShowFailDialog(false)}
         onRestart={() => window.location.reload()}
         courseId={courseId || ""}
-        score={segmentScores[currentSegmentData.id] || 0}
+        score={currentScore}
       />
     </Card>
   );
