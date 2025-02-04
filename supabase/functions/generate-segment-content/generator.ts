@@ -29,11 +29,16 @@ REQUIREMENTS:
    - Use proper vector notation (\\vec{v}, \\hat{i}, etc)
    - Use proper fractions (\\frac{numerator}{denominator})
    - Always escape backslashes in JSON (\\\\)
-3. Keep content focused and accurate to the lecture material
-4. Create UNIQUE content that does not overlap with other segments
-5. Add relevant emoji markers for key points
-6. Create proper visual hierarchy with clear headings
-7. Provide detailed explanations and examples
+3. Content MUST be UNIQUE:
+   - NEVER repeat concepts or examples from other segments
+   - Each segment should cover a distinct subtopic
+   - Break down complex topics into separate, non-overlapping segments
+   - Focus on different aspects/applications in each segment
+   - Never duplicate formulas or explanations between segments
+4. Add relevant emoji markers for key points
+5. Create proper visual hierarchy with clear headings
+6. Provide detailed explanations and examples
+7. Each segment should be self-contained but part of a logical progression
 
 Required JSON Structure:
 {
@@ -72,7 +77,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. Use clear spacing and proper mathematical notation in all formulas.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. Use clear spacing and proper mathematical notation in all formulas. NEVER repeat content between segments.'
         },
         {
           role: 'user',
@@ -117,7 +122,7 @@ export const cleanGeneratedContent = (content: string): string => {
     .replace(/\t/g, ' ')                // Replace tabs with spaces
     .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
     .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
-    .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
     .replace(/\\/g, '\\\\')             // Escape backslashes properly
     .replace(/"/g, '\\"')               // Escape quotes properly
     .replace(/\s+/g, ' ')               // Collapse multiple spaces
