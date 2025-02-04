@@ -18,24 +18,28 @@ PREVIOUS SEGMENTS CONTEXT (DO NOT REPEAT THIS CONTENT):
 ${previousSegmentsContext}
 ` : ''}
 
-AI Configuration Settings:
-- Temperature: ${aiConfig.temperature} (higher means more random/creative responses)
-- Creativity Level: ${aiConfig.creativity_level} (higher means more creative and exploratory content)
+AI Configuration Settings (IMPORTANT - Adjust content based on these settings):
+- Temperature: ${aiConfig.temperature} (higher means more creative and varied explanations)
+- Creativity Level: ${aiConfig.creativity_level} (higher means more engaging and innovative examples)
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-CONTENT REQUIREMENTS:
+CONTENT REQUIREMENTS (Adjust based on AI settings):
 1. Theory Slide 1 should:
    - Begin with a clear introduction of the concept
-   - Provide detailed mathematical foundations
-   - Include step-by-step explanations
-   - Use clear, academic language
+   - Provide detailed mathematical foundations (depth based on detail_level)
+   - Include step-by-step explanations (complexity based on creativity_level)
+   - Use clear, academic language (style varies with temperature)
+   - Depth and breadth of content should scale with detail_level
+   - Examples should be more creative and varied with higher creativity_level
 
 2. Theory Slide 2 should:
-   - Focus on practical applications
-   - Include multiple worked examples
-   - Connect theory to real-world scenarios
-   - Provide detailed solution steps
+   - Focus on practical applications (variety based on creativity_level)
+   - Include multiple worked examples (complexity scales with detail_level)
+   - Connect theory to real-world scenarios (creativity based on temperature)
+   - Provide detailed solution steps (depth based on detail_level)
+   - Use engaging examples that match the creativity_level
+   - Explanation depth should match the detail_level setting
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:

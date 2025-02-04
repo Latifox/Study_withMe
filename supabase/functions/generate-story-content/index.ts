@@ -21,7 +21,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content first
+    // Fetch lecture content and AI config
     const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content')
@@ -32,6 +32,27 @@ serve(async (req) => {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
+
+    // Fetch AI configuration
+    const { data: aiConfig, error: aiConfigError } = await supabaseClient
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .single();
+
+    if (aiConfigError) {
+      console.log('No AI config found, using defaults');
+    }
+
+    // Use default values if no config is found
+    const config = aiConfig || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      custom_instructions: ''
+    };
+
+    console.log('Using AI config:', config);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -46,6 +67,12 @@ serve(async (req) => {
             role: 'system',
             content: `You are an expert educational content organizer. Generate exactly 10 clear, descriptive segment titles for this lecture content in the same language as the lecture content.
             
+            AI Configuration Settings:
+            - Temperature: ${config.temperature} (higher means more creative/varied titles)
+            - Creativity Level: ${config.creativity_level} (higher means more engaging and unique titles)
+            - Detail Level: ${config.detail_level} (higher means more specific and comprehensive titles)
+            ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
+            
             Rules for titles:
             1. Each title should be concise but descriptive (3-7 words)
             2. Titles should follow a logical progression
@@ -53,6 +80,7 @@ serve(async (req) => {
             4. Avoid technical jargon unless necessary
             5. Ensure titles are engaging and clear
             6. Use the same language as the lecture content
+            7. Adjust creativity and specificity based on the AI configuration
             
             Return a JSON object with exactly 10 numbered titles. DO NOT include any markdown formatting or code block indicators.
             Example format:
@@ -68,7 +96,7 @@ serve(async (req) => {
             content: lecture.content
           }
         ],
-        temperature: 0.7,
+        temperature: config.temperature,
       }),
     });
 
