@@ -145,7 +145,16 @@ export const cleanGeneratedContent = (content: string): string => {
   try {
     // First try to parse as is - if it's already valid JSON
     const parsed = JSON.parse(content);
-    console.log('Content was already valid JSON');
+    
+    // Process LaTeX content in theory slides
+    if (parsed.theory_slide_1) {
+      parsed.theory_slide_1 = processLatexContent(parsed.theory_slide_1);
+    }
+    if (parsed.theory_slide_2) {
+      parsed.theory_slide_2 = processLatexContent(parsed.theory_slide_2);
+    }
+
+    console.log('Content was valid JSON and processed:', JSON.stringify(parsed, null, 2));
     return JSON.stringify(parsed);
   } catch (error) {
     console.log('Direct parsing failed, attempting cleaning...', error);
@@ -154,16 +163,12 @@ export const cleanGeneratedContent = (content: string): string => {
   // More aggressive cleaning of the content
   let cleanedContent = content
     .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
-    .replace(/\\n/g, ' ')               // Replace escaped newlines with spaces
-    .replace(/\n/g, ' ')                // Replace actual newlines with spaces
-    .replace(/\r/g, ' ')                // Replace carriage returns with spaces
+    .replace(/\\n/g, '\n')              // Replace escaped newlines with actual newlines
+    .replace(/\r/g, '\n')               // Replace carriage returns with newlines
     .replace(/\t/g, ' ')                // Replace tabs with spaces
     .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
     .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-    .replace(/\\/g, '\\\\')             // Escape backslashes properly
-    .replace(/"/g, '\\"')               // Escape quotes properly
-    .replace(/\s+/g, ' ')               // Collapse multiple spaces
     .trim();                            // Remove leading/trailing whitespace
 
   // Attempt to find and fix common JSON structural issues
@@ -185,34 +190,62 @@ export const cleanGeneratedContent = (content: string): string => {
     }
   }
 
-  console.log('Content after cleaning:', cleanedContent);
-
   try {
-    // Try to parse and validate the structure
+    // Parse and process the cleaned content
     const parsed = JSON.parse(cleanedContent);
     
-    // Validate required fields
-    if (!parsed.theory_slide_1 || !parsed.theory_slide_2 || !parsed.quiz_question_1 || !parsed.quiz_question_2) {
-      throw new Error('Missing required fields in JSON structure');
+    // Process LaTeX content in theory slides
+    if (parsed.theory_slide_1) {
+      parsed.theory_slide_1 = processLatexContent(parsed.theory_slide_1);
+    }
+    if (parsed.theory_slide_2) {
+      parsed.theory_slide_2 = processLatexContent(parsed.theory_slide_2);
     }
     
-    // Validate quiz questions
-    for (const quiz of [parsed.quiz_question_1, parsed.quiz_question_2]) {
-      if (!quiz.type || !quiz.question || !quiz.explanation) {
-        throw new Error('Invalid quiz question structure');
-      }
-      if (quiz.type === 'multiple_choice' && (!Array.isArray(quiz.options) || quiz.options.length < 4)) {
-        throw new Error('Multiple choice question must have at least 4 options');
-      }
-      if (quiz.type === 'true_false' && typeof quiz.correctAnswer !== 'boolean') {
-        throw new Error('True/False question must have a boolean correct answer');
-      }
-    }
-
+    // Validate required fields and structure
+    validateContent(parsed);
+    
+    console.log('Final processed content:', JSON.stringify(parsed, null, 2));
     return JSON.stringify(parsed);
   } catch (error) {
     console.error('Error parsing or validating cleaned content:', error);
     console.error('Problematic content:', cleanedContent);
     throw new Error(`Failed to parse or validate generated content: ${error.message}`);
+  }
+};
+
+const processLatexContent = (content: string): string => {
+  return content
+    // Ensure proper newlines around block math
+    .replace(/\$\$(.*?)\$\$/gs, (match, formula) => {
+      return `\n\n$$\n${formula.trim()}\n$$\n\n`;
+    })
+    // Fix common LaTeX command issues
+    .replace(/\\ext\{/g, '\\text{')
+    .replace(/ewline/g, '\\newline')
+    // Ensure proper spacing around inline math
+    .replace(/\$(.*?)\$/g, (match, formula) => {
+      return `$${formula.trim()}$`;
+    })
+    // Ensure proper line breaks for markdown
+    .replace(/\n{3,}/g, '\n\n')  // Replace multiple newlines with double newlines
+    .trim();
+};
+
+const validateContent = (content: any) => {
+  if (!content.theory_slide_1 || !content.theory_slide_2 || !content.quiz_question_1 || !content.quiz_question_2) {
+    throw new Error('Missing required fields in JSON structure');
+  }
+
+  for (const quiz of [content.quiz_question_1, content.quiz_question_2]) {
+    if (!quiz.type || !quiz.question || !quiz.explanation) {
+      throw new Error('Invalid quiz question structure');
+    }
+    if (quiz.type === 'multiple_choice' && (!Array.isArray(quiz.options) || quiz.options.length < 4)) {
+      throw new Error('Multiple choice question must have at least 4 options');
+    }
+    if (quiz.type === 'true_false' && typeof quiz.correctAnswer !== 'boolean') {
+      throw new Error('True/False question must have a boolean correct answer');
+    }
   }
 };
