@@ -1,5 +1,5 @@
-import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import TheorySlide from "./TheorySlide";
@@ -86,7 +86,7 @@ export const StoryContainer = ({
           quiz_number: quizNumber,
           completed_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id, lecture_id, segment_number, quiz_number'
+          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
         });
 
       if (quizProgressError) {
@@ -106,10 +106,16 @@ export const StoryContainer = ({
         .eq('user_id', user.id)
         .eq('lecture_id', parseInt(lectureId))
         .eq('segment_number', segmentNumber)
-        .single();
+        .maybeSingle();
 
+      // If there's an error other than no rows found
       if (progressError && progressError.code !== 'PGRST116') {
         console.error('Error fetching progress:', progressError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch progress. Please try again.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -126,8 +132,6 @@ export const StoryContainer = ({
           score: newScore,
           completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,lecture_id,segment_number'
         });
 
       if (updateError) {
@@ -282,3 +286,5 @@ export const StoryContainer = ({
     </Card>
   );
 };
+
+export default StoryContainer;
