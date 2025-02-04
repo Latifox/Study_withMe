@@ -66,7 +66,7 @@ export const generateContent = async (prompt: string) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -89,10 +89,13 @@ export const generateContent = async (prompt: string) => {
   }
 
   const data = await response.json();
+  console.log('Raw OpenAI response:', data.choices[0].message.content); // Added logging
   return data.choices[0].message.content;
 };
 
 export const cleanGeneratedContent = (content: string): string => {
+  console.log('Content before cleaning:', content); // Added logging
+
   // More robust cleaning of the generated content
   let cleanedContent = content
     .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
@@ -102,12 +105,17 @@ export const cleanGeneratedContent = (content: string): string => {
     .replace(/\n{3,}/g, '\n\n')         // Replace multiple newlines with double newlines
     .trim();
 
+  console.log('Content after initial cleaning:', cleanedContent); // Added logging
+
   // Try to parse and stringify to ensure valid JSON
   try {
     const parsed = JSON.parse(cleanedContent);
-    return JSON.stringify(parsed);
+    const stringified = JSON.stringify(parsed);
+    console.log('Successfully parsed and stringified JSON'); // Added logging
+    return stringified;
   } catch (error) {
     console.error('Error parsing cleaned content:', error);
+    console.error('Problematic content:', cleanedContent); // Added logging
     throw new Error('Failed to parse generated content as JSON');
   }
 };
