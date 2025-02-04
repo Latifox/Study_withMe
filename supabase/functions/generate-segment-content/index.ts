@@ -106,7 +106,7 @@ For Quiz Questions:
    - Include a thorough explanation
    - Connect to the theory content
 
-Return JSON in this format:
+Return JSON in this format (NO MARKDOWN CODE BLOCKS):
 {
   "theory_slide_1": "Core concepts and fundamentals in markdown",
   "theory_slide_2": "Applications and examples in markdown",
@@ -131,7 +131,9 @@ Remember to:
 - Keep language clear and professional
 - Maintain consistent depth across all content
 - Ensure all content is directly relevant to "${segmentTitle}"
-- Make complex concepts accessible without oversimplifying`;
+- Make complex concepts accessible without oversimplifying
+- DO NOT wrap the response in markdown code blocks
+- Properly escape any quotes or special characters in the content`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -145,7 +147,7 @@ Remember to:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert educational content creator. Create engaging, comprehensive, and clear content that follows best practices in educational design.'
+              content: 'You are an expert educational content creator. Create engaging, comprehensive, and clear content that follows best practices in educational design. Return only valid JSON without markdown code blocks.'
             },
             {
               role: 'user',
@@ -170,16 +172,44 @@ Remember to:
 
       let content;
       try {
-        const cleanContent = data.choices[0].message.content.replace(/```json\n|\n```/g, '');
+        // Remove any markdown code block indicators and clean the response
+        const responseContent = data.choices[0].message.content;
+        console.log('Raw response content:', responseContent);
+        
+        // Clean the content by removing markdown code blocks and any leading/trailing whitespace
+        const cleanContent = responseContent
+          .replace(/```json\s*|\s*```/g, '')
+          .trim();
+        
+        console.log('Cleaned content:', cleanContent);
+        
+        // Parse the cleaned content
         content = JSON.parse(cleanContent);
         
-        if (!content.theory_slide_1 || !content.theory_slide_2 || 
-            !content.quiz_question_1 || !content.quiz_question_2) {
-          throw new Error('Missing required content fields');
+        // Validate the required fields
+        const requiredFields = ['theory_slide_1', 'theory_slide_2', 'quiz_question_1', 'quiz_question_2'];
+        const missingFields = requiredFields.filter(field => !content[field]);
+        
+        if (missingFields.length > 0) {
+          throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+        
+        // Validate quiz question structure
+        if (!content.quiz_question_1.type || !content.quiz_question_1.question || 
+            !content.quiz_question_1.options || !content.quiz_question_1.correctAnswer || 
+            !content.quiz_question_1.explanation) {
+          throw new Error('Invalid multiple choice question structure');
+        }
+        
+        if (!content.quiz_question_2.type || !content.quiz_question_2.question || 
+            typeof content.quiz_question_2.correctAnswer !== 'boolean' || 
+            !content.quiz_question_2.explanation) {
+          throw new Error('Invalid true/false question structure');
         }
       } catch (error) {
-        console.error('Error parsing content:', error);
-        throw new Error(`Failed to parse generated content: ${error.message}`);
+        console.error('Error parsing or validating content:', error);
+        console.error('Failed content:', data.choices[0].message.content);
+        throw new Error(`Failed to parse or validate generated content: ${error.message}`);
       }
 
       const { data: segmentContent, error: insertError } = await supabaseClient
