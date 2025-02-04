@@ -1,6 +1,6 @@
 
 import ReactMarkdown from 'react-markdown';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
@@ -18,6 +18,19 @@ interface CodeProps {
 }
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
+  const createMotionComponent = (Component: keyof JSX.IntrinsicElements) => {
+    return motion[Component];
+  };
+
+  const MotionH1 = createMotionComponent('h1');
+  const MotionH2 = createMotionComponent('h2');
+  const MotionH3 = createMotionComponent('h3');
+  const MotionP = createMotionComponent('p');
+  const MotionUl = createMotionComponent('ul');
+  const MotionOl = createMotionComponent('ol');
+  const MotionLi = createMotionComponent('li');
+  const MotionBlockquote = createMotionComponent('blockquote');
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -35,7 +48,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
             <ReactMarkdown
               components={{
                 h1: ({ node, ...props }) => (
-                  <motion.h1 
+                  <MotionH1 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
@@ -44,7 +57,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   />
                 ),
                 h2: ({ node, ...props }) => (
-                  <motion.h2
+                  <MotionH2
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 }}
@@ -53,7 +66,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   />
                 ),
                 h3: ({ node, ...props }) => (
-                  <motion.h3
+                  <MotionH3
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
@@ -62,7 +75,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   />
                 ),
                 p: ({ node, ...props }) => (
-                  <motion.p
+                  <MotionP
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
@@ -71,7 +84,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   />
                 ),
                 ul: ({ node, ...props }) => (
-                  <motion.ul
+                  <MotionUl
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 }}
@@ -80,7 +93,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   />
                 ),
                 ol: ({ node, ...props }) => (
-                  <motion.ol
+                  <MotionOl
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 }}
@@ -89,7 +102,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   />
                 ),
                 li: ({ node, ...props }) => (
-                  <motion.li
+                  <MotionLi
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.7 }}
@@ -113,7 +126,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                     </div>
                   ),
                 blockquote: ({ node, ...props }) => (
-                  <motion.blockquote 
+                  <MotionBlockquote 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.8 }}
