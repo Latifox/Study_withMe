@@ -1,6 +1,5 @@
 
 export const generatePrompt = (segmentTitle: string, lectureContent: string) => {
-  // Enhanced sanitization to prevent JSON parsing issues
   const sanitizedContent = lectureContent
     .replace(/[\n\r]/g, ' ')  // Replace newlines with spaces
     .replace(/[\t]/g, ' ')    // Replace tabs with spaces
@@ -83,7 +82,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. NEVER include raw newlines or unescaped special characters in the JSON strings. Format all content as proper JSON with escaped characters.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. Format all content as proper JSON with escaped characters.'
         },
         {
           role: 'user',
@@ -115,7 +114,7 @@ export const cleanGeneratedContent = (content: string): string => {
     console.log('Content was already valid JSON');
     return JSON.stringify(parsed);
   } catch (error) {
-    console.log('Direct parsing failed, attempting cleaning...');
+    console.log('Direct parsing failed, attempting cleaning...', error);
   }
 
   // More aggressive cleaning of the content
@@ -138,6 +137,8 @@ export const cleanGeneratedContent = (content: string): string => {
     const jsonStart = cleanedContent.indexOf('{');
     if (jsonStart !== -1) {
       cleanedContent = cleanedContent.substring(jsonStart);
+    } else {
+      throw new Error('No JSON object found in content');
     }
   }
 
@@ -145,6 +146,8 @@ export const cleanGeneratedContent = (content: string): string => {
     const jsonEnd = cleanedContent.lastIndexOf('}');
     if (jsonEnd !== -1) {
       cleanedContent = cleanedContent.substring(0, jsonEnd + 1);
+    } else {
+      throw new Error('No closing brace found in JSON content');
     }
   }
 
@@ -179,3 +182,4 @@ export const cleanGeneratedContent = (content: string): string => {
     throw new Error(`Failed to parse or validate generated content: ${error.message}`);
   }
 };
+
