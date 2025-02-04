@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +8,7 @@ import SegmentProgress from "./SegmentProgress";
 import StoryProgress from "./StoryProgress";
 import StoryFailDialog from "./StoryFailDialog";
 import StoryCompletionScreen from "./StoryCompletionScreen";
-import { QuizProgressHandler } from "./QuizProgressHandler";
+import { handleQuizProgress } from "./QuizProgressHandler";
 import { POINTS_PER_CORRECT_ANSWER, MAX_SCORE } from "@/utils/scoreUtils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -71,7 +71,7 @@ export const StoryContainer = ({
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
       const quizNumber = questionIndex + 1;
 
-      const { handleQuizCompletion } = await QuizProgressHandler({
+      await handleQuizProgress({
         userId: user.id,
         lectureId: parseInt(lectureId),
         segmentNumber,
@@ -105,8 +105,6 @@ export const StoryContainer = ({
           });
         }
       });
-
-      await handleQuizCompletion();
 
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);
