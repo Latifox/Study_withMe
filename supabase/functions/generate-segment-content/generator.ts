@@ -1,12 +1,16 @@
 
 export const generatePrompt = (segmentTitle: string, lectureContent: string) => {
-  // Sanitize the lecture content to prevent JSON parsing issues
+  // Enhanced sanitization to prevent JSON parsing issues
   const sanitizedContent = lectureContent
     .replace(/[\n\r]/g, ' ')  // Replace newlines with spaces
     .replace(/[\t]/g, ' ')    // Replace tabs with spaces
-    .replace(/\\/g, '\\\\')   // Escape backslashes
-    .replace(/"/g, '\\"')     // Escape quotes
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
+    .replace(/\\/g, '\\\\')   // Escape backslashes properly
+    .replace(/"/g, '\\"')     // Escape quotes properly
+    .replace(/'/g, "\\'")     // Escape single quotes
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+    .replace(/[\u2018\u2019]/g, "'")  // Replace smart quotes
+    .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
+    .trim(); // Remove leading/trailing whitespace
 
   return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". Do not repeat content from other segments. Format as a STRICT JSON object with carefully escaped strings.
 
@@ -79,7 +83,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. NO code blocks, NO invalid characters.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. NEVER include raw newlines or unescaped special characters in the JSON strings. Format all content as proper JSON with escaped characters.'
         },
         {
           role: 'user',
@@ -87,7 +91,7 @@ export const generateContent = async (prompt: string) => {
         }
       ],
       temperature: 0.7,
-      max_tokens: 3000, // Increased for more detailed content
+      max_tokens: 3000,
     }),
   });
 
@@ -106,7 +110,7 @@ export const cleanGeneratedContent = (content: string): string => {
   console.log('Content before cleaning:', content);
 
   try {
-    // First try to parse as is - if it's already valid JSON, just return it
+    // First try to parse as is - if it's already valid JSON
     const parsed = JSON.parse(content);
     console.log('Content was already valid JSON');
     return JSON.stringify(parsed);
@@ -114,15 +118,35 @@ export const cleanGeneratedContent = (content: string): string => {
     console.log('Direct parsing failed, attempting cleaning...');
   }
 
-  // If direct parsing failed, try cleaning the content
+  // More aggressive cleaning of the content
   let cleanedContent = content
-    .replace(/```json\s*|\s*```/g, '') // Remove code blocks
-    .replace(/\\n/g, '\n')            // Convert escaped newlines to actual newlines
-    .replace(/[\u2018\u2019]/g, "'")  // Replace smart quotes
-    .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
-    .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove all control characters
-    .replace(/\\\\/g, '\\')           // Fix double escaped backslashes
-    .trim();
+    .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
+    .replace(/\\n/g, ' ')               // Replace escaped newlines with spaces
+    .replace(/\n/g, ' ')                // Replace actual newlines with spaces
+    .replace(/\r/g, ' ')                // Replace carriage returns with spaces
+    .replace(/\t/g, ' ')                // Replace tabs with spaces
+    .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
+    .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+    .replace(/\\/g, '\\\\')             // Escape backslashes properly
+    .replace(/"/g, '\\"')               // Escape quotes properly
+    .replace(/\s+/g, ' ')               // Collapse multiple spaces
+    .trim();                            // Remove leading/trailing whitespace
+
+  // Attempt to find and fix common JSON structural issues
+  if (!cleanedContent.startsWith('{')) {
+    const jsonStart = cleanedContent.indexOf('{');
+    if (jsonStart !== -1) {
+      cleanedContent = cleanedContent.substring(jsonStart);
+    }
+  }
+
+  if (!cleanedContent.endsWith('}')) {
+    const jsonEnd = cleanedContent.lastIndexOf('}');
+    if (jsonEnd !== -1) {
+      cleanedContent = cleanedContent.substring(0, jsonEnd + 1);
+    }
+  }
 
   console.log('Content after cleaning:', cleanedContent);
 
@@ -130,7 +154,7 @@ export const cleanGeneratedContent = (content: string): string => {
     // Try to parse and validate the structure
     const parsed = JSON.parse(cleanedContent);
     
-    // Validate required fields and structure
+    // Validate required fields
     if (!parsed.theory_slide_1 || !parsed.theory_slide_2 || !parsed.quiz_question_1 || !parsed.quiz_question_2) {
       throw new Error('Missing required fields in JSON structure');
     }
@@ -148,7 +172,6 @@ export const cleanGeneratedContent = (content: string): string => {
       }
     }
 
-    // Return the validated and formatted JSON
     return JSON.stringify(parsed);
   } catch (error) {
     console.error('Error parsing or validating cleaned content:', error);
