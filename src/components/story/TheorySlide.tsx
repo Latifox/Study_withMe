@@ -1,3 +1,4 @@
+
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -24,55 +25,128 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
-      <Card className="p-6 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-200">
-        <div className="prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
-          <ReactMarkdown
-            components={{
-              h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mb-4 text-primary" {...props} />,
-              h2: ({ node, ...props }) => <h2 className="text-2xl font-semibold mb-3 text-primary/90" {...props} />,
-              h3: ({ node, ...props }) => <h3 className="text-xl font-medium mb-2 text-primary/80" {...props} />,
-              p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
-              ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-              ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-              li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-              code: ({ node, inline, className, children, ...props }: CodeProps) => 
-                inline ? (
-                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
-                    {children}
-                  </code>
-                ) : (
-                  <pre className="relative">
-                    <code className="block bg-gray-50 dark:bg-gray-900 p-4 rounded-lg my-4 text-sm font-mono leading-relaxed overflow-x-auto border border-gray-200 dark:border-gray-700 shadow-sm" {...props}>
+      <Card className="relative overflow-hidden">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 opacity-50" />
+        
+        {/* Content container with glassmorphism effect */}
+        <div className="relative p-8 backdrop-blur-sm">
+          <div className="prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                h1: ({ node, ...props }) => (
+                  <motion.h1 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-4xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+                    {...props}
+                  />
+                ),
+                h2: ({ node, ...props }) => (
+                  <motion.h2
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-3xl font-semibold mb-4 text-primary/90"
+                    {...props}
+                  />
+                ),
+                h3: ({ node, ...props }) => (
+                  <motion.h3
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-2xl font-medium mb-3 text-primary/80"
+                    {...props}
+                  />
+                ),
+                p: ({ node, ...props }) => (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="mb-4 leading-relaxed text-foreground/90"
+                    {...props}
+                  />
+                ),
+                ul: ({ node, ...props }) => (
+                  <motion.ul
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="list-disc pl-6 mb-4 space-y-2 marker:text-primary"
+                    {...props}
+                  />
+                ),
+                ol: ({ node, ...props }) => (
+                  <motion.ol
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="list-decimal pl-6 mb-4 space-y-2 marker:text-primary"
+                    {...props}
+                  />
+                ),
+                li: ({ node, ...props }) => (
+                  <motion.li
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    className="mb-1"
+                    {...props}
+                  />
+                ),
+                code: ({ node, inline, className, children, ...props }: CodeProps) => 
+                  inline ? (
+                    <code className="bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded text-sm font-mono text-primary" {...props}>
                       {children}
                     </code>
-                  </pre>
+                  ) : (
+                    <div className="relative group">
+                      <pre className="overflow-x-auto p-4 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/10">
+                        <code className="text-sm font-mono text-primary/90" {...props}>
+                          {children}
+                        </code>
+                      </pre>
+                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ),
+                blockquote: ({ node, ...props }) => (
+                  <motion.blockquote 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.8 }}
+                    className="border-l-4 border-primary/50 pl-4 my-6 italic text-foreground/80"
+                    {...props}
+                  />
                 ),
-              blockquote: ({ node, ...props }) => (
-                <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-gray-600 dark:text-gray-300" {...props} />
-              ),
-              strong: ({ node, ...props }) => (
-                <strong className="font-bold text-primary dark:text-primary/90" {...props} />
-              ),
-              em: ({ node, ...props }) => (
-                <em className="italic text-gray-700 dark:text-gray-200" {...props} />
-              ),
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+                strong: ({ node, ...props }) => (
+                  <strong className="font-bold text-primary" {...props} />
+                ),
+                em: ({ node, ...props }) => (
+                  <em className="italic text-primary/80" {...props} />
+                ),
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
         </div>
       </Card>
       
       <motion.div
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.9 }}
+        className="sticky bottom-4"
       >
         <Button
           onClick={onContinue}
-          className="w-full bg-gradient-to-r from-primary/80 to-primary hover:from-primary hover:to-primary/90 text-white shadow-md"
+          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
         >
           Continue
-          <ChevronRight className="ml-2 h-4 w-4" />
+          <ChevronRight className="ml-2 h-4 w-4 animate-pulse" />
         </Button>
       </motion.div>
     </motion.div>
