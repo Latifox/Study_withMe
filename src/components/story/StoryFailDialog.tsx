@@ -35,9 +35,13 @@ const StoryFailDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Keep practicing!</DialogTitle>
-          <DialogDescription>
-            You need 10 XP to complete this node. Current score: {score} XP.
-            Would you like to try again or return to the course?
+          <DialogDescription className="space-y-2">
+            <p>
+              You need 10 XP to complete this node. Current score: {score} XP.
+            </p>
+            <p>
+              Would you like to try again or return to the course?
+            </p>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex justify-end space-x-2">

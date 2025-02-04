@@ -6,9 +6,9 @@ import StoryQuiz from "./StoryQuiz";
 import SegmentProgress from "./SegmentProgress";
 import StoryProgress from "./StoryProgress";
 import StoryFailDialog from "./StoryFailDialog";
+import StoryCompletionScreen from "./StoryCompletionScreen";
 import { StoryContent, SegmentContent } from "@/hooks/useStoryContent";
 import { supabase } from "@/integrations/supabase/client";
-import { useParams } from "react-router-dom";
 
 interface StoryContainerProps {
   storyContent: {
@@ -47,6 +47,7 @@ export const StoryContainer = ({
   const questionIndex = currentStep - 2;
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const [showFailDialog, setShowFailDialog] = useState(false);
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const { toast } = useToast();
 
   const handleContinue = () => {
@@ -133,10 +134,11 @@ export const StoryContainer = ({
       // If this is the second quiz, check total score
       if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
         if (newScore >= MAX_SCORE) {
-          // Both quizzes correct, complete the segment
+          // Both quizzes correct, show completion screen
+          setShowCompletionScreen(true);
           onCorrectAnswer();
           toast({
-            title: "🌟 Segment Complete!",
+            title: "🌟 Node Complete!",
             description: "Great job! You've mastered this node.",
           });
         } else {
@@ -204,47 +206,6 @@ export const StoryContainer = ({
     }
   };
 
-  const handleRestartNode = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !lectureId) return;
-
-      const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
-
-      // Reset quiz progress
-      await supabase
-        .from('quiz_progress')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId))
-        .eq('segment_number', segmentNumber);
-
-      // Reset user progress
-      await supabase
-        .from('user_progress')
-        .upsert({
-          user_id: user.id,
-          lecture_id: parseInt(lectureId),
-          segment_number: segmentNumber,
-          score: 0,
-          completed_at: null,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id, lecture_id, segment_number'
-        });
-
-      setShowFailDialog(false);
-      window.location.reload();
-    } catch (error) {
-      console.error('Error resetting progress:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reset progress. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   if (!currentSegmentData.slides || !currentSegmentData.questions) {
     return (
       <Card className="p-2">
@@ -256,6 +217,10 @@ export const StoryContainer = ({
         </div>
       </Card>
     );
+  }
+
+  if (showCompletionScreen) {
+    return <StoryCompletionScreen onBack={() => window.history.back()} />;
   }
 
   return (
@@ -295,7 +260,7 @@ export const StoryContainer = ({
       <StoryFailDialog
         isOpen={showFailDialog}
         onClose={() => setShowFailDialog(false)}
-        onRestart={handleRestartNode}
+        onRestart={() => window.location.reload()}
         courseId={courseId || ""}
         score={segmentScores[currentSegmentData.id] || 0}
       />
