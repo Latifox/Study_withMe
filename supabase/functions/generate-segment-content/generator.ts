@@ -1,4 +1,4 @@
-export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any) => {
+export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any, previousSegments: any[] = []) => {
   const sanitizedContent = lectureContent
     .replace(/[\n\r]/g, ' ')
     .replace(/[\t]/g, ' ')
@@ -10,7 +10,22 @@ export const generatePrompt = (segmentTitle: string, lectureContent: string, aiC
     .replace(/[\u201C\u201D]/g, '"')
     .trim();
 
+  const previousSegmentsContext = previousSegments.map((segment, index) => `
+Previous Segment ${index + 1}: "${segment.title}"
+Theory Content:
+${segment.theory_slide_1}
+${segment.theory_slide_2}
+Quiz Questions:
+${JSON.stringify(segment.quiz_question_1)}
+${JSON.stringify(segment.quiz_question_2)}
+`).join('\n\n');
+
   return `Create UNIQUE educational content based on this specific lecture material, focusing on a specific subtopic related to "${segmentTitle}". Do not repeat content from other segments. Format as a STRICT JSON object with carefully escaped strings.
+
+${previousSegments.length > 0 ? `
+PREVIOUS SEGMENTS CONTEXT (DO NOT REPEAT THIS CONTENT):
+${previousSegmentsContext}
+` : ''}
 
 AI Configuration Settings:
 - Temperature: ${aiConfig.temperature} (higher means more random/creative responses)
@@ -35,7 +50,7 @@ REQUIREMENTS:
    - Use proper fractions (\\frac{numerator}{denominator})
    - Always escape backslashes in JSON (\\\\)
 3. Content MUST be UNIQUE:
-   - NEVER repeat concepts or examples from other segments
+   - NEVER repeat concepts or examples from previous segments
    - Each segment should cover a distinct subtopic
    - Break down complex topics into separate, non-overlapping segments
    - Focus on different aspects/applications in each segment

@@ -33,6 +33,18 @@ serve(async (req) => {
       );
     }
 
+    // Fetch previous segments' content
+    const previousSegments = [];
+    for (let i = 1; i < segmentNumber; i++) {
+      const prevContent = await getExistingContent(supabaseClient, storyStructure.id, i);
+      if (prevContent) {
+        previousSegments.push({
+          title: storyStructure[`segment_${i}_title`],
+          ...prevContent
+        });
+      }
+    }
+
     // Fetch lecture content and AI config
     const [lecture, aiConfig] = await Promise.all([
       getLectureContent(supabaseClient, lectureId),
@@ -56,7 +68,7 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = generatePrompt(segmentTitle, lecture.content, config);
+      const prompt = generatePrompt(segmentTitle, lecture.content, config, previousSegments);
       const responseContent = await generateContent(prompt);
       
       console.log('Successfully received OpenAI response');
