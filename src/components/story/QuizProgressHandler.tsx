@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { calculateNewScore, MAX_SCORE } from "@/utils/scoreUtils";
+import { POINTS_PER_CORRECT_ANSWER, MAX_SCORE } from "@/utils/scoreUtils";
 
 interface QuizProgressHandlerProps {
   userId: string;
@@ -40,9 +40,8 @@ export const handleQuizProgress = async ({
     const quizAlreadyCompleted = !!existingQuizProgress?.completed_at;
     console.log('Quiz already completed:', quizAlreadyCompleted);
 
-    // If quiz is already completed, don't update anything
+    // If quiz is already completed, return current score without updating
     if (quizAlreadyCompleted) {
-      // Get current score to return
       const { data: currentProgress } = await supabase
         .from('user_progress')
         .select('score')
@@ -55,7 +54,27 @@ export const handleQuizProgress = async ({
       return;
     }
 
-    // Record quiz completion
+    // Get current progress
+    const { data: existingProgress, error: progressError } = await supabase
+      .from('user_progress')
+      .select('score')
+      .eq('user_id', userId)
+      .eq('lecture_id', lectureId)
+      .eq('segment_number', segmentNumber)
+      .maybeSingle();
+
+    if (progressError) {
+      console.error('Error fetching existing progress:', progressError);
+      onError();
+      return;
+    }
+
+    // Calculate new score
+    const currentScore = existingProgress?.score || 0;
+    const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, MAX_SCORE);
+    console.log('Score calculation:', { currentScore, newScore });
+
+    // Record quiz completion first
     const { error: quizProgressError } = await supabase
       .from('quiz_progress')
       .upsert({
@@ -72,27 +91,7 @@ export const handleQuizProgress = async ({
       return;
     }
 
-    // Get current score
-    const { data: existingProgress, error: progressError } = await supabase
-      .from('user_progress')
-      .select('score')
-      .eq('user_id', userId)
-      .eq('lecture_id', lectureId)
-      .eq('segment_number', segmentNumber)
-      .maybeSingle();
-
-    if (progressError) {
-      console.error('Error fetching existing progress:', progressError);
-      onError();
-      return;
-    }
-
-    console.log('Existing progress:', existingProgress);
-    const currentScore = existingProgress?.score || 0;
-    const newScore = currentScore + 5; // Add 5 points for each new quiz completion
-    console.log('Score calculation:', { currentScore, newScore });
-
-    // Update or insert progress
+    // Update user progress
     const { error: upsertError } = await supabase
       .from('user_progress')
       .upsert({
