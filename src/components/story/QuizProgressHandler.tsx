@@ -83,10 +83,9 @@ export const handleQuizProgress = async ({
         segment_number: segmentNumber,
         quiz_number: quizNumber,
         completed_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,lecture_id,segment_number,quiz_number',
-        ignoreDuplicates: false
-      });
+      })
+      .onConflict('user_id, lecture_id, segment_number, quiz_number')
+      .merge(['completed_at']);
 
     if (quizProgressError) {
       console.error('Error saving quiz progress:', quizProgressError);
@@ -94,7 +93,7 @@ export const handleQuizProgress = async ({
       return;
     }
 
-    // Update user progress with explicit onConflict handling
+    // Update user progress with explicit merge fields
     const { error: upsertError } = await supabase
       .from('user_progress')
       .upsert({
@@ -104,10 +103,9 @@ export const handleQuizProgress = async ({
         score: newScore,
         completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,lecture_id,segment_number',
-        ignoreDuplicates: false
-      });
+      })
+      .onConflict('user_id, lecture_id, segment_number')
+      .merge(['score', 'completed_at', 'updated_at']);
 
     if (upsertError) {
       console.error('Error updating progress:', upsertError);
