@@ -1,3 +1,4 @@
+
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -32,32 +33,6 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionOl = createMotionComponent('ol');
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
-
-  // Process the content to ensure LaTeX is properly formatted
-  const processContent = (rawContent: string) => {
-    if (!rawContent) return '';
-    
-    console.log('Raw content before processing:', rawContent);
-    
-    const processed = rawContent
-      // Handle align* environments
-      .replace(/\\begin\{align\*\}/g, '$$\\begin{align*}')
-      .replace(/\\end\{align\*\}/g, '\\end{align*}$$')
-      // Handle text commands
-      .replace(/\\text\{([^}]*)\}/g, '\\text{$1}')
-      // Handle textbf commands
-      .replace(/\\textbf\{([^}]*)\}/g, '\\mathbf{$1}')
-      // Handle escaped backslashes
-      .replace(/\\\\/g, '\\')
-      // Ensure proper spacing around math blocks
-      .replace(/\$\$/g, '\n$$\n')
-      // Clean up any double spaces or unnecessary newlines
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    console.log('Processed content:', processed);
-    return processed;
-  };
 
   return (
     <motion.div 
@@ -138,29 +113,21 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                     {...props}
                   />
                 ),
-                code: ({ node, inline, className, children, ...props }: CodeProps) => {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const content = String(children).replace(/\n$/, '');
-                  
-                  if (inline) {
-                    return (
-                      <code className="bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded text-sm font-mono text-primary" {...props}>
-                        {content}
-                      </code>
-                    );
-                  }
-
-                  return (
+                code: ({ node, inline, className, children, ...props }: CodeProps) => 
+                  inline ? (
+                    <code className="bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded text-sm font-mono text-primary" {...props}>
+                      {children}
+                    </code>
+                  ) : (
                     <div className="relative group">
                       <pre className="overflow-x-auto p-4 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/10">
-                        <code className={`text-sm font-mono text-primary/90 ${match ? `language-${match[1]}` : ''}`} {...props}>
-                          {content}
+                        <code className="text-sm font-mono text-primary/90" {...props}>
+                          {children}
                         </code>
                       </pre>
                       <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                  );
-                },
+                  ),
                 blockquote: ({ node, ...props }) => (
                   <MotionBlockquote 
                     initial={{ opacity: 0, x: -20 }}
@@ -172,7 +139,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 )
               }}
             >
-              {processContent(content)}
+              {content}
             </ReactMarkdown>
           </div>
         </div>
@@ -197,3 +164,4 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 };
 
 export default TheorySlide;
+
