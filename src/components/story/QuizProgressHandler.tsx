@@ -19,8 +19,10 @@ export const handleQuizProgress = async ({
   onError,
 }: QuizProgressHandlerProps) => {
   try {
+    console.log('Handling quiz progress for:', { userId, lectureId, segmentNumber, quizNumber });
+
     // Check if quiz was already completed
-    const { data: existingQuizProgress } = await supabase
+    const { data: existingQuizProgress, error: quizError } = await supabase
       .from('quiz_progress')
       .select('completed_at')
       .eq('user_id', userId)
@@ -29,13 +31,20 @@ export const handleQuizProgress = async ({
       .eq('quiz_number', quizNumber)
       .maybeSingle();
 
+    if (quizError) {
+      console.error('Error checking quiz progress:', quizError);
+      onError();
+      return;
+    }
+
     const quizAlreadyCompleted = !!existingQuizProgress?.completed_at;
+    console.log('Quiz already completed:', quizAlreadyCompleted);
 
     // Record quiz completion if not already completed
     if (!quizAlreadyCompleted) {
       const { error: quizProgressError } = await supabase
         .from('quiz_progress')
-        .insert({
+        .upsert({
           user_id: userId,
           lecture_id: lectureId,
           segment_number: segmentNumber,
@@ -51,7 +60,7 @@ export const handleQuizProgress = async ({
     }
 
     // Get current score
-    const { data: existingProgress } = await supabase
+    const { data: existingProgress, error: progressError } = await supabase
       .from('user_progress')
       .select('score')
       .eq('user_id', userId)
@@ -59,8 +68,16 @@ export const handleQuizProgress = async ({
       .eq('segment_number', segmentNumber)
       .maybeSingle();
 
+    if (progressError) {
+      console.error('Error fetching existing progress:', progressError);
+      onError();
+      return;
+    }
+
+    console.log('Existing progress:', existingProgress);
     const currentScore = existingProgress?.score || 0;
     const newScore = calculateNewScore(currentScore, quizAlreadyCompleted);
+    console.log('Score calculation:', { currentScore, newScore, quizAlreadyCompleted });
 
     // Check if user progress exists
     if (existingProgress) {
@@ -90,8 +107,7 @@ export const handleQuizProgress = async ({
           lecture_id: lectureId,
           segment_number: segmentNumber,
           score: newScore,
-          completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString()
+          completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null
         });
 
       if (insertError) {
@@ -101,6 +117,7 @@ export const handleQuizProgress = async ({
       }
     }
 
+    console.log('Successfully updated progress with new score:', newScore);
     onSuccess(newScore);
 
   } catch (error) {
