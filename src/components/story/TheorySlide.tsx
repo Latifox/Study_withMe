@@ -35,12 +35,28 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 
   // Process the content to ensure LaTeX is properly formatted
   const processContent = (rawContent: string) => {
-    return rawContent
-      .replace(/\\\\/g, '\\') // Replace double backslashes with single
-      .replace(/\\begin{align\*}/g, '$$\\begin{align*}') // Add $$ for block math
-      .replace(/\\end{align\*}/g, '\\end{align*}$$') // Add $$ for block math
-      .replace(/\\text{([^}]*)}/g, '\\text{$1}') // Ensure text commands are properly formatted
-      .replace(/\\textbf{([^}]*)}/g, '\\mathbf{$1}'); // Convert textbf to mathbf in math mode
+    if (!rawContent) return '';
+    
+    console.log('Raw content before processing:', rawContent);
+    
+    const processed = rawContent
+      // Handle align* environments
+      .replace(/\\begin\{align\*\}/g, '$$\\begin{align*}')
+      .replace(/\\end\{align\*\}/g, '\\end{align*}$$')
+      // Handle text commands
+      .replace(/\\text\{([^}]*)\}/g, '\\text{$1}')
+      // Handle textbf commands
+      .replace(/\\textbf\{([^}]*)\}/g, '\\mathbf{$1}')
+      // Handle escaped backslashes
+      .replace(/\\\\/g, '\\')
+      // Ensure proper spacing around math blocks
+      .replace(/\$\$/g, '\n$$\n')
+      // Clean up any double spaces or unnecessary newlines
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    console.log('Processed content:', processed);
+    return processed;
   };
 
   return (
