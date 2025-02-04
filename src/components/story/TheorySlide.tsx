@@ -35,8 +35,6 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 
   // Process content to ensure proper LaTeX formatting
   const processContent = (rawContent: string) => {
-    console.log('Processing content:', rawContent);
-    
     return rawContent
       // Ensure proper spacing around block math
       .replace(/\$\$(.*?)\$\$/gs, (match, formula) => {
@@ -47,8 +45,8 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
         return `$${formula.trim()}$`;
       })
       // Fix common LaTeX issues
-      .replace(/\\vec{([^}]+)}/g, '\\vec{$1}')
-      .replace(/\\frac{([^}]+)}{([^}]+)}/g, '\\frac{$1}{$2}')
+      .replace(/\\ext\{([^}]+)\}/g, '\\text{$1}')
+      .replace(/ewline/g, '\\newline')
       .trim();
   };
 
