@@ -1,3 +1,4 @@
+
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -20,36 +21,6 @@ interface CodeProps {
 }
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
-  const processContent = (rawContent: string) => {
-    if (!rawContent) return '';
-    
-    console.log('Processing content:', rawContent);
-    
-    // Replace text{...} with \text{...}
-    let processed = rawContent.replace(/text\{/g, '\\text{');
-    
-    // Replace extbf{...} with \mathbf{...}
-    processed = processed.replace(/extbf\{/g, '\\mathbf{');
-    
-    // Replace vec{...} with \vec{...}
-    processed = processed.replace(/vec\{/g, '\\vec{');
-    
-    // Replace begin{align*} with \begin{align*}
-    processed = processed.replace(/begin\{align\*\}/g, '\\begin{align*}');
-    
-    // Replace end{align*} with \end{align*}
-    processed = processed.replace(/end\{align\*\}/g, '\\end{align*}');
-    
-    // Fix fraction notation
-    processed = processed.replace(/frac\{/g, '\\frac{');
-    
-    // Ensure proper spacing around math blocks
-    processed = processed.replace(/\$\$/g, '\n$$\n');
-    
-    console.log('Processed content:', processed);
-    return processed;
-  };
-
   const createMotionComponent = (Component: keyof JSX.IntrinsicElements) => {
     return motion[Component];
   };
@@ -62,8 +33,6 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionOl = createMotionComponent('ol');
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
-
-  const processedContent = processContent(content);
 
   return (
     <motion.div 
@@ -170,7 +139,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 )
               }}
             >
-              {processedContent}
+              {content}
             </ReactMarkdown>
           </div>
         </div>
@@ -195,3 +164,4 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 };
 
 export default TheorySlide;
+
