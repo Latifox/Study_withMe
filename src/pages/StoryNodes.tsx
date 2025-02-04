@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import LearningPathway from "@/components/story/LearningPathway";
@@ -16,6 +17,27 @@ const StoryNodes = () => {
   const [completedNodes] = useState(new Set<string>());
   const [loadingNode, setLoadingNode] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Add a new query to fetch user progress
+  const { data: userProgress } = useQuery({
+    queryKey: ['user-progress', lectureId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !lectureId) return null;
+
+      const { data } = await supabase
+        .from('user_progress')
+        .select('score')
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId));
+
+      return data;
+    }
+  });
+
+  // Calculate total XP and completed nodes
+  const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
+  const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
 
   const { data: storyContent, isLoading, error } = useQuery({
     queryKey: ['story-content', lectureId],
@@ -80,7 +102,6 @@ const StoryNodes = () => {
 
   const handleNodeSelect = async (nodeId: string) => {
     setLoadingNode(nodeId);
-    // Navigate immediately to the content page with loading state
     navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
   };
 
@@ -105,14 +126,26 @@ const StoryNodes = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <Button
-        variant="ghost"
-        onClick={handleBack}
-        className="mb-6"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Course
-      </Button>
+      <div className="flex items-center justify-between mb-6">
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Course
+        </Button>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-400" />
+            <span className="font-bold">{totalXP} XP</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-purple-500" />
+            <span className="font-bold">{completedNodesCount}</span>
+          </div>
+        </div>
+      </div>
 
       <Card className="p-6 bg-white/50 backdrop-blur-sm">
         <LearningPathway
