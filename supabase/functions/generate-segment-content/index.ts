@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -66,74 +65,43 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = `Create comprehensive educational content for segment "${segmentTitle}". The content should be thorough yet accessible.
+      const prompt = `Create educational content for segment "${segmentTitle}". Format the response as a STRICT JSON object with NO markdown code blocks or special formatting.
 
 REQUIREMENTS:
+1. ONLY return a valid JSON object
+2. Use proper string escaping for quotes and special characters
+3. Avoid any markdown code block formatting
+4. Keep all strings properly terminated
 
-For Theory Slides:
-1. Each slide should use proper markdown formatting
-2. Include clear headings (##, ###)
-3. Break content into digestible paragraphs
-4. Use bullet points and numbered lists where appropriate
-5. Highlight key terms using **bold**
-6. Add relevant emojis 🎯 to emphasize important points
-7. Include practical examples and real-world applications
-8. Ensure content flows logically from basic to advanced concepts
+Content Structure:
+1. Two theory slides in markdown format:
+   - First slide: Core concepts and fundamentals
+   - Second slide: Applications and examples
 
-Theory Slide 1 should focus on:
-- Core concepts and definitions
-- Fundamental principles
-- Key terminology
-- Basic theoretical framework
+2. Two quiz questions:
+   - One multiple choice question
+   - One true/false question
 
-Theory Slide 2 should focus on:
-- Practical applications
-- Real-world examples
-- Case studies or scenarios
-- Common misconceptions and clarifications
-
-For Quiz Questions:
-1. Multiple Choice Question should:
-   - Test understanding, not just memorization
-   - Have clearly distinct options
-   - Include one clearly correct answer
-   - Have plausible but incorrect distractors
-   - Provide a detailed explanation
-
-2. True/False Question should:
-   - Test application of concepts
-   - Be unambiguous
-   - Include a thorough explanation
-   - Connect to the theory content
-
-Return JSON in this format (NO MARKDOWN CODE BLOCKS):
+Required JSON Structure:
 {
-  "theory_slide_1": "Core concepts and fundamentals in markdown",
-  "theory_slide_2": "Applications and examples in markdown",
+  "theory_slide_1": "string with markdown (escaped quotes)",
+  "theory_slide_2": "string with markdown (escaped quotes)",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "Thought-provoking question",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": "Correct option",
-    "explanation": "Detailed explanation of why this is correct"
+    "question": "string",
+    "options": ["string array"],
+    "correctAnswer": "string matching one option",
+    "explanation": "string"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "Clear true/false statement",
-    "correctAnswer": true,
-    "explanation": "Thorough explanation of the correct answer"
+    "question": "string",
+    "correctAnswer": boolean,
+    "explanation": "string"
   }
 }
 
-Base your content on this lecture material: ${lecture.content}
-
-Remember to:
-- Keep language clear and professional
-- Maintain consistent depth across all content
-- Ensure all content is directly relevant to "${segmentTitle}"
-- Make complex concepts accessible without oversimplifying
-- DO NOT wrap the response in markdown code blocks
-- Properly escape any quotes or special characters in the content`;
+Base content on this lecture material: ${lecture.content.replace(/"/g, '\\"')}`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -147,7 +115,7 @@ Remember to:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert educational content creator. Create engaging, comprehensive, and clear content that follows best practices in educational design. Return only valid JSON without markdown code blocks.'
+              content: 'You are an expert educational content creator. Return ONLY a valid JSON object with proper string escaping. NO markdown code blocks or formatting.'
             },
             {
               role: 'user',
@@ -172,13 +140,15 @@ Remember to:
 
       let content;
       try {
-        // Remove any markdown code block indicators and clean the response
+        // Remove any potential formatting and clean the response
         const responseContent = data.choices[0].message.content;
         console.log('Raw response content:', responseContent);
         
-        // Clean the content by removing markdown code blocks and any leading/trailing whitespace
+        // Clean and sanitize the content
         const cleanContent = responseContent
-          .replace(/```json\s*|\s*```/g, '')
+          .replace(/```json\s*|\s*```/g, '') // Remove code blocks
+          .replace(/[\u2018\u2019]/g, "'")   // Replace smart quotes
+          .replace(/[\u201C\u201D]/g, '"')   // Replace smart double quotes
           .trim();
         
         console.log('Cleaned content:', cleanContent);
@@ -186,26 +156,41 @@ Remember to:
         // Parse the cleaned content
         content = JSON.parse(cleanContent);
         
-        // Validate the required fields
+        // Validate required fields
         const requiredFields = ['theory_slide_1', 'theory_slide_2', 'quiz_question_1', 'quiz_question_2'];
         const missingFields = requiredFields.filter(field => !content[field]);
         
         if (missingFields.length > 0) {
           throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
         }
+
+        // Escape any remaining unescaped quotes in theory slides
+        content.theory_slide_1 = content.theory_slide_1.replace(/(?<!\\)"/g, '\\"');
+        content.theory_slide_2 = content.theory_slide_2.replace(/(?<!\\)"/g, '\\"');
         
-        // Validate quiz question structure
-        if (!content.quiz_question_1.type || !content.quiz_question_1.question || 
-            !content.quiz_question_1.options || !content.quiz_question_1.correctAnswer || 
-            !content.quiz_question_1.explanation) {
-          throw new Error('Invalid multiple choice question structure');
-        }
+        // Validate quiz questions structure
+        const validateQuizQuestion = (question: any, type: string) => {
+          if (!question.type || !question.question || !question.explanation) {
+            throw new Error(`Invalid ${type} question structure: missing required fields`);
+          }
+          
+          if (type === 'multiple_choice') {
+            if (!Array.isArray(question.options) || question.options.length < 2) {
+              throw new Error('Multiple choice question must have at least 2 options');
+            }
+            if (!question.options.includes(question.correctAnswer)) {
+              throw new Error('Correct answer must be one of the options');
+            }
+          } else if (type === 'true_false') {
+            if (typeof question.correctAnswer !== 'boolean') {
+              throw new Error('True/False question must have a boolean correct answer');
+            }
+          }
+        };
+
+        validateQuizQuestion(content.quiz_question_1, 'multiple_choice');
+        validateQuizQuestion(content.quiz_question_2, 'true_false');
         
-        if (!content.quiz_question_2.type || !content.quiz_question_2.question || 
-            typeof content.quiz_question_2.correctAnswer !== 'boolean' || 
-            !content.quiz_question_2.explanation) {
-          throw new Error('Invalid true/false question structure');
-        }
       } catch (error) {
         console.error('Error parsing or validating content:', error);
         console.error('Failed content:', data.choices[0].message.content);
