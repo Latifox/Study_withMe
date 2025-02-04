@@ -33,7 +33,10 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
 
-  console.log('Content being rendered:', content);
+  // Process the content to ensure LaTeX equations are properly formatted
+  const processedContent = content.replace(/\[ /g, '$$').replace(/ \]/g, '$$');
+
+  console.log('Content being rendered:', processedContent);
 
   return (
     <motion.div 
@@ -140,7 +143,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 )
               }}
             >
-              {content}
+              {processedContent}
             </ReactMarkdown>
           </div>
         </div>
