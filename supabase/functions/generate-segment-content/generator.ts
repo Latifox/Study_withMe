@@ -45,25 +45,6 @@ Required JSON Structure:
   }
 }
 
-SLIDE STRUCTURE:
-Slide 1 (Theory and Formulas):
-- Start with a clear ## Main Concept header
-- Present key definitions specific to this segment
-- Format mathematical formulas using LaTeX:
-  * Block formulas: $$formula$$
-  * Inline formulas: $formula$
-- Include all relevant mathematical formulas with explanations
-- Provide detailed explanations of each concept
-- End with key insights unique to this segment
-
-Slide 2 (Applications):
-- Focus on practical examples specific to this segment
-- Include step-by-step problem solving if applicable
-- Show formula applications with numerical examples
-- Connect to real-world scenarios
-- Include practice calculations or worked examples
-- Summarize with practical applications
-
 Focus ONLY on content specifically related to: ${segmentTitle}
 Base the content strictly on this lecture material: ${sanitizedContent}`;
 };
@@ -78,11 +59,11 @@ export const generateContent = async (prompt: string) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4-0125-preview',
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. Return ONLY a valid JSON object with properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. Format all content as proper JSON with escaped characters.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting.'
         },
         {
           role: 'user',
@@ -91,6 +72,7 @@ export const generateContent = async (prompt: string) => {
       ],
       temperature: 0.7,
       max_tokens: 3000,
+      response_format: { type: "json_object" }
     }),
   });
 
