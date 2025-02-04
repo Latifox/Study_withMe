@@ -25,13 +25,12 @@ interface LearningPathwayProps {
   onNodeSelect: (nodeId: string) => void;
 }
 
-// Define the type for our user progress payload
-type UserProgressPayload = {
+interface UserProgressPayload {
   new: {
     segment_number: number;
     score: number;
   } | null;
-};
+}
 
 const LearningPathway = ({ 
   nodes, 
@@ -67,7 +66,6 @@ const LearningPathway = ({
 
     fetchUserProgress();
 
-    // Subscribe to real-time updates
     const channel = supabase
       .channel('user-progress-updates')
       .on(
@@ -79,7 +77,7 @@ const LearningPathway = ({
           filter: `lecture_id=eq.${lectureId}`
         },
         (payload: RealtimePostgresChangesPayload<UserProgressPayload>) => {
-          if (payload.new && payload.new.segment_number !== undefined && payload.new.score !== undefined) {
+          if (payload.new && 'segment_number' in payload.new && 'score' in payload.new) {
             const segmentKey = `segment_${payload.new.segment_number}`;
             setNodeProgress(prev => ({
               ...prev,
