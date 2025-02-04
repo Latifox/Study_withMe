@@ -33,25 +33,17 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
 
-  // Process content to ensure proper LaTeX formatting
+  // Only ensure proper spacing around math blocks, no other modifications
   const processContent = (rawContent: string) => {
     return rawContent
-      // Ensure proper spacing around block math
       .replace(/\$\$(.*?)\$\$/gs, (match, formula) => {
-        return `\n\n$$\n${formula.trim()}\n$$\n\n`;
+        return `\n\n$$${formula}$$\n\n`;
       })
-      // Ensure proper spacing around inline math
-      .replace(/\$(.*?)\$/g, (match, formula) => {
-        return `$${formula.trim()}$`;
-      })
-      // Fix common LaTeX issues
-      .replace(/\\ext\{([^}]+)\}/g, '\\text{$1}')
-      .replace(/ewline/g, '\\newline')
       .trim();
   };
 
   const processedContent = processContent(content);
-  console.log('Processed content:', processedContent);
+  console.log('Content being rendered:', processedContent);
 
   return (
     <motion.div 

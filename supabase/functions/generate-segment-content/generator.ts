@@ -28,52 +28,47 @@ AI Configuration Settings:
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-LATEX AND MARKDOWN FORMATTING REQUIREMENTS:
+LATEX FORMATTING REQUIREMENTS:
 
-1. Use ONLY valid LaTeX syntax and commands:
-   - Always use \\text{} for text inside math mode, NEVER use \\ext{}
-   - Always properly close environments with \\end{...}
-   - Use proper LaTeX environments: align*, equation, array, etc.
+1. Use ONLY these LaTeX commands and environments:
+   - \\text{} for text inside math mode
+   - Math environments: align*, equation*, array
+   - Greek letters: \\alpha, \\beta, \\theta, etc.
+   - Vectors: \\vec{v}, \\vec{r}
+   - Unit vectors: \\hat{i}, \\hat{j}, \\hat{k}
+   - Fractions: \\frac{num}{den}
+   - Subscripts: v_x, a_y
+   - Superscripts: x^2, v^n
+   - Special symbols: \\partial, \\nabla, \\infty
+   - Spacing: \\quad, \\;
 
-2. Block Math Formatting:
-   - Wrap in double dollars with proper spacing:
-     $$
-     \\begin{align*}
-     x &= v_0t + x_0 \\\\
-     y &= h - \\frac{1}{2}gt^2
-     \\end{align*}
-     $$
+2. Block Math Format:
+   $$
+   \\begin{align*}
+   x &= v_0t + x_0 \\\\
+   y &= h - \\frac{1}{2}gt^2
+   \\end{align*}
+   $$
 
-3. Inline Math Formatting:
-   - Wrap in single dollars: $\\vec{v} = \\frac{d\\vec{r}}{dt}$
-   - Use \\text{} for text: $\\text{where } v \\text{ is velocity}$
-
-4. LaTeX Commands and Symbols:
-   - Vectors: $\\vec{v}$, $\\vec{r}$
-   - Unit vectors: $\\hat{i}$, $\\hat{j}$, $\\hat{k}$
-   - Fractions: $\\frac{numerator}{denominator}$
-   - Greek letters: $\\alpha$, $\\beta$, $\\theta$
-   - Operators: $\\sin$, $\\cos$, $\\tan$
-   - Subscripts: $v_x$, $a_y$
-   - Superscripts: $x^2$, $v^n$
-   - Special symbols: $\\partial$, $\\nabla$, $\\infty$
+3. Inline Math Format:
+   $\\vec{v} = \\frac{d\\vec{r}}{dt}$
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string containing properly formatted markdown with LaTeX - Core concepts and detailed formulas",
-  "theory_slide_2": "string containing properly formatted markdown with LaTeX - Examples and applications",
+  "theory_slide_1": "string with markdown and LaTeX - Core concepts and formulas",
+  "theory_slide_2": "string with markdown and LaTeX - Examples and applications",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string asking about specific concepts from THIS segment only",
+    "question": "string testing concepts from THIS segment",
     "options": ["array of 4 distinct strings"],
     "correctAnswer": "string matching one option",
-    "explanation": "string with markdown explaining the correct answer"
+    "explanation": "string with markdown explaining the answer"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string testing understanding of THIS segment's specific content",
+    "question": "string testing THIS segment's content",
     "correctAnswer": boolean,
-    "explanation": "string with markdown explaining why true or false"
+    "explanation": "string with markdown explaining why true/false"
   }
 }
 
@@ -95,7 +90,7 @@ export const generateContent = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings. Pay special attention to proper line breaks, markdown syntax, and LaTeX formula formatting. Use clear spacing and proper mathematical notation in all formulas. NEVER repeat content between segments.'
+          content: 'You are an expert educational content creator specializing in creating unique, detailed content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings with proper LaTeX notation.'
         },
         {
           role: 'user',
@@ -120,53 +115,13 @@ export const generateContent = async (prompt: string) => {
 };
 
 export const cleanGeneratedContent = (content: string): string => {
-  console.log('Content before parsing:', content);
-
   try {
-    // First try to parse as is - if it's already valid JSON
+    // Only parse the JSON to validate it, but keep the exact string content
     const parsed = JSON.parse(content);
-    console.log('Content was valid JSON:', JSON.stringify(parsed, null, 2));
-    return JSON.stringify(parsed);
+    console.log('Content is valid JSON:', JSON.stringify(parsed, null, 2));
+    return content; // Return the original string to preserve exact formatting
   } catch (error) {
-    console.log('Direct parsing failed, attempting cleaning...', error);
-  }
-
-  // More aggressive cleaning of the content
-  let cleanedContent = content
-    .replace(/```json\s*|\s*```/g, '')  // Remove code blocks
-    .replace(/\r/g, '\n')               // Replace carriage returns with newlines
-    .replace(/\t/g, ' ')                // Replace tabs with spaces
-    .replace(/[\u2018\u2019]/g, "'")    // Replace smart quotes
-    .replace(/[\u201C\u201D]/g, '"')    // Replace smart double quotes
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-    .trim();                            // Remove leading/trailing whitespace
-
-  // Attempt to find and fix common JSON structural issues
-  if (!cleanedContent.startsWith('{')) {
-    const jsonStart = cleanedContent.indexOf('{');
-    if (jsonStart !== -1) {
-      cleanedContent = cleanedContent.substring(jsonStart);
-    } else {
-      throw new Error('No JSON object found in content');
-    }
-  }
-
-  if (!cleanedContent.endsWith('}')) {
-    const jsonEnd = cleanedContent.lastIndexOf('}');
-    if (jsonEnd !== -1) {
-      cleanedContent = cleanedContent.substring(0, jsonEnd + 1);
-    } else {
-      throw new Error('No closing brace found in JSON content');
-    }
-  }
-
-  try {
-    const parsed = JSON.parse(cleanedContent);
-    console.log('Final processed content:', JSON.stringify(parsed, null, 2));
-    return JSON.stringify(parsed);
-  } catch (error) {
-    console.error('Error parsing cleaned content:', error);
-    console.error('Problematic content:', cleanedContent);
+    console.error('Error parsing content:', error);
     throw new Error(`Failed to parse generated content: ${error.message}`);
   }
 };
