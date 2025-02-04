@@ -1,6 +1,6 @@
 
 import ReactMarkdown from 'react-markdown';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
@@ -82,7 +82,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="mb-4 leading-relaxed text-foreground/90"
+                    className="mb-4 leading-relaxed text-foreground/90 [&>*]:text-foreground/90"
                     {...props}
                   />
                 ),
@@ -136,13 +136,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                     className="border-l-4 border-primary/50 pl-4 my-6 italic text-foreground/80"
                     {...props}
                   />
-                ),
-                strong: ({ node, ...props }) => (
-                  <strong className="font-bold text-primary" {...props} />
-                ),
-                em: ({ node, ...props }) => (
-                  <em className="italic text-primary/80" {...props} />
-                ),
+                )
               }}
             >
               {content}
