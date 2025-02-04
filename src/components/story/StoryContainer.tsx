@@ -99,10 +99,19 @@ export const StoryContainer = ({
         return;
       }
 
-      // Update overall segment progress with new score
-      const currentScore = segmentScores[currentSegmentData.id] || 0;
+      // Get current total score for this segment
+      const { data: existingProgress } = await supabase
+        .from('user_progress')
+        .select('score')
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .eq('segment_number', segmentNumber)
+        .single();
+
+      const currentScore = existingProgress?.score || 0;
       const newScore = currentScore + POINTS_PER_CORRECT_ANSWER;
 
+      // Update overall segment progress with new score
       const { error: progressError } = await supabase
         .from('user_progress')
         .upsert({
