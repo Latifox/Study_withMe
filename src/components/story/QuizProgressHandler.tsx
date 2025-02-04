@@ -62,22 +62,43 @@ export const handleQuizProgress = async ({
     const currentScore = existingProgress?.score || 0;
     const newScore = calculateNewScore(currentScore, quizAlreadyCompleted);
 
-    // Update progress
-    const { error: updateError } = await supabase
-      .from('user_progress')
-      .upsert({
-        user_id: userId,
-        lecture_id: lectureId,
-        segment_number: segmentNumber,
-        score: newScore,
-        completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString()
-      });
+    // Check if user progress exists
+    if (existingProgress) {
+      // Update existing progress
+      const { error: updateError } = await supabase
+        .from('user_progress')
+        .update({
+          score: newScore,
+          completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('lecture_id', lectureId)
+        .eq('segment_number', segmentNumber);
 
-    if (updateError) {
-      console.error('Error updating progress:', updateError);
-      onError();
-      return;
+      if (updateError) {
+        console.error('Error updating progress:', updateError);
+        onError();
+        return;
+      }
+    } else {
+      // Insert new progress
+      const { error: insertError } = await supabase
+        .from('user_progress')
+        .insert({
+          user_id: userId,
+          lecture_id: lectureId,
+          segment_number: segmentNumber,
+          score: newScore,
+          completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error('Error inserting progress:', insertError);
+        onError();
+        return;
+      }
     }
 
     onSuccess(newScore);
