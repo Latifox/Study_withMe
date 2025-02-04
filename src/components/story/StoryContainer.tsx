@@ -151,39 +151,43 @@ export const StoryContainer = ({
           title: "🌟 Segment Complete!",
           description: "Great job! You've mastered this node.",
         });
-      } else if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT && newScore < MAX_SCORE) {
-        // If this was the second quiz but total score is not max, reset progress
-        toast({
-          title: "Keep practicing!",
-          description: "You need to get both questions correct to advance. Let's try again!",
-          variant: "destructive",
-        });
-        // Reset progress for this segment
-        await supabase
-          .from('quiz_progress')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('lecture_id', parseInt(lectureId))
-          .eq('segment_number', segmentNumber);
-
-        await supabase
-          .from('user_progress')
-          .upsert({
-            user_id: user.id,
-            lecture_id: parseInt(lectureId),
-            segment_number: segmentNumber,
-            score: 0,
-            completed_at: null,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id, lecture_id, segment_number'
-          });
-
-        // Reset to beginning of segment
-        window.location.reload();
       } else {
-        // Continue to next question
-        handleContinue();
+        // Continue to next question or handle completion
+        if (quizNumber === TOTAL_QUESTIONS_PER_SEGMENT) {
+          if (newScore < MAX_SCORE) {
+            // Reset progress for this segment if not all answers were correct
+            await supabase
+              .from('quiz_progress')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('lecture_id', parseInt(lectureId))
+              .eq('segment_number', segmentNumber);
+
+            await supabase
+              .from('user_progress')
+              .upsert({
+                user_id: user.id,
+                lecture_id: parseInt(lectureId),
+                segment_number: segmentNumber,
+                score: 0,
+                completed_at: null,
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id, lecture_id, segment_number'
+              });
+
+            toast({
+              title: "Keep practicing!",
+              description: "You need to get both questions correct to advance. Let's try again!",
+              variant: "destructive",
+            });
+            
+            // Reset to beginning of segment
+            window.location.reload();
+          }
+        } else {
+          handleContinue();
+        }
       }
 
     } catch (error) {
