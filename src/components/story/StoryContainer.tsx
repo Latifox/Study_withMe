@@ -78,6 +78,12 @@ export const StoryContainer = ({
         quizNumber,
         isCorrect: true,
         onSuccess: (newScore) => {
+          // Update the local state to reflect the new score
+          const updatedSegmentScores = {
+            ...segmentScores,
+            [currentSegmentData.id]: newScore
+          };
+
           toast({
             title: "🎯 Correct!",
             description: `+5 points earned! Total: ${newScore}/10 XP`,
