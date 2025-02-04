@@ -57,6 +57,32 @@ const LearningPathway = ({
     };
 
     fetchUserProgress();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('user-progress-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_progress',
+          filter: `lecture_id=eq.${lectureId}`
+        },
+        (payload) => {
+          if (payload.new && 'segment_number' in payload.new && 'score' in payload.new) {
+            setNodeProgress(prev => ({
+              ...prev,
+              [`segment_${payload.new.segment_number}`]: payload.new.score || 0
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [lectureId]);
 
   const isNodeAvailable = (node: LessonNode) => {
@@ -181,10 +207,15 @@ const LearningPathway = ({
                               )}>
                                 {node.difficulty}
                               </span>
-                              <div className="flex items-center space-x-1">
+                              <motion.div 
+                                className="flex items-center space-x-1"
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 0.3 }}
+                                key={currentScore} // This ensures animation triggers on score change
+                              >
                                 <Star className="w-4 h-4 text-yellow-400" />
                                 <span className="text-sm text-gray-600">{currentScore}/10 XP</span>
-                              </div>
+                              </motion.div>
                             </div>
                           </div>
                         </div>
