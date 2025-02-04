@@ -1,11 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import { POINTS_PER_CORRECT_ANSWER, MAX_SCORE } from "@/utils/scoreUtils";
 
 interface QuizProgressHandlerProps {
   userId: string;
   lectureId: number;
   segmentNumber: number;
   quizNumber: number;
+  isCorrect: boolean;
   onSuccess: (newScore: number) => void;
   onError: () => void;
 }
@@ -15,66 +15,17 @@ export const handleQuizProgress = async ({
   lectureId,
   segmentNumber,
   quizNumber,
+  isCorrect,
   onSuccess,
   onError,
 }: QuizProgressHandlerProps) => {
   try {
-    console.log('Handling quiz progress for:', { userId, lectureId, segmentNumber, quizNumber });
+    console.log('Handling quiz progress for:', { userId, lectureId, segmentNumber, quizNumber, isCorrect });
 
-    // Check if quiz was already completed
-    const { data: existingQuizProgress, error: quizError } = await supabase
-      .from('quiz_progress')
-      .select('completed_at')
-      .eq('user_id', userId)
-      .eq('lecture_id', lectureId)
-      .eq('segment_number', segmentNumber)
-      .eq('quiz_number', quizNumber)
-      .maybeSingle();
+    // Calculate quiz score based on correctness
+    const quizScore = isCorrect ? 5 : 0;
 
-    if (quizError) {
-      console.error('Error checking quiz progress:', quizError);
-      onError();
-      return;
-    }
-
-    const quizAlreadyCompleted = !!existingQuizProgress?.completed_at;
-    console.log('Quiz already completed:', quizAlreadyCompleted);
-
-    // If quiz is already completed, return current score without updating
-    if (quizAlreadyCompleted) {
-      const { data: currentProgress } = await supabase
-        .from('user_progress')
-        .select('score')
-        .eq('user_id', userId)
-        .eq('lecture_id', lectureId)
-        .eq('segment_number', segmentNumber)
-        .maybeSingle();
-
-      onSuccess(currentProgress?.score || 0);
-      return;
-    }
-
-    // Get current progress
-    const { data: existingProgress, error: progressError } = await supabase
-      .from('user_progress')
-      .select('score')
-      .eq('user_id', userId)
-      .eq('lecture_id', lectureId)
-      .eq('segment_number', segmentNumber)
-      .maybeSingle();
-
-    if (progressError) {
-      console.error('Error fetching existing progress:', progressError);
-      onError();
-      return;
-    }
-
-    // Calculate new score
-    const currentScore = existingProgress?.score || 0;
-    const newScore = Math.min(currentScore + POINTS_PER_CORRECT_ANSWER, MAX_SCORE);
-    console.log('Score calculation:', { currentScore, newScore });
-
-    // Record quiz completion first
+    // Record quiz completion with score
     const { error: quizProgressError } = await supabase
       .from('quiz_progress')
       .upsert({
@@ -82,7 +33,8 @@ export const handleQuizProgress = async ({
         lecture_id: lectureId,
         segment_number: segmentNumber,
         quiz_number: quizNumber,
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        quiz_score: quizScore
       }, {
         onConflict: 'user_id,lecture_id,segment_number,quiz_number'
       });
@@ -93,15 +45,32 @@ export const handleQuizProgress = async ({
       return;
     }
 
-    // Update user progress with explicit onConflict handling
+    // Get total segment score by summing quiz scores
+    const { data: quizScores, error: scoresError } = await supabase
+      .from('quiz_progress')
+      .select('quiz_score')
+      .eq('user_id', userId)
+      .eq('lecture_id', lectureId)
+      .eq('segment_number', segmentNumber);
+
+    if (scoresError) {
+      console.error('Error fetching quiz scores:', scoresError);
+      onError();
+      return;
+    }
+
+    const totalScore = quizScores.reduce((sum, quiz) => sum + (quiz.quiz_score || 0), 0);
+    console.log('Total segment score:', totalScore);
+
+    // Update user progress with total score
     const { error: upsertError } = await supabase
       .from('user_progress')
       .upsert({
         user_id: userId,
         lecture_id: lectureId,
         segment_number: segmentNumber,
-        score: newScore,
-        completed_at: newScore >= MAX_SCORE ? new Date().toISOString() : null,
+        score: totalScore,
+        completed_at: totalScore >= 10 ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,lecture_id,segment_number'
@@ -113,8 +82,8 @@ export const handleQuizProgress = async ({
       return;
     }
 
-    console.log('Successfully updated progress with new score:', newScore);
-    onSuccess(newScore);
+    console.log('Successfully updated progress with new score:', totalScore);
+    onSuccess(totalScore);
 
   } catch (error) {
     console.error('Error in quiz progress handler:', error);

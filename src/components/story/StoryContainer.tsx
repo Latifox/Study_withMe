@@ -76,14 +76,15 @@ export const StoryContainer = ({
         lectureId: parseInt(lectureId),
         segmentNumber,
         quizNumber,
+        isCorrect: true,
         onSuccess: (newScore) => {
           toast({
             title: "🎯 Correct!",
-            description: `+${POINTS_PER_CORRECT_ANSWER} points earned! Total: ${newScore}/${MAX_SCORE} XP`,
+            description: `+5 points earned! Total: ${newScore}/10 XP`,
           });
 
           if (quizNumber === 2) {
-            if (newScore >= MAX_SCORE) {
+            if (newScore >= 10) {
               setShowCompletionScreen(true);
               onCorrectAnswer();
               toast({
@@ -129,29 +130,35 @@ export const StoryContainer = ({
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
       const quizNumber = questionIndex + 1;
 
-      await supabase
-        .from('quiz_progress')
-        .upsert({
-          user_id: user.id,
-          lecture_id: parseInt(lectureId),
-          segment_number: segmentNumber,
-          quiz_number: quizNumber,
-          completed_at: null
-        });
-
-      if (quizNumber === 2) {
-        setShowFailDialog(true);
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
-        onWrongAnswer();
-        toast({
-          title: "Keep trying!",
-          description: "Don't worry, mistakes help us learn.",
-          variant: "destructive"
-        });
-        handleContinue();
-      }
+      await handleQuizProgress({
+        userId: user.id,
+        lectureId: parseInt(lectureId),
+        segmentNumber,
+        quizNumber,
+        isCorrect: false,
+        onSuccess: (newScore) => {
+          if (quizNumber === 2 && newScore < 10) {
+            setShowFailDialog(true);
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
+            onWrongAnswer();
+            toast({
+              title: "Keep trying!",
+              description: "Don't worry, mistakes help us learn.",
+              variant: "destructive"
+            });
+            handleContinue();
+          }
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to save progress. Please try again.",
+            variant: "destructive",
+          });
+        }
+      });
     } catch (error) {
       console.error('Error in handleWrongAnswer:', error);
     }

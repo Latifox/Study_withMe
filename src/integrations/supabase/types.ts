@@ -116,6 +116,7 @@ export type Database = {
           id: number
           lecture_id: number | null
           quiz_number: number
+          quiz_score: number | null
           segment_number: number
           updated_at: string | null
           user_id: string
@@ -126,6 +127,7 @@ export type Database = {
           id?: never
           lecture_id?: number | null
           quiz_number: number
+          quiz_score?: number | null
           segment_number: number
           updated_at?: string | null
           user_id: string
@@ -136,6 +138,7 @@ export type Database = {
           id?: never
           lecture_id?: number | null
           quiz_number?: number
+          quiz_score?: number | null
           segment_number?: number
           updated_at?: string | null
           user_id?: string
