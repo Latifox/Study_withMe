@@ -4,6 +4,9 @@ import { motion, HTMLMotionProps } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface TheorySlideProps {
   content: string;
@@ -39,13 +42,13 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       className="space-y-6"
     >
       <Card className="relative overflow-hidden">
-        {/* Gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 opacity-50" />
         
-        {/* Content container with glassmorphism effect */}
         <div className="relative p-8 backdrop-blur-sm">
           <div className="prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
             <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
               components={{
                 h1: ({ node, ...props }) => (
                   <MotionH1 
@@ -167,3 +170,4 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 };
 
 export default TheorySlide;
+
