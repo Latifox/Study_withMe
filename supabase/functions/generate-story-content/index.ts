@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -21,33 +22,41 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture content and AI config
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content')
-      .eq('id', lectureId)
-      .single();
+    // Fetch subject content mappings, subjects, and AI config
+    const [subjectsData, aiConfig] = await Promise.all([
+      supabaseClient
+        .from('subject_definitions')
+        .select(`
+          id,
+          title,
+          chronological_order,
+          subject_content_mapping (
+            content_snippet,
+            relevance_score
+          )
+        `)
+        .eq('lecture_id', lectureId)
+        .order('chronological_order', { ascending: true }),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .maybeSingle()
+    ]);
 
-    if (lectureError || !lecture?.content) {
-      console.error('Error fetching lecture:', lectureError);
-      throw new Error('Failed to fetch lecture content');
-    }
+    if (subjectsData.error) throw subjectsData.error;
 
-    const { data: aiConfig } = await supabaseClient
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .single();
-
-    const config = aiConfig || {
+    const config = aiConfig.data || {
       temperature: 0.7,
       creativity_level: 0.5,
-      detail_level: 0.6,
-      custom_instructions: ''
+      detail_level: 0.6
     };
 
-    console.log('Using AI config:', config);
+    // Group subjects into 10 segments based on chronological order and content
+    const subjects = subjectsData.data;
+    console.log(`Found ${subjects.length} subjects with content mappings`);
 
+    // Generate segment titles based on subjects and their content
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -59,66 +68,57 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert educational content organizer. Generate exactly 10 clear, descriptive segment titles for this lecture content in the same language as the lecture content.
-            
-            AI Configuration Settings:
-            - Temperature: ${config.temperature} (higher means more creative/varied titles)
-            - Creativity Level: ${config.creativity_level} (higher means more engaging and unique titles)
-            - Detail Level: ${config.detail_level} (higher means more specific and comprehensive titles)
-            ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
-            
-            Rules for titles:
-            1. Ensure STRICT chronological order - concepts must build upon each other logically
-            2. First segments should cover foundational concepts
-            3. Middle segments should cover main theories and applications
-            4. Final segments should cover advanced applications and synthesis
-            5. NO repetition of concepts between segments
-            6. Each title should clearly indicate progression level
-            7. Use professional, academic language
-            8. Adjust creativity and specificity based on the AI configuration
-            9. Maintain consistent terminology throughout
-            10. Each segment should have a clear, unique focus
-            
-            Return a JSON object with exactly 10 numbered titles. DO NOT include any markdown formatting or code block indicators.
-            Example format:
-            {
-              "segment_1_title": "Introduction to [Topic]",
-              "segment_2_title": "Basic Concepts and Definitions",
-              ...
-              "segment_10_title": "Advanced Applications"
-            }`
+            content: 'Generate exactly 10 clear, descriptive segment titles based on the provided subjects and their content.'
           },
           {
             role: 'user',
-            content: lecture.content
+            content: `Using these subjects and their extracted content, generate 10 segment titles that follow a logical progression:
+
+Subjects and their content:
+${subjects.map(subject => `
+Subject: ${subject.title}
+Content:
+${subject.subject_content_mapping.map(mapping => 
+  `- ${mapping.content_snippet} (Relevance: ${mapping.relevance_score})`
+).join('\n')}
+`).join('\n')}
+
+AI Configuration Settings:
+- Temperature: ${config.temperature}
+- Creativity Level: ${config.creativity_level}
+- Detail Level: ${config.detail_level}
+
+Rules for titles:
+1. Each title must be based on the actual content provided
+2. Maintain strict chronological order based on subject order
+3. Each title should clearly indicate the progression level
+4. No repetition of concepts between segments
+5. Use professional, academic language
+6. Titles must reflect the actual content available
+
+Return a JSON object with exactly 10 numbered titles in this format:
+{
+  "segment_1_title": "Introduction to [Topic]",
+  "segment_2_title": "Basic Concepts and Definitions",
+  ...
+  "segment_10_title": "Advanced Applications"
+}`
           }
         ],
         temperature: config.temperature,
+        response_format: { type: "json_object" }
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Raw OpenAI response:', data);
+    const titles = JSON.parse(data.choices[0].message.content);
 
-    let titles;
-    try {
-      const content = data.choices[0].message.content;
-      const cleanContent = content.replace(/```json\n|\n```/g, '');
-      titles = JSON.parse(cleanContent);
-      
-      if (!titles || Object.keys(titles).length !== 10) {
-        throw new Error('Invalid titles object - must have exactly 10 segments');
-      }
-      
-      console.log('Successfully parsed titles:', titles);
-    } catch (error) {
-      console.error('Error parsing titles:', error);
-      throw new Error(`Failed to parse titles: ${error.message}`);
+    if (!titles || Object.keys(titles).length !== 10) {
+      throw new Error('Invalid titles object - must have exactly 10 segments');
     }
 
     // Store the story structure
@@ -131,10 +131,7 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (storyError) {
-      console.error('Error creating story structure:', storyError);
-      throw new Error('Failed to create story structure');
-    }
+    if (storyError) throw storyError;
 
     console.log('Successfully created story structure with titles');
 

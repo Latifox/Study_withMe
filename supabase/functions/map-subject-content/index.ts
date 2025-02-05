@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -48,20 +47,10 @@ serve(async (req) => {
         .maybeSingle()
     ]);
 
-    if (lectureResult.error) {
-      console.error('Error fetching lecture:', lectureResult.error);
-      throw lectureResult.error;
-    }
-    if (subjectsResult.error) {
-      console.error('Error fetching subjects:', subjectsResult.error);
-      throw subjectsResult.error;
-    }
-    if (aiConfigResult.error) {
-      console.error('Error fetching AI config:', aiConfigResult.error);
-      throw aiConfigResult.error;
-    }
+    if (lectureResult.error) throw lectureResult.error;
+    if (subjectsResult.error) throw subjectsResult.error;
+    if (aiConfigResult.error) throw aiConfigResult.error;
     if (!lectureResult.data?.content) {
-      console.error('No lecture content found');
       throw new Error('Lecture content not found');
     }
 
@@ -83,10 +72,7 @@ serve(async (req) => {
         .delete()
         .in('subject_id', subjects.map(s => s.id));
 
-      if (deleteError) {
-        console.error('Error deleting existing mappings:', deleteError);
-        throw deleteError;
-      }
+      if (deleteError) throw deleteError;
     }
 
     // Use OpenAI to analyze content for each subject
@@ -94,10 +80,16 @@ serve(async (req) => {
     for (const subject of subjects) {
       console.log(`Processing subject: ${subject.title}`);
       
-      try {
-        const prompt = `Analyze this lecture content and extract the most relevant, non-redundant content specifically related to the subject "${subject.title}". If provided, use these additional details about the subject: ${subject.details || 'none provided'}.
+      const prompt = `Analyze this lecture content and extract ONLY the most relevant, non-redundant content specifically related to the subject "${subject.title}". 
+      
+IMPORTANT INSTRUCTIONS:
+1. If provided, strictly follow these additional details about the subject: ${subject.details || 'none provided'}.
+2. DO NOT invent, extrapolate, or add any information not present in the source material.
+3. Only extract text that is EXPLICITLY related to this subject.
+4. Ensure extracted content maintains proper context.
+5. Include relevant formulas and examples ONLY if they appear in the original text.
 
-Configuration settings to consider:
+AI Configuration settings to consider:
 - Temperature: ${aiConfig.temperature} (higher means more creative analysis)
 - Creativity Level: ${aiConfig.creativity_level} (higher means more innovative connections)
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive content selection)
@@ -109,12 +101,13 @@ Return a JSON array of objects, each containing:
 {
   "content_snippet": "the extracted relevant text",
   "relevance_score": (number between 0 and 1 indicating relevance),
-  "start_index": (approximate position in original text),
-  "end_index": (approximate position in original text)
+  "start_index": (position in original text),
+  "end_index": (position in original text)
 }
 
 Include only the most relevant, non-redundant content. Avoid duplicate information.`;
 
+      try {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -122,7 +115,7 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4',
+            model: 'gpt-4o-mini',
             messages: [
               {
                 role: 'system',
@@ -131,6 +124,7 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
               { role: 'user', content: prompt }
             ],
             temperature: aiConfig.temperature,
+            response_format: { type: "json_object" }
           }),
         });
 
@@ -154,7 +148,7 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
 
       } catch (error) {
         console.error(`Error processing subject ${subject.title}:`, error);
-        // Continue with other subjects even if one fails
+        throw error;
       }
     }
 
@@ -166,42 +160,21 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
         .from('subject_content_mapping')
         .insert(mappings);
 
-      if (mappingError) {
-        console.error('Error inserting mappings:', mappingError);
-        throw mappingError;
-      }
+      if (mappingError) throw mappingError;
     }
 
-    console.log('Successfully completed content mapping');
-
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        mappingsCount: mappings.length 
-      }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
-        },
-        status: 200 
-      }
+      JSON.stringify({ success: true, mappingsCount: mappings.length }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in map-subject-content:', error);
-    
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }),
+      JSON.stringify({ error: error.message }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
-        },
-        status: 500
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

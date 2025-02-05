@@ -18,7 +18,7 @@ ${JSON.stringify(segment.quiz_question_1)}
 ${JSON.stringify(segment.quiz_question_2)}
 `).join('\n\n');
 
-  const basePrompt = `Create educational content for a physics lecture segment by STRICTLY extracting and organizing information from the provided lecture content. DO NOT invent, extrapolate, or add information not explicitly present in the source material. 
+  const basePrompt = `Create educational content for a lecture segment by STRICTLY using the provided subject-specific content. DO NOT invent, extrapolate, or add information not explicitly present in the provided content mappings.
 
 ${previousSegments.length > 0 ? `
 PREVIOUS SEGMENTS CONTEXT (For reference only - DO NOT repeat this content):
@@ -29,15 +29,15 @@ CONTENT PROGRESSION GUIDELINES:
 2. Reference previous concepts only when extending them
 3. Maintain clear progression from earlier segments
 4. Focus exclusively on new material for this segment
-5. Ensure examples come directly from the lecture content
+5. Use examples ONLY from the mapped content
 ` : ''}
 
 IMPORTANT CONTENT GENERATION RULES:
-1. ONLY use information explicitly found in the lecture content
-2. DO NOT invent or add any formulas, examples, or explanations not present in the source material
-3. Maintain academic accuracy by sticking strictly to the provided content
-4. Use examples ONLY if they appear in the original lecture text
-5. For quiz questions, use ONLY concepts and scenarios mentioned in the lecture content
+1. ONLY use information from the provided content mappings
+2. DO NOT invent or add any formulas, examples, or explanations
+3. Maintain academic accuracy by sticking strictly to the mapped content
+4. Use examples ONLY if they appear in the original mapped content
+5. For quiz questions, use ONLY concepts and scenarios from the mapped content
 
 AI Configuration Settings (Use these to adjust presentation style only, not content):
 - Temperature: ${aiConfig.temperature} (affects explanation variety)
@@ -47,16 +47,16 @@ ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_inst
 
 SLIDE REQUIREMENTS:
 1. Theory Slide 1:
-   - Extract and present core concepts exactly as they appear in the lecture
-   - Include mathematical foundations ONLY if present in source material
-   - Provide explanations using the exact terminology from the lecture
+   - Present core concepts exactly as they appear in the mapped content
+   - Include mathematical foundations ONLY if present in mapped content
+   - Provide explanations using the exact terminology from the content
    - Maintain precise adherence to the original content
 
 2. Theory Slide 2:
-   - Present applications and examples ONLY from the lecture content
-   - Include worked examples EXACTLY as they appear in the source
+   - Present applications and examples ONLY from the mapped content
+   - Include worked examples EXACTLY as they appear
    - Do not create new examples or applications
-   - Use only real-world connections mentioned in the original text
+   - Use only real-world connections mentioned in the original content
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:
@@ -85,36 +85,33 @@ LATEX FORMATTING REQUIREMENTS:
 Required JSON Structure:
 {
   "theory_slide_1": "string with markdown and LaTeX - Extracted core concepts",
-  "theory_slide_2": "string with markdown and LaTeX - Examples from lecture",
+  "theory_slide_2": "string with markdown and LaTeX - Examples from mapped content",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string based on lecture content",
+    "question": "string based on mapped content",
     "options": ["array of 4 distinct options from content"],
     "correctAnswer": "string matching one option",
-    "explanation": "string explaining using lecture content"
+    "explanation": "string explaining using mapped content"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string based on lecture content",
+    "question": "string based on mapped content",
     "correctAnswer": boolean,
-    "explanation": "string using lecture content"
+    "explanation": "string using mapped content"
   }
 }
 
 ${subjectContent ? `
-SUBJECT-SPECIFIC FOCUS - IMPORTANT:
+SUBJECT-SPECIFIC CONTENT TO USE:
 Title: ${subjectContent.subject.title}
 ${subjectContent.subject.details ? `Subject Instructions: ${subjectContent.subject.details}` : ''}
 
-${subjectContent.mappings.length > 0 ? `Relevant Content Segments to Focus On:
+Available Content Mappings:
 ${subjectContent.mappings.map((mapping: any, index: number) => 
-  `\nSegment ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}`
+  `\nMapping ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}`
 ).join('\n')}
 
-IMPORTANT: Focus EXCLUSIVELY on these content segments when creating the slides and questions.` : ''}` : ''}
-
-SOURCE LECTURE CONTENT TO USE:
-${lectureContent}
+IMPORTANT: Use ONLY this mapped content when creating the slides and questions. DO NOT reference any content outside these mappings.` : ''}
 
 Focus ONLY on content specifically related to: ${segmentTitle}`;
 
@@ -136,7 +133,7 @@ export const generateContent = async (prompt: string): Promise<string> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // Using the recommended model with higher rate limits
+          model: 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
@@ -185,4 +182,3 @@ export const generateContent = async (prompt: string): Promise<string> => {
 
   throw new Error('Failed to generate content after all retry attempts');
 };
-
