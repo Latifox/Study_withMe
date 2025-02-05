@@ -33,8 +33,15 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const MotionLi = createMotionComponent('li');
   const MotionBlockquote = createMotionComponent('blockquote');
 
-  // Process the content to ensure LaTeX equations are properly formatted
-  const processedContent = content.replace(/\[ /g, '$$').replace(/ \]/g, '$$');
+  // Process the content to ensure LaTeX equations and symbols are properly formatted
+  const processedContent = content
+    .replace(/\[ /g, '$$')
+    .replace(/ \]/g, '$$')
+    .replace(/\(\\omega\)/g, '$\\omega$')
+    .replace(/\(\\[a-zA-Z]+\)/g, (match) => {
+      // Convert any LaTeX command in parentheses to inline math mode
+      return '$' + match.slice(1, -1) + '$';
+    });
 
   console.log('Content being rendered:', processedContent);
 
