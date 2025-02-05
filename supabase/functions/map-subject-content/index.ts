@@ -97,15 +97,13 @@ AI Configuration settings to consider:
 Lecture content:
 ${content}
 
-Return a JSON array of objects, each containing:
+You must respond ONLY with a valid JSON array containing objects with this exact structure:
 {
   "content_snippet": "the extracted relevant text",
-  "relevance_score": (number between 0 and 1 indicating relevance),
-  "start_index": (position in original text),
-  "end_index": (position in original text)
-}
-
-Include only the most relevant, non-redundant content. Avoid duplicate information.`;
+  "relevance_score": (number between 0 and 1),
+  "start_index": (number representing position in original text),
+  "end_index": (number representing position in original text)
+}`;
 
       try {
         console.log('Making OpenAI API request...');
@@ -142,17 +140,39 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
           throw new Error('Invalid response format from OpenAI API');
         }
 
-        const contentAnalysis = JSON.parse(data.choices[0].message.content);
+        let contentAnalysis;
+        try {
+          const parsedContent = JSON.parse(data.choices[0].message.content);
+          // Ensure we have an array in the response, even if it's wrapped in an object
+          contentAnalysis = Array.isArray(parsedContent) ? parsedContent : parsedContent.content || [];
+          
+          if (!Array.isArray(contentAnalysis)) {
+            console.error('Unexpected response format:', parsedContent);
+            throw new Error('Response is not an array');
+          }
+        } catch (parseError) {
+          console.error('Failed to parse OpenAI response:', data.choices[0].message.content);
+          throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
+        }
 
-        // Add mappings from AI analysis
+        // Validate each analysis object before adding to mappings
         contentAnalysis.forEach(analysis => {
-          mappings.push({
-            subject_id: subject.id,
-            content_start_index: analysis.start_index,
-            content_end_index: analysis.end_index,
-            content_snippet: analysis.content_snippet,
-            relevance_score: analysis.relevance_score
-          });
+          if (
+            typeof analysis.content_snippet === 'string' &&
+            typeof analysis.relevance_score === 'number' &&
+            typeof analysis.start_index === 'number' &&
+            typeof analysis.end_index === 'number'
+          ) {
+            mappings.push({
+              subject_id: subject.id,
+              content_start_index: analysis.start_index,
+              content_end_index: analysis.end_index,
+              content_snippet: analysis.content_snippet,
+              relevance_score: analysis.relevance_score
+            });
+          } else {
+            console.warn('Skipping invalid analysis object:', analysis);
+          }
         });
 
       } catch (error) {
