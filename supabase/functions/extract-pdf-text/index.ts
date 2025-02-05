@@ -37,10 +37,14 @@ For the given text:
 
 Output format should be a JSON array of objects with properties:
 {
-  segment_number: number,
-  title: string,
-  start_word: number,
-  end_word: number
+  "segments": [
+    {
+      segment_number: number,
+      title: string,
+      start_word: number,
+      end_word: number
+    }
+  ]
 }`
           },
           {
@@ -66,9 +70,38 @@ Output format should be a JSON array of objects with properties:
   }
 }
 
+function normalizeText(text: string): string {
+  // Replace multiple spaces, newlines, and tabs with single spaces
+  return text.replace(/\s+/g, ' ').trim();
+}
+
 function getWordsInRange(text: string, start: number, end: number): string {
   const words = text.split(/\s+/);
+  if (start < 1 || end > words.length || start > end) {
+    console.error('Invalid word range:', { start, end, totalWords: words.length });
+    throw new Error('Invalid word range');
+  }
   return words.slice(start - 1, end).join(' ');
+}
+
+function validateSegmentBoundaries(text: string, segments: any[]): boolean {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  const words = text.split(/\s+/);
+  
+  for (const segment of segments) {
+    const segmentContent = getWordsInRange(text, segment.start_word, segment.end_word);
+    // Check if segment starts with a capital letter (likely start of sentence)
+    if (!/^[A-Z]/.test(segmentContent)) {
+      console.error('Segment does not start with a sentence:', segmentContent.substring(0, 50));
+      return false;
+    }
+    // Check if segment ends with proper punctuation
+    if (!/[.!?]$/.test(segmentContent)) {
+      console.error('Segment does not end with a sentence:', segmentContent.substring(-50));
+      return false;
+    }
+  }
+  return true;
 }
 
 serve(async (req) => {
@@ -107,15 +140,20 @@ serve(async (req) => {
     console.log('PDF file converted to buffer, size:', buffer.length);
 
     const data = await pdfParse(buffer);
-    const text = data.text;
+    const normalizedText = normalizeText(data.text);
     
-    console.log('Successfully extracted text, length:', text.length);
+    console.log('Successfully extracted and normalized text, length:', normalizedText.length);
 
     // Analyze text with GPT to get segments
     console.log('Analyzing text with GPT...');
-    const { segments } = await analyzeTextWithGPT(text);
+    const { segments } = await analyzeTextWithGPT(normalizedText);
     
     console.log(`Identified ${segments.length} segments`);
+
+    // Validate segment boundaries
+    if (!validateSegmentBoundaries(normalizedText, segments)) {
+      throw new Error('Invalid segment boundaries detected');
+    }
 
     // Store segments and their content
     for (const segment of segments) {
@@ -139,7 +177,7 @@ serve(async (req) => {
         }
 
         // Get content for this segment
-        const segmentContent = getWordsInRange(text, segment.start_word, segment.end_word);
+        const segmentContent = getWordsInRange(normalizedText, segment.start_word, segment.end_word);
 
         // Store segment content
         const { error: contentError } = await supabaseClient
@@ -164,7 +202,7 @@ serve(async (req) => {
     // Update the lecture content
     const { error: lectureError } = await supabaseClient
       .from('lectures')
-      .update({ content: text })
+      .update({ content: normalizedText })
       .eq('id', parseInt(lectureId));
 
     if (lectureError) {
@@ -202,4 +240,3 @@ serve(async (req) => {
     );
   }
 });
-
