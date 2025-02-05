@@ -3,41 +3,16 @@ import { GeneratedContent } from "./types.ts";
 
 export const generatePrompt = (
   segmentTitle: string, 
-  lectureContent: string, 
-  aiConfig: any, 
-  previousSegments: any[] = [],
-  subjectContent: any = null
+  chunkPair: { chunk1: string; chunk2: string }, 
+  aiConfig: any
 ) => {
-  const previousSegmentsContext = previousSegments.map((segment, index) => `
-Previous Segment ${index + 1}: "${segment.title}"
-Theory Content:
-${segment.theory_slide_1}
-${segment.theory_slide_2}
-Quiz Questions:
-${JSON.stringify(segment.quiz_question_1)}
-${JSON.stringify(segment.quiz_question_2)}
-`).join('\n\n');
+  const basePrompt = `Create educational content based strictly on the provided lecture chunks. For this segment titled "${segmentTitle}", use the following content:
 
-  const basePrompt = `Create educational content for a lecture segment by STRICTLY using the provided subject-specific content. DO NOT invent, extrapolate, or add information not explicitly present in the provided content mappings.
+CHUNK 1:
+${chunkPair.chunk1}
 
-${previousSegments.length > 0 ? `
-PREVIOUS SEGMENTS CONTEXT (For reference only - DO NOT repeat this content):
-${previousSegmentsContext}
-
-CONTENT PROGRESSION GUIDELINES:
-1. Build upon previous segments without repeating their content
-2. Reference previous concepts only when extending them
-3. Maintain clear progression from earlier segments
-4. Focus exclusively on new material for this segment
-5. Use examples ONLY from the mapped content
-` : ''}
-
-IMPORTANT CONTENT GENERATION RULES:
-1. ONLY use information from the provided content mappings
-2. DO NOT invent or add any formulas, examples, or explanations
-3. Maintain academic accuracy by sticking strictly to the mapped content
-4. Use examples ONLY if they appear in the original mapped content
-5. For quiz questions, use ONLY concepts and scenarios from the mapped content
+CHUNK 2:
+${chunkPair.chunk2}
 
 AI Configuration Settings (Use these to adjust presentation style only, not content):
 - Temperature: ${aiConfig.temperature} (affects explanation variety)
@@ -45,18 +20,25 @@ AI Configuration Settings (Use these to adjust presentation style only, not cont
 - Detail Level: ${aiConfig.detail_level} (affects depth of content extraction)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-SLIDE REQUIREMENTS:
+REQUIREMENTS:
+
 1. Theory Slide 1:
-   - Present core concepts exactly as they appear in the mapped content
-   - Include mathematical foundations ONLY if present in mapped content
-   - Provide explanations using the exact terminology from the content
+   - Focus ONLY on content from Chunk 1
+   - Present core concepts exactly as they appear
+   - Use mathematical foundations present in the chunk
    - Maintain precise adherence to the original content
 
 2. Theory Slide 2:
-   - Present applications and examples ONLY from the mapped content
-   - Include worked examples EXACTLY as they appear
+   - Focus ONLY on content from Chunk 2
+   - Present applications and examples from the chunk
    - Do not create new examples or applications
-   - Use only real-world connections mentioned in the original content
+   - Use only connections mentioned in the chunk
+
+3. Quiz Questions:
+   - Question 1 should test understanding of Chunk 1 content
+   - Question 2 should test understanding of Chunk 2 content
+   - Each question must be based solely on its respective chunk
+   - Do not mix content between chunks in questions
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:
@@ -84,36 +66,22 @@ LATEX FORMATTING REQUIREMENTS:
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string with markdown and LaTeX - Extracted core concepts",
-  "theory_slide_2": "string with markdown and LaTeX - Examples from mapped content",
+  "theory_slide_1": "string with markdown and LaTeX - Based on Chunk 1",
+  "theory_slide_2": "string with markdown and LaTeX - Based on Chunk 2",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string based on mapped content",
-    "options": ["array of 4 distinct options from content"],
+    "question": "string based on Chunk 1",
+    "options": ["array of 4 distinct options from Chunk 1"],
     "correctAnswer": "string matching one option",
-    "explanation": "string explaining using mapped content"
+    "explanation": "string using content from Chunk 1"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string based on mapped content",
+    "question": "string based on Chunk 2",
     "correctAnswer": boolean,
-    "explanation": "string using mapped content"
+    "explanation": "string using content from Chunk 2"
   }
-}
-
-${subjectContent ? `
-SUBJECT-SPECIFIC CONTENT TO USE:
-Title: ${subjectContent.subject.title}
-${subjectContent.subject.details ? `Subject Instructions: ${subjectContent.subject.details}` : ''}
-
-Available Content Mappings:
-${subjectContent.mappings.map((mapping: any, index: number) => 
-  `\nMapping ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}`
-).join('\n')}
-
-IMPORTANT: Use ONLY this mapped content when creating the slides and questions. DO NOT reference any content outside these mappings.` : ''}
-
-Focus ONLY on content specifically related to: ${segmentTitle}`;
+}`;
 
   return basePrompt;
 };
@@ -175,7 +143,6 @@ export const generateContent = async (prompt: string): Promise<string> => {
         throw error;
       }
       console.error(`Attempt ${attempt} failed:`, error);
-      // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)));
     }
   }

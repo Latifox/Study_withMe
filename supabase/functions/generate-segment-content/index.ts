@@ -1,6 +1,7 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureContent, saveSegmentContent } from "./db.ts";
+import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureChunks, getAIConfig, saveSegmentContent } from "./db.ts";
 import { validateContent } from "./validator.ts";
 import { generatePrompt, generateContent } from "./generator.ts";
 import { GeneratedContent, SegmentRequest } from "./types.ts";
@@ -45,42 +46,19 @@ serve(async (req) => {
       );
     }
 
-    // Fetch previous segments' content
-    const previousSegments = [];
-    for (let i = 1; i < segmentNumber; i++) {
-      const prevContent = await getExistingContent(supabaseClient, storyStructure.id, i);
-      if (prevContent) {
-        previousSegments.push({
-          title: storyStructure[`segment_${i}_title`],
-          ...prevContent
-        });
-      }
-    }
+    // Fetch the lecture chunks for this segment
+    const chunkPair = await getLectureChunks(supabaseClient, lectureId, segmentNumber);
+    console.log('Retrieved chunks for segment:', segmentNumber);
 
-    // Fetch lecture content and AI config
-    const [lecture, aiConfig] = await Promise.all([
-      getLectureContent(supabaseClient, lectureId),
-      supabaseClient
-        .from('lecture_ai_configs')
-        .select('*')
-        .eq('lecture_id', lectureId)
-        .maybeSingle()
-    ]);
-
-    // Use default AI config if none exists
-    const config = aiConfig.data || {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.6,
-      custom_instructions: ''
-    };
+    // Get AI config
+    const aiConfig = await getAIConfig(supabaseClient, lectureId);
 
     console.log('Calling OpenAI API for content generation...');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = generatePrompt(segmentTitle, lecture.content, config, previousSegments);
+      const prompt = generatePrompt(segmentTitle, chunkPair, aiConfig);
       const responseContent = await generateContent(prompt);
       
       console.log('Successfully received OpenAI response');

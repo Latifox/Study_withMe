@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { GeneratedContent, SegmentRequest } from "./types.ts";
 
@@ -34,19 +35,46 @@ export const getExistingContent = async (supabaseClient: any, storyStructureId: 
   return existingContent;
 };
 
-export const getLectureContent = async (supabaseClient: any, lectureId: number) => {
-  const { data: lecture, error: lectureError } = await supabaseClient
-    .from('lectures')
-    .select('content')
-    .eq('id', lectureId)
-    .single();
+export const getLectureChunks = async (supabaseClient: any, lectureId: number, segmentNumber: number) => {
+  // Calculate the chunk indices for this segment
+  const startChunkOrder = (segmentNumber - 1) * 2 + 1;
+  const endChunkOrder = startChunkOrder + 1;
 
-  if (lectureError || !lecture?.content) {
-    console.error('Failed to fetch lecture:', lectureError);
-    throw new Error('Lecture content not found');
+  const { data: chunks, error: chunksError } = await supabaseClient
+    .from('lecture_chunks')
+    .select('content')
+    .eq('lecture_id', lectureId)
+    .in('chunk_order', [startChunkOrder, endChunkOrder])
+    .order('chunk_order', { ascending: true });
+
+  if (chunksError) {
+    console.error('Failed to fetch lecture chunks:', chunksError);
+    throw new Error(`Failed to fetch lecture chunks: ${chunksError.message}`);
   }
 
-  return lecture;
+  if (!chunks || chunks.length < 2) {
+    throw new Error(`Not enough chunks found for segment ${segmentNumber}. Expected 2 chunks, found ${chunks?.length || 0}.`);
+  }
+
+  return {
+    chunk1: chunks[0].content,
+    chunk2: chunks[1].content
+  };
+};
+
+export const getAIConfig = async (supabaseClient: any, lectureId: number) => {
+  const { data: aiConfig } = await supabaseClient
+    .from('lecture_ai_configs')
+    .select('*')
+    .eq('lecture_id', lectureId)
+    .maybeSingle();
+
+  return aiConfig || {
+    temperature: 0.7,
+    creativity_level: 0.5,
+    detail_level: 0.6,
+    custom_instructions: ''
+  };
 };
 
 export const saveSegmentContent = async (
@@ -74,38 +102,4 @@ export const saveSegmentContent = async (
   }
 
   return segmentContent;
-};
-
-export const getSubjectContent = async (supabaseClient: any, lectureId: number, segmentNumber: number) => {
-  // Get the subject for this segment based on chronological order
-  const { data: subject, error: subjectError } = await supabaseClient
-    .from('subject_definitions')
-    .select('id, title, details')
-    .eq('lecture_id', lectureId)
-    .eq('chronological_order', segmentNumber)
-    .single();
-
-  if (subjectError) {
-    console.error('Failed to fetch subject:', subjectError);
-    return null;
-  }
-
-  if (!subject) return null;
-
-  // Get the mapped content for this subject
-  const { data: mappings, error: mappingError } = await supabaseClient
-    .from('subject_content_mapping')
-    .select('*')
-    .eq('subject_id', subject.id)
-    .order('relevance_score', { ascending: false });
-
-  if (mappingError) {
-    console.error('Failed to fetch content mappings:', mappingError);
-    return null;
-  }
-
-  return {
-    subject,
-    mappings: mappings || []
-  };
 };
