@@ -23,39 +23,45 @@ function splitIntoChunks(text: string, wordsPerChunk: number = 150): string[] {
 }
 
 async function polishChunk(chunk: string): Promise<string> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert at polishing text chunks. Your task is to:
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert at polishing text chunks. Your task is to:
 1. Ensure all sentences are complete
 2. Fix any cut-off sentences at the beginning or end
 3. Maintain academic tone and technical accuracy
 4. Keep the core information intact
 5. Return ONLY the polished text, no explanations or markdown`
-        },
-        {
-          role: 'user',
-          content: `Polish this text chunk, ensuring all sentences are complete and properly structured: "${chunk}"`
-        }
-      ],
-      temperature: 0.3
-    }),
-  });
+          },
+          {
+            role: 'user',
+            content: `Polish this text chunk, ensuring all sentences are complete and properly structured: "${chunk}"`
+          }
+        ],
+        temperature: 0.3
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status, await response.text());
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Error in polishChunk:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.choices[0].message.content.trim();
 }
 
 serve(async (req) => {
@@ -87,6 +93,7 @@ serve(async (req) => {
       .download(filePath);
 
     if (downloadError) {
+      console.error('Download error:', downloadError);
       throw new Error(`Failed to download PDF: ${downloadError.message}`);
     }
 
@@ -105,43 +112,52 @@ serve(async (req) => {
     // Polish and store each chunk
     console.log('Starting chunk polishing process...');
     for (let i = 0; i < chunks.length; i++) {
-      const polishedContent = await polishChunk(chunks[i]);
-      console.log(`Polished chunk ${i + 1}/${chunks.length}`);
+      try {
+        const polishedContent = await polishChunk(chunks[i]);
+        console.log(`Polished chunk ${i + 1}/${chunks.length}`);
 
-      // Store original and polished chunks
-      const { error: chunkError } = await supabaseClient
-        .from('lecture_chunks')
-        .insert({
-          lecture_id: parseInt(lectureId),
-          chunk_order: i + 1,
-          content: chunks[i]
-        });
+        // Store chunks
+        const { error: chunkError } = await supabaseClient
+          .from('lecture_chunks')
+          .insert({
+            lecture_id: parseInt(lectureId),
+            chunk_order: i + 1,
+            content: chunks[i]
+          });
 
-      if (chunkError) {
-        throw chunkError;
-      }
+        if (chunkError) {
+          console.error('Error storing chunk:', chunkError);
+          throw chunkError;
+        }
 
-      const { error: polishedChunkError } = await supabaseClient
-        .from('lecture_polished_chunks')
-        .insert({
-          lecture_id: parseInt(lectureId),
-          chunk_order: i + 1,
-          original_content: chunks[i],
-          polished_content: polishedContent
-        });
+        // Store polished chunks
+        const { error: polishedChunkError } = await supabaseClient
+          .from('lecture_polished_chunks')
+          .insert({
+            lecture_id: parseInt(lectureId),
+            chunk_order: i + 1,
+            original_content: chunks[i],
+            polished_content: polishedContent
+          });
 
-      if (polishedChunkError) {
-        throw polishedChunkError;
+        if (polishedChunkError) {
+          console.error('Error storing polished chunk:', polishedChunkError);
+          throw polishedChunkError;
+        }
+      } catch (error) {
+        console.error(`Error processing chunk ${i + 1}:`, error);
+        throw error;
       }
     }
 
-    // Update the lecture content (keeping the full text as well for other features)
+    // Update the lecture content
     const { error: lectureError } = await supabaseClient
       .from('lectures')
       .update({ content: text })
       .eq('id', parseInt(lectureId));
 
     if (lectureError) {
+      console.error('Error updating lecture:', lectureError);
       throw lectureError;
     }
 
@@ -149,6 +165,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
+        success: true,
         text,
         numberOfChunks: chunks.length
       }),
