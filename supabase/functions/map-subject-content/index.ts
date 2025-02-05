@@ -115,7 +115,7 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4',
             messages: [
               {
                 role: 'system',
