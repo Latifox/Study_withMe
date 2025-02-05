@@ -22,27 +22,29 @@ async function analyzeTextWithGPT(text: string): Promise<any> {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing academic text and identifying key segments. Important rules:
-1. ALWAYS ensure segment boundaries align with complete sentences - never cut a sentence in half
-2. Each segment should cover complete ideas or concepts
-3. Begin segments at the start of a sentence
-4. End segments at the end of a sentence
+            content: `You are an expert at analyzing academic text and identifying key segments. You MUST follow these rules strictly:
+
+1. Each segment MUST start with a complete sentence
+2. Each segment MUST end with a complete sentence (ending with . ! or ?)
+3. Each segment should cover one complete concept or topic
+4. Never cut a sentence in half
+5. Each segment must make sense on its own
 
 For the given text:
-1. Identify 8-10 key segments
-2. For each segment, provide:
-   - A clear, descriptive title
-   - The starting word number (must be at start of a sentence)
-   - The ending word number (must be at end of a sentence)
+1. Split it into 8-10 logical segments
+2. For each segment provide:
+   - A clear title describing the main topic
+   - The starting word number (must be the first word of a complete sentence)
+   - The ending word number (must be the last word of a complete sentence)
 
-Output format should be a JSON array of objects with properties:
+Return ONLY a JSON object in this format:
 {
   "segments": [
     {
-      segment_number: number,
-      title: string,
-      start_word: number,
-      end_word: number
+      "segment_number": number,
+      "title": string,
+      "start_word": number,
+      "end_word": number
     }
   ]
 }`
@@ -71,36 +73,60 @@ Output format should be a JSON array of objects with properties:
 }
 
 function normalizeText(text: string): string {
-  // Replace multiple spaces, newlines, and tabs with single spaces
-  return text.replace(/\s+/g, ' ').trim();
+  return text
+    .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+    .replace(/[\r\n]+/g, ' ')  // Replace newlines with space
+    .replace(/\t+/g, ' ')  // Replace tabs with space
+    .trim();  // Remove leading/trailing spaces
 }
 
 function getWordsInRange(text: string, start: number, end: number): string {
   const words = text.split(/\s+/);
   if (start < 1 || end > words.length || start > end) {
     console.error('Invalid word range:', { start, end, totalWords: words.length });
-    throw new Error('Invalid word range');
+    throw new Error(`Invalid word range: start=${start}, end=${end}, total words=${words.length}`);
   }
   return words.slice(start - 1, end).join(' ');
 }
 
 function validateSegmentBoundaries(text: string, segments: any[]): boolean {
-  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
   const words = text.split(/\s+/);
+  console.log('Total words in text:', words.length);
   
   for (const segment of segments) {
-    const segmentContent = getWordsInRange(text, segment.start_word, segment.end_word);
-    // Check if segment starts with a capital letter (likely start of sentence)
-    if (!/^[A-Z]/.test(segmentContent)) {
-      console.error('Segment does not start with a sentence:', segmentContent.substring(0, 50));
-      return false;
-    }
-    // Check if segment ends with proper punctuation
-    if (!/[.!?]$/.test(segmentContent)) {
-      console.error('Segment does not end with a sentence:', segmentContent.substring(-50));
+    console.log(`Validating segment ${segment.segment_number}:`, {
+      start: segment.start_word,
+      end: segment.end_word,
+      title: segment.title
+    });
+
+    try {
+      const segmentContent = getWordsInRange(text, segment.start_word, segment.end_word);
+      console.log(`Segment ${segment.segment_number} content:`, segmentContent.substring(0, 100) + '...');
+
+      // Check if segment starts with a capital letter
+      if (!/^[A-Z]/.test(segmentContent)) {
+        console.error(`Segment ${segment.segment_number} does not start with capital letter:`, segmentContent.substring(0, 50));
+        return false;
+      }
+
+      // Check if segment ends with proper punctuation
+      if (!/[.!?]$/.test(segmentContent)) {
+        console.error(`Segment ${segment.segment_number} does not end with proper punctuation:`, segmentContent.substring(-50));
+        return false;
+      }
+
+      // Basic validation that content looks like complete sentences
+      if (!/^[A-Z].*[.!?]$/.test(segmentContent)) {
+        console.error(`Segment ${segment.segment_number} does not look like complete sentences:`, segmentContent);
+        return false;
+      }
+    } catch (error) {
+      console.error(`Error validating segment ${segment.segment_number}:`, error);
       return false;
     }
   }
+
   return true;
 }
 
@@ -143,16 +169,24 @@ serve(async (req) => {
     const normalizedText = normalizeText(data.text);
     
     console.log('Successfully extracted and normalized text, length:', normalizedText.length);
+    console.log('First 200 characters:', normalizedText.substring(0, 200));
 
     // Analyze text with GPT to get segments
     console.log('Analyzing text with GPT...');
-    const { segments } = await analyzeTextWithGPT(normalizedText);
+    const gptResponse = await analyzeTextWithGPT(normalizedText);
+    console.log('GPT Response:', gptResponse);
     
+    if (!gptResponse.segments || !Array.isArray(gptResponse.segments)) {
+      throw new Error('Invalid GPT response format - missing segments array');
+    }
+
+    const { segments } = gptResponse;
     console.log(`Identified ${segments.length} segments`);
 
     // Validate segment boundaries
+    console.log('Validating segment boundaries...');
     if (!validateSegmentBoundaries(normalizedText, segments)) {
-      throw new Error('Invalid segment boundaries detected');
+      throw new Error('Invalid segment boundaries detected - segments must align with complete sentences');
     }
 
     // Store segments and their content
