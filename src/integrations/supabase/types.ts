@@ -71,69 +71,69 @@ export type Database = {
           },
         ]
       }
-      lecture_chunks: {
+      lecture_segment_content: {
         Row: {
-          chunk_order: number
+          analysis: string | null
           content: string
-          created_at: string
+          created_at: string | null
           id: number
-          lecture_id: number | null
-          updated_at: string
+          segment_id: number | null
         }
         Insert: {
-          chunk_order: number
+          analysis?: string | null
           content: string
-          created_at?: string
+          created_at?: string | null
           id?: number
-          lecture_id?: number | null
-          updated_at?: string
+          segment_id?: number | null
         }
         Update: {
-          chunk_order?: number
+          analysis?: string | null
           content?: string
-          created_at?: string
+          created_at?: string | null
           id?: number
-          lecture_id?: number | null
-          updated_at?: string
+          segment_id?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "lecture_chunks_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
+            foreignKeyName: "lecture_segment_content_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: true
+            referencedRelation: "lecture_segments"
             referencedColumns: ["id"]
           },
         ]
       }
-      lecture_polished_chunks: {
+      lecture_segments: {
         Row: {
-          chunk_order: number
-          created_at: string
+          created_at: string | null
+          end_word: number
           id: number
           lecture_id: number | null
-          original_content: string
-          polished_content: string
+          segment_number: number
+          start_word: number
+          title: string
         }
         Insert: {
-          chunk_order: number
-          created_at?: string
-          id?: never
+          created_at?: string | null
+          end_word: number
+          id?: number
           lecture_id?: number | null
-          original_content: string
-          polished_content: string
+          segment_number: number
+          start_word: number
+          title: string
         }
         Update: {
-          chunk_order?: number
-          created_at?: string
-          id?: never
+          created_at?: string | null
+          end_word?: number
+          id?: number
           lecture_id?: number | null
-          original_content?: string
-          polished_content?: string
+          segment_number?: number
+          start_word?: number
+          title?: string
         }
         Relationships: [
           {
-            foreignKeyName: "lecture_polished_chunks_lecture_id_fkey"
+            foreignKeyName: "lecture_segments_lecture_id_fkey"
             columns: ["lecture_id"]
             isOneToOne: false
             referencedRelation: "lectures"

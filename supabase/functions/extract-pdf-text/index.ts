@@ -9,20 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function splitIntoChunks(text: string, wordsPerChunk: number = 150): string[] {
-  // Remove extra whitespace and split into words
-  const words = text.replace(/\s+/g, ' ').trim().split(' ');
-  const chunks: string[] = [];
-  
-  for (let i = 0; i < words.length; i += wordsPerChunk) {
-    const chunk = words.slice(i, i + wordsPerChunk).join(' ');
-    chunks.push(chunk);
-  }
-  
-  return chunks;
-}
-
-async function polishChunk(chunk: string): Promise<string> {
+async function analyzeTextWithGPT(text: string): Promise<any> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -31,23 +18,31 @@ async function polishChunk(chunk: string): Promise<string> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are an expert at polishing text chunks. Your task is to:
-1. Ensure all sentences are complete
-2. Fix any cut-off sentences at the beginning or end
-3. Maintain academic tone and technical accuracy
-4. Keep the core information intact
-5. Return ONLY the polished text, no explanations or markdown`
+            content: `You are an expert at analyzing academic text and identifying key segments. For the given text:
+1. Identify the most important segments (aim for 8-10 segments)
+2. For each segment, provide:
+   - A clear, descriptive title
+   - The starting word number
+   - The ending word number
+Output format should be a JSON array of objects with properties:
+{
+  segment_number: number,
+  title: string,
+  start_word: number,
+  end_word: number
+}`
           },
           {
             role: 'user',
-            content: `Polish this text chunk, ensuring all sentences are complete and properly structured: "${chunk}"`
+            content: text
           }
         ],
-        temperature: 0.3
+        temperature: 0.3,
+        response_format: { type: "json_object" }
       }),
     });
 
@@ -57,11 +52,16 @@ async function polishChunk(chunk: string): Promise<string> {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content.trim();
+    return JSON.parse(data.choices[0].message.content);
   } catch (error) {
-    console.error('Error in polishChunk:', error);
+    console.error('Error in analyzeTextWithGPT:', error);
     throw error;
   }
+}
+
+function getWordsInRange(text: string, start: number, end: number): string {
+  const words = text.split(/\s+/);
+  return words.slice(start - 1, end).join(' ');
 }
 
 serve(async (req) => {
@@ -80,7 +80,6 @@ serve(async (req) => {
 
     console.log('Processing PDF file:', filePath);
     
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -105,47 +104,52 @@ serve(async (req) => {
     
     console.log('Successfully extracted text, length:', text.length);
 
-    // Split the text into chunks
-    const chunks = splitIntoChunks(text);
-    console.log(`Split text into ${chunks.length} chunks`);
+    // Analyze text with GPT to get segments
+    console.log('Analyzing text with GPT...');
+    const { segments } = await analyzeTextWithGPT(text);
+    
+    console.log(`Identified ${segments.length} segments`);
 
-    // Polish and store each chunk
-    console.log('Starting chunk polishing process...');
-    for (let i = 0; i < chunks.length; i++) {
+    // Store segments and their content
+    for (const segment of segments) {
       try {
-        const polishedContent = await polishChunk(chunks[i]);
-        console.log(`Polished chunk ${i + 1}/${chunks.length}`);
-
-        // Store chunks
-        const { error: chunkError } = await supabaseClient
-          .from('lecture_chunks')
+        // Store segment definition
+        const { data: segmentData, error: segmentError } = await supabaseClient
+          .from('lecture_segments')
           .insert({
             lecture_id: parseInt(lectureId),
-            chunk_order: i + 1,
-            content: chunks[i]
-          });
+            segment_number: segment.segment_number,
+            title: segment.title,
+            start_word: segment.start_word,
+            end_word: segment.end_word
+          })
+          .select()
+          .single();
 
-        if (chunkError) {
-          console.error('Error storing chunk:', chunkError);
-          throw chunkError;
+        if (segmentError) {
+          console.error('Error storing segment:', segmentError);
+          throw segmentError;
         }
 
-        // Store polished chunks
-        const { error: polishedChunkError } = await supabaseClient
-          .from('lecture_polished_chunks')
+        // Get content for this segment
+        const segmentContent = getWordsInRange(text, segment.start_word, segment.end_word);
+
+        // Store segment content
+        const { error: contentError } = await supabaseClient
+          .from('lecture_segment_content')
           .insert({
-            lecture_id: parseInt(lectureId),
-            chunk_order: i + 1,
-            original_content: chunks[i],
-            polished_content: polishedContent
+            segment_id: segmentData.id,
+            content: segmentContent
           });
 
-        if (polishedChunkError) {
-          console.error('Error storing polished chunk:', polishedChunkError);
-          throw polishedChunkError;
+        if (contentError) {
+          console.error('Error storing segment content:', contentError);
+          throw contentError;
         }
+
+        console.log(`Successfully stored segment ${segment.segment_number}`);
       } catch (error) {
-        console.error(`Error processing chunk ${i + 1}:`, error);
+        console.error(`Error processing segment ${segment.segment_number}:`, error);
         throw error;
       }
     }
@@ -161,13 +165,12 @@ serve(async (req) => {
       throw lectureError;
     }
 
-    console.log('Successfully stored all chunks and polished chunks in the database');
+    console.log('Successfully processed all segments');
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        text,
-        numberOfChunks: chunks.length
+        segmentsCount: segments.length
       }),
       { 
         headers: { 
