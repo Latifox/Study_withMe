@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { GeneratedContent, SegmentRequest } from "./types.ts";
 
@@ -75,4 +74,38 @@ export const saveSegmentContent = async (
   }
 
   return segmentContent;
+};
+
+export const getSubjectContent = async (supabaseClient: any, lectureId: number, segmentNumber: number) => {
+  // Get the subject for this segment based on chronological order
+  const { data: subject, error: subjectError } = await supabaseClient
+    .from('subject_definitions')
+    .select('id, title, details')
+    .eq('lecture_id', lectureId)
+    .eq('chronological_order', segmentNumber)
+    .single();
+
+  if (subjectError) {
+    console.error('Failed to fetch subject:', subjectError);
+    return null;
+  }
+
+  if (!subject) return null;
+
+  // Get the mapped content for this subject
+  const { data: mappings, error: mappingError } = await supabaseClient
+    .from('subject_content_mapping')
+    .select('*')
+    .eq('subject_id', subject.id)
+    .order('relevance_score', { ascending: false });
+
+  if (mappingError) {
+    console.error('Failed to fetch content mappings:', mappingError);
+    return null;
+  }
+
+  return {
+    subject,
+    mappings: mappings || []
+  };
 };

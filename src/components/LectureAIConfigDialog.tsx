@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,23 +35,35 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch existing configuration
+  // Fetch existing configuration and subjects
   const { data: config } = useQuery({
     queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
       if (!lectureId) return null;
       
-      const { data, error } = await supabase
-        .from("lecture_ai_configs")
-        .select("*")
-        .eq("lecture_id", lectureId)
-        .maybeSingle();
+      const [configData, subjectsData] = await Promise.all([
+        supabase
+          .from("lecture_ai_configs")
+          .select("*")
+          .eq("lecture_id", lectureId)
+          .maybeSingle(),
+        supabase
+          .from("subject_definitions")
+          .select("*")
+          .eq("lecture_id", lectureId)
+          .order("chronological_order", { ascending: true })
+      ]);
 
-      if (error) {
-        console.error("Error fetching AI config:", error);
-        throw error;
-      }
-      return data;
+      if (configData.error) throw configData.error;
+      if (subjectsData.error) throw subjectsData.error;
+
+      return {
+        config: configData.data,
+        subjects: subjectsData.data.map(subject => ({
+          title: subject.title,
+          details: subject.details || ""
+        }))
+      };
     },
     enabled: !!lectureId && isOpen,
   });
@@ -58,14 +71,13 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   // Update local state when config is fetched
   useEffect(() => {
     if (config) {
-      setTemperature([config.temperature]);
-      setCreativity([config.creativity_level]);
-      setDetailLevel([config.detail_level]);
-      try {
-        const parsedSubjects = JSON.parse(config.custom_instructions || '[]');
-        setSubjects(parsedSubjects);
-      } catch (e) {
-        setSubjects([]);
+      if (config.config) {
+        setTemperature([config.config.temperature]);
+        setCreativity([config.config.creativity_level]);
+        setDetailLevel([config.config.detail_level]);
+      }
+      if (config.subjects) {
+        setSubjects(config.subjects);
       }
     }
   }, [config]);
@@ -96,7 +108,9 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
     try {
       setIsSaving(true);
-      const { error } = await supabase
+
+      // Save AI config
+      const { error: configError } = await supabase
         .from("lecture_ai_configs")
         .upsert(
           {
@@ -104,7 +118,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             temperature: temperature[0],
             creativity_level: creativity[0],
             detail_level: detailLevel[0],
-            custom_instructions: JSON.stringify(subjects),
           },
           {
             onConflict: 'lecture_id',
@@ -112,20 +125,49 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           }
         );
 
-      if (error) throw error;
+      if (configError) throw configError;
+
+      // Delete existing subjects
+      const { error: deleteError } = await supabase
+        .from("subject_definitions")
+        .delete()
+        .eq("lecture_id", lectureId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new subjects
+      const { error: subjectsError } = await supabase
+        .from("subject_definitions")
+        .insert(
+          subjects.map((subject, index) => ({
+            lecture_id: lectureId,
+            chronological_order: index + 1,
+            title: subject.title,
+            details: subject.details || null
+          }))
+        );
+
+      if (subjectsError) throw subjectsError;
+
+      // Trigger content mapping
+      const { error: mappingError } = await supabase.functions.invoke('map-subject-content', {
+        body: { lectureId }
+      });
+
+      if (mappingError) throw mappingError;
 
       toast({
         title: "Success",
-        description: "AI configuration saved successfully",
+        description: "AI configuration and subjects saved successfully",
       });
 
       queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       onClose();
     } catch (error) {
-      console.error("Error saving AI config:", error);
+      console.error("Error saving configuration:", error);
       toast({
         title: "Error",
-        description: "Failed to save AI configuration",
+        description: "Failed to save configuration",
         variant: "destructive",
       });
     } finally {

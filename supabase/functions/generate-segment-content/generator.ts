@@ -1,6 +1,12 @@
 import { GeneratedContent } from "./types.ts";
 
-export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any, previousSegments: any[] = []) => {
+export const generatePrompt = async (
+  segmentTitle: string, 
+  lectureContent: string, 
+  aiConfig: any, 
+  previousSegments: any[] = [],
+  subjectContent: any = null
+) => {
   const previousSegmentsContext = previousSegments.map((segment, index) => `
 Previous Segment ${index + 1}: "${segment.title}"
 Theory Content:
@@ -11,7 +17,7 @@ ${JSON.stringify(segment.quiz_question_1)}
 ${JSON.stringify(segment.quiz_question_2)}
 `).join('\n\n');
 
-  return `Create comprehensive, detailed educational content for a physics lecture, focusing on the specific subtopic "${segmentTitle}". Each theory slide should be thorough and include multiple examples where appropriate. Format as a STRICT JSON object with carefully escaped strings.
+  const basePrompt = `Create comprehensive, detailed educational content for a physics lecture, focusing on the specific subtopic "${segmentTitle}". Each theory slide should be thorough and include multiple examples where appropriate. Format as a STRICT JSON object with carefully escaped strings.
 
 ${previousSegments.length > 0 ? `
 PREVIOUS SEGMENTS CONTEXT (IMPORTANT - DO NOT REPEAT THIS CONTENT):
@@ -90,9 +96,27 @@ Required JSON Structure:
     "explanation": "string with markdown explaining why true/false"
   }
 }
+`;
 
-Focus ONLY on content specifically related to: ${segmentTitle}
-Base the content strictly on this lecture material: ${lectureContent}`;
+  let contextualContent = `Focus ONLY on content specifically related to: ${segmentTitle}\n`;
+  
+  if (subjectContent) {
+    contextualContent += `\nSubject Details:\nTitle: ${subjectContent.subject.title}\n`;
+    if (subjectContent.subject.details) {
+      contextualContent += `Details: ${subjectContent.subject.details}\n`;
+    }
+    
+    if (subjectContent.mappings.length > 0) {
+      contextualContent += `\nRelevant Content Segments:\n`;
+      subjectContent.mappings.forEach((mapping: any, index: number) => {
+        contextualContent += `\nSegment ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}\n`;
+      });
+    }
+  }
+
+  contextualContent += `\nBase the content on this lecture material: ${lectureContent}`;
+
+  return `${basePrompt}\n\n${contextualContent}`;
 };
 
 export const generateContent = async (prompt: string) => {
