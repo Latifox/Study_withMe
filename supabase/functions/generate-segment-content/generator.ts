@@ -18,42 +18,45 @@ ${JSON.stringify(segment.quiz_question_1)}
 ${JSON.stringify(segment.quiz_question_2)}
 `).join('\n\n');
 
-  const basePrompt = `Create comprehensive, detailed educational content for a physics lecture, focusing on the specific subtopic "${segmentTitle}". Each theory slide should be thorough and include multiple examples where appropriate. Format as a STRICT JSON object with carefully escaped strings.
+  const basePrompt = `Create educational content for a physics lecture segment by STRICTLY extracting and organizing information from the provided lecture content. DO NOT invent, extrapolate, or add information not explicitly present in the source material. 
 
 ${previousSegments.length > 0 ? `
-PREVIOUS SEGMENTS CONTEXT (IMPORTANT - DO NOT REPEAT THIS CONTENT):
+PREVIOUS SEGMENTS CONTEXT (For reference only - DO NOT repeat this content):
 ${previousSegmentsContext}
 
-GUIDELINES FOR CONTENT PROGRESSION:
+CONTENT PROGRESSION GUIDELINES:
 1. Build upon previous segments without repeating their content
 2. Reference previous concepts only when extending them
 3. Maintain clear progression from earlier segments
 4. Focus exclusively on new material for this segment
-5. Ensure examples are unique and don't overlap with previous segments
+5. Ensure examples come directly from the lecture content
 ` : ''}
 
-AI Configuration Settings (IMPORTANT - Adjust content based on these settings):
-- Temperature: ${aiConfig.temperature} (higher means more creative and varied explanations)
-- Creativity Level: ${aiConfig.creativity_level} (higher means more engaging and innovative examples)
-- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
+IMPORTANT CONTENT GENERATION RULES:
+1. ONLY use information explicitly found in the lecture content
+2. DO NOT invent or add any formulas, examples, or explanations not present in the source material
+3. Maintain academic accuracy by sticking strictly to the provided content
+4. Use examples ONLY if they appear in the original lecture text
+5. For quiz questions, use ONLY concepts and scenarios mentioned in the lecture content
+
+AI Configuration Settings (Use these to adjust presentation style only, not content):
+- Temperature: ${aiConfig.temperature} (affects explanation variety)
+- Creativity Level: ${aiConfig.creativity_level} (affects presentation style)
+- Detail Level: ${aiConfig.detail_level} (affects depth of content extraction)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-CONTENT REQUIREMENTS (Adjust based on AI settings):
-1. Theory Slide 1 should:
-   - Begin with a clear introduction of NEW concepts
-   - Provide detailed mathematical foundations (depth based on detail_level)
-   - Include step-by-step explanations (complexity based on creativity_level)
-   - Use clear, academic language (style varies with temperature)
-   - Depth and breadth of content should scale with detail_level
-   - Examples should be more creative and varied with higher creativity_level
+SLIDE REQUIREMENTS:
+1. Theory Slide 1:
+   - Extract and present core concepts exactly as they appear in the lecture
+   - Include mathematical foundations ONLY if present in source material
+   - Provide explanations using the exact terminology from the lecture
+   - Maintain precise adherence to the original content
 
-2. Theory Slide 2 should:
-   - Focus on practical applications (variety based on creativity_level)
-   - Include multiple worked examples (complexity scales with detail_level)
-   - Connect theory to real-world scenarios (creativity based on temperature)
-   - Provide detailed solution steps (depth based on detail_level)
-   - Use engaging examples that match the creativity_level
-   - Explanation depth should match the detail_level setting
+2. Theory Slide 2:
+   - Present applications and examples ONLY from the lecture content
+   - Include worked examples EXACTLY as they appear in the source
+   - Do not create new examples or applications
+   - Use only real-world connections mentioned in the original text
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:
@@ -81,36 +84,39 @@ LATEX FORMATTING REQUIREMENTS:
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string with markdown and LaTeX - Detailed core concepts and formulas",
-  "theory_slide_2": "string with markdown and LaTeX - Comprehensive examples and applications",
+  "theory_slide_1": "string with markdown and LaTeX - Extracted core concepts",
+  "theory_slide_2": "string with markdown and LaTeX - Examples from lecture",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string testing concepts from THIS segment",
-    "options": ["array of 4 distinct strings"],
+    "question": "string based on lecture content",
+    "options": ["array of 4 distinct options from content"],
     "correctAnswer": "string matching one option",
-    "explanation": "string with markdown explaining the answer"
+    "explanation": "string explaining using lecture content"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string testing THIS segment's content",
+    "question": "string based on lecture content",
     "correctAnswer": boolean,
-    "explanation": "string with markdown explaining why true/false"
+    "explanation": "string using lecture content"
   }
 }
 
-Focus ONLY on content specifically related to: ${segmentTitle}
-
 ${subjectContent ? `
-Subject Details:
+SUBJECT-SPECIFIC FOCUS - IMPORTANT:
 Title: ${subjectContent.subject.title}
-${subjectContent.subject.details ? `Details: ${subjectContent.subject.details}` : ''}
+${subjectContent.subject.details ? `Subject Instructions: ${subjectContent.subject.details}` : ''}
 
-${subjectContent.mappings.length > 0 ? `Relevant Content Segments:
+${subjectContent.mappings.length > 0 ? `Relevant Content Segments to Focus On:
 ${subjectContent.mappings.map((mapping: any, index: number) => 
   `\nSegment ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}`
-).join('\n')}` : ''}` : ''}
+).join('\n')}
 
-Base the content on this lecture material: ${lectureContent}`;
+IMPORTANT: Focus EXCLUSIVELY on these content segments when creating the slides and questions.` : ''}` : ''}
+
+SOURCE LECTURE CONTENT TO USE:
+${lectureContent}
+
+Focus ONLY on content specifically related to: ${segmentTitle}`;
 
   return basePrompt;
 };
