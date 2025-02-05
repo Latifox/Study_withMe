@@ -22,41 +22,43 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch subject content mappings, subjects, and AI config
-    const [subjectsData, aiConfig] = await Promise.all([
-      supabaseClient
-        .from('subject_definitions')
-        .select(`
-          id,
-          title,
-          chronological_order,
-          subject_content_mapping (
-            content_snippet,
-            relevance_score
-          )
-        `)
-        .eq('lecture_id', lectureId)
-        .order('chronological_order', { ascending: true }),
-      supabaseClient
-        .from('lecture_ai_configs')
-        .select('*')
-        .eq('lecture_id', lectureId)
-        .maybeSingle()
-    ]);
+    // Fetch lecture chunks
+    const { data: chunks, error: chunksError } = await supabaseClient
+      .from('lecture_chunks')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .order('chunk_order', { ascending: true });
 
-    if (subjectsData.error) throw subjectsData.error;
+    if (chunksError) throw chunksError;
+    console.log(`Found ${chunks.length} chunks`);
 
-    const config = aiConfig.data || {
+    // Get AI configuration
+    const { data: aiConfig } = await supabaseClient
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .maybeSingle();
+
+    const config = aiConfig?.data || {
       temperature: 0.7,
       creativity_level: 0.5,
       detail_level: 0.6
     };
 
-    // Group subjects into 10 segments based on chronological order and content
-    const subjects = subjectsData.data;
-    console.log(`Found ${subjects.length} subjects with content mappings`);
+    // Process chunks in pairs to generate titles
+    const chunksPrompts = [];
+    for (let i = 0; i < chunks.length; i += 2) {
+      const chunk1 = chunks[i];
+      const chunk2 = chunks[i + 1];
+      
+      if (chunk2) {
+        chunksPrompts.push(`Chunk ${i + 1} content: ${chunk1.content}\nChunk ${i + 2} content: ${chunk2.content}`);
+      } else {
+        chunksPrompts.push(`Chunk ${i + 1} content: ${chunk1.content}`);
+      }
+    }
 
-    // Generate segment titles based on subjects and their content
+    // Generate segment titles based on chunk pairs
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -68,40 +70,23 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Generate exactly 10 clear, descriptive segment titles based on the provided subjects and their content.'
+            content: `Generate clear, descriptive segment titles based on the provided content chunks. Each title should:
+1. Accurately represent the content from both chunks in the pair
+2. Follow a logical progression
+3. Use professional, academic language
+4. Be concise but descriptive`
           },
           {
             role: 'user',
-            content: `Using these subjects and their extracted content, generate 10 segment titles that follow a logical progression:
+            content: `Given these content chunk pairs, generate a title for each pair that captures their combined meaning:
 
-Subjects and their content:
-${subjects.map(subject => `
-Subject: ${subject.title}
-Content:
-${subject.subject_content_mapping.map(mapping => 
-  `- ${mapping.content_snippet} (Relevance: ${mapping.relevance_score})`
-).join('\n')}
-`).join('\n')}
+${chunksPrompts.map((prompt, index) => `Pair ${index + 1}:\n${prompt}\n`).join('\n')}
 
-AI Configuration Settings:
-- Temperature: ${config.temperature}
-- Creativity Level: ${config.creativity_level}
-- Detail Level: ${config.detail_level}
-
-Rules for titles:
-1. Each title must be based on the actual content provided
-2. Maintain strict chronological order based on subject order
-3. Each title should clearly indicate the progression level
-4. No repetition of concepts between segments
-5. Use professional, academic language
-6. Titles must reflect the actual content available
-
-Return a JSON object with exactly 10 numbered titles in this format:
+Return a JSON object with numbered titles (one per chunk pair) in this format:
 {
   "segment_1_title": "Introduction to [Topic]",
   "segment_2_title": "Basic Concepts and Definitions",
   ...
-  "segment_10_title": "Advanced Applications"
 }`
           }
         ],
@@ -117,9 +102,7 @@ Return a JSON object with exactly 10 numbered titles in this format:
     const data = await response.json();
     const titles = JSON.parse(data.choices[0].message.content);
 
-    if (!titles || Object.keys(titles).length !== 10) {
-      throw new Error('Invalid titles object - must have exactly 10 segments');
-    }
+    console.log('Generated titles:', titles);
 
     // Store the story structure
     const { data: storyStructure, error: storyError } = await supabaseClient
@@ -150,3 +133,4 @@ Return a JSON object with exactly 10 numbered titles in this format:
     );
   }
 });
+
