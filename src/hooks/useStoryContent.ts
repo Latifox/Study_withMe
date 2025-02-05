@@ -38,13 +38,10 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       console.log('Fetching story content for lecture:', numericLectureId);
 
-      // Fetch segments and their associated chunks
+      // Fetch segments
       const { data: segments, error: segmentsError } = await supabase
         .from('lecture_segments')
-        .select(`
-          *,
-          chunks:lecture_polished_chunks(chunk_order, polished_content)
-        `)
+        .select('*')
         .eq('lecture_id', numericLectureId)
         .order('segment_number', { ascending: true });
 
@@ -53,13 +50,22 @@ export const useStoryContent = (lectureId: string | undefined) => {
         throw segmentsError;
       }
 
-      // Transform data into the required format
-      const formattedSegments = segments.map((segment, index) => {
-        const chunkPair = segment.chunks as { chunk_order: number; polished_content: string }[];
-        
-        // Sort chunks by order and split into slides
-        const sortedChunks = chunkPair.sort((a, b) => a.chunk_order - b.chunk_order);
-        const slides = sortedChunks.map((chunk, i) => ({
+      // For each segment, fetch its corresponding chunks
+      const formattedSegments = await Promise.all(segments.map(async (segment) => {
+        const { data: chunks, error: chunksError } = await supabase
+          .from('lecture_polished_chunks')
+          .select('chunk_order, polished_content')
+          .eq('lecture_id', numericLectureId)
+          .gte('chunk_order', (segment.segment_number * 2) - 1)
+          .lte('chunk_order', segment.segment_number * 2)
+          .order('chunk_order', { ascending: true });
+
+        if (chunksError) {
+          console.error('Error fetching chunks:', chunksError);
+          throw chunksError;
+        }
+
+        const slides = chunks.map((chunk, i) => ({
           id: `slide-${i + 1}`,
           content: chunk.polished_content
         }));
@@ -89,7 +95,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
           slides,
           questions
         };
-      });
+      }));
 
       return { segments: formattedSegments };
     },

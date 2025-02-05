@@ -63,26 +63,31 @@ const StoryContent = () => {
     queryFn: async () => {
       if (!numericLectureId || !segmentNumber) throw new Error('Invalid parameters');
 
-      // Fetch segment info and its polished chunks
-      const { data: segmentData, error: segmentError } = await supabase
+      // Fetch segment info
+      const { data: segment, error: segmentError } = await supabase
         .from('lecture_segments')
-        .select(`
-          *,
-          chunks:lecture_polished_chunks(chunk_order, polished_content)
-        `)
+        .select('*')
         .eq('lecture_id', numericLectureId)
         .eq('segment_number', segmentNumber)
         .single();
 
       if (segmentError) throw segmentError;
 
-      const chunks = (segmentData.chunks as { chunk_order: number; polished_content: string }[])
-        .sort((a, b) => a.chunk_order - b.chunk_order);
+      // Fetch corresponding chunks
+      const { data: chunks, error: chunksError } = await supabase
+        .from('lecture_polished_chunks')
+        .select('chunk_order, polished_content')
+        .eq('lecture_id', numericLectureId)
+        .gte('chunk_order', (segmentNumber * 2) - 1)
+        .lte('chunk_order', segmentNumber * 2)
+        .order('chunk_order', { ascending: true });
+
+      if (chunksError) throw chunksError;
 
       return {
         segments: [{
           id: nodeId || '',
-          title: segmentData.title,
+          title: segment.title,
           slides: chunks.map((chunk, i) => ({
             id: `slide-${i + 1}`,
             content: chunk.polished_content
