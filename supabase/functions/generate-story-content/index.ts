@@ -30,7 +30,11 @@ serve(async (req) => {
       .order('chunk_order', { ascending: true });
 
     if (chunksError) throw chunksError;
-    console.log(`Found ${chunks.length} chunks`);
+    console.log(`Found ${chunks?.length || 0} chunks`);
+
+    if (!chunks || chunks.length === 0) {
+      throw new Error('No lecture chunks found');
+    }
 
     // Process chunks in pairs to generate titles
     const chunksPrompts = [];
@@ -121,4 +125,3 @@ Return a JSON object with numbered titles (one per chunk pair) in this format:
     );
   }
 });
-
