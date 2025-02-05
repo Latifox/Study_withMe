@@ -1,7 +1,7 @@
 
 import { GeneratedContent } from "./types.ts";
 
-export const generatePrompt = async (
+export const generatePrompt = (
   segmentTitle: string, 
   lectureContent: string, 
   aiConfig: any, 
@@ -97,30 +97,25 @@ Required JSON Structure:
     "explanation": "string with markdown explaining why true/false"
   }
 }
-`;
 
-  let contextualContent = `Focus ONLY on content specifically related to: ${segmentTitle}\n`;
-  
-  if (subjectContent) {
-    contextualContent += `\nSubject Details:\nTitle: ${subjectContent.subject.title}\n`;
-    if (subjectContent.subject.details) {
-      contextualContent += `Details: ${subjectContent.subject.details}\n`;
-    }
-    
-    if (subjectContent.mappings.length > 0) {
-      contextualContent += `\nRelevant Content Segments:\n`;
-      subjectContent.mappings.forEach((mapping: any, index: number) => {
-        contextualContent += `\nSegment ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}\n`;
-      });
-    }
-  }
+Focus ONLY on content specifically related to: ${segmentTitle}
 
-  contextualContent += `\nBase the content on this lecture material: ${lectureContent}`;
+${subjectContent ? `
+Subject Details:
+Title: ${subjectContent.subject.title}
+${subjectContent.subject.details ? `Details: ${subjectContent.subject.details}` : ''}
 
-  return `${basePrompt}\n\n${contextualContent}`;
+${subjectContent.mappings.length > 0 ? `Relevant Content Segments:
+${subjectContent.mappings.map((mapping: any, index: number) => 
+  `\nSegment ${index + 1} (Relevance: ${mapping.relevance_score.toFixed(2)}):\n${mapping.content_snippet}`
+).join('\n')}` : ''}` : ''}
+
+Base the content on this lecture material: ${lectureContent}`;
+
+  return basePrompt;
 };
 
-export const generateContent = async (prompt: string) => {
+export const generateContent = async (prompt: string): Promise<string> => {
   console.log('Generating content with prompt:', prompt);
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -130,7 +125,7 @@ export const generateContent = async (prompt: string) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4',  // Fixed model name from gpt-4o to gpt-4
+      model: 'gpt-4',
       messages: [
         {
           role: 'system',
