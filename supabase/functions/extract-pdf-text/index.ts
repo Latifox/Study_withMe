@@ -22,12 +22,19 @@ async function analyzeTextWithGPT(text: string): Promise<any> {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing academic text and identifying key segments. For the given text:
-1. Identify the most important segments (aim for 8-10 segments)
+            content: `You are an expert at analyzing academic text and identifying key segments. Important rules:
+1. ALWAYS ensure segment boundaries align with complete sentences - never cut a sentence in half
+2. Each segment should cover complete ideas or concepts
+3. Begin segments at the start of a sentence
+4. End segments at the end of a sentence
+
+For the given text:
+1. Identify 8-10 key segments
 2. For each segment, provide:
    - A clear, descriptive title
-   - The starting word number
-   - The ending word number
+   - The starting word number (must be at start of a sentence)
+   - The ending word number (must be at end of a sentence)
+
 Output format should be a JSON array of objects with properties:
 {
   segment_number: number,
@@ -195,3 +202,4 @@ serve(async (req) => {
     );
   }
 });
+
