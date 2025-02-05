@@ -118,38 +118,65 @@ Base the content on this lecture material: ${lectureContent}`;
 export const generateContent = async (prompt: string): Promise<string> => {
   console.log('Generating content with prompt:', prompt);
   
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert physics educator specializing in creating detailed, comprehensive educational content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings with proper LaTeX notation.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 3000,
-      response_format: { type: "json_object" }
-    }),
-  });
+  const maxRetries = 3;
+  const baseDelay = 1000; // 1 second
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('OpenAI API error:', response.status, errorText);
-    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini', // Using the recommended model with higher rate limits
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert physics educator specializing in creating detailed, comprehensive educational content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings with proper LaTeX notation.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 3000,
+          response_format: { type: "json_object" }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`OpenAI API error (attempt ${attempt}/${maxRetries}):`, response.status, errorText);
+        
+        if (response.status === 429) {
+          // Rate limit hit - wait and retry
+          const retryDelay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+          console.log(`Rate limit hit. Waiting ${retryDelay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue;
+        }
+        
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2));
+      return data.choices[0].message.content;
+
+    } catch (error) {
+      if (attempt === maxRetries) {
+        console.error('All retry attempts failed:', error);
+        throw error;
+      }
+      console.error(`Attempt ${attempt} failed:`, error);
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)));
+    }
   }
 
-  const data = await response.json();
-  console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2));
-  return data.choices[0].message.content;
+  throw new Error('Failed to generate content after all retry attempts');
 };
 
