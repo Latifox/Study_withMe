@@ -73,6 +73,10 @@ const StoryContent = () => {
 
       if (segmentError) throw segmentError;
 
+      if (!segment) {
+        throw new Error('Segment not found');
+      }
+
       // Fetch corresponding chunks
       const { data: chunks, error: chunksError } = await supabase
         .from('lecture_polished_chunks')
@@ -83,6 +87,18 @@ const StoryContent = () => {
         .order('chunk_order', { ascending: true });
 
       if (chunksError) throw chunksError;
+
+      if (!chunks || chunks.length === 0) {
+        console.log('No chunks found for segment:', segmentNumber);
+        return {
+          segments: [{
+            id: nodeId || '',
+            title: segment.title,
+            slides: [],
+            questions: []
+          }]
+        };
+      }
 
       return {
         segments: [{

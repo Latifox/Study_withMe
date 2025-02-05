@@ -50,6 +50,11 @@ export const useStoryContent = (lectureId: string | undefined) => {
         throw segmentsError;
       }
 
+      if (!segments || segments.length === 0) {
+        console.log('No segments found for lecture:', numericLectureId);
+        return { segments: [] };
+      }
+
       // For each segment, fetch its corresponding chunks
       const formattedSegments = await Promise.all(segments.map(async (segment) => {
         const { data: chunks, error: chunksError } = await supabase
@@ -63,6 +68,16 @@ export const useStoryContent = (lectureId: string | undefined) => {
         if (chunksError) {
           console.error('Error fetching chunks:', chunksError);
           throw chunksError;
+        }
+
+        if (!chunks) {
+          console.log('No chunks found for segment:', segment.segment_number);
+          return {
+            id: segment.id.toString(),
+            title: segment.title,
+            slides: [],
+            questions: []
+          };
         }
 
         const slides = chunks.map((chunk, i) => ({
