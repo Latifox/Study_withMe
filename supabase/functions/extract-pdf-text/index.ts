@@ -30,7 +30,7 @@ async function polishChunk(chunk: string): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4-mini',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -170,7 +170,7 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
