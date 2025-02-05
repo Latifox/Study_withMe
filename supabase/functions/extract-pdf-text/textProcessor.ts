@@ -3,41 +3,42 @@ export function normalizeText(text: string): string {
   return text
     .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
     .replace(/[\r\n]+/g, ' ')  // Replace newlines with space
-    .replace(/\t+/g, ' ')  // Replace tabs with space
     .trim();  // Remove leading/trailing spaces
 }
 
-export function getWordsInRange(text: string, start: number, end: number): string {
+export function splitIntoSegments(text: string, targetLength: number = 1000): { segments: Array<{ content: string, wordStart: number, wordEnd: number }> } {
   const words = text.split(/\s+/);
-  if (start < 1 || end > words.length || start > end) {
-    console.error('Invalid word range:', { start, end, totalWords: words.length });
-    throw new Error(`Invalid word range: start=${start}, end=${end}, total words=${words.length}`);
-  }
-  return words.slice(start - 1, end).join(' ');
-}
-
-export function isCompleteSentence(text: string): boolean {
-  // Simplified sentence validation that focuses on basic requirements
-  const trimmedText = text.trim();
+  const segments: Array<{ content: string, wordStart: number, wordEnd: number }> = [];
   
-  // Must start with a word character or number
-  if (!/^[A-Za-z0-9]/.test(trimmedText)) {
-    console.log('Text does not start with a valid character:', trimmedText.substring(0, 50));
-    return false;
+  let currentSegment: string[] = [];
+  let startIndex = 1;
+  
+  for (let i = 0; i < words.length; i++) {
+    currentSegment.push(words[i]);
+    
+    // Check if current segment reaches target length or ends with a period
+    if (currentSegment.join(' ').length >= targetLength || 
+        (words[i].endsWith('.') && currentSegment.length > 50)) {
+      
+      segments.push({
+        content: currentSegment.join(' '),
+        wordStart: startIndex,
+        wordEnd: startIndex + currentSegment.length - 1
+      });
+      
+      startIndex = startIndex + currentSegment.length;
+      currentSegment = [];
+    }
   }
-
-  // Must end with proper punctuation
-  if (!/[.!?][\s]*$/.test(trimmedText)) {
-    console.log('Text does not end with proper punctuation:', trimmedText.slice(-50));
-    return false;
+  
+  // Add remaining words as last segment if any
+  if (currentSegment.length > 0) {
+    segments.push({
+      content: currentSegment.join(' '),
+      wordStart: startIndex,
+      wordEnd: startIndex + currentSegment.length - 1
+    });
   }
-
-  // Basic check for minimum words (at least 3 words)
-  const words = trimmedText.split(/\s+/);
-  if (words.length < 3) {
-    console.log('Text is too short to be a complete sentence:', trimmedText);
-    return false;
-  }
-
-  return true;
+  
+  return { segments };
 }

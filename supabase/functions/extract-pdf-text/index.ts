@@ -3,8 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import pdfParse from "npm:pdf-parse@1.1.1";
-import { normalizeText, getWordsInRange } from './textProcessor.ts';
-import { validateSegmentBoundaries } from './segmentValidator.ts';
+import { normalizeText, splitIntoSegments } from './textProcessor.ts';
 import { analyzeTextWithGPT } from './gptAnalyzer.ts';
 
 const corsHeaders = {
@@ -33,7 +32,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Download the file from storage
+    // Download file from storage
     const { data: fileData, error: downloadError } = await supabaseClient
       .storage
       .from('lecture_pdfs')
@@ -45,44 +44,32 @@ serve(async (req) => {
     }
 
     const buffer = Buffer.from(await fileData.arrayBuffer());
-    console.log('PDF file converted to buffer, size:', buffer.length);
-
     const data = await pdfParse(buffer);
     const normalizedText = normalizeText(data.text);
     
     console.log('Successfully extracted and normalized text, length:', normalizedText.length);
-    console.log('First 200 characters:', normalizedText.substring(0, 200));
 
-    // Analyze text with GPT to get segments
-    console.log('Analyzing text with GPT...');
+    // Split text into segments
+    const { segments } = splitIntoSegments(normalizedText);
+    console.log(`Split text into ${segments.length} segments`);
+
+    // Get titles from GPT
     const gptResponse = await analyzeTextWithGPT(normalizedText);
-    console.log('GPT Response:', gptResponse);
-    
-    if (!gptResponse.segments || !Array.isArray(gptResponse.segments)) {
-      throw new Error('Invalid GPT response format - missing segments array');
-    }
-
-    const { segments } = gptResponse;
-    console.log(`Identified ${segments.length} segments`);
-
-    // Validate segment boundaries
-    console.log('Validating segment boundaries...');
-    if (!validateSegmentBoundaries(normalizedText, segments)) {
-      throw new Error('Invalid segment boundaries detected - segments must align with complete sentences');
-    }
+    const titles = gptResponse.titles || new Array(segments.length).fill('Untitled Section');
 
     // Store segments and their content
-    for (const segment of segments) {
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
       try {
         // Store segment definition
         const { data: segmentData, error: segmentError } = await supabaseClient
           .from('lecture_segments')
           .insert({
             lecture_id: parseInt(lectureId),
-            segment_number: segment.segment_number,
-            title: segment.title,
-            start_word: segment.start_word,
-            end_word: segment.end_word
+            segment_number: i + 1,
+            title: titles[i] || `Section ${i + 1}`,
+            start_word: segment.wordStart,
+            end_word: segment.wordEnd
           })
           .select()
           .single();
@@ -92,15 +79,12 @@ serve(async (req) => {
           throw segmentError;
         }
 
-        // Get content for this segment
-        const segmentContent = getWordsInRange(normalizedText, segment.start_word, segment.end_word);
-
         // Store segment content
         const { error: contentError } = await supabaseClient
           .from('lecture_segment_content')
           .insert({
             segment_id: segmentData.id,
-            content: segmentContent
+            content: segment.content
           });
 
         if (contentError) {
@@ -108,9 +92,9 @@ serve(async (req) => {
           throw contentError;
         }
 
-        console.log(`Successfully stored segment ${segment.segment_number}`);
+        console.log(`Successfully stored segment ${i + 1}`);
       } catch (error) {
-        console.error(`Error processing segment ${segment.segment_number}:`, error);
+        console.error(`Error processing segment ${i + 1}:`, error);
         throw error;
       }
     }
@@ -125,8 +109,6 @@ serve(async (req) => {
       console.error('Error updating lecture:', lectureError);
       throw lectureError;
     }
-
-    console.log('Successfully processed all segments');
 
     return new Response(
       JSON.stringify({ 
