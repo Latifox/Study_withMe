@@ -30,7 +30,7 @@ async function polishChunk(chunk: string): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4-mini',
       messages: [
         {
           role: 'system',
