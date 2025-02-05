@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,10 +27,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Fetching lecture content and subjects...');
+    console.log('Fetching lecture content, subjects, and AI config...');
 
-    // Fetch lecture content and subjects
-    const [lectureResult, subjectsResult] = await Promise.all([
+    // Fetch lecture content, subjects, and AI config
+    const [lectureResult, subjectsResult, aiConfigResult] = await Promise.all([
       supabaseClient
         .from('lectures')
         .select('content')
@@ -39,7 +40,12 @@ serve(async (req) => {
         .from('subject_definitions')
         .select('*')
         .eq('lecture_id', lectureId)
-        .order('chronological_order', { ascending: true })
+        .order('chronological_order', { ascending: true }),
+      supabaseClient
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .maybeSingle()
     ]);
 
     if (lectureResult.error) {
@@ -50,6 +56,10 @@ serve(async (req) => {
       console.error('Error fetching subjects:', subjectsResult.error);
       throw subjectsResult.error;
     }
+    if (aiConfigResult.error) {
+      console.error('Error fetching AI config:', aiConfigResult.error);
+      throw aiConfigResult.error;
+    }
     if (!lectureResult.data?.content) {
       console.error('No lecture content found');
       throw new Error('Lecture content not found');
@@ -57,7 +67,13 @@ serve(async (req) => {
 
     const content = lectureResult.data.content;
     const subjects = subjectsResult.data;
-    console.log(`Found ${subjects.length} subjects to process`);
+    const aiConfig = aiConfigResult.data || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6
+    };
+
+    console.log(`Found ${subjects.length} subjects to process with AI config:`, aiConfig);
 
     // Delete existing mappings
     if (subjects.length > 0) {
@@ -73,58 +89,72 @@ serve(async (req) => {
       }
     }
 
-    // Create mappings for each subject
+    // Use OpenAI to analyze content for each subject
     const mappings = [];
     for (const subject of subjects) {
       console.log(`Processing subject: ${subject.title}`);
       
-      // Simple relevance calculation based on keyword matching
-      const keywords = [subject.title, ...(subject.details?.split(/\s+/) || [])].filter(Boolean);
-      const contentLines = content.split('\n');
-      
-      let currentSegment = {
-        startIndex: 0,
-        endIndex: 0,
-        text: '',
-        score: 0
-      };
+      try {
+        const prompt = `Analyze this lecture content and extract the most relevant, non-redundant content specifically related to the subject "${subject.title}". If provided, use these additional details about the subject: ${subject.details || 'none provided'}.
 
-      for (let i = 0; i < contentLines.length; i++) {
-        const line = contentLines[i];
-        const matchScore = keywords.reduce((score, keyword) => {
-          const regex = new RegExp(keyword, 'gi');
-          const matches = (line.match(regex) || []).length;
-          return score + matches;
-        }, 0);
+Configuration settings to consider:
+- Temperature: ${aiConfig.temperature} (higher means more creative analysis)
+- Creativity Level: ${aiConfig.creativity_level} (higher means more innovative connections)
+- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive content selection)
 
-        if (matchScore > 0) {
-          if (currentSegment.text === '') {
-            currentSegment.startIndex = i;
-          }
-          currentSegment.endIndex = i;
-          currentSegment.text += line + '\n';
-          currentSegment.score += matchScore;
-        } else if (currentSegment.text !== '') {
+Lecture content:
+${content}
+
+Return a JSON array of objects, each containing:
+{
+  "content_snippet": "the extracted relevant text",
+  "relevance_score": (number between 0 and 1 indicating relevance),
+  "start_index": (approximate position in original text),
+  "end_index": (approximate position in original text)
+}
+
+Include only the most relevant, non-redundant content. Avoid duplicate information.`;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an expert at analyzing educational content and extracting relevant information. You return only valid JSON arrays.'
+              },
+              { role: 'user', content: prompt }
+            ],
+            temperature: aiConfig.temperature,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`OpenAI API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const contentAnalysis = JSON.parse(data.choices[0].message.content);
+
+        // Add mappings from AI analysis
+        contentAnalysis.forEach(analysis => {
           mappings.push({
             subject_id: subject.id,
-            content_start_index: currentSegment.startIndex,
-            content_end_index: currentSegment.endIndex,
-            content_snippet: currentSegment.text.trim(),
-            relevance_score: currentSegment.score / keywords.length
+            content_start_index: analysis.start_index,
+            content_end_index: analysis.end_index,
+            content_snippet: analysis.content_snippet,
+            relevance_score: analysis.relevance_score
           });
-          currentSegment = { startIndex: 0, endIndex: 0, text: '', score: 0 };
-        }
-      }
-
-      // Add final segment if exists
-      if (currentSegment.text !== '') {
-        mappings.push({
-          subject_id: subject.id,
-          content_start_index: currentSegment.startIndex,
-          content_end_index: currentSegment.endIndex,
-          content_snippet: currentSegment.text.trim(),
-          relevance_score: currentSegment.score / keywords.length
         });
+
+      } catch (error) {
+        console.error(`Error processing subject ${subject.title}:`, error);
+        // Continue with other subjects even if one fails
       }
     }
 
