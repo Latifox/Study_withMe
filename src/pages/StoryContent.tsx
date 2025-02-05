@@ -1,21 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import StoryCompletionScreen from "@/components/story/StoryCompletionScreen";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
 import StoryScoreHeader from "@/components/story/StoryScoreHeader";
-import StoryCompletionScreen from "@/components/story/StoryCompletionScreen";
 import StoryMainContent from "@/components/story/StoryMainContent";
 import { useToast } from "@/hooks/use-toast";
-
-interface QuizQuestion {
-  type: "multiple_choice" | "true_false";
-  question: string;
-  options?: string[];
-  correctAnswer: string | boolean;
-  explanation: string;
-}
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const StoryContent = () => {
   const { courseId, lectureId, nodeId } = useParams();
@@ -37,7 +31,7 @@ const StoryContent = () => {
     }
   }, [nodeId]);
 
-  // Fetch existing progress only if user has completed the node before
+  // Fetch existing progress
   useEffect(() => {
     const fetchExistingProgress = async () => {
       if (!segmentNumber || !numericLectureId) return;
@@ -53,7 +47,6 @@ const StoryContent = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      // Only set the score if the node was previously completed
       if (progress?.completed_at) {
         setSegmentScores(prev => ({
           ...prev,
@@ -65,101 +58,55 @@ const StoryContent = () => {
     fetchExistingProgress();
   }, [nodeId, numericLectureId, segmentNumber]);
 
-  const isValidQuizQuestion = (question: any): question is QuizQuestion => {
-    return (
-      question &&
-      typeof question === 'object' &&
-      (question.type === 'multiple_choice' || question.type === 'true_false') &&
-      typeof question.question === 'string' &&
-      (typeof question.correctAnswer === 'string' || typeof question.correctAnswer === 'boolean') &&
-      typeof question.explanation === 'string' &&
-      (!question.options || Array.isArray(question.options))
-    );
-  };
-
   const { data: content, isLoading, error } = useQuery({
-    queryKey: ['segment-content', numericLectureId, nodeId],
+    queryKey: ['segment-content', numericLectureId, segmentNumber],
     queryFn: async () => {
-      if (!numericLectureId || !nodeId) throw new Error('Lecture ID and Node ID are required');
-      console.log('Fetching content for:', { lectureId: numericLectureId, nodeId });
+      if (!numericLectureId || !segmentNumber) throw new Error('Invalid parameters');
 
-      const segmentNumber = parseInt(nodeId.split('_')[1]);
-      if (isNaN(segmentNumber)) throw new Error('Invalid segment number');
-
-      // First, get the story structure
-      const { data: storyStructure, error: structureError } = await supabase
-        .from('story_structures')
-        .select('*, segment_contents(*)')
+      // Fetch segment info and its polished chunks
+      const { data: segmentData, error: segmentError } = await supabase
+        .from('lecture_segments')
+        .select(`
+          *,
+          chunks:lecture_polished_chunks(chunk_order, polished_content)
+        `)
         .eq('lecture_id', numericLectureId)
+        .eq('segment_number', segmentNumber)
         .single();
 
-      if (structureError) throw structureError;
-      if (!storyStructure) throw new Error('Story structure not found');
+      if (segmentError) throw segmentError;
 
-      // Find the segment content
-      const segmentContent = storyStructure.segment_contents?.find(
-        content => content.segment_number === segmentNumber
-      );
-
-      if (!segmentContent) {
-        console.log('No content found, triggering generation...');
-        const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId: numericLectureId,
-            segmentNumber,
-            segmentTitle: storyStructure[`segment_${segmentNumber}_title`]
-          }
-        });
-
-        if (generationError) throw generationError;
-
-        const quiz1 = generatedContent.segmentContent.quiz_question_1 as unknown as QuizQuestion;
-        const quiz2 = generatedContent.segmentContent.quiz_question_2 as unknown as QuizQuestion;
-
-        if (!isValidQuizQuestion(quiz1) || !isValidQuizQuestion(quiz2)) {
-          throw new Error('Invalid quiz question format received from generation');
-        }
-        
-        return {
-          segments: [{
-            id: nodeId,
-            title: storyStructure[`segment_${segmentNumber}_title`] || `Segment ${segmentNumber}`,
-            slides: [
-              { id: 'slide-1', content: generatedContent.segmentContent.theory_slide_1 },
-              { id: 'slide-2', content: generatedContent.segmentContent.theory_slide_2 }
-            ],
-            questions: [
-              { id: 'q1', ...quiz1 },
-              { id: 'q2', ...quiz2 }
-            ]
-          }]
-        };
-      }
-
-      const quiz1 = segmentContent.quiz_question_1 as unknown as QuizQuestion;
-      const quiz2 = segmentContent.quiz_question_2 as unknown as QuizQuestion;
-
-      if (!isValidQuizQuestion(quiz1) || !isValidQuizQuestion(quiz2)) {
-        throw new Error('Invalid quiz question format in database');
-      }
+      const chunks = (segmentData.chunks as { chunk_order: number; polished_content: string }[])
+        .sort((a, b) => a.chunk_order - b.chunk_order);
 
       return {
         segments: [{
-          id: nodeId,
-          title: storyStructure[`segment_${segmentNumber}_title`] || `Segment ${segmentNumber}`,
-          slides: [
-            { id: 'slide-1', content: segmentContent.theory_slide_1 },
-            { id: 'slide-2', content: segmentContent.theory_slide_2 }
-          ],
+          id: nodeId || '',
+          title: segmentData.title,
+          slides: chunks.map((chunk, i) => ({
+            id: `slide-${i + 1}`,
+            content: chunk.polished_content
+          })),
           questions: [
-            { id: 'q1', ...quiz1 },
-            { id: 'q2', ...quiz2 }
+            {
+              id: 'q1',
+              type: "multiple_choice" as const,
+              question: "Sample Question 1",
+              options: ["Option 1", "Option 2", "Option 3"],
+              correctAnswer: "Option 1",
+              explanation: "Sample explanation 1"
+            },
+            {
+              id: 'q2',
+              type: "true_false" as const,
+              question: "Sample Question 2",
+              correctAnswer: true,
+              explanation: "Sample explanation 2"
+            }
           ]
         }]
       };
-    },
-    enabled: Boolean(numericLectureId && nodeId),
-    retry: 1
+    }
   });
 
   const handleBack = () => {
@@ -242,7 +189,7 @@ const StoryContent = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-2">
+      <div className="container mx-auto p-4">
         <StoryLoading />
       </div>
     );
@@ -250,7 +197,7 @@ const StoryContent = () => {
 
   if (error || !content) {
     return (
-      <div className="container mx-auto p-2">
+      <div className="container mx-auto p-4">
         <StoryError 
           message={error instanceof Error ? error.message : "Failed to load segment content"}
           onBack={handleBack}

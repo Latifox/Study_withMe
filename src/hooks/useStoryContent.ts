@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,9 +9,8 @@ export interface StoryContent {
 export interface StorySegment {
   id: string;
   title: string;
-  description: string;
-  slides?: SegmentContent['slides'];
-  questions?: SegmentContent['questions'];
+  slides: SegmentContent['slides'];
+  questions: SegmentContent['questions'];
 }
 
 export interface SegmentContent {
@@ -38,134 +38,66 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       console.log('Fetching story content for lecture:', numericLectureId);
 
-      // Check if story structure exists
-      const { data: storyStructure, error: structureError } = await supabase
-        .from('story_structures')
-        .select('*, segment_contents(*)')
+      // Fetch segments and their associated chunks
+      const { data: segments, error: segmentsError } = await supabase
+        .from('lecture_segments')
+        .select(`
+          *,
+          chunks:lecture_polished_chunks(chunk_order, polished_content)
+        `)
         .eq('lecture_id', numericLectureId)
-        .maybeSingle();
+        .order('segment_number', { ascending: true });
 
-      if (structureError) {
-        console.error('Error fetching story structure:', structureError);
-        throw structureError;
+      if (segmentsError) {
+        console.error('Error fetching segments:', segmentsError);
+        throw segmentsError;
       }
 
-      if (!storyStructure) {
-        console.log('No story structure exists, triggering generation');
-        const { data: generatedStructure, error } = await supabase.functions.invoke('generate-story-content', {
-          body: { lectureId: numericLectureId }
-        });
+      // Transform data into the required format
+      const formattedSegments = segments.map((segment, index) => {
+        const chunkPair = segment.chunks as { chunk_order: number; polished_content: string }[];
+        
+        // Sort chunks by order and split into slides
+        const sortedChunks = chunkPair.sort((a, b) => a.chunk_order - b.chunk_order);
+        const slides = sortedChunks.map((chunk, i) => ({
+          id: `slide-${i + 1}`,
+          content: chunk.polished_content
+        }));
 
-        if (error) throw error;
-        return processStoryStructure(generatedStructure.storyStructure);
-      }
+        // Generate placeholder questions (these will be replaced by actual questions from the edge function)
+        const questions = [
+          {
+            id: 'q1',
+            type: "multiple_choice" as const,
+            question: "Question 1",
+            options: ["Option 1", "Option 2", "Option 3"],
+            correctAnswer: "Option 1",
+            explanation: "Explanation 1"
+          },
+          {
+            id: 'q2',
+            type: "true_false" as const,
+            question: "Question 2",
+            correctAnswer: true,
+            explanation: "Explanation 2"
+          }
+        ];
 
-      return processStoryStructure(storyStructure);
-    },
-    gcTime: 1000 * 60 * 60, // 1 hour
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    retry: 1
-  });
-};
-
-const processStoryStructure = (structure: any) => {
-  const segments = [];
-  for (let i = 1; i <= 10; i++) {
-    const segmentContent = structure.segment_contents?.find(
-      (content: any) => content.segment_number === i
-    );
-
-    const processedContent = segmentContent ? {
-      slides: [
-        { id: 'slide-1', content: segmentContent.theory_slide_1 },
-        { id: 'slide-2', content: segmentContent.theory_slide_2 }
-      ],
-      questions: [
-        { id: 'q1', ...segmentContent.quiz_question_1 },
-        { id: 'q2', ...segmentContent.quiz_question_2 }
-      ]
-    } : undefined;
-
-    segments.push({
-      id: `segment-${i}`,
-      title: structure[`segment_${i}_title`],
-      description: '',
-      ...(processedContent && {
-        slides: processedContent.slides,
-        questions: processedContent.questions
-      })
-    });
-  }
-  return { segments };
-};
-
-export const useSegmentContent = (
-  lectureId: string | undefined,
-  segmentNumber: number,
-  segmentTitle: string
-) => {
-  return useQuery({
-    queryKey: ['segment-content', lectureId, segmentNumber],
-    queryFn: async () => {
-      if (!lectureId) throw new Error('Lecture ID is required');
-      const numericLectureId = parseInt(lectureId, 10);
-      if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
-
-      // Get story structure id
-      const { data: storyStructure } = await supabase
-        .from('story_structures')
-        .select('id')
-        .eq('lecture_id', numericLectureId)
-        .single();
-
-      if (!storyStructure) throw new Error('Story structure not found');
-
-      // Check if segment content exists
-      const { data: existingContent } = await supabase
-        .from('segment_contents')
-        .select('*')
-        .eq('story_structure_id', storyStructure.id)
-        .eq('segment_number', segmentNumber)
-        .maybeSingle();
-
-      if (existingContent) {
-        return processSegmentContent(existingContent);
-      }
-
-      // Generate new content
-      const { data: generatedContent, error } = await supabase.functions.invoke('generate-segment-content', {
-        body: { 
-          lectureId: numericLectureId,
-          segmentNumber,
-          segmentTitle
-        }
+        return {
+          id: segment.id.toString(),
+          title: segment.title,
+          slides,
+          questions
+        };
       });
 
-      if (error) throw error;
-      return processSegmentContent(generatedContent.segmentContent);
+      return { segments: formattedSegments };
     },
-    enabled: Boolean(lectureId && segmentNumber && segmentTitle),
-    gcTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1
   });
-};
-
-const processSegmentContent = (content: any) => {
-  return {
-    slides: [
-      { id: 'slide-1', content: content.theory_slide_1 },
-      { id: 'slide-2', content: content.theory_slide_2 }
-    ],
-    questions: [
-      { id: 'q1', ...content.quiz_question_1 },
-      { id: 'q2', ...content.quiz_question_2 }
-    ]
-  };
 };

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
@@ -42,61 +43,31 @@ const StoryNodes = () => {
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
       if (!lectureId) throw new Error('Lecture ID is required');
-      console.log('Fetching story structure for lecture:', lectureId);
+      console.log('Fetching segments for lecture:', lectureId);
 
-      // Get the most recent story structure
-      const { data: storyStructures, error: structureError } = await supabase
-        .from('story_structures')
+      const { data: segments, error: segmentsError } = await supabase
+        .from('lecture_segments')
         .select('*')
         .eq('lecture_id', parseInt(lectureId))
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('segment_number', { ascending: true });
 
-      if (structureError) {
-        console.error('Error fetching story structure:', structureError);
-        throw structureError;
-      }
-
-      const storyStructure = storyStructures?.[0];
-
-      if (!storyStructure) {
-        console.log('No story structure found, generating new content...');
-        const { data: generatedStructure, error: generationError } = await supabase.functions.invoke('generate-story-content', {
-          body: { lectureId: parseInt(lectureId) }
-        });
-
-        if (generationError) {
-          console.error('Error generating story content:', generationError);
-          throw generationError;
-        }
-
-        console.log('Successfully generated new story structure:', generatedStructure);
-        return {
-          segments: Array.from({ length: 10 }, (_, i) => ({
-            id: `segment_${i + 1}`,
-            title: generatedStructure.storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`,
-            type: (i % 3 === 0 ? "quiz" : "concept") as "concept" | "quiz" | "challenge",
-            difficulty: (i < 3 ? "beginner" : i < 7 ? "intermediate" : "advanced") as "beginner" | "intermediate" | "advanced",
-            prerequisites: i === 0 ? [] : [`segment_${i}`],
-            points: (i + 1) * 10,
-            description: `Master the concepts of ${generatedStructure.storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`}`,
-          }))
-        };
+      if (segmentsError) {
+        console.error('Error fetching segments:', segmentsError);
+        throw segmentsError;
       }
 
       return {
-        segments: Array.from({ length: 10 }, (_, i) => ({
-          id: `segment_${i + 1}`,
-          title: storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`,
+        segments: segments.map((segment, i) => ({
+          id: `segment_${segment.segment_number}`,
+          title: segment.title,
           type: (i % 3 === 0 ? "quiz" : "concept") as "concept" | "quiz" | "challenge",
           difficulty: (i < 3 ? "beginner" : i < 7 ? "intermediate" : "advanced") as "beginner" | "intermediate" | "advanced",
-          prerequisites: i === 0 ? [] : [`segment_${i}`],
+          prerequisites: i === 0 ? [] : [`segment_${segment.segment_number - 1}`],
           points: (i + 1) * 10,
-          description: `Master the concepts of ${storyStructure[`segment_${i + 1}_title`] || `Lesson ${i + 1}`}`,
+          description: `Master the concepts of ${segment.title}`
         }))
       };
-    },
-    retry: 1
+    }
   });
 
   const handleBack = () => {
