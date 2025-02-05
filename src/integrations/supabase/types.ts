@@ -291,47 +291,6 @@ export type Database = {
           },
         ]
       }
-      subject_content_mapping: {
-        Row: {
-          content_end_index: number
-          content_snippet: string
-          content_start_index: number
-          created_at: string
-          id: number
-          relevance_score: number
-          subject_id: number | null
-          updated_at: string
-        }
-        Insert: {
-          content_end_index: number
-          content_snippet: string
-          content_start_index: number
-          created_at?: string
-          id?: never
-          relevance_score?: number
-          subject_id?: number | null
-          updated_at?: string
-        }
-        Update: {
-          content_end_index?: number
-          content_snippet?: string
-          content_start_index?: number
-          created_at?: string
-          id?: never
-          relevance_score?: number
-          subject_id?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subject_content_mapping_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subject_definitions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subject_definitions: {
         Row: {
           chronological_order: number

@@ -32,19 +32,6 @@ serve(async (req) => {
     if (chunksError) throw chunksError;
     console.log(`Found ${chunks.length} chunks`);
 
-    // Get AI configuration
-    const { data: aiConfig } = await supabaseClient
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
-
-    const config = aiConfig?.data || {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.6
-    };
-
     // Process chunks in pairs to generate titles
     const chunksPrompts = [];
     for (let i = 0; i < chunks.length; i += 2) {
@@ -70,15 +57,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Generate clear, descriptive segment titles based on the provided content chunks. Each title should:
-1. Accurately represent the content from both chunks in the pair
-2. Follow a logical progression
-3. Use professional, academic language
-4. Be concise but descriptive`
+            content: `You are an expert in creating educational content structures. Generate descriptive titles that accurately summarize the academic content from each pair of text chunks. Each title should:
+1. Be highly specific to the actual content in the chunks
+2. Use appropriate academic terminology found in the chunks
+3. Follow a natural learning progression
+4. Be concise but informative
+5. Focus ONLY on the subject matter present in the chunks`
           },
           {
             role: 'user',
-            content: `Given these content chunk pairs, generate a title for each pair that captures their combined meaning:
+            content: `Based on these pairs of content chunks from a lecture, generate a descriptive title for each pair that captures their combined meaning:
 
 ${chunksPrompts.map((prompt, index) => `Pair ${index + 1}:\n${prompt}\n`).join('\n')}
 
@@ -90,7 +78,7 @@ Return a JSON object with numbered titles (one per chunk pair) in this format:
 }`
           }
         ],
-        temperature: config.temperature,
+        temperature: 0.3, // Lower temperature for more focused outputs
         response_format: { type: "json_object" }
       }),
     });
@@ -133,4 +121,3 @@ Return a JSON object with numbered titles (one per chunk pair) in this format:
     );
   }
 });
-
