@@ -108,6 +108,7 @@ Return a JSON array of objects, each containing:
 Include only the most relevant, non-redundant content. Avoid duplicate information.`;
 
       try {
+        console.log('Making OpenAI API request...');
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -115,7 +116,7 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4',
+            model: 'gpt-4o-mini',
             messages: [
               {
                 role: 'system',
@@ -129,10 +130,18 @@ Include only the most relevant, non-redundant content. Avoid duplicate informati
         });
 
         if (!response.ok) {
-          throw new Error(`OpenAI API error: ${response.status}`);
+          const errorText = await response.text();
+          console.error('OpenAI API error response:', errorText);
+          throw new Error(`OpenAI API error: ${response.status}. Details: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('OpenAI API response received');
+        
+        if (!data.choices?.[0]?.message?.content) {
+          throw new Error('Invalid response format from OpenAI API');
+        }
+
         const contentAnalysis = JSON.parse(data.choices[0].message.content);
 
         // Add mappings from AI analysis
