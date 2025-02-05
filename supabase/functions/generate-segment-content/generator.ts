@@ -1,3 +1,4 @@
+
 import { GeneratedContent } from "./types.ts";
 
 export const generatePrompt = async (
@@ -129,7 +130,7 @@ export const generateContent = async (prompt: string) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-4',  // Fixed model name from gpt-4o to gpt-4
       messages: [
         {
           role: 'system',
@@ -156,3 +157,4 @@ export const generateContent = async (prompt: string) => {
   console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2));
   return data.choices[0].message.content;
 };
+
