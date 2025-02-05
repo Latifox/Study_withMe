@@ -80,30 +80,49 @@ serve(async (req) => {
     for (const subject of subjects) {
       console.log(`Processing subject: ${subject.title}`);
       
-      const prompt = `Analyze this lecture content and extract ONLY the most relevant, non-redundant content specifically related to the subject "${subject.title}". 
-      
-IMPORTANT INSTRUCTIONS:
-1. If provided, strictly follow these additional details about the subject: ${subject.details || 'none provided'}.
-2. DO NOT invent, extrapolate, or add any information not present in the source material.
-3. Only extract text that is EXPLICITLY related to this subject.
-4. Ensure extracted content maintains proper context.
-5. Include relevant formulas and examples ONLY if they appear in the original text.
+      const prompt = `You are an expert educational content analyzer. Your task is to extract PRECISELY relevant content for "${subject.title}" from the lecture material. Follow these instructions meticulously.
 
-AI Configuration settings to consider:
-- Temperature: ${aiConfig.temperature} (higher means more creative analysis)
-- Creativity Level: ${aiConfig.creativity_level} (higher means more innovative connections)
-- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive content selection)
+CONTENT EXTRACTION RULES:
+1. Identify content that DIRECTLY relates to "${subject.title}"
+2. Extract VERBATIM text segments - do not paraphrase or modify
+3. Include full, complete sentences or paragraphs only
+4. Maintain proper context for each extraction
+5. Ensure precise start and end indices for each segment
+${subject.details ? `6. Pay special attention to this subject detail: ${subject.details}` : ''}
 
-Lecture content:
-${content}
+AI Configuration context (influences extraction precision):
+- Temperature: ${aiConfig.temperature}
+- Creativity Level: ${aiConfig.creativity_level}
+- Detail Level: ${aiConfig.detail_level}
 
-You must respond ONLY with a valid JSON array containing objects with this exact structure:
+FORMAT REQUIREMENTS:
+Return a JSON array where each object MUST follow this EXACT structure:
 {
-  "content_snippet": "the extracted relevant text",
-  "relevance_score": (number between 0 and 1),
-  "start_index": (number representing position in original text),
-  "end_index": (number representing position in original text)
-}`;
+  "content_snippet": "exact extracted text from the source",
+  "relevance_score": number between 0.0 and 1.0,
+  "start_index": number indicating exact starting position in source text,
+  "end_index": number indicating exact ending position in source text
+}
+
+Example of correct response format:
+[
+  {
+    "content_snippet": "Newton's First Law states that an object will remain at rest or in uniform motion in a straight line unless acted upon by an external force",
+    "relevance_score": 0.95,
+    "start_index": 145,
+    "end_index": 267
+  }
+]
+
+IMPORTANT:
+- Each object MUST contain ALL four fields
+- relevance_score MUST be a number between 0 and 1
+- start_index and end_index MUST be valid numbers
+- content_snippet MUST be an exact string from the source
+- The response MUST be a valid JSON array
+
+Source content to analyze:
+${content}`;
 
       try {
         console.log('Making OpenAI API request...');
@@ -118,7 +137,7 @@ You must respond ONLY with a valid JSON array containing objects with this exact
             messages: [
               {
                 role: 'system',
-                content: 'You are an expert at analyzing educational content and extracting relevant information. You return only valid JSON arrays.'
+                content: 'You are an expert at analyzing educational content and extracting relevant information. You MUST return only valid JSON arrays containing objects with the exact specified structure.'
               },
               { role: 'user', content: prompt }
             ],
@@ -143,8 +162,7 @@ You must respond ONLY with a valid JSON array containing objects with this exact
         let contentAnalysis;
         try {
           const parsedContent = JSON.parse(data.choices[0].message.content);
-          // Ensure we have an array in the response, even if it's wrapped in an object
-          contentAnalysis = Array.isArray(parsedContent) ? parsedContent : parsedContent.content || [];
+          contentAnalysis = Array.isArray(parsedContent) ? parsedContent : parsedContent.mappings || parsedContent.content || [];
           
           if (!Array.isArray(contentAnalysis)) {
             console.error('Unexpected response format:', parsedContent);
@@ -155,14 +173,20 @@ You must respond ONLY with a valid JSON array containing objects with this exact
           throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
         }
 
-        // Validate each analysis object before adding to mappings
-        contentAnalysis.forEach(analysis => {
-          if (
-            typeof analysis.content_snippet === 'string' &&
-            typeof analysis.relevance_score === 'number' &&
-            typeof analysis.start_index === 'number' &&
-            typeof analysis.end_index === 'number'
-          ) {
+        // Strict validation of each analysis object
+        contentAnalysis.forEach((analysis, index) => {
+          if (!analysis || typeof analysis !== 'object') {
+            console.warn(`Invalid analysis object at index ${index}:`, analysis);
+            return;
+          }
+
+          const isValid = 
+            typeof analysis.content_snippet === 'string' && analysis.content_snippet.trim().length > 0 &&
+            typeof analysis.relevance_score === 'number' && analysis.relevance_score >= 0 && analysis.relevance_score <= 1 &&
+            typeof analysis.start_index === 'number' && analysis.start_index >= 0 &&
+            typeof analysis.end_index === 'number' && analysis.end_index > analysis.start_index;
+
+          if (isValid) {
             mappings.push({
               subject_id: subject.id,
               content_start_index: analysis.start_index,
@@ -171,7 +195,12 @@ You must respond ONLY with a valid JSON array containing objects with this exact
               relevance_score: analysis.relevance_score
             });
           } else {
-            console.warn('Skipping invalid analysis object:', analysis);
+            console.warn('Invalid analysis object structure:', analysis);
+            console.warn('Validation details:', {
+              hasContentSnippet: typeof analysis.content_snippet === 'string',
+              hasValidScore: typeof analysis.relevance_score === 'number' && analysis.relevance_score >= 0 && analysis.relevance_score <= 1,
+              hasValidIndices: typeof analysis.start_index === 'number' && typeof analysis.end_index === 'number' && analysis.end_index > analysis.start_index
+            });
           }
         });
 
