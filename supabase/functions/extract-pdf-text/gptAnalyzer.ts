@@ -12,24 +12,24 @@ export async function analyzeTextWithGPT(text: string): Promise<any> {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing academic text and identifying key segments. 
-You MUST follow these rules PRECISELY:
-
-1. Each segment MUST start with a COMPLETE sentence that begins with a capital letter
-2. Each segment MUST end with a COMPLETE sentence ending with a period, exclamation mark, or question mark
-3. NEVER break a sentence in half - always include full sentences
-4. Each segment should contain multiple complete sentences covering one main topic
-5. Segment boundaries must align perfectly with sentence boundaries
-6. The first word of each segment must be the first word of a complete sentence
-7. The last word of each segment must be the last word of a complete sentence
+            content: `You are an expert at analyzing academic text and identifying key segments.
+            
+STRICT RULES FOR SEGMENTATION:
+1. Each segment MUST start with a complete sentence (begins with capital letter, ends with period/question mark/exclamation mark)
+2. Each segment MUST end with a complete sentence
+3. Never break in the middle of a sentence
+4. Each segment should contain MULTIPLE complete sentences (minimum 2-3)
+5. Segments should cover logically related content
+6. The word count should PRECISELY align with sentence boundaries
+7. The first word of a segment MUST be the first word of a complete sentence
+8. The last word of a segment MUST be the last word of a complete sentence
 
 For the given text:
-1. Split it into 8-10 logical segments following the rules above
-2. For each segment provide:
-   - A clear title describing the main topic
-   - The starting word number (must be first word of a complete sentence)
-   - The ending word number (must be last word of a complete sentence)
-   - Verify that both start and end align with sentence boundaries
+1. Identify 8-10 logical segments following the rules above
+2. For each segment:
+   - Create a descriptive title
+   - Note the EXACT word numbers where complete sentences begin and end
+   - Double-check that boundaries align with full sentences
 
 Return ONLY a JSON object in this format:
 {
@@ -37,8 +37,8 @@ Return ONLY a JSON object in this format:
     {
       "segment_number": number,
       "title": string,
-      "start_word": number,
-      "end_word": number
+      "start_word": number (must be first word of a sentence),
+      "end_word": number (must be last word of a sentence)
     }
   ]
 }`
@@ -59,7 +59,21 @@ Return ONLY a JSON object in this format:
     }
 
     const data = await response.json();
-    return JSON.parse(data.choices[0].message.content);
+    const parsedContent = JSON.parse(data.choices[0].message.content);
+    console.log('GPT Response:', parsedContent);
+    
+    if (!parsedContent.segments || !Array.isArray(parsedContent.segments)) {
+      throw new Error('Invalid GPT response format - missing segments array');
+    }
+
+    // Validate segment structure
+    for (const segment of parsedContent.segments) {
+      if (!segment.segment_number || !segment.title || !segment.start_word || !segment.end_word) {
+        throw new Error('Invalid segment format in GPT response');
+      }
+    }
+
+    return parsedContent;
   } catch (error) {
     console.error('Error in analyzeTextWithGPT:', error);
     throw error;

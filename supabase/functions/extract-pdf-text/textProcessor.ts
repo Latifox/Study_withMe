@@ -17,6 +17,36 @@ export function getWordsInRange(text: string, start: number, end: number): strin
 }
 
 export function isCompleteSentence(text: string): boolean {
-  // Check if text starts with a capital letter and ends with proper punctuation
-  return /^[A-Z].*[.!?]$/.test(text.trim());
+  // More robust sentence validation
+  const trimmedText = text.trim();
+  
+  // Must start with a capital letter
+  if (!/^[A-Z]/.test(trimmedText)) {
+    console.log('Text does not start with capital letter:', trimmedText.substring(0, 50));
+    return false;
+  }
+
+  // Must end with proper punctuation
+  if (!/[.!?]$/.test(trimmedText)) {
+    console.log('Text does not end with proper punctuation:', trimmedText.slice(-50));
+    return false;
+  }
+
+  // Basic check for sentence structure (should have a subject and verb)
+  const wordCount = trimmedText.split(/\s+/).length;
+  if (wordCount < 3) {
+    console.log('Text is too short to be a complete sentence:', trimmedText);
+    return false;
+  }
+
+  // Check for balanced quotation marks and parentheses
+  const quotes = (trimmedText.match(/"/g) || []).length;
+  const parentheses = (trimmedText.match(/\(/g) || []).length === (trimmedText.match(/\)/g) || []).length;
+  
+  if (quotes % 2 !== 0 || !parentheses) {
+    console.log('Unbalanced quotes or parentheses in:', trimmedText);
+    return false;
+  }
+
+  return true;
 }
