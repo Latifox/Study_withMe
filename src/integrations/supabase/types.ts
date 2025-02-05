@@ -71,64 +71,90 @@ export type Database = {
           },
         ]
       }
-      lecture_segment_content: {
+      lecture_polished_chunks: {
         Row: {
-          analysis: string | null
-          content: string
-          created_at: string | null
+          chunk_order: number
+          created_at: string
           id: number
-          segment_id: number | null
+          lecture_id: number | null
+          polished_content: string
         }
         Insert: {
-          analysis?: string | null
-          content: string
-          created_at?: string | null
+          chunk_order: number
+          created_at?: string
           id?: number
-          segment_id?: number | null
+          lecture_id?: number | null
+          polished_content: string
         }
         Update: {
-          analysis?: string | null
-          content?: string
-          created_at?: string | null
+          chunk_order?: number
+          created_at?: string
           id?: number
-          segment_id?: number | null
+          lecture_id?: number | null
+          polished_content?: string
         }
         Relationships: [
           {
-            foreignKeyName: "lecture_segment_content_segment_id_fkey"
-            columns: ["segment_id"]
-            isOneToOne: true
-            referencedRelation: "lecture_segments"
+            foreignKeyName: "lecture_polished_chunks_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lecture_raw_chunks: {
+        Row: {
+          chunk_order: number
+          created_at: string
+          id: number
+          lecture_id: number | null
+          raw_content: string
+        }
+        Insert: {
+          chunk_order: number
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          raw_content: string
+        }
+        Update: {
+          chunk_order?: number
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          raw_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_raw_chunks_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
             referencedColumns: ["id"]
           },
         ]
       }
       lecture_segments: {
         Row: {
-          created_at: string | null
-          end_word: number
+          created_at: string
           id: number
           lecture_id: number | null
           segment_number: number
-          start_word: number
           title: string
         }
         Insert: {
-          created_at?: string | null
-          end_word: number
+          created_at?: string
           id?: number
           lecture_id?: number | null
           segment_number: number
-          start_word: number
           title: string
         }
         Update: {
-          created_at?: string | null
-          end_word?: number
+          created_at?: string
           id?: number
           lecture_id?: number | null
           segment_number?: number
-          start_word?: number
           title?: string
         }
         Relationships: [
@@ -216,109 +242,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "quiz_progress_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      segment_contents: {
-        Row: {
-          created_at: string
-          id: number
-          quiz_question_1: Json | null
-          quiz_question_2: Json | null
-          segment_number: number
-          story_structure_id: number | null
-          theory_slide_1: string | null
-          theory_slide_2: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          quiz_question_1?: Json | null
-          quiz_question_2?: Json | null
-          segment_number: number
-          story_structure_id?: number | null
-          theory_slide_1?: string | null
-          theory_slide_2?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          quiz_question_1?: Json | null
-          quiz_question_2?: Json | null
-          segment_number?: number
-          story_structure_id?: number | null
-          theory_slide_1?: string | null
-          theory_slide_2?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "segment_contents_story_structure_id_fkey"
-            columns: ["story_structure_id"]
-            isOneToOne: false
-            referencedRelation: "story_structures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      story_structures: {
-        Row: {
-          created_at: string
-          id: number
-          lecture_id: number | null
-          segment_1_title: string | null
-          segment_10_title: string | null
-          segment_2_title: string | null
-          segment_3_title: string | null
-          segment_4_title: string | null
-          segment_5_title: string | null
-          segment_6_title: string | null
-          segment_7_title: string | null
-          segment_8_title: string | null
-          segment_9_title: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          lecture_id?: number | null
-          segment_1_title?: string | null
-          segment_10_title?: string | null
-          segment_2_title?: string | null
-          segment_3_title?: string | null
-          segment_4_title?: string | null
-          segment_5_title?: string | null
-          segment_6_title?: string | null
-          segment_7_title?: string | null
-          segment_8_title?: string | null
-          segment_9_title?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          lecture_id?: number | null
-          segment_1_title?: string | null
-          segment_10_title?: string | null
-          segment_2_title?: string | null
-          segment_3_title?: string | null
-          segment_4_title?: string | null
-          segment_5_title?: string | null
-          segment_6_title?: string | null
-          segment_7_title?: string | null
-          segment_8_title?: string | null
-          segment_9_title?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "story_structures_lecture_id_fkey"
             columns: ["lecture_id"]
             isOneToOne: false
             referencedRelation: "lectures"

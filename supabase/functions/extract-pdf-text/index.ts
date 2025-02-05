@@ -1,4 +1,5 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -61,40 +62,40 @@ serve(async (req) => {
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       try {
-        // Store segment definition
-        const { data: segmentData, error: segmentError } = await supabaseClient
-          .from('lecture_segments')
+        // Store raw chunk
+        const { data: rawChunkData, error: rawChunkError } = await supabaseClient
+          .from('lecture_raw_chunks')
           .insert({
             lecture_id: parseInt(lectureId),
-            segment_number: i + 1,
-            title: titles[i] || `Section ${i + 1}`,
-            start_word: segment.wordStart,
-            end_word: segment.wordEnd
-          })
-          .select()
-          .single();
-
-        if (segmentError) {
-          console.error('Error storing segment:', segmentError);
-          throw segmentError;
-        }
-
-        // Store segment content
-        const { error: contentError } = await supabaseClient
-          .from('lecture_segment_content')
-          .insert({
-            segment_id: segmentData.id,
-            content: segment.content
+            chunk_order: i + 1,
+            raw_content: segment.content
           });
 
-        if (contentError) {
-          console.error('Error storing segment content:', contentError);
-          throw contentError;
+        if (rawChunkError) {
+          console.error('Error storing raw chunk:', rawChunkError);
+          throw rawChunkError;
         }
 
-        console.log(`Successfully stored segment ${i + 1}`);
+        // Store segment if it's a pair (every 2 chunks)
+        if (i % 2 === 1) {
+          const segmentNumber = Math.floor(i / 2) + 1;
+          const { data: segmentData, error: segmentError } = await supabaseClient
+            .from('lecture_segments')
+            .insert({
+              lecture_id: parseInt(lectureId),
+              segment_number: segmentNumber,
+              title: titles[segmentNumber - 1] || `Segment ${segmentNumber}`
+            });
+
+          if (segmentError) {
+            console.error('Error storing segment:', segmentError);
+            throw segmentError;
+          }
+        }
+
+        console.log(`Successfully stored chunk ${i + 1}`);
       } catch (error) {
-        console.error(`Error processing segment ${i + 1}:`, error);
+        console.error(`Error processing chunk ${i + 1}:`, error);
         throw error;
       }
     }
