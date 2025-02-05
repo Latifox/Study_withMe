@@ -14,31 +14,27 @@ export async function analyzeTextWithGPT(text: string): Promise<any> {
             role: 'system',
             content: `You are an expert at analyzing academic text and identifying key segments.
             
-STRICT RULES FOR SEGMENTATION:
-1. Each segment MUST start with a complete sentence (begins with capital letter, ends with period/question mark/exclamation mark)
+RULES FOR TEXT SEGMENTATION:
+1. Each segment MUST start with a complete sentence
 2. Each segment MUST end with a complete sentence
-3. Never break in the middle of a sentence
-4. Each segment should contain MULTIPLE complete sentences (minimum 2-3)
-5. Segments should cover logically related content
-6. The word count should PRECISELY align with sentence boundaries
-7. The first word of a segment MUST be the first word of a complete sentence
-8. The last word of a segment MUST be the last word of a complete sentence
+3. Each segment should contain multiple sentences
+4. DO NOT break in the middle of a sentence
+5. A complete sentence:
+   - Starts with a letter or number
+   - Ends with a period, exclamation mark, or question mark
+   - Contains at least 3 words
+6. Segments should cover related content
+7. Try to identify 8-10 logical segments
+8. Word numbers must align exactly with sentence boundaries
 
-For the given text:
-1. Identify 8-10 logical segments following the rules above
-2. For each segment:
-   - Create a descriptive title
-   - Note the EXACT word numbers where complete sentences begin and end
-   - Double-check that boundaries align with full sentences
-
-Return ONLY a JSON object in this format:
+Return a JSON object in this format:
 {
   "segments": [
     {
       "segment_number": number,
       "title": string,
-      "start_word": number (must be first word of a sentence),
-      "end_word": number (must be last word of a sentence)
+      "start_word": number (first word of first complete sentence),
+      "end_word": number (last word of last complete sentence)
     }
   ]
 }`

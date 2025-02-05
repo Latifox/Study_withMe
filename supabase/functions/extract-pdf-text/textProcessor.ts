@@ -17,34 +17,25 @@ export function getWordsInRange(text: string, start: number, end: number): strin
 }
 
 export function isCompleteSentence(text: string): boolean {
-  // More robust sentence validation
+  // Simplified sentence validation that focuses on basic requirements
   const trimmedText = text.trim();
   
-  // Must start with a capital letter
-  if (!/^[A-Z]/.test(trimmedText)) {
-    console.log('Text does not start with capital letter:', trimmedText.substring(0, 50));
+  // Must start with a word character or number
+  if (!/^[A-Za-z0-9]/.test(trimmedText)) {
+    console.log('Text does not start with a valid character:', trimmedText.substring(0, 50));
     return false;
   }
 
   // Must end with proper punctuation
-  if (!/[.!?]$/.test(trimmedText)) {
+  if (!/[.!?][\s]*$/.test(trimmedText)) {
     console.log('Text does not end with proper punctuation:', trimmedText.slice(-50));
     return false;
   }
 
-  // Basic check for sentence structure (should have a subject and verb)
-  const wordCount = trimmedText.split(/\s+/).length;
-  if (wordCount < 3) {
+  // Basic check for minimum words (at least 3 words)
+  const words = trimmedText.split(/\s+/);
+  if (words.length < 3) {
     console.log('Text is too short to be a complete sentence:', trimmedText);
-    return false;
-  }
-
-  // Check for balanced quotation marks and parentheses
-  const quotes = (trimmedText.match(/"/g) || []).length;
-  const parentheses = (trimmedText.match(/\(/g) || []).length === (trimmedText.match(/\)/g) || []).length;
-  
-  if (quotes % 2 !== 0 || !parentheses) {
-    console.log('Unbalanced quotes or parentheses in:', trimmedText);
     return false;
   }
 
