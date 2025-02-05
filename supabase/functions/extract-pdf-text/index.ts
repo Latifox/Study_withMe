@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -65,23 +66,31 @@ serve(async (req) => {
   try {
     console.log('Received request to extract PDF text');
     
-    const formData = await req.formData();
-    const file = formData.get('file');
-    const lectureId = formData.get('lectureId');
+    const { filePath, lectureId } = await req.json();
     
-    if (!file || !(file instanceof File)) {
-      throw new Error('No PDF file provided');
+    if (!filePath || !lectureId) {
+      throw new Error('No file path or lecture ID provided');
     }
 
-    if (!lectureId) {
-      throw new Error('No lecture ID provided');
+    console.log('Processing PDF file:', filePath);
+    
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Download the file from storage
+    const { data: fileData, error: downloadError } = await supabaseClient
+      .storage
+      .from('lecture_pdfs')
+      .download(filePath);
+
+    if (downloadError) {
+      throw new Error(`Failed to download PDF: ${downloadError.message}`);
     }
 
-    console.log('Processing PDF file:', file.name);
-    
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
+    const buffer = Buffer.from(await fileData.arrayBuffer());
     console.log('PDF file converted to buffer, size:', buffer.length);
 
     const data = await pdfParse(buffer);
@@ -93,12 +102,6 @@ serve(async (req) => {
     const chunks = splitIntoChunks(text);
     console.log(`Split text into ${chunks.length} chunks`);
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     // Polish and store each chunk
     console.log('Starting chunk polishing process...');
     for (let i = 0; i < chunks.length; i++) {
@@ -109,7 +112,7 @@ serve(async (req) => {
       const { error: chunkError } = await supabaseClient
         .from('lecture_chunks')
         .insert({
-          lecture_id: parseInt(lectureId as string),
+          lecture_id: parseInt(lectureId),
           chunk_order: i + 1,
           content: chunks[i]
         });
@@ -121,7 +124,7 @@ serve(async (req) => {
       const { error: polishedChunkError } = await supabaseClient
         .from('lecture_polished_chunks')
         .insert({
-          lecture_id: parseInt(lectureId as string),
+          lecture_id: parseInt(lectureId),
           chunk_order: i + 1,
           original_content: chunks[i],
           polished_content: polishedContent
@@ -136,7 +139,7 @@ serve(async (req) => {
     const { error: lectureError } = await supabaseClient
       .from('lectures')
       .update({ content: text })
-      .eq('id', parseInt(lectureId as string));
+      .eq('id', parseInt(lectureId));
 
     if (lectureError) {
       throw lectureError;

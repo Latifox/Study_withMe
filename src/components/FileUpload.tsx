@@ -21,15 +21,14 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const extractPDFContent = async (file: File, lectureId: number): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('lectureId', lectureId.toString());
-
-    console.log('Sending PDF for text extraction...');
+  const extractPDFContent = async (filePath: string, lectureId: number): Promise<string> => {
+    console.log('Sending file path for text extraction:', filePath);
     
     const { data, error } = await supabase.functions.invoke('extract-pdf-text', {
-      body: formData,
+      body: {
+        filePath,
+        lectureId: lectureId.toString()
+      }
     });
 
     if (error) {
@@ -83,7 +82,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
       // Extract PDF content with the new lecture ID
       console.log('Extracting PDF content...');
-      await extractPDFContent(file, lectureData.id);
+      await extractPDFContent(filePath, lectureData.id);
       console.log('PDF content extracted and stored');
 
       // Invalidate queries and wait a moment to ensure the UI updates
