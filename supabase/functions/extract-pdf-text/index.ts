@@ -22,20 +22,24 @@ async function analyzeTextWithGPT(text: string): Promise<any> {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing academic text and identifying key segments. You MUST follow these rules strictly:
+            content: `You are an expert at analyzing academic text and identifying key segments. 
+You MUST follow these rules PRECISELY:
 
-1. Each segment MUST start with a complete sentence
-2. Each segment MUST end with a complete sentence (ending with . ! or ?)
-3. Each segment should cover one complete concept or topic
-4. Never cut a sentence in half
-5. Each segment must make sense on its own
+1. Each segment MUST start with a COMPLETE sentence that begins with a capital letter
+2. Each segment MUST end with a COMPLETE sentence ending with a period, exclamation mark, or question mark
+3. NEVER break a sentence in half - always include full sentences
+4. Each segment should contain multiple complete sentences covering one main topic
+5. Segment boundaries must align perfectly with sentence boundaries
+6. The first word of each segment must be the first word of a complete sentence
+7. The last word of each segment must be the last word of a complete sentence
 
 For the given text:
-1. Split it into 8-10 logical segments
+1. Split it into 8-10 logical segments following the rules above
 2. For each segment provide:
    - A clear title describing the main topic
-   - The starting word number (must be the first word of a complete sentence)
-   - The ending word number (must be the last word of a complete sentence)
+   - The starting word number (must be first word of a complete sentence)
+   - The ending word number (must be last word of a complete sentence)
+   - Verify that both start and end align with sentence boundaries
 
 Return ONLY a JSON object in this format:
 {
@@ -89,9 +93,16 @@ function getWordsInRange(text: string, start: number, end: number): string {
   return words.slice(start - 1, end).join(' ');
 }
 
+function isCompleteSentence(text: string): boolean {
+  // Check if text starts with a capital letter and ends with proper punctuation
+  return /^[A-Z].*[.!?]$/.test(text.trim());
+}
+
 function validateSegmentBoundaries(text: string, segments: any[]): boolean {
   const words = text.split(/\s+/);
   console.log('Total words in text:', words.length);
+  
+  let previousEndWord = 0;
   
   for (const segment of segments) {
     console.log(`Validating segment ${segment.segment_number}:`, {
@@ -100,27 +111,44 @@ function validateSegmentBoundaries(text: string, segments: any[]): boolean {
       title: segment.title
     });
 
+    // Check for gaps or overlaps between segments
+    if (segment.start_word !== previousEndWord + 1 && previousEndWord !== 0) {
+      console.error(`Gap or overlap detected between segments at word ${segment.start_word}`);
+      return false;
+    }
+
     try {
       const segmentContent = getWordsInRange(text, segment.start_word, segment.end_word);
       console.log(`Segment ${segment.segment_number} content:`, segmentContent.substring(0, 100) + '...');
 
-      // Check if segment starts with a capital letter
-      if (!/^[A-Z]/.test(segmentContent)) {
-        console.error(`Segment ${segment.segment_number} does not start with capital letter:`, segmentContent.substring(0, 50));
+      // Enhanced validation for complete sentences
+      if (!isCompleteSentence(segmentContent)) {
+        console.error(`Segment ${segment.segment_number} is not a complete sentence:`, segmentContent);
         return false;
       }
 
-      // Check if segment ends with proper punctuation
-      if (!/[.!?]$/.test(segmentContent)) {
-        console.error(`Segment ${segment.segment_number} does not end with proper punctuation:`, segmentContent.substring(-50));
+      // Check for sentence-like structure with multiple sentences
+      const sentences = segmentContent.match(/[^.!?]+[.!?]+/g);
+      if (!sentences || sentences.length < 1) {
+        console.error(`Segment ${segment.segment_number} doesn't contain proper sentences:`, segmentContent);
         return false;
       }
 
-      // Basic validation that content looks like complete sentences
-      if (!/^[A-Z].*[.!?]$/.test(segmentContent)) {
-        console.error(`Segment ${segment.segment_number} does not look like complete sentences:`, segmentContent);
+      // Validate first and last sentences specifically
+      const firstSentence = sentences[0].trim();
+      const lastSentence = sentences[sentences.length - 1].trim();
+
+      if (!isCompleteSentence(firstSentence)) {
+        console.error(`First sentence of segment ${segment.segment_number} is invalid:`, firstSentence);
         return false;
       }
+
+      if (!isCompleteSentence(lastSentence)) {
+        console.error(`Last sentence of segment ${segment.segment_number} is invalid:`, lastSentence);
+        return false;
+      }
+
+      previousEndWord = segment.end_word;
     } catch (error) {
       console.error(`Error validating segment ${segment.segment_number}:`, error);
       return false;
