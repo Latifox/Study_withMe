@@ -33,18 +33,12 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    // Fetch AI configuration
-    const { data: aiConfig, error: aiConfigError } = await supabaseClient
+    const { data: aiConfig } = await supabaseClient
       .from('lecture_ai_configs')
       .select('*')
       .eq('lecture_id', lectureId)
       .single();
 
-    if (aiConfigError) {
-      console.log('No AI config found, using defaults');
-    }
-
-    // Use default values if no config is found
     const config = aiConfig || {
       temperature: 0.7,
       creativity_level: 0.5,
@@ -74,13 +68,16 @@ serve(async (req) => {
             ${config.custom_instructions ? `\nCustom Instructions:\n${config.custom_instructions}` : ''}
             
             Rules for titles:
-            1. Each title should be concise but descriptive (3-7 words)
-            2. Titles should follow a logical progression
-            3. Use professional, academic language
-            4. Avoid technical jargon unless necessary
-            5. Ensure titles are engaging and clear
-            6. Use the same language as the lecture content
-            7. Adjust creativity and specificity based on the AI configuration
+            1. Ensure STRICT chronological order - concepts must build upon each other logically
+            2. First segments should cover foundational concepts
+            3. Middle segments should cover main theories and applications
+            4. Final segments should cover advanced applications and synthesis
+            5. NO repetition of concepts between segments
+            6. Each title should clearly indicate progression level
+            7. Use professional, academic language
+            8. Adjust creativity and specificity based on the AI configuration
+            9. Maintain consistent terminology throughout
+            10. Each segment should have a clear, unique focus
             
             Return a JSON object with exactly 10 numbered titles. DO NOT include any markdown formatting or code block indicators.
             Example format:
@@ -111,7 +108,6 @@ serve(async (req) => {
     let titles;
     try {
       const content = data.choices[0].message.content;
-      // Remove any potential markdown formatting
       const cleanContent = content.replace(/```json\n|\n```/g, '');
       titles = JSON.parse(cleanContent);
       

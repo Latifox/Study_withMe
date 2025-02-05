@@ -1,4 +1,4 @@
-import { GeneratedContent, SegmentRequest } from "./types.ts";
+import { GeneratedContent } from "./types.ts";
 
 export const generatePrompt = (segmentTitle: string, lectureContent: string, aiConfig: any, previousSegments: any[] = []) => {
   const previousSegmentsContext = previousSegments.map((segment, index) => `
@@ -14,8 +14,15 @@ ${JSON.stringify(segment.quiz_question_2)}
   return `Create comprehensive, detailed educational content for a physics lecture, focusing on the specific subtopic "${segmentTitle}". Each theory slide should be thorough and include multiple examples where appropriate. Format as a STRICT JSON object with carefully escaped strings.
 
 ${previousSegments.length > 0 ? `
-PREVIOUS SEGMENTS CONTEXT (DO NOT REPEAT THIS CONTENT):
+PREVIOUS SEGMENTS CONTEXT (IMPORTANT - DO NOT REPEAT THIS CONTENT):
 ${previousSegmentsContext}
+
+GUIDELINES FOR CONTENT PROGRESSION:
+1. Build upon previous segments without repeating their content
+2. Reference previous concepts only when extending them
+3. Maintain clear progression from earlier segments
+4. Focus exclusively on new material for this segment
+5. Ensure examples are unique and don't overlap with previous segments
 ` : ''}
 
 AI Configuration Settings (IMPORTANT - Adjust content based on these settings):
@@ -26,7 +33,7 @@ ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_inst
 
 CONTENT REQUIREMENTS (Adjust based on AI settings):
 1. Theory Slide 1 should:
-   - Begin with a clear introduction of the concept
+   - Begin with a clear introduction of NEW concepts
    - Provide detailed mathematical foundations (depth based on detail_level)
    - Include step-by-step explanations (complexity based on creativity_level)
    - Use clear, academic language (style varies with temperature)
