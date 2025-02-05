@@ -22,15 +22,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch lecture chunks
+    // Fetch polished chunks
     const { data: chunks, error: chunksError } = await supabaseClient
-      .from('lecture_chunks')
+      .from('lecture_polished_chunks')
       .select('*')
       .eq('lecture_id', lectureId)
       .order('chunk_order', { ascending: true });
 
     if (chunksError) throw chunksError;
-    console.log(`Found ${chunks?.length || 0} chunks`);
+    console.log(`Found ${chunks?.length || 0} polished chunks`);
 
     if (!chunks || chunks.length === 0) {
       throw new Error('No lecture chunks found');
@@ -43,9 +43,9 @@ serve(async (req) => {
       const chunk2 = chunks[i + 1];
       
       if (chunk2) {
-        chunksPrompts.push(`Chunk ${i + 1} content: ${chunk1.content}\nChunk ${i + 2} content: ${chunk2.content}`);
+        chunksPrompts.push(`Chunk ${i + 1} content: ${chunk1.polished_content}\nChunk ${i + 2} content: ${chunk2.polished_content}`);
       } else {
-        chunksPrompts.push(`Chunk ${i + 1} content: ${chunk1.content}`);
+        chunksPrompts.push(`Chunk ${i + 1} content: ${chunk1.polished_content}`);
       }
     }
 
@@ -70,7 +70,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Based on these pairs of content chunks from a lecture, generate a descriptive title for each pair that captures their combined meaning:
+            content: `Based on these pairs of polished content chunks from a lecture, generate a descriptive title for each pair that captures their combined meaning:
 
 ${chunksPrompts.map((prompt, index) => `Pair ${index + 1}:\n${prompt}\n`).join('\n')}
 
@@ -82,7 +82,7 @@ Return a JSON object with numbered titles (one per chunk pair) in this format:
 }`
           }
         ],
-        temperature: 0.3, // Lower temperature for more focused outputs
+        temperature: 0.3,
         response_format: { type: "json_object" }
       }),
     });

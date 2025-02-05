@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { GeneratedContent, SegmentRequest } from "./types.ts";
 
@@ -41,15 +40,15 @@ export const getLectureChunks = async (supabaseClient: any, lectureId: number, s
   const endChunkOrder = startChunkOrder + 1;
 
   const { data: chunks, error: chunksError } = await supabaseClient
-    .from('lecture_chunks')
-    .select('content')
+    .from('lecture_polished_chunks')
+    .select('polished_content')
     .eq('lecture_id', lectureId)
     .in('chunk_order', [startChunkOrder, endChunkOrder])
     .order('chunk_order', { ascending: true });
 
   if (chunksError) {
-    console.error('Failed to fetch lecture chunks:', chunksError);
-    throw new Error(`Failed to fetch lecture chunks: ${chunksError.message}`);
+    console.error('Failed to fetch polished lecture chunks:', chunksError);
+    throw new Error(`Failed to fetch polished lecture chunks: ${chunksError.message}`);
   }
 
   if (!chunks || chunks.length < 2) {
@@ -57,8 +56,8 @@ export const getLectureChunks = async (supabaseClient: any, lectureId: number, s
   }
 
   return {
-    chunk1: chunks[0].content,
-    chunk2: chunks[1].content
+    chunk1: chunks[0].polished_content,
+    chunk2: chunks[1].polished_content
   };
 };
 

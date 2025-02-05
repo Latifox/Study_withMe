@@ -106,6 +106,41 @@ export type Database = {
           },
         ]
       }
+      lecture_polished_chunks: {
+        Row: {
+          chunk_order: number
+          created_at: string
+          id: number
+          lecture_id: number | null
+          original_content: string
+          polished_content: string
+        }
+        Insert: {
+          chunk_order: number
+          created_at?: string
+          id?: never
+          lecture_id?: number | null
+          original_content: string
+          polished_content: string
+        }
+        Update: {
+          chunk_order?: number
+          created_at?: string
+          id?: never
+          lecture_id?: number | null
+          original_content?: string
+          polished_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_polished_chunks_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lectures: {
         Row: {
           content: string | null
