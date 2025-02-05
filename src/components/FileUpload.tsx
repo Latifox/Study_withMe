@@ -21,9 +21,10 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const extractPDFContent = async (file: File): Promise<string> => {
+  const extractPDFContent = async (file: File, lectureId: number): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('lectureId', lectureId.toString());
 
     console.log('Sending PDF for text extraction...');
     
@@ -53,12 +54,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     try {
       setIsUploading(true);
 
-      // Extract PDF content first
-      console.log('Extracting PDF content...');
-      const pdfContent = await extractPDFContent(file);
-      console.log('PDF content extracted successfully');
-
-      // Upload PDF to storage
+      // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
       
@@ -70,19 +66,25 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (uploadError) throw uploadError;
       console.log('PDF uploaded successfully');
 
-      // Save lecture metadata and content to database
+      // Save lecture metadata and get the lecture ID
       console.log('Saving lecture to database...');
-      const { error: dbError } = await supabase
+      const { data: lectureData, error: dbError } = await supabase
         .from('lectures')
         .insert({
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
-          content: pdfContent,
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
       console.log('Lecture saved successfully');
+
+      // Extract PDF content with the new lecture ID
+      console.log('Extracting PDF content...');
+      await extractPDFContent(file, lectureData.id);
+      console.log('PDF content extracted and stored');
 
       // Invalidate queries and wait a moment to ensure the UI updates
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
