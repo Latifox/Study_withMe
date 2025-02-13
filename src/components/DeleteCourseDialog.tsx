@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -20,24 +21,34 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
+      // First, delete all lectures associated with this course
+      const { error: lecturesError } = await supabase
+        .from('lectures')
+        .delete()
+        .eq('course_id', courseId);
+
+      if (lecturesError) throw lecturesError;
+
+      // Then delete the course
+      const { error: courseError } = await supabase
         .from('courses')
         .delete()
         .eq('id', courseId);
 
-      if (error) throw error;
+      if (courseError) throw courseError;
 
       toast({
         title: "Success",
-        description: "Course deleted successfully",
+        description: "Course and all its lectures deleted successfully",
       });
       
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['uploaded-courses'] });
       setOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete course",
+        description: "Failed to delete course: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -56,7 +67,7 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
         <DialogHeader>
           <DialogTitle>Delete Course</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete "{courseTitle}"? This action cannot be undone.
+            Are you sure you want to delete "{courseTitle}"? This will also delete all lectures associated with this course. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-4 mt-4">
