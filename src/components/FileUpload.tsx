@@ -58,19 +58,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     try {
       setIsUploading(true);
 
-      // First check if we have a storage bucket
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const lectureBucketExists = buckets?.some(b => b.name === 'lecture_pdfs');
-
-      if (!lectureBucketExists) {
-        toast({
-          title: "Error",
-          description: "Storage bucket not configured. Please contact support.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
