@@ -33,7 +33,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
     if (error) {
       console.error('Error extracting PDF content:', error);
-      throw new Error('Failed to extract PDF content');
+      throw error;
+    }
+
+    if (!data?.text) {
+      console.error('No text content returned from extraction:', data);
+      throw new Error('No text content extracted from PDF');
     }
 
     console.log('Extracted text length:', data.text.length);
@@ -52,6 +57,19 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
     try {
       setIsUploading(true);
+
+      // First check if we have a storage bucket
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const lectureBucketExists = buckets?.some(b => b.name === 'lecture_pdfs');
+
+      if (!lectureBucketExists) {
+        toast({
+          title: "Error",
+          description: "Storage bucket not configured. Please contact support.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
@@ -81,6 +99,10 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       console.log('Lecture saved successfully');
 
       // Extract PDF content with the new lecture ID
+      if (!lectureData?.id) {
+        throw new Error('No lecture ID returned from database');
+      }
+
       console.log('Extracting PDF content...');
       await extractPDFContent(filePath, lectureData.id);
       console.log('PDF content extracted and stored');
@@ -96,11 +118,11 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         description: "Lecture uploaded successfully!",
       });
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
       toast({
         title: "Error",
-        description: "Failed to upload lecture: " + error.message,
+        description: error.message || "Failed to upload lecture",
         variant: "destructive",
       });
     } finally {
@@ -122,7 +144,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
               <h4 className="font-medium text-amber-800 mb-2">File Requirements:</h4>
               <ul className="text-sm text-amber-700 space-y-1 list-disc pl-4">
                 <li>PDF files only</li>
-                <li>Text must be searchable (no scanned documents)</li>
+                <li>Text must be searchable (not scanned documents)</li>
                 <li>Maximum file size: 10MB</li>
                 <li>Clear, readable text formatting</li>
                 <li>No password-protected documents</li>
