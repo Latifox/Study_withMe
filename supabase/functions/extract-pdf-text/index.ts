@@ -84,8 +84,19 @@ serve(async (req) => {
         const gptResponse = await analyzeTextWithGPT(normalizedText);
         console.log('GPT Analysis complete:', gptResponse);
         
-        // Store lecture segments
+        // Calculate content per segment (divide text equally among segments)
+        const segmentLength = Math.floor(normalizedText.length / gptResponse.titles.length);
+        
+        // Store lecture segments with content
         for (let i = 0; i < gptResponse.titles.length; i++) {
+          const startIdx = i * segmentLength;
+          const endIdx = i === gptResponse.titles.length - 1 
+            ? normalizedText.length 
+            : (i + 1) * segmentLength;
+          
+          const segmentContent = normalizedText.slice(startIdx, endIdx);
+          
+          // Store in lecture_segments for backward compatibility
           const { error: segmentError } = await supabaseClient
             .from('lecture_segments')
             .insert({
@@ -95,8 +106,27 @@ serve(async (req) => {
             });
 
           if (segmentError) {
-            console.error(`Error storing segment ${i + 1}:`, segmentError);
+            console.error(`Error storing lecture segment ${i + 1}:`, segmentError);
             throw segmentError;
+          }
+
+          // Store in new segments table with content
+          const { error: newSegmentError } = await supabaseClient
+            .from('segments')
+            .insert({
+              lecture_id: parseInt(lectureId),
+              sequence_number: i + 1,
+              title: gptResponse.titles[i],
+              content: {
+                text: segmentContent,
+                slides: [],
+                questions: []
+              }
+            });
+
+          if (newSegmentError) {
+            console.error(`Error storing new segment ${i + 1}:`, newSegmentError);
+            throw newSegmentError;
           }
         }
 
