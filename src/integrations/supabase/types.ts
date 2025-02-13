@@ -293,6 +293,44 @@ export type Database = {
           },
         ]
       }
+      segments: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: number
+          lecture_id: number | null
+          sequence_number: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          sequence_number: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          sequence_number?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segments_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_structures: {
         Row: {
           created_at: string | null
