@@ -14,7 +14,13 @@ export async function analyzeTextWithGPT(text: string): Promise<any> {
             role: 'system',
             content: `You are an expert at analyzing academic text and identifying key topics.
             Analyze the text and create meaningful titles for each segment.
-            Return a JSON array of segment titles that summarize the main topic of each segment.`
+            Return a JSON array of segment titles that summarize the main topic of each segment.
+            Important guidelines:
+            - Create 4-6 segments total
+            - Each segment should cover a distinct topic
+            - Titles should be clear and concise
+            - Avoid repeating topics
+            - Ensure titles reflect the natural progression of the content`
           },
           {
             role: 'user',

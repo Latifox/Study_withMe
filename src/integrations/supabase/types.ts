@@ -249,6 +249,85 @@ export type Database = {
           },
         ]
       }
+      segment_contents: {
+        Row: {
+          created_at: string | null
+          id: number
+          quiz_question_1: Json | null
+          quiz_question_2: Json | null
+          segment_number: number
+          story_structure_id: number | null
+          theory_slide_1: string | null
+          theory_slide_2: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: never
+          quiz_question_1?: Json | null
+          quiz_question_2?: Json | null
+          segment_number: number
+          story_structure_id?: number | null
+          theory_slide_1?: string | null
+          theory_slide_2?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: never
+          quiz_question_1?: Json | null
+          quiz_question_2?: Json | null
+          segment_number?: number
+          story_structure_id?: number | null
+          theory_slide_1?: string | null
+          theory_slide_2?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segment_contents_story_structure_id_fkey"
+            columns: ["story_structure_id"]
+            isOneToOne: false
+            referencedRelation: "story_structures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_structures: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: number
+          lecture_id: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: never
+          lecture_id?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: never
+          lecture_id?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_structures_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: true
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subject_definitions: {
         Row: {
           chronological_order: number
