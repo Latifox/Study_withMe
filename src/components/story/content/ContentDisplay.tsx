@@ -5,6 +5,7 @@ import QuizHandler from "../quiz/QuizHandler";
 import SegmentProgress from "../SegmentProgress";
 import StoryProgress from "../StoryProgress";
 import { MAX_SCORE } from "@/utils/scoreUtils";
+import { AlertCircle } from "lucide-react";
 
 interface ContentDisplayProps {
   currentSegmentData: {
@@ -42,6 +43,15 @@ const ContentDisplay = ({
   onCorrectAnswer,
   onWrongAnswer
 }: ContentDisplayProps) => {
+  // Check if slides exist and have content for the current index
+  const hasValidSlide = isSlide && 
+    currentSegmentData?.slides?.length > slideIndex && 
+    currentSegmentData.slides[slideIndex]?.content;
+
+  // Check if questions exist for the current index
+  const hasValidQuestion = !isSlide && 
+    currentSegmentData?.questions?.length > questionIndex;
+
   return (
     <Card className="p-2">
       <div className="mb-2">
@@ -63,21 +73,49 @@ const ContentDisplay = ({
       <h2 className="text-base font-bold mb-2">{currentSegmentData.title}</h2>
       
       {isSlide ? (
-        <TheorySlide
-          content={currentSegmentData.slides[slideIndex].content}
-          onContinue={onContinue}
-        />
+        hasValidSlide ? (
+          <TheorySlide
+            content={currentSegmentData.slides[slideIndex].content}
+            onContinue={onContinue}
+          />
+        ) : (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-amber-800">No Content Available</h4>
+                <p className="text-sm text-amber-700">
+                  The content for this slide is still being generated. Please try again in a few moments.
+                </p>
+              </div>
+            </div>
+          </div>
+        )
       ) : (
-        <QuizHandler
-          currentSegmentData={currentSegmentData}
-          questionIndex={questionIndex}
-          lectureId={lectureId}
-          courseId={courseId}
-          currentScore={currentScore}
-          onCorrectAnswer={onCorrectAnswer}
-          onWrongAnswer={onWrongAnswer}
-          onContinue={onContinue}
-        />
+        hasValidQuestion ? (
+          <QuizHandler
+            currentSegmentData={currentSegmentData}
+            questionIndex={questionIndex}
+            lectureId={lectureId}
+            courseId={courseId}
+            currentScore={currentScore}
+            onCorrectAnswer={onCorrectAnswer}
+            onWrongAnswer={onWrongAnswer}
+            onContinue={onContinue}
+          />
+        ) : (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-amber-800">No Questions Available</h4>
+                <p className="text-sm text-amber-700">
+                  The questions for this segment are still being generated. Please try again in a few moments.
+                </p>
+              </div>
+            </div>
+          </div>
+        )
       )}
     </Card>
   );
