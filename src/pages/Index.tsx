@@ -69,7 +69,7 @@ const Index = () => {
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-white">Welcome to Course Manager</h1>
+            <h1 className="text-4xl font-bold text-white"></h1>
             <Button variant="outline" onClick={handleSignOut} className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -93,7 +93,7 @@ const Index = () => {
 
             <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/invited-courses')}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90">
+                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
                   <Mail className="w-6 h-6" />
                   Invited Courses
                 </CardTitle>

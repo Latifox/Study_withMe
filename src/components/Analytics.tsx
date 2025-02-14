@@ -106,14 +106,14 @@ const Analytics = () => {
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 bg-purple-400 hover:bg-purple-300 rounded-lg">
+              <CardContent className="pt-6 rounded-lg bg-purple-400 hover:bg-purple-300">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-red-300 hover:bg-red-200">
-                    <Flame className="w-6 h-6 text-orange-500" />
+                  <div className="p-3 rounded-full bg-red-600 hover:bg-red-500">
+                    <Flame className="w-6 h-6 text-orange-500 bg-red-600 hover:bg-red-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Current Streak</p>
-                    <p className="text-2xl font-bold text-gray-900">{currentStreak} days</p>
+                    <p className="font-bold text-lg text-red-600">Current Streak</p>
+                    <p className="text-2xl font-bold text-red-600">{currentStreak} days</p>
                   </div>
                 </div>
               </CardContent>
@@ -122,12 +122,12 @@ const Analytics = () => {
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-purple-300 hover:bg-purple-200">
+                  <div className="p-3 rounded-full bg-green-500 hover:bg-green-400">
                     <Trophy className="w-6 h-6 text-purple-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Total Lectures</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalLectures}</p>
+                    <p className="text-lg font-bold text-green-500">Total Lectures</p>
+                    <p className="text-2xl font-bold text-green-500">{totalLectures}</p>
                   </div>
                 </div>
               </CardContent>
@@ -136,12 +136,12 @@ const Analytics = () => {
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-full">
-                    <BookOpen className="w-6 h-6 text-blue-500" />
+                  <div className="p-3 rounded-full bg-cyan-600 hover:bg-cyan-500">
+                    <BookOpen className="w-6 h-6 text-blue-500 bg-cyan-600 hover:bg-cyan-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Daily Average</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-lg font-bold text-sky-600">Daily Average</p>
+                    <p className="text-2xl font-bold text-cyan-600">
                       {chartData.length ? (totalLectures / chartData.length).toFixed(1) : '0'}
                     </p>
                   </div>
@@ -170,7 +170,7 @@ const Analytics = () => {
               </div>
             </div>
 
-            <div className="h-[400px] bg-white rounded-lg p-4 shadow-inner">
+            <div className="h-[400px] rounded-lg p-4 shadow-inner bg-purple-300 hover:bg-purple-200">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={prepareChartData()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
