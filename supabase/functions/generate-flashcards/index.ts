@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -50,51 +51,43 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content and AI config');
 
-    const systemMessage = `You are a flashcard generator. Generate exactly ${count} flashcards based on the provided lecture content. 
-    Each flashcard should have a question on one side and the answer on the other side.
-    
-    Adjust your output based on these parameters:
-    - Creativity Level: ${aiConfig.creativity_level} (higher means more creative and unique questions)
-    - Detail Level: ${aiConfig.detail_level} (higher means more detailed answers)
-    
-    ${aiConfig.custom_instructions ? `Additional instructions:\n${aiConfig.custom_instructions}` : ''}
-    
-    Format each flashcard as:
-    Question: [your question here]
-    Answer: [your answer here]`;
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Generate flashcards using Gemini
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: systemMessage
-          },
+        contents: [
           {
             role: 'user',
-            content: lecture.content
+            parts: [{
+              text: `Generate exactly ${count} flashcards based on this lecture content:\n\n${lecture.content}\n\n` +
+                    `Format each flashcard as:\nQuestion: [your question here]\nAnswer: [your answer here]\n\n` +
+                    `Adjust output based on these parameters:\n` +
+                    `- Creativity Level: ${aiConfig.creativity_level}\n` +
+                    `- Detail Level: ${aiConfig.detail_level}`
+            }]
           }
         ],
-        temperature: aiConfig.temperature,
+        generationConfig: {
+          temperature: aiConfig.temperature,
+          maxOutputTokens: 2048,
+        }
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('Google API error:', response.status);
+      throw new Error(`Google API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Successfully generated flashcards from OpenAI');
+    console.log('Raw Gemini response:', data);
 
-    const content = data.choices[0].message.content;
-
+    const content = data.candidates[0].content.parts[0].text;
+    
     // Parse the response to extract flashcards
     const flashcards = content.split('\n\n')
       .filter((card: string) => card.trim())

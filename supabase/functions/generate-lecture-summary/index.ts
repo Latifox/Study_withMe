@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -49,116 +50,80 @@ serve(async (req) => {
 
     console.log('Fetched lecture content and AI config, generating comprehensive summary...');
 
-    const systemMessage = `You are an expert educational content summarizer. Create a comprehensive, well-structured summary of the lecture content. 
-    
-    Adjust your output based on these parameters:
-    - Creativity Level: ${aiConfig.creativity_level} (higher means more creative and unique perspectives)
-    - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
-    
-    ${aiConfig.custom_instructions ? `Additional instructions:\n${aiConfig.custom_instructions}\n\n` : ''}
-    
-    Follow these guidelines:
-    1. Maintain the EXACT SAME LANGUAGE as the input text (if Spanish, write in Spanish, if French, write in French, etc.)
-    2. Structure the summary into these specific sections, using Markdown formatting:
-
-    # Structure
-    - Outline the organizational structure of the content
-    - Identify major sections and subsections
-    - Note any patterns in how information is presented
-    - Highlight the flow of ideas
-
-    # Key Concepts
-    - Break down 4-6 important concepts
-    - Include clear definitions
-    - Use examples where relevant
-    - Highlight important terms in **bold**
-
-    # Main Ideas
-    - List the central arguments or themes
-    - Explain core principles
-    - Identify key takeaways
-    - Connect to broader context
-
-    # Important Quotes
-    - Select 2-3 significant quotes
-    - Use proper ">" quote formatting
-    - Add brief context for each quote
-    - Attribute quotes when possible
-
-    # Relationships and Connections
-    - Identify links between concepts
-    - Show how ideas build on each other
-    - Note external connections
-    - Highlight cause-effect relationships
-
-    # Supporting Evidence & Examples
-    - List key examples used
-    - Describe supporting evidence
-    - Include relevant data or statistics
-    - Note case studies or illustrations
-
-    # Full Content
-    Provide a detailed, comprehensive summary of the entire lecture content, including:
-    - In-depth explanations of all concepts
-    - Extended examples and applications
-    - Detailed analysis of important points
-    - Connection between different topics
-    - Study recommendations and practical implications
-
-    Make each section informative yet concise. Use proper Markdown formatting throughout.`;
-
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: systemMessage
-          },
+        contents: [
           {
             role: 'user',
-            content: lecture.content
+            parts: [{
+              text: `Create a comprehensive, well-structured summary of this lecture content:\n\n${lecture.content}\n\n` +
+                    `Follow these guidelines:\n` +
+                    `1. Structure the summary into these specific sections:\n\n` +
+                    `# Structure\n` +
+                    `- Outline the organizational structure\n` +
+                    `- Identify major sections and subsections\n` +
+                    `- Note patterns in information presentation\n` +
+                    `- Highlight idea flow\n\n` +
+                    `# Key Concepts\n` +
+                    `- Break down 4-6 important concepts\n` +
+                    `- Include clear definitions\n` +
+                    `- Use examples where relevant\n` +
+                    `- Highlight important terms in **bold**\n\n` +
+                    `# Main Ideas\n` +
+                    `- List central arguments/themes\n` +
+                    `- Explain core principles\n` +
+                    `- Identify key takeaways\n` +
+                    `- Connect to broader context\n\n` +
+                    `# Important Quotes\n` +
+                    `- Select 2-3 significant quotes\n` +
+                    `- Use proper ">" quote formatting\n` +
+                    `- Add brief context\n` +
+                    `- Attribute quotes when possible\n\n` +
+                    `# Relationships and Connections\n` +
+                    `- Identify links between concepts\n` +
+                    `- Show how ideas build\n` +
+                    `- Note external connections\n` +
+                    `- Highlight cause-effect relationships\n\n` +
+                    `# Supporting Evidence & Examples\n` +
+                    `- List key examples\n` +
+                    `- Describe supporting evidence\n` +
+                    `- Include relevant data\n` +
+                    `- Note case studies\n\n` +
+                    `# Full Content\n` +
+                    `Provide comprehensive summary including:\n` +
+                    `- In-depth concept explanations\n` +
+                    `- Extended examples\n` +
+                    `- Detailed analysis\n` +
+                    `- Topic connections\n` +
+                    `- Study recommendations\n\n` +
+                    `Adjust based on:\n` +
+                    `- Creativity Level: ${aiConfig.creativity_level}\n` +
+                    `- Detail Level: ${aiConfig.detail_level}\n` +
+                    `${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}`
+            }]
           }
         ],
-        temperature: aiConfig.temperature,
-        max_tokens: 2500,
+        generationConfig: {
+          temperature: aiConfig.temperature,
+          maxOutputTokens: 2500,
+        }
       }),
     });
 
-    if (!openaiResponse.ok) {
-      console.error('OpenAI API error:', openaiResponse.status);
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI API error details:', errorText);
-      
-      if (openaiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a few moments.' }),
-          { 
-            status: 429,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          error: `OpenAI API error: ${openaiResponse.status}`,
-          details: 'Please try again in a few moments or contact support if the issue persists.'
-        }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    if (!response.ok) {
+      console.error('Google API error:', response.status);
+      const errorText = await response.text();
+      console.error('Google API error details:', errorText);
+      throw new Error(`Google API error: ${response.status}`);
     }
 
-    const data = await openaiResponse.json();
-    const fullSummary = data.choices[0].message.content;
+    const data = await response.json();
+    const fullSummary = data.candidates[0].content.parts[0].text;
     
     const sections = {
       structure: extractSection(fullSummary, "Structure"),

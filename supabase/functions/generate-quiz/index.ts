@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -48,78 +49,65 @@ serve(async (req) => {
       custom_instructions: ''
     };
 
-    console.log('Fetched lecture content and AI config, sending to OpenAI...');
+    console.log('Fetched lecture content and AI config, sending to Gemini...');
 
-    // Generate quiz using OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Generate quiz using Gemini
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a quiz generator. Generate a quiz based on the provided lecture content. 
-            
-            Adjust your output based on these parameters:
-            - Creativity Level: ${config.creativity_level} (higher means more creative and challenging questions)
-            - Detail Level: ${config.detail_level} (higher means more detailed questions and answers)
-            
-            ${config.custom_instructions ? `Additional instructions:\n${config.custom_instructions}\n\n` : ''}
-            
-            Rules:
-            - Generate exactly ${quizConfig.numberOfQuestions} questions
-            - Difficulty level: ${quizConfig.difficulty}
-            - Question types: ${quizConfig.questionTypes === 'mixed' ? 'mix of multiple choice and true/false' : quizConfig.questionTypes}
-            ${quizConfig.hintsEnabled ? '- Include a helpful hint for each question' : ''}
-            
-            Response format:
-            Return a JSON array where each question object has these exact properties:
-            {
-              "question": "string with the question text",
-              "type": "multiple_choice" or "true_false",
-              "options": ["array", "of", "possible", "answers"],
-              "correctAnswer": "must match one of the options exactly",
-              ${quizConfig.hintsEnabled ? '"hint": "helpful hint text",' : ''}
-            }
-            
-            Important:
-            - For multiple choice: provide exactly 4 options
-            - For true/false: options must be exactly ["True", "False"]
-            - Return ONLY the JSON array, no markdown, no extra text
-            - Ensure the JSON is valid and properly formatted`
-          },
+        contents: [
           {
             role: 'user',
-            content: lecture.content
+            parts: [{
+              text: `Generate a quiz based on this lecture content:\n\n${lecture.content}\n\n` +
+                    `Requirements:\n` +
+                    `- Generate exactly ${quizConfig.numberOfQuestions} questions\n` +
+                    `- Difficulty level: ${quizConfig.difficulty}\n` +
+                    `- Question types: ${quizConfig.questionTypes}\n` +
+                    `${quizConfig.hintsEnabled ? '- Include a helpful hint for each question\n' : ''}` +
+                    `\nFormat each question as a JSON object with these properties:\n` +
+                    `{\n` +
+                    `  "question": "string with the question text",\n` +
+                    `  "type": "multiple_choice" or "true_false",\n` +
+                    `  "options": ["array", "of", "possible", "answers"],\n` +
+                    `  "correctAnswer": "must match one of the options exactly",\n` +
+                    `  ${quizConfig.hintsEnabled ? '"hint": "helpful hint text",\n' : ''}` +
+                    `}\n\n` +
+                    `Important rules:\n` +
+                    `- For multiple choice: provide exactly 4 options\n` +
+                    `- For true/false: options must be exactly ["True", "False"]\n` +
+                    `- Return an array of question objects\n` +
+                    `\nAdjust output based on these parameters:\n` +
+                    `- Creativity Level: ${config.creativity_level}\n` +
+                    `- Detail Level: ${config.detail_level}`
+            }]
           }
         ],
-        temperature: config.temperature,
+        generationConfig: {
+          temperature: config.temperature,
+          maxOutputTokens: 2048,
+        }
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
+      console.error('Google API error:', response.status);
       const errorText = await response.text();
-      console.error('OpenAI API error details:', errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('Google API error details:', errorText);
+      throw new Error(`Google API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Raw OpenAI response:', data.choices[0].message.content);
+    console.log('Raw Gemini response:', data.candidates[0].content.parts[0].text);
 
     let quiz;
     try {
-      // Remove any potential markdown formatting and clean the string
-      const cleanContent = data.choices[0].message.content
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      
-      quiz = JSON.parse(cleanContent);
+      // Parse the response into JSON
+      quiz = JSON.parse(data.candidates[0].content.parts[0].text);
       
       // Validate quiz structure
       if (!Array.isArray(quiz)) {
@@ -139,7 +127,7 @@ serve(async (req) => {
       console.log('Successfully parsed and validated quiz:', quiz);
     } catch (error) {
       console.error('Error parsing or validating quiz JSON:', error);
-      console.error('Raw content:', data.choices[0].message.content);
+      console.error('Raw content:', data.candidates[0].content.parts[0].text);
       throw new Error(`Failed to parse quiz JSON: ${error.message}`);
     }
 

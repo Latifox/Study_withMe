@@ -94,33 +94,29 @@ export const generateContent = async (prompt: string): Promise<string> => {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
           'Content-Type': 'application/json',
+          'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert physics educator specializing in creating detailed, comprehensive educational content with proper mathematical notation. You MUST return ONLY a valid JSON object - no markdown code blocks, no extra text. The JSON object must have properly formatted and escaped markdown strings with proper LaTeX notation.'
-            },
+          contents: [
             {
               role: 'user',
-              content: prompt
+              parts: [{ text: prompt }]
             }
           ],
-          temperature: 0.7,
-          max_tokens: 3000,
-          response_format: { type: "json_object" }
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 3000,
+          }
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`OpenAI API error (attempt ${attempt}/${maxRetries}):`, response.status, errorText);
+        console.error(`Google API error (attempt ${attempt}/${maxRetries}):`, response.status, errorText);
         
         if (response.status === 429) {
           // Rate limit hit - wait and retry
@@ -130,12 +126,15 @@ export const generateContent = async (prompt: string): Promise<string> => {
           continue;
         }
         
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+        throw new Error(`Google API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Raw OpenAI response:', JSON.stringify(data.choices[0].message.content, null, 2));
-      return data.choices[0].message.content;
+      console.log('Raw Google API response:', JSON.stringify(data, null, 2));
+      
+      // Extract the generated content from Gemini's response
+      const generatedContent = data.candidates[0].content.parts[0].text;
+      return generatedContent;
 
     } catch (error) {
       if (attempt === maxRetries) {
