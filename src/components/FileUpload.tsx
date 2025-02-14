@@ -21,30 +21,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const extractPDFContent = async (filePath: string, lectureId: number): Promise<string> => {
-    console.log('Sending file path for text extraction:', filePath);
-    
-    const { data, error } = await supabase.functions.invoke('extract-pdf-text', {
-      body: {
-        filePath,
-        lectureId: lectureId.toString()
-      }
-    });
-
-    if (error) {
-      console.error('Error extracting PDF content:', error);
-      throw error;
-    }
-
-    if (!data?.text) {
-      console.error('No text content returned from extraction:', data);
-      throw new Error('No text content extracted from PDF');
-    }
-
-    console.log('Extracted text length:', data.text.length);
-    return data.text;
-  };
-
   const handleUpload = async () => {
     if (!file || !title || !courseId) {
       toast({
@@ -91,8 +67,16 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       }
 
       console.log('Extracting PDF content...');
-      await extractPDFContent(filePath, lectureData.id);
-      console.log('PDF content extracted and stored');
+      const { data, error } = await supabase.functions.invoke('extract-pdf-text', {
+        body: {
+          filePath,
+          lectureId: lectureData.id.toString()
+        }
+      });
+
+      if (error) throw error;
+      
+      console.log('PDF content extraction response:', data);
 
       // Invalidate queries and wait a moment to ensure the UI updates
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
