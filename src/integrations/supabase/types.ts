@@ -71,90 +71,26 @@ export type Database = {
           },
         ]
       }
-      lecture_polished_chunks: {
-        Row: {
-          chunk_order: number
-          created_at: string
-          id: number
-          lecture_id: number | null
-          polished_content: string
-        }
-        Insert: {
-          chunk_order: number
-          created_at?: string
-          id?: number
-          lecture_id?: number | null
-          polished_content: string
-        }
-        Update: {
-          chunk_order?: number
-          created_at?: string
-          id?: number
-          lecture_id?: number | null
-          polished_content?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lecture_polished_chunks_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lecture_raw_chunks: {
-        Row: {
-          chunk_order: number
-          created_at: string
-          id: number
-          lecture_id: number | null
-          raw_content: string
-        }
-        Insert: {
-          chunk_order: number
-          created_at?: string
-          id?: number
-          lecture_id?: number | null
-          raw_content: string
-        }
-        Update: {
-          chunk_order?: number
-          created_at?: string
-          id?: number
-          lecture_id?: number | null
-          raw_content?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lecture_raw_chunks_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       lecture_segments: {
         Row: {
           created_at: string
           id: number
           lecture_id: number | null
-          segment_number: number
+          sequence_number: number
           title: string
         }
         Insert: {
           created_at?: string
           id?: number
           lecture_id?: number | null
-          segment_number: number
+          sequence_number: number
           title: string
         }
         Update: {
           created_at?: string
           id?: number
           lecture_id?: number | null
-          segment_number?: number
+          sequence_number?: number
           title?: string
         }
         Relationships: [
@@ -220,7 +156,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string | null
-          id?: never
+          id?: number
           lecture_id?: number | null
           quiz_number: number
           quiz_score?: number | null
@@ -231,7 +167,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string | null
-          id?: never
+          id?: number
           lecture_id?: number | null
           quiz_number?: number
           quiz_score?: number | null
@@ -249,53 +185,9 @@ export type Database = {
           },
         ]
       }
-      segment_contents: {
-        Row: {
-          created_at: string | null
-          id: number
-          quiz_question_1: Json | null
-          quiz_question_2: Json | null
-          segment_number: number
-          story_structure_id: number | null
-          theory_slide_1: string | null
-          theory_slide_2: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: never
-          quiz_question_1?: Json | null
-          quiz_question_2?: Json | null
-          segment_number: number
-          story_structure_id?: number | null
-          theory_slide_1?: string | null
-          theory_slide_2?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: never
-          quiz_question_1?: Json | null
-          quiz_question_2?: Json | null
-          segment_number?: number
-          story_structure_id?: number | null
-          theory_slide_1?: string | null
-          theory_slide_2?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "segment_contents_story_structure_id_fkey"
-            columns: ["story_structure_id"]
-            isOneToOne: false
-            referencedRelation: "story_structures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       segments: {
         Row: {
-          content: Json | null
+          content: Json
           created_at: string
           id: number
           lecture_id: number | null
@@ -304,7 +196,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          content?: Json | null
+          content?: Json
           created_at?: string
           id?: number
           lecture_id?: number | null
@@ -313,7 +205,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          content?: Json | null
+          content?: Json
           created_at?: string
           id?: number
           lecture_id?: number | null
@@ -324,79 +216,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "segments_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      story_structures: {
-        Row: {
-          created_at: string | null
-          error_message: string | null
-          id: number
-          lecture_id: number | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          error_message?: string | null
-          id?: never
-          lecture_id?: number | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          error_message?: string | null
-          id?: never
-          lecture_id?: number | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "story_structures_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: true
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      subject_definitions: {
-        Row: {
-          chronological_order: number
-          created_at: string
-          details: string | null
-          id: number
-          lecture_id: number | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          chronological_order: number
-          created_at?: string
-          details?: string | null
-          id?: never
-          lecture_id?: number | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          chronological_order?: number
-          created_at?: string
-          details?: string | null
-          id?: never
-          lecture_id?: number | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subject_definitions_lecture_id_fkey"
             columns: ["lecture_id"]
             isOneToOne: false
             referencedRelation: "lectures"
@@ -418,7 +237,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string | null
-          id?: never
+          id?: number
           lecture_id?: number | null
           score?: number | null
           segment_number: number
@@ -428,7 +247,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string | null
-          id?: never
+          id?: number
           lecture_id?: number | null
           score?: number | null
           segment_number?: number

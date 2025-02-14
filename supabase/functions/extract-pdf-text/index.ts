@@ -51,21 +51,6 @@ serve(async (req) => {
     
     console.log('Successfully extracted and normalized text, length:', normalizedText.length);
 
-    // Create story structure entry
-    const { data: storyStructure, error: storyError } = await supabaseClient
-      .from('story_structures')
-      .insert({
-        lecture_id: parseInt(lectureId),
-        status: 'processing'
-      })
-      .select()
-      .single();
-
-    if (storyError) {
-      console.error('Error creating story structure:', storyError);
-      throw storyError;
-    }
-
     // Update lecture content
     const { error: lectureError } = await supabaseClient
       .from('lectures')
@@ -77,95 +62,65 @@ serve(async (req) => {
       throw lectureError;
     }
 
-    // Start asynchronous content generation
-    EdgeRuntime.waitUntil((async () => {
-      try {
-        // Get titles and segment count from GPT
-        const gptResponse = await analyzeTextWithGPT(normalizedText);
-        console.log('GPT Analysis complete:', gptResponse);
+    try {
+      // Get segments with titles and content from GPT
+      const { segments } = await analyzeTextWithGPT(normalizedText);
+      console.log('GPT Analysis complete, segments:', segments.length);
+      
+      // Store segments
+      for (let i = 0; i < segments.length; i++) {
+        const segmentNumber = i + 1;
+        const segment = segments[i];
         
-        // Calculate content per segment (divide text equally among segments)
-        const segmentLength = Math.floor(normalizedText.length / gptResponse.titles.length);
-        
-        // Store lecture segments with content
-        for (let i = 0; i < gptResponse.titles.length; i++) {
-          const startIdx = i * segmentLength;
-          const endIdx = i === gptResponse.titles.length - 1 
-            ? normalizedText.length 
-            : (i + 1) * segmentLength;
-          
-          const segmentContent = normalizedText.slice(startIdx, endIdx);
-          
-          // Store in lecture_segments for backward compatibility
-          const { error: segmentError } = await supabaseClient
-            .from('lecture_segments')
-            .insert({
-              lecture_id: parseInt(lectureId),
-              segment_number: i + 1,
-              title: gptResponse.titles[i]
-            });
+        // Store in lecture_segments table
+        const { error: segmentError } = await supabaseClient
+          .from('lecture_segments')
+          .insert({
+            lecture_id: parseInt(lectureId),
+            sequence_number: segmentNumber,
+            title: segment.title
+          });
 
-          if (segmentError) {
-            console.error(`Error storing lecture segment ${i + 1}:`, segmentError);
-            throw segmentError;
-          }
-
-          // Store in new segments table with content
-          const { error: newSegmentError } = await supabaseClient
-            .from('segments')
-            .insert({
-              lecture_id: parseInt(lectureId),
-              sequence_number: i + 1,
-              title: gptResponse.titles[i],
-              content: {
-                text: segmentContent,
-                slides: [],
-                questions: []
-              }
-            });
-
-          if (newSegmentError) {
-            console.error(`Error storing new segment ${i + 1}:`, newSegmentError);
-            throw newSegmentError;
-          }
+        if (segmentError) {
+          console.error(`Error storing lecture segment ${segmentNumber}:`, segmentError);
+          throw segmentError;
         }
 
-        // Update story structure status to completed
-        const { error: updateError } = await supabaseClient
-          .from('story_structures')
-          .update({ status: 'completed' })
-          .eq('id', storyStructure.id);
+        // Store in segments table with content
+        const { error: contentError } = await supabaseClient
+          .from('segments')
+          .insert({
+            lecture_id: parseInt(lectureId),
+            sequence_number: segmentNumber,
+            title: segment.title,
+            content: segment.content
+          });
 
-        if (updateError) {
-          console.error('Error updating story structure status:', updateError);
-          throw updateError;
-        }
-
-        console.log('Content generation completed successfully');
-      } catch (error) {
-        console.error('Error in background processing:', error);
-        await supabaseClient
-          .from('story_structures')
-          .update({ 
-            status: 'failed',
-            error_message: error.message
-          })
-          .eq('id', storyStructure.id);
-      }
-    })());
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        text: normalizedText
-      }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
+        if (contentError) {
+          console.error(`Error storing segment content ${segmentNumber}:`, contentError);
+          throw contentError;
         }
       }
-    );
+
+      console.log('Successfully stored all segments and content');
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          segmentCount: segments.length
+        }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+    } catch (error) {
+      console.error('Error processing content:', error);
+      throw error;
+    }
 
   } catch (error) {
     console.error('Error processing PDF:', error);

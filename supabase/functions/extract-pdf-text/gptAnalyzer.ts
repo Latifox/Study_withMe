@@ -1,5 +1,14 @@
 
-export async function analyzeTextWithGPT(text: string): Promise<any> {
+interface SegmentContent {
+  title: string;
+  content: {
+    text: string;
+    slides: any[];
+    questions: any[];
+  };
+}
+
+export async function analyzeTextWithGPT(text: string): Promise<{ segments: SegmentContent[] }> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -12,15 +21,15 @@ export async function analyzeTextWithGPT(text: string): Promise<any> {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing academic text and identifying key topics.
-            Analyze the text and create meaningful titles for each segment.
-            Return a JSON array of segment titles that summarize the main topic of each segment.
+            content: `You are an expert at analyzing academic text and creating meaningful segments.
+            For each segment, provide both a title and relevant content.
+            Return a JSON array of segments, where each segment has a title and content.
             Important guidelines:
             - Create 4-6 segments total
             - Each segment should cover a distinct topic
-            - Titles should be clear and concise
-            - Avoid repeating topics
-            - Ensure titles reflect the natural progression of the content`
+            - Content must be directly from the source text
+            - Ensure logical progression of topics
+            - Maintain academic accuracy and depth`
           },
           {
             role: 'user',
