@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { updateUserProgress } from "@/services/quizProgressService";
 
 interface StoryContentHandlerProps {
   nodeId: string | undefined;
@@ -50,6 +49,7 @@ export const useStoryContentHandler = ({
     if (!user) return;
 
     const currentQuestionIndex = currentStep - 2;
+    const quizNumber = currentQuestionIndex + 1;
     
     // Remove from failed questions if it was there
     const updatedFailedQuestions = new Set(failedQuestions);
@@ -63,10 +63,21 @@ export const useStoryContentHandler = ({
     }));
 
     try {
-      // Always update progress since we know this is a correct answer
-      if (currentStep === 3) {
-        await updateUserProgress(user.id, numericLectureId, sequenceNumber, newScore);
-      }
+      // Insert the quiz progress record
+      const { error } = await supabase
+        .from('quiz_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: numericLectureId,
+          segment_number: sequenceNumber,
+          quiz_number: quizNumber,
+          quiz_score: 5,
+          completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
+        });
+
+      if (error) throw error;
 
       toast({
         title: "🌟 Correct Answer!",
@@ -74,7 +85,7 @@ export const useStoryContentHandler = ({
       });
       handleContinue();
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.error('Error saving quiz progress:', error);
       toast({
         title: "Error",
         description: "Failed to save progress. Please try again.",
