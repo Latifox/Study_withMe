@@ -9,16 +9,14 @@ export interface StoryContent {
 export interface StorySegment {
   id: string;
   title: string;
-  slides: string[];
-  questions: Question[];
-}
-
-interface Question {
-  type: "multiple_choice" | "true_false";
-  question: string;
-  options?: string[];
-  correctAnswer: string | boolean;
-  explanation: string;
+  slides: Array<{ content: string }>;
+  questions: Array<{
+    type: "multiple_choice" | "true_false";
+    question: string;
+    options?: string[];
+    correctAnswer: string | boolean;
+    explanation: string;
+  }>;
 }
 
 export const useStoryContent = (lectureId: string | undefined) => {
@@ -60,28 +58,42 @@ export const useStoryContent = (lectureId: string | undefined) => {
         throw contentsError;
       }
 
+      console.log('Raw segment contents:', segmentContents);
+
       // Map segments to their content
       const formattedSegments = segments.map((segment) => {
         const content = segmentContents?.find(
           (content) => content.sequence_number === segment.sequence_number
         );
 
-        const defaultContent = {
-          theory_slide_1: '',
-          theory_slide_2: '',
-          quiz_question_1: null,
-          quiz_question_2: null
-        };
+        if (content?.content) {
+          return {
+            id: segment.id.toString(),
+            title: segment.title,
+            slides: [
+              { content: content.content.theory_slide_1 || '' },
+              { content: content.content.theory_slide_2 || '' }
+            ],
+            questions: [
+              content.content.quiz_question_1,
+              content.content.quiz_question_2
+            ].filter(Boolean)
+          };
+        }
 
-        const segmentContent = content?.content as any || defaultContent;
-
+        // Return empty content if none exists yet
         return {
           id: segment.id.toString(),
           title: segment.title,
-          slides: [segmentContent.theory_slide_1, segmentContent.theory_slide_2],
-          questions: [segmentContent.quiz_question_1, segmentContent.quiz_question_2].filter(Boolean)
+          slides: [
+            { content: '' },
+            { content: '' }
+          ],
+          questions: []
         };
       });
+
+      console.log('Formatted segments:', formattedSegments);
 
       return { segments: formattedSegments };
     },

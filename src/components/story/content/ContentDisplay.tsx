@@ -11,8 +11,16 @@ interface ContentDisplayProps {
   currentSegmentData: {
     id: string;
     title: string;
-    slides: any[];
-    questions: any[];
+    slides: Array<{
+      content: string;
+    }>;
+    questions: Array<{
+      type: "multiple_choice" | "true_false";
+      question: string;
+      options?: string[];
+      correctAnswer: string | boolean;
+      explanation: string;
+    }>;
   };
   currentSegment: number;
   currentStep: number;
@@ -45,12 +53,18 @@ const ContentDisplay = ({
 }: ContentDisplayProps) => {
   // Check if slides exist and have content for the current index
   const hasValidSlide = isSlide && 
-    currentSegmentData?.slides?.length > slideIndex && 
+    Array.isArray(currentSegmentData?.slides) && 
     currentSegmentData.slides[slideIndex]?.content;
 
   // Check if questions exist for the current index
   const hasValidQuestion = !isSlide && 
-    currentSegmentData?.questions?.length > questionIndex;
+    Array.isArray(currentSegmentData?.questions) && 
+    currentSegmentData.questions[questionIndex];
+
+  console.log('Current segment data:', currentSegmentData);
+  console.log('Is slide:', isSlide, 'slideIndex:', slideIndex);
+  console.log('Has valid slide:', hasValidSlide);
+  console.log('Has valid question:', hasValidQuestion);
 
   return (
     <Card className="p-2">
