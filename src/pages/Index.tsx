@@ -53,7 +53,7 @@ const Index = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-12">
           <Card 
-            className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+            className="hover:shadow-lg transition-shadow duration-300 cursor-pointer bg-gradient-to-br from-indigo-50 via-white to-purple-50 border-0"
             onClick={() => navigate('/uploaded-courses')}
           >
             <CardHeader>
@@ -70,7 +70,7 @@ const Index = () => {
           </Card>
 
           <Card 
-            className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+            className="hover:shadow-lg transition-shadow duration-300 cursor-pointer bg-gradient-to-br from-indigo-50 via-white to-purple-50 border-0"
             onClick={() => navigate('/invited-courses')}
           >
             <CardHeader>
