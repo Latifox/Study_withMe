@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Flame, Trophy, BookOpen } from "lucide-react";
+import { Flame, Trophy, BookOpen, Star } from "lucide-react";
 
 const Analytics = () => {
   const {
@@ -138,12 +138,12 @@ const Analytics = () => {
               <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <BookOpen className="w-6 h-6 text-white" />
+                    <Star className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-white/90">Daily Average</p>
+                    <p className="text-lg font-semibold text-white/90">Total XP</p>
                     <p className="text-3xl font-bold text-white">
-                      {chartData.length ? (totalLectures / chartData.length).toFixed(1) : '0'}
+                      {userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0}
                     </p>
                   </div>
                 </div>
