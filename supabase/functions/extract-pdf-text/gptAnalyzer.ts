@@ -29,26 +29,47 @@ export async function analyzeTextWithGPT(text: string): Promise<{ segments: Segm
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
             content: `You are an expert at analyzing academic text and creating educational content.
-            Analyze the text and break it into 4-6 logical segments. For each segment:
-            1. Create a clear, concise title
-            2. Create two theory slides based on the content
-            3. Create two quiz questions (one multiple choice, one true/false)
+            Analyze the provided text and break it into 4-6 logical segments. For each segment, create:
+            1. A clear, concise title
+            2. Two theory slides that explain key concepts
+            3. Two quiz questions to test understanding:
+               - One multiple choice question with 4 options
+               - One true/false question
             
-            Return a JSON array of segments, each containing:
-            - title: clear and descriptive
-            - content: containing theory slides and quiz questions
+            Structure your response as a JSON array of segments, each containing:
+            {
+              "title": "segment title",
+              "content": {
+                "theory_slide_1": "markdown text explaining first concept",
+                "theory_slide_2": "markdown text explaining second concept",
+                "quiz_question_1": {
+                  "type": "multiple_choice",
+                  "question": "question text",
+                  "options": ["option1", "option2", "option3", "option4"],
+                  "correctAnswer": "exact text of correct option",
+                  "explanation": "why this is correct"
+                },
+                "quiz_question_2": {
+                  "type": "true_false",
+                  "question": "true/false question text",
+                  "correctAnswer": boolean,
+                  "explanation": "why this is true or false"
+                }
+              }
+            }
             
             Guidelines:
-            - Each segment should cover a distinct topic
-            - Theory slides should be based on the actual lecture content
-            - Quiz questions must test understanding of the content
-            - Ensure logical progression of topics
-            - Keep all content factual and derived from the lecture text`
+            - Make all content directly relevant to the lecture material
+            - Keep theory slides concise but informative
+            - Ensure quiz questions test understanding, not just recall
+            - Write clear, unambiguous questions
+            - Include proper markdown formatting including headers, lists, and emphasis
+            - For math content, use LaTeX notation wrapped in $ or $$ symbols`
           },
           {
             role: 'user',
@@ -66,7 +87,15 @@ export async function analyzeTextWithGPT(text: string): Promise<{ segments: Segm
     }
 
     const data = await response.json();
-    return JSON.parse(data.choices[0].message.content);
+    const result = JSON.parse(data.choices[0].message.content);
+
+    // Validate the response structure
+    if (!result.segments || !Array.isArray(result.segments)) {
+      throw new Error('Invalid response format from GPT');
+    }
+
+    console.log('GPT Response:', JSON.stringify(result, null, 2));
+    return result;
   } catch (error) {
     console.error('Error in analyzeTextWithGPT:', error);
     throw error;
