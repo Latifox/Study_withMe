@@ -6,7 +6,7 @@ export const generatePrompt = (
   chunkPair: { chunk1: string; chunk2: string }, 
   aiConfig: any
 ) => {
-  const basePrompt = `Generate segment titles and content in the same language as the provided lecture. Focus on accuracy and relevance to the lecture content. Create detailed, well-structured content that maximizes learning effectiveness.
+  const basePrompt = `Generate EXTENSIVE and HIGHLY DETAILED segment content in the same language as the provided lecture. Your mission is to create comprehensive educational content that thoroughly explains every concept. Each theory slide should contain AT LEAST 500 words of rich, detailed content.
 
 For this segment titled "${segmentTitle}", use the following content:
 
@@ -22,31 +22,43 @@ AI Configuration Settings (Use these to adjust presentation style only, not cont
 - Detail Level: ${aiConfig.detail_level} (affects depth of content extraction)
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-REQUIREMENTS:
+CONTENT GENERATION REQUIREMENTS:
 
-1. Theory Slide 1:
-   - Focus ONLY on content from Chunk 1
-   - Present core concepts with clear hierarchy and structure
-   - Use markdown for rich text formatting:
-     * Headers (##, ###) for clear section breaks
-     * Bullet points and numbered lists for organized information
-     * **Bold** for key terms and important concepts
-     * *Italic* for emphasis and definitions
-     * > Blockquotes for important statements or theorems
-   - Use LaTeX for mathematical expressions:
-     * Inline math mode with single $ for short expressions
-     * Display math mode with $$ for complex equations
-     * Use proper LaTeX environments (align*, equation*, array)
-   - Break down complex concepts into digestible parts
-   - Include examples and explanations when present in the chunk
+1. Theory Slide 1 (MINIMUM 500 words):
+   - Extract and expand EVERY concept from Chunk 1
+   - Create a comprehensive learning experience with:
+     * Detailed explanations of each concept
+     * Multiple examples for each topic
+     * Real-world applications
+     * Step-by-step breakdowns of complex ideas
+     * Connections between different concepts
+   - Include ALL of these sections:
+     * Main concept introduction
+     * Detailed theoretical background
+     * Step-by-step explanations
+     * Multiple examples with variations
+     * Common misconceptions and clarifications
+     * Practical applications
+     * Key takeaways
+   - Use extensive formatting:
+     * Headers (##, ###) for EACH major section
+     * Nested bullet points for detailed breakdowns
+     * **Bold** for ALL key terms
+     * *Italic* for definitions and emphasis
+     * > Blockquotes for important theorems/principles
+   - For mathematical content:
+     * Include detailed step-by-step derivations
+     * Explain each variable and symbol
+     * Provide multiple examples with different values
+     * Show alternative approaches when applicable
 
-2. Theory Slide 2:
-   - Focus ONLY on content from Chunk 2
-   - Structure content with clear hierarchy
-   - Use the same markdown and LaTeX formatting rules
-   - Emphasize practical applications and examples
-   - Include relevant diagrams or illustrations mentioned
-   - Create clear connections between concepts
+2. Theory Slide 2 (MINIMUM 500 words):
+   - Apply the same comprehensive approach to Chunk 2
+   - Maintain the same detailed structure
+   - Focus heavily on practical applications
+   - Include numerous examples
+   - Connect concepts to real-world scenarios
+   - Provide extensive explanations of each topic
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:
@@ -73,29 +85,48 @@ LATEX FORMATTING REQUIREMENTS:
    $\\vec{v} = \\frac{d\\vec{r}}{dt}$
 
 MARKDOWN STRUCTURE REQUIREMENTS:
-1. Organize content with clear hierarchy:
+Each theory slide must follow this extensive structure:
 
-## Main Topic
+## Main Topic (Comprehensive Overview)
 
-### Subtopic 1
-* Key point 1
-* Key point 2
-  * Sub-point A
-  * Sub-point B
+### 1. Theoretical Background
+* Fundamental principles
+* Core concepts
+  * Detailed explanation of each concept
+  * Historical context
+  * Theoretical foundations
+* Key relationships between concepts
 
-### Subtopic 2
-1. First step
-2. Second step
+### 2. Detailed Explanations
+* Step-by-step breakdowns
+* Process explanations
+* Component analysis
+* Interconnections between ideas
 
-> Important theorem or definition
+### 3. Practical Examples
+1. Basic example with full explanation
+2. Intermediate example with variations
+3. Advanced application example
+4. Real-world case studies
 
-2. Use emphasis appropriately:
-**Key Term**: *definition or explanation*
+### 4. Common Misconceptions
+* Typical misunderstandings
+* Clarifications
+* Correct interpretations
+* Prevention tips
+
+### 5. Applications and Implications
+* Real-world uses
+* Practical implementations
+* Industry applications
+* Future developments
+
+> Important theorems, principles, and key takeaways
 
 Required JSON Structure:
 {
-  "theory_slide_1": "string with markdown and LaTeX - Based on Chunk 1",
-  "theory_slide_2": "string with markdown and LaTeX - Based on Chunk 2",
+  "theory_slide_1": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on Chunk 1",
+  "theory_slide_2": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on Chunk 2",
   "quiz_question_1": {
     "type": "multiple_choice",
     "question": "string based on Chunk 1",
@@ -109,7 +140,16 @@ Required JSON Structure:
     "correctAnswer": boolean,
     "explanation": "string using content from Chunk 2"
   }
-}`;
+}
+
+IMPORTANT NOTES:
+1. Each theory slide MUST contain at least 500 words of content
+2. Include MULTIPLE examples for each concept
+3. Provide DETAILED explanations for every topic
+4. Use ALL the specified markdown formatting elements
+5. Break down complex ideas into digestible parts
+6. Include practical applications and real-world examples
+7. Ensure comprehensive coverage of ALL concepts from the chunks`;
 
   return basePrompt;
 };
