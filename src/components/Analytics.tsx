@@ -88,7 +88,15 @@ const Analytics = () => {
     return lecturesByDate;
   };
 
-  const totalLectures = new Set(userProgress?.map(p => p.lecture_id)).size || 0;
+  // Update the totalLectures calculation to only count completed lectures
+  const totalLectures = userProgress?.reduce((uniqueLectures, progress) => {
+    // Only count lectures where there's a score (indicating completion)
+    if (progress.score && !uniqueLectures.has(progress.lecture_id)) {
+      uniqueLectures.add(progress.lecture_id);
+    }
+    return uniqueLectures;
+  }, new Set<number>()).size || 0;
+
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
 
