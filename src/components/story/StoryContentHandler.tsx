@@ -96,7 +96,7 @@ export const useStoryContentHandler = ({
       variant: "destructive"
     });
     
-    // Go back to the first theory slide
+    // Go back to the first theory slide (step 0)
     setCurrentStep(0);
   };
 
