@@ -11,6 +11,26 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+interface SegmentContent {
+  content: {
+    theory_slide_1: string;
+    theory_slide_2: string;
+    quiz_question_1: {
+      type: "multiple_choice";
+      question: string;
+      options: string[];
+      correctAnswer: string;
+      explanation: string;
+    };
+    quiz_question_2: {
+      type: "true_false";
+      question: string;
+      correctAnswer: boolean;
+      explanation: string;
+    };
+  };
+}
+
 const StoryContent = () => {
   const { courseId, lectureId, nodeId } = useParams();
   const navigate = useNavigate();
@@ -42,7 +62,7 @@ const StoryContent = () => {
       const { data: progress } = await supabase
         .from('user_progress')
         .select('score, completed_at')
-        .eq('sequence_number', sequenceNumber)
+        .eq('segment_number', sequenceNumber)
         .eq('lecture_id', numericLectureId)
         .eq('user_id', user.id)
         .maybeSingle();
@@ -96,7 +116,9 @@ const StoryContent = () => {
         throw contentError;
       }
 
-      if (!segmentContent?.content) {
+      const content = segmentContent as SegmentContent;
+
+      if (!content?.content) {
         console.log('No content found for segment:', sequenceNumber);
         return {
           segments: [{
@@ -109,19 +131,19 @@ const StoryContent = () => {
       }
 
       // Add debug logging to see the content structure
-      console.log('Raw segment content:', segmentContent.content);
+      console.log('Raw segment content:', content);
 
       return {
         segments: [{
           id: nodeId || '',
           title: segment.title,
           slides: [
-            { id: 'slide-1', content: segmentContent.content.theory_slide_1 },
-            { id: 'slide-2', content: segmentContent.content.theory_slide_2 }
+            { id: 'slide-1', content: content.content.theory_slide_1 },
+            { id: 'slide-2', content: content.content.theory_slide_2 }
           ],
           questions: [
-            segmentContent.content.quiz_question_1,
-            segmentContent.content.quiz_question_2
+            content.content.quiz_question_1,
+            content.content.quiz_question_2
           ].filter(Boolean)
         }]
       };
