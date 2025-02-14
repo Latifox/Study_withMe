@@ -96,8 +96,8 @@ export const useStoryContentHandler = ({
       variant: "destructive"
     });
     
-    // Go back to the first theory slide (step 0)
-    setCurrentStep(0);
+    // Force immediate reset to step 0 (first theory slide)
+    setCurrentStep(() => 0);
   };
 
   return {
