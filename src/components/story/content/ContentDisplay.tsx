@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import TheorySlide from "../TheorySlide";
 import QuizHandler from "../quiz/QuizHandler";
 import SegmentProgress from "../SegmentProgress";
-import StoryProgress from "../StoryProgress";
 import { MAX_SCORE } from "@/utils/scoreUtils";
 import { AlertCircle } from "lucide-react";
 
@@ -74,13 +73,6 @@ const ContentDisplay = ({
           totalSegments={totalSegments}
           currentStep={currentStep}
           totalSteps={4}
-        />
-      </div>
-
-      <div className="mb-2">
-        <StoryProgress
-          currentPoints={currentScore}
-          maxPoints={MAX_SCORE}
         />
       </div>
 
