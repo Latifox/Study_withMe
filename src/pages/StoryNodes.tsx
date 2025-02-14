@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
@@ -10,27 +9,33 @@ import { supabase } from "@/integrations/supabase/client";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
 import { useToast } from "@/hooks/use-toast";
-
 const StoryNodes = () => {
-  const { courseId, lectureId } = useParams();
+  const {
+    courseId,
+    lectureId
+  } = useParams();
   const navigate = useNavigate();
   const [completedNodes] = useState(new Set<string>());
   const [loadingNode, setLoadingNode] = useState<string | null>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Add a new query to fetch user progress
-  const { data: userProgress } = useQuery({
+  const {
+    data: userProgress
+  } = useQuery({
     queryKey: ['user-progress', lectureId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user || !lectureId) return null;
-
-      const { data } = await supabase
-        .from('user_progress')
-        .select('score')
-        .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId));
-
+      const {
+        data
+      } = await supabase.from('user_progress').select('score').eq('user_id', user.id).eq('lecture_id', parseInt(lectureId));
       return data;
     }
   });
@@ -38,24 +43,25 @@ const StoryNodes = () => {
   // Calculate total XP and completed nodes
   const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
   const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
-
-  const { data: storyContent, isLoading, error } = useQuery({
+  const {
+    data: storyContent,
+    isLoading,
+    error
+  } = useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
       if (!lectureId) throw new Error('Lecture ID is required');
       console.log('Fetching segments for lecture:', lectureId);
-
-      const { data: segments, error: segmentsError } = await supabase
-        .from('lecture_segments')
-        .select('*')
-        .eq('lecture_id', parseInt(lectureId))
-        .order('sequence_number', { ascending: true });
-
+      const {
+        data: segments,
+        error: segmentsError
+      } = await supabase.from('lecture_segments').select('*').eq('lecture_id', parseInt(lectureId)).order('sequence_number', {
+        ascending: true
+      });
       if (segmentsError) {
         console.error('Error fetching segments:', segmentsError);
         throw segmentsError;
       }
-
       return {
         segments: segments.map((segment, i) => ({
           id: `segment_${segment.sequence_number}`,
@@ -69,57 +75,35 @@ const StoryNodes = () => {
       };
     }
   });
-
   const handleBack = () => {
     navigate(`/course/${courseId}`);
   };
-
   const handleNodeSelect = async (nodeId: string) => {
     setLoadingNode(nodeId);
     navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
   };
-
   const handleStudyInDetail = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
   };
-
   if (isLoading) {
-    return (
-      <div className="container mx-auto p-4">
+    return <div className="container mx-auto p-4">
         <StoryLoading />
-      </div>
-    );
+      </div>;
   }
-
   if (error || !storyContent) {
-    return (
-      <div className="container mx-auto p-4">
-        <StoryError 
-          message={error instanceof Error ? error.message : "Failed to load story content"}
-          onBack={handleBack}
-        />
-      </div>
-    );
+    return <div className="container mx-auto p-4">
+        <StoryError message={error instanceof Error ? error.message : "Failed to load story content"} onBack={handleBack} />
+      </div>;
   }
-
-  return (
-    <div className="container mx-auto p-4">
+  return <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="flex items-center gap-2"
-        >
+        <Button variant="ghost" onClick={handleBack} className="flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back to Course
         </Button>
 
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={handleStudyInDetail}
-            className="flex items-center gap-2"
-          >
+        <div className="flex items-center gap-4 my-0 py-0 mx-[80px] px-[200px]">
+          <Button variant="outline" onClick={handleStudyInDetail} className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             Study the lecture in detail
           </Button>
@@ -135,15 +119,8 @@ const StoryNodes = () => {
       </div>
 
       <Card className="p-6 bg-white/50 backdrop-blur-sm">
-        <LearningPathway
-          nodes={storyContent.segments}
-          completedNodes={completedNodes}
-          currentNode={loadingNode}
-          onNodeSelect={handleNodeSelect}
-        />
+        <LearningPathway nodes={storyContent.segments} completedNodes={completedNodes} currentNode={loadingNode} onNodeSelect={handleNodeSelect} />
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default StoryNodes;
