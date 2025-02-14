@@ -6,7 +6,9 @@ export const generatePrompt = (
   chunkPair: { chunk1: string; chunk2: string }, 
   aiConfig: any
 ) => {
-  const basePrompt = `Create educational content based strictly on the provided lecture chunks. For this segment titled "${segmentTitle}", use the following content:
+  const basePrompt = `Generate segment titles and content in the same language as the provided lecture. Focus on accuracy and relevance to the lecture content. Ensure the content is detailed, with a clear and friendly tone. Focus only on information from the lecture to ensure accuracy and relevance.
+
+For this segment titled "${segmentTitle}", use the following content:
 
 CHUNK 1:
 ${chunkPair.chunk1}
@@ -27,18 +29,21 @@ REQUIREMENTS:
    - Present core concepts exactly as they appear
    - Use mathematical foundations present in the chunk
    - Maintain precise adherence to the original content
+   - Preserve the original language of the lecture
 
 2. Theory Slide 2:
    - Focus ONLY on content from Chunk 2
    - Present applications and examples from the chunk
    - Do not create new examples or applications
    - Use only connections mentioned in the chunk
+   - Maintain the same language as the original lecture
 
 3. Quiz Questions:
    - Question 1 should test understanding of Chunk 1 content
    - Question 2 should test understanding of Chunk 2 content
    - Each question must be based solely on its respective chunk
    - Do not mix content between chunks in questions
+   - Use the same language as the lecture content
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:

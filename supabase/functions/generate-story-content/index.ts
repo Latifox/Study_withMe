@@ -50,27 +50,28 @@ serve(async (req) => {
     }
 
     // Generate segment titles based on chunk pairs
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
+        contents: [
           {
             role: 'system',
-            content: `You are an expert in creating educational content structures. Generate descriptive titles that accurately summarize the academic content from each pair of text chunks. Each title should:
-1. Be highly specific to the actual content in the chunks
-2. Use appropriate academic terminology found in the chunks
-3. Follow a natural learning progression
-4. Be concise but informative
-5. Focus ONLY on the subject matter present in the chunks`
-          },
-          {
-            role: 'user',
-            content: `Based on these pairs of polished content chunks from a lecture, generate a descriptive title for each pair that captures their combined meaning:
+            parts: [{
+              text: `Generate segment titles and content in the same language as the provided lecture. Focus on accuracy and relevance to the lecture content. Ensure the content is detailed, with a clear and friendly tone. Focus only on information from the lecture to ensure accuracy and relevance.
+
+Based on these pairs of polished content chunks from a lecture, generate a descriptive title for each pair that captures their combined meaning. Each title should:
+1. Maintain the original language of the lecture
+2. Be highly specific to the actual content in the chunks
+3. Use appropriate academic terminology found in the chunks
+4. Follow a natural learning progression
+5. Be concise but informative
+6. Focus ONLY on the subject matter present in the chunks
+
+Lecture chunks to process:
 
 ${chunksPrompts.map((prompt, index) => `Pair ${index + 1}:\n${prompt}\n`).join('\n')}
 
@@ -80,10 +81,13 @@ Return a JSON object with numbered titles (one per chunk pair) in this format:
   "segment_2_title": "Basic Concepts and Definitions",
   ...
 }`
+            }]
           }
         ],
-        temperature: 0.3,
-        response_format: { type: "json_object" }
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 2048,
+        },
       }),
     });
 
@@ -92,7 +96,7 @@ Return a JSON object with numbered titles (one per chunk pair) in this format:
     }
 
     const data = await response.json();
-    const titles = JSON.parse(data.choices[0].message.content);
+    const titles = JSON.parse(data.candidates[0].content.parts[0].text);
 
     console.log('Generated titles:', titles);
 
