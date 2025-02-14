@@ -32,21 +32,12 @@ export const useStoryContentHandler = ({
       if (newStep === 4) {
         const totalScore = segmentScores[nodeId || ''] || 0;
         console.log('Current score:', totalScore, 'Failed questions:', failedQuestions);
-        if (failedQuestions.size > 0) {
-          toast({
-            title: "Review Required!",
-            description: "You need to correctly answer all questions to complete this node. Let's review the material again!",
-            variant: "destructive",
-          });
-          setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
-          setCurrentStep(0);
-          return 0;
-        } else {
-          toast({
-            title: "🎉 Node Completed!",
-            description: "Great job! You've mastered this node.",
-          });
-        }
+        // If we reach this point, the user has answered all questions correctly
+        // since wrong answers restart the segment
+        toast({
+          title: "🎉 Node Completed!",
+          description: "Great job! You've mastered this node.",
+        });
       }
       return newStep;
     });
@@ -60,6 +51,7 @@ export const useStoryContentHandler = ({
 
     const currentQuestionIndex = currentStep - 2;
     
+    // Remove from failed questions if it was there
     const updatedFailedQuestions = new Set(failedQuestions);
     updatedFailedQuestions.delete(currentQuestionIndex);
     setFailedQuestions(updatedFailedQuestions);
@@ -71,7 +63,8 @@ export const useStoryContentHandler = ({
     }));
 
     try {
-      if (updatedFailedQuestions.size === 0 && currentStep === 3) {
+      // Always update progress since we know this is a correct answer
+      if (currentStep === 3) {
         await updateUserProgress(user.id, numericLectureId, sequenceNumber, newScore);
       }
 
@@ -93,6 +86,8 @@ export const useStoryContentHandler = ({
   const handleWrongAnswer = () => {
     const currentQuestionIndex = currentStep - 2;
     setFailedQuestions(prev => new Set([...prev, currentQuestionIndex]));
+    
+    // Reset the score when answering incorrectly
     setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
     
     toast({
@@ -101,6 +96,7 @@ export const useStoryContentHandler = ({
       variant: "destructive"
     });
     
+    // Go back to the first theory slide
     setCurrentStep(0);
   };
 
