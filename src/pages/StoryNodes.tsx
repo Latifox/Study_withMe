@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
+import { ArrowLeft, Star, Trophy, BookOpen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import LearningPathway from "@/components/story/LearningPathway";
@@ -10,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 
 const StoryNodes = () => {
   const { courseId, lectureId } = useParams();
@@ -18,7 +18,6 @@ const StoryNodes = () => {
   const [loadingNode, setLoadingNode] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Add a new query to fetch user progress
   const {
     data: userProgress
   } = useQuery({
@@ -37,9 +36,9 @@ const StoryNodes = () => {
     }
   });
 
-  // Calculate total XP and completed nodes
   const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
   const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
+
   const {
     data: storyContent,
     isLoading,
@@ -72,21 +71,26 @@ const StoryNodes = () => {
       };
     }
   });
+
   const handleBack = () => {
     navigate(`/course/${courseId}`);
   };
+
   const handleNodeSelect = async (nodeId: string) => {
     setLoadingNode(nodeId);
     navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
   };
+
   const handleStudyInDetail = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
   };
+
   if (isLoading) {
     return <div className="container mx-auto p-4">
         <StoryLoading />
       </div>;
   }
+
   if (error || !storyContent) {
     return <div className="container mx-auto p-4">
         <StoryError message={error instanceof Error ? error.message : "Failed to load story content"} onBack={handleBack} />
@@ -95,68 +99,152 @@ const StoryNodes = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/80 to-teal-400/80">
-        {/* Animated orbs */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        <motion.div 
+          animate={{ 
+            y: [0, -30, 0],
+            x: [0, 20, 0]
+          }} 
+          transition={{ 
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute top-20 left-20 w-96 h-96 bg-emerald-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        />
+        <motion.div 
+          animate={{ 
+            y: [0, 30, 0],
+            x: [0, -20, 0]
+          }} 
+          transition={{ 
+            duration: 7,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.5
+          }}
+          className="absolute top-0 right-20 w-96 h-96 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        />
+        <motion.div 
+          animate={{ 
+            y: [-20, 20, -20],
+            x: [10, -10, 10]
+          }} 
+          transition={{ 
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+          className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        />
         
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 via-transparent to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 via-transparent to-transparent" />
       </div>
 
       <div className="container mx-auto p-4 relative">
-        <div className="flex items-center justify-between mb-6">
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center justify-between mb-6"
+        >
           <Button 
             variant="ghost" 
             onClick={handleBack} 
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20"
+            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-105"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Course
           </Button>
 
-          <div className="flex items-center gap-4 my-0 py-0 mx-[80px] px-[200px]">
+          <div className="flex items-center gap-4">
             <Button 
               variant="outline" 
               onClick={handleStudyInDetail} 
-              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20"
+              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-105"
             >
               <BookOpen className="h-4 w-4" />
-              Study the lecture in detail
+              Study in Detail
             </Button>
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
+            >
               <Star className="h-5 w-5 text-yellow-400" />
               <span className="font-bold text-white">{totalXP} XP</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+            </motion.div>
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
+            >
               <Trophy className="h-5 w-5 text-emerald-200" />
               <span className="font-bold text-white">{completedNodesCount}</span>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
-        <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20 shadow-xl relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20">
-            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-          </div>
-          <div className="relative z-10">
-            <LearningPathway 
-              nodes={storyContent?.segments || []} 
-              completedNodes={completedNodes} 
-              currentNode={loadingNode} 
-              onNodeSelect={handleNodeSelect} 
-            />
-          </div>
-        </Card>
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20 shadow-xl relative overflow-hidden">
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="absolute top-4 right-4"
+            >
+              <Sparkles className="w-6 h-6 text-emerald-200" />
+            </motion.div>
+
+            <div className="absolute inset-0 opacity-20">
+              <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+              </svg>
+            </div>
+
+            <div className="relative z-10 mb-8">
+              <motion.h1 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-bold text-center text-white mb-2"
+              >
+                Your Learning Adventure
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-center text-emerald-100 opacity-80"
+              >
+                Complete nodes to earn XP and unlock new content
+              </motion.p>
+            </div>
+
+            <div className="relative z-10">
+              <LearningPathway 
+                nodes={storyContent?.segments || []} 
+                completedNodes={completedNodes} 
+                currentNode={loadingNode} 
+                onNodeSelect={handleNodeSelect} 
+              />
+            </div>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );
