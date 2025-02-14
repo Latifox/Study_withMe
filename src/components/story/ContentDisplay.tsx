@@ -65,7 +65,7 @@ const ContentDisplay = ({
   console.log('Has valid question:', hasValidQuestion);
 
   return (
-    <Card className="p-2 bg-white/40 backdrop-blur-sm">
+    <Card className="p-2 bg-transparent border-none shadow-none">
       <div className="mb-2">
         <SegmentProgress
           currentSegment={currentSegment}
