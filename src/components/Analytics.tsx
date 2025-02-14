@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +13,7 @@ import { Flame, Trophy, BookOpen } from "lucide-react";
 const Analytics = () => {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
+  const [viewType, setViewType] = useState<'daily' | 'cumulative'>('daily');
 
   const getDateRange = () => {
     const now = new Date();
@@ -48,7 +48,6 @@ const Analytics = () => {
     enabled: !!user,
   });
 
-  // Calculate learning streak
   const calculateStreak = () => {
     if (!userProgress?.length) return 0;
     
@@ -67,13 +66,13 @@ const Analytics = () => {
     return streak;
   };
 
-  // Process data for the chart
   const prepareChartData = () => {
     if (!userProgress?.length) return [];
 
     const startDate = getDateRange();
     const dateRange = eachDayOfInterval({ start: startDate, end: new Date() });
     
+    let cumulativeCount = 0;
     const lecturesByDate = dateRange.map(date => {
       const dateStr = startOfDay(date).toISOString();
       const lecturesCompleted = new Set(
@@ -82,9 +81,12 @@ const Analytics = () => {
           .map(p => p.lecture_id)
       ).size;
 
+      cumulativeCount += lecturesCompleted;
+
       return {
         date: format(date, 'MMM dd'),
-        lectures: lecturesCompleted
+        lectures: lecturesCompleted,
+        cumulative: cumulativeCount
       };
     });
 
@@ -156,7 +158,37 @@ const Analytics = () => {
 
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-800">Learning Activity</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-bold text-gray-800">Learning Activity</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewType('daily')}
+                  className={cn(
+                    "border-2",
+                    viewType === 'daily'
+                      ? "border-purple-500 text-purple-500 bg-purple-50"
+                      : "border-gray-200 hover:border-purple-500 hover:text-purple-500"
+                  )}
+                >
+                  Daily
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewType('cumulative')}
+                  className={cn(
+                    "border-2",
+                    viewType === 'cumulative'
+                      ? "border-purple-500 text-purple-500 bg-purple-50"
+                      : "border-gray-200 hover:border-purple-500 hover:text-purple-500"
+                  )}
+                >
+                  Cumulative
+                </Button>
+              </div>
+            </div>
             <div className="flex gap-2">
               {(['week', 'month', 'year', 'all'] as const).map((range) => (
                 <Button
@@ -179,7 +211,7 @@ const Analytics = () => {
 
           <div className="h-[400px] bg-white rounded-lg p-4 shadow-inner">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <LineChart data={prepareChartData()}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="date" 
@@ -206,7 +238,7 @@ const Analytics = () => {
                 />
                 <Line
                   type="monotone"
-                  dataKey="lectures"
+                  dataKey={viewType === 'daily' ? 'lectures' : 'cumulative'}
                   stroke="#8B5CF6"
                   strokeWidth={2}
                   dot={false}
