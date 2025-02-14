@@ -57,106 +57,137 @@ const Course = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/uploaded-courses')}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Courses
-          </Button>
-          <h1 className="text-4xl font-bold text-gray-800">
-            {course?.title || 'Loading...'}
-          </h1>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Bold animated background with emerald/teal palette */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-400">
+        {/* Animated mesh pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
         </div>
+        
+        {/* Animated orbs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 via-transparent to-transparent"></div>
+      </div>
 
-        <div className="flex justify-end mb-6">
-          <Button onClick={() => setShowUpload(true)} className="gap-2">
-            <Upload className="w-4 h-4" />
-            Upload Lecture
-          </Button>
-        </div>
+      {/* Content */}
+      <div className="relative p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-4 mb-8">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/uploaded-courses')}
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Courses
+            </Button>
+            <h1 className="text-4xl font-bold text-white">
+              {course?.title || 'Loading...'}
+            </h1>
+          </div>
 
-        <div className="grid gap-4">
-          {isLoading ? (
-            <Card>
-              <CardContent className="p-6">
-                Loading lectures...
-              </CardContent>
-            </Card>
-          ) : lectures?.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-gray-500">
-                No lectures yet. Upload your first lecture!
-              </CardContent>
-            </Card>
-          ) : (
-            lectures?.map((lecture) => (
-              <Card 
-                key={lecture.id}
-                className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-                onClick={() => setSelectedLectureId(lecture.id)}
-              >
-                <CardContent className="flex justify-between items-center p-6">
-                  <div>
-                    <h3 className="text-xl font-semibold">{lecture.title}</h3>
-                    <p className="text-gray-500">
-                      {new Date(lecture.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                    <DeleteLectureDialog 
-                      lectureId={lecture.id} 
-                      lectureTitle={lecture.title} 
-                      courseId={parsedCourseId}
-                    />
-                    <Button 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowAIConfig(lecture.id);
-                      }}
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Configure AI
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedLectureId(lecture.id);
-                      }}
-                    >
-                      Take Action
-                    </Button>
-                  </div>
+          <div className="flex justify-end mb-6">
+            <Button 
+              onClick={() => setShowUpload(true)} 
+              className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/10"
+            >
+              <Upload className="w-4 h-4" />
+              Upload Lecture
+            </Button>
+          </div>
+
+          <div className="grid gap-4">
+            {isLoading ? (
+              <Card className="bg-white/10 backdrop-blur-md border-white/20">
+                <CardContent className="p-6 text-white">
+                  Loading lectures...
                 </CardContent>
               </Card>
-            ))
+            ) : lectures?.length === 0 ? (
+              <Card className="bg-white/10 backdrop-blur-md border-white/20">
+                <CardContent className="p-6 text-center text-white/80">
+                  No lectures yet. Upload your first lecture!
+                </CardContent>
+              </Card>
+            ) : (
+              lectures?.map((lecture) => (
+                <Card 
+                  key={lecture.id}
+                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20"
+                  onClick={() => setSelectedLectureId(lecture.id)}
+                >
+                  <CardContent className="flex justify-between items-center p-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">{lecture.title}</h3>
+                      <p className="text-white/70">
+                        {new Date(lecture.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                      <DeleteLectureDialog 
+                        lectureId={lecture.id} 
+                        lectureTitle={lecture.title} 
+                        courseId={parsedCourseId}
+                      />
+                      <Button 
+                        variant="outline"
+                        className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAIConfig(lecture.id);
+                        }}
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Configure AI
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLectureId(lecture.id);
+                        }}
+                      >
+                        Take Action
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {showUpload && (
+            <FileUpload 
+              courseId={parsedCourseId.toString()} 
+              onClose={() => setShowUpload(false)}
+            />
           )}
-        </div>
 
-        {showUpload && (
-          <FileUpload 
-            courseId={parsedCourseId.toString()} 
-            onClose={() => setShowUpload(false)}
+          <LectureActionsDialog
+            isOpen={!!selectedLectureId}
+            onClose={() => setSelectedLectureId(null)}
+            lectureId={selectedLectureId!}
           />
-        )}
 
-        <LectureActionsDialog
-          isOpen={!!selectedLectureId}
-          onClose={() => setSelectedLectureId(null)}
-          lectureId={selectedLectureId!}
-        />
-
-        <LectureAIConfigDialog
-          isOpen={!!showAIConfig}
-          onClose={() => setShowAIConfig(null)}
-          lectureId={showAIConfig!}
-        />
+          <LectureAIConfigDialog
+            isOpen={!!showAIConfig}
+            onClose={() => setShowAIConfig(null)}
+            lectureId={showAIConfig!}
+          />
+        </div>
       </div>
     </div>
   );
