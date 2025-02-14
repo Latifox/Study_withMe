@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,15 +42,25 @@ const Analytics = () => {
     queryFn: async () => {
       const startDate = getDateRange();
       
-      // First, get all quiz progress records
-      const { data: quizData, error } = await supabase
+      // Get quiz progress records
+      const { data: quizData, error: quizError } = await supabase
         .from('quiz_progress')
         .select('completed_at, lecture_id, quiz_number, quiz_score')
         .eq('user_id', user?.id)
         .gte('completed_at', startDate.toISOString())
         .order('completed_at', { ascending: true });
       
-      if (error) throw error;
+      if (quizError) throw quizError;
+      
+      // Get user progress records for streak calculation
+      const { data: progressData, error: progressError } = await supabase
+        .from('user_progress')
+        .select('completed_at')
+        .eq('user_id', user?.id)
+        .is('completed_at', 'NOT NULL')
+        .order('completed_at', { ascending: false });
+      
+      if (progressError) throw progressError;
       
       // Process the data to determine completed lectures
       const lectureProgress = new Map();
@@ -63,32 +74,41 @@ const Analytics = () => {
       });
 
       // Transform the data for the component
-      return quizData?.map(progress => ({
-        ...progress,
-        isLectureCompleted: lectureProgress.get(progress.lecture_id)?.size === 5 // A lecture is completed when it has 5 quiz_number=2 entries
-      }));
+      return {
+        quizProgress: quizData?.map(progress => ({
+          ...progress,
+          isLectureCompleted: lectureProgress.get(progress.lecture_id)?.size === 5 // A lecture is completed when it has 5 quiz_number=2 entries
+        })),
+        segmentProgress: progressData || []
+      };
     },
     enabled: !!user
   });
 
   const calculateStreak = () => {
-    if (!userProgress?.length) return 0;
+    if (!userProgress?.segmentProgress.length) return 0;
+    
     const today = startOfDay(new Date());
-    const completedLectureDates = userProgress
-      .filter(p => p.isLectureCompleted)
-      .map(p => startOfDay(new Date(p.completed_at)));
-    const uniqueDates = new Set(completedLectureDates.map(d => d.toISOString()));
+    const uniqueDates = new Set(
+      userProgress.segmentProgress.map(p => 
+        startOfDay(new Date(p.completed_at)).toISOString()
+      )
+    );
+
     let streak = 0;
     let currentDate = today;
+
+    // Check each day, moving backwards from today
     while (uniqueDates.has(currentDate.toISOString())) {
       streak++;
       currentDate = subDays(currentDate, 1);
     }
+
     return streak;
   };
 
   const prepareChartData = () => {
-    if (!userProgress?.length) return [];
+    if (!userProgress?.quizProgress.length) return [];
     const startDate = getDateRange();
     const dateRange = eachDayOfInterval({
       start: startDate,
@@ -99,7 +119,7 @@ const Analytics = () => {
     const lecturesByDate = dateRange.map(date => {
       const dateStr = startOfDay(date).toISOString();
       const completedLectures = new Set(
-        userProgress
+        userProgress.quizProgress
           .filter(p => p.isLectureCompleted && startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
           .map(p => p.lecture_id)
       ).size;
@@ -114,7 +134,7 @@ const Analytics = () => {
   };
 
   // Count unique completed lectures
-  const totalLectures = userProgress?.reduce((completedLectures, progress) => {
+  const totalLectures = userProgress?.quizProgress.reduce((completedLectures, progress) => {
     if (progress.isLectureCompleted) {
       completedLectures.add(progress.lecture_id);
     }
@@ -182,7 +202,7 @@ const Analytics = () => {
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
                     <p className="text-3xl font-bold text-white">
-                      {userProgress?.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) || 0}
+                      {userProgress?.quizProgress.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) || 0}
                     </p>
                   </div>
                 </div>
