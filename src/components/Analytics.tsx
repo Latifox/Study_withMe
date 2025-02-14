@@ -182,7 +182,7 @@ const Analytics = () => {
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
                     <p className="text-3xl font-bold text-white">
-                      {userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0}
+                      {userProgress?.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) || 0}
                     </p>
                   </div>
                 </div>
