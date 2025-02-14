@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import StoryMainContent from "@/components/story/StoryMainContent";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { updateUserProgress } from "@/services/quizProgressService";
 
 interface SegmentContent {
   content: {
@@ -175,41 +177,31 @@ const StoryContent = () => {
   const handleCorrectAnswer = async () => {
     if (!nodeId || !numericLectureId || !sequenceNumber) return;
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const newScore = (segmentScores[nodeId] || 0) + 5;
     setSegmentScores(prev => ({
       ...prev,
       [nodeId]: newScore
     }));
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      await updateUserProgress(user.id, numericLectureId, sequenceNumber, newScore);
 
-    // Update progress in database
-    const { error } = await supabase
-      .from('user_progress')
-      .upsert({
-        user_id: user.id,
-        lecture_id: numericLectureId,
-        segment_number: sequenceNumber,
-        score: newScore,
-        completed_at: newScore >= 10 ? new Date().toISOString() : null
+      toast({
+        title: "🌟 Correct Answer!",
+        description: `+5 XP points earned! Total: ${newScore}/10 XP`,
       });
-
-    if (error) {
+      handleContinue();
+    } catch (error) {
       console.error('Error updating progress:', error);
       toast({
         title: "Error",
         description: "Failed to save progress. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "🌟 Correct Answer!",
-      description: `+5 XP points earned! Total: ${newScore}/10 XP`,
-    });
-    handleContinue();
   };
 
   const handleWrongAnswer = () => {
