@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen, Sparkles } from "lucide-react";
@@ -99,7 +100,7 @@ const StoryNodes = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/80 to-teal-400/80">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
         <motion.div 
           animate={{ 
             y: [0, -30, 0],
@@ -110,7 +111,7 @@ const StoryNodes = () => {
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="absolute top-20 left-20 w-96 h-96 bg-emerald-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         />
         <motion.div 
           animate={{ 
@@ -123,7 +124,7 @@ const StoryNodes = () => {
             ease: "easeInOut",
             delay: 0.5
           }}
-          className="absolute top-0 right-20 w-96 h-96 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         />
         <motion.div 
           animate={{ 
@@ -136,10 +137,10 @@ const StoryNodes = () => {
             ease: "easeInOut",
             delay: 1
           }}
-          className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         />
         
-        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent" />
       </div>
 
       <div className="container mx-auto p-4 relative">
@@ -251,3 +252,4 @@ const StoryNodes = () => {
 };
 
 export default StoryNodes;
+
