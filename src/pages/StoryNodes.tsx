@@ -49,7 +49,7 @@ const StoryNodes = () => {
         .from('lecture_segments')
         .select('*')
         .eq('lecture_id', parseInt(lectureId))
-        .order('segment_number', { ascending: true });
+        .order('sequence_number', { ascending: true });
 
       if (segmentsError) {
         console.error('Error fetching segments:', segmentsError);
@@ -58,11 +58,11 @@ const StoryNodes = () => {
 
       return {
         segments: segments.map((segment, i) => ({
-          id: `segment_${segment.segment_number}`,
+          id: `segment_${segment.sequence_number}`,
           title: segment.title,
           type: (i % 3 === 0 ? "quiz" : "concept") as "concept" | "quiz" | "challenge",
           difficulty: (i < 3 ? "beginner" : i < 7 ? "intermediate" : "advanced") as "beginner" | "intermediate" | "advanced",
-          prerequisites: i === 0 ? [] : [`segment_${segment.segment_number - 1}`],
+          prerequisites: i === 0 ? [] : [`segment_${segment.sequence_number - 1}`],
           points: (i + 1) * 10,
           description: `Master the concepts of ${segment.title}`
         }))
