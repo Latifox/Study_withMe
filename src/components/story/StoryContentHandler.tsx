@@ -96,8 +96,10 @@ export const useStoryContentHandler = ({
       variant: "destructive"
     });
     
-    // Force immediate reset to step 0 (first theory slide)
-    setCurrentStep(() => 0);
+    // Ensure immediate reset to step 0 (first theory slide)
+    setTimeout(() => {
+      setCurrentStep(0);
+    }, 0);
   };
 
   return {
@@ -106,3 +108,4 @@ export const useStoryContentHandler = ({
     handleWrongAnswer
   };
 };
+
