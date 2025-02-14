@@ -83,12 +83,24 @@ export const useStoryContentHandler = ({
     }
   };
 
-  const handleWrongAnswer = () => {
+  const handleWrongAnswer = async () => {
+    if (!nodeId || !numericLectureId || !sequenceNumber) return;
+    
     const currentQuestionIndex = currentStep - 2;
     setFailedQuestions(prev => new Set([...prev, currentQuestionIndex]));
-    
-    // Reset the score when answering incorrectly
-    setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
+
+    // Reset the score to 0 both in state and in the database
+    setSegmentScores(prev => ({ ...prev, [nodeId]: 0 }));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Update the progress in the database to reflect the reset score
+        await updateUserProgress(user.id, numericLectureId, sequenceNumber, 0);
+      }
+    } catch (error) {
+      console.error('Error updating progress after wrong answer:', error);
+    }
     
     toast({
       title: "Let's review!",
@@ -108,4 +120,3 @@ export const useStoryContentHandler = ({
     handleWrongAnswer
   };
 };
-
