@@ -2,19 +2,16 @@
 import { GeneratedContent } from "./types.ts";
 
 export const generatePrompt = (
-  segmentTitle: string, 
-  chunkPair: { chunk1: string; chunk2: string }, 
+  segmentTitle: string,
+  segmentContent: string,
   aiConfig: any
 ) => {
-  const basePrompt = `Generate EXTENSIVE and HIGHLY DETAILED segment content in the same language as the provided lecture. Your mission is to create comprehensive educational content that thoroughly explains every concept. Each theory slide should contain AT LEAST 500 words of rich, detailed content.
+  const basePrompt = `Generate EXTENSIVE and HIGHLY DETAILED educational content in the same language as the provided lecture. Your mission is to create comprehensive content that thoroughly explains every concept. Each theory slide should contain AT LEAST 500 words of rich, detailed content.
 
 For this segment titled "${segmentTitle}", use the following content:
 
-CHUNK 1:
-${chunkPair.chunk1}
-
-CHUNK 2:
-${chunkPair.chunk2}
+LECTURE CONTENT:
+${segmentContent}
 
 AI Configuration Settings (Use these to adjust presentation style only, not content):
 - Temperature: ${aiConfig.temperature} (affects explanation variety)
@@ -25,7 +22,7 @@ ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_inst
 CONTENT GENERATION REQUIREMENTS:
 
 1. Theory Slide 1 (MINIMUM 500 words):
-   - Extract and expand EVERY concept from Chunk 1
+   - Extract and expand EVERY concept from the first half of the content
    - Create a comprehensive learning experience with:
      * Detailed explanations of each concept
      * Multiple examples for each topic
@@ -53,8 +50,8 @@ CONTENT GENERATION REQUIREMENTS:
      * Show alternative approaches when applicable
 
 2. Theory Slide 2 (MINIMUM 500 words):
-   - Apply the same comprehensive approach to Chunk 2
-   - Maintain the same detailed structure
+   - Focus on the second half of the content
+   - Follow the same comprehensive structure
    - Focus heavily on practical applications
    - Include numerous examples
    - Connect concepts to real-world scenarios
@@ -125,20 +122,20 @@ Each theory slide must follow this extensive structure:
 
 Required JSON Structure:
 {
-  "theory_slide_1": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on Chunk 1",
-  "theory_slide_2": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on Chunk 2",
+  "theory_slide_1": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on first half",
+  "theory_slide_2": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on second half",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string based on Chunk 1",
-    "options": ["array of 4 distinct options from Chunk 1"],
+    "question": "string based on first half",
+    "options": ["array of 4 distinct options"],
     "correctAnswer": "string matching one option",
-    "explanation": "string using content from Chunk 1"
+    "explanation": "string explaining the correct answer"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string based on Chunk 2",
+    "question": "string based on second half",
     "correctAnswer": boolean,
-    "explanation": "string using content from Chunk 2"
+    "explanation": "string explaining why true or false"
   }
 }
 
@@ -149,7 +146,7 @@ IMPORTANT NOTES:
 4. Use ALL the specified markdown formatting elements
 5. Break down complex ideas into digestible parts
 6. Include practical applications and real-world examples
-7. Ensure comprehensive coverage of ALL concepts from the chunks`;
+7. Ensure comprehensive coverage of ALL concepts from the content`;
 
   return basePrompt;
 };
