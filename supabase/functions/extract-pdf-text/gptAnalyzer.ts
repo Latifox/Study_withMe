@@ -22,6 +22,8 @@ interface SegmentContent {
 
 export async function analyzeTextWithGPT(text: string): Promise<{ segments: SegmentContent[] }> {
   try {
+    console.log('Starting GPT analysis with text length:', text.length);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -34,42 +36,40 @@ export async function analyzeTextWithGPT(text: string): Promise<{ segments: Segm
           {
             role: 'system',
             content: `You are an expert at analyzing academic text and creating educational content.
-            Analyze the provided text and break it into 4-6 logical segments. For each segment, create:
-            1. A clear, concise title
-            2. Two theory slides that explain key concepts
-            3. Two quiz questions to test understanding:
-               - One multiple choice question with 4 options
+            Your task is to break the provided text into 4-6 logical segments and create educational content for each.
+
+            For each segment you MUST create:
+            1. A descriptive title summarizing the main topic
+            2. Two theory slides explaining the key concepts
+            3. Two quiz questions:
+               - One multiple choice with exactly 4 options
                - One true/false question
-            
-            Structure your response as a JSON array of segments, each containing:
+
+            Output format MUST be exactly:
             {
-              "title": "segment title",
-              "content": {
-                "theory_slide_1": "markdown text explaining first concept",
-                "theory_slide_2": "markdown text explaining second concept",
-                "quiz_question_1": {
-                  "type": "multiple_choice",
-                  "question": "question text",
-                  "options": ["option1", "option2", "option3", "option4"],
-                  "correctAnswer": "exact text of correct option",
-                  "explanation": "why this is correct"
-                },
-                "quiz_question_2": {
-                  "type": "true_false",
-                  "question": "true/false question text",
-                  "correctAnswer": boolean,
-                  "explanation": "why this is true or false"
+              "segments": [
+                {
+                  "title": "string",
+                  "content": {
+                    "theory_slide_1": "string with markdown",
+                    "theory_slide_2": "string with markdown",
+                    "quiz_question_1": {
+                      "type": "multiple_choice",
+                      "question": "string",
+                      "options": ["string", "string", "string", "string"],
+                      "correctAnswer": "string (must match one of the options exactly)",
+                      "explanation": "string"
+                    },
+                    "quiz_question_2": {
+                      "type": "true_false",
+                      "question": "string",
+                      "correctAnswer": boolean,
+                      "explanation": "string"
+                    }
+                  }
                 }
-              }
-            }
-            
-            Guidelines:
-            - Make all content directly relevant to the lecture material
-            - Keep theory slides concise but informative
-            - Ensure quiz questions test understanding, not just recall
-            - Write clear, unambiguous questions
-            - Include proper markdown formatting including headers, lists, and emphasis
-            - For math content, use LaTeX notation wrapped in $ or $$ symbols`
+              ]
+            }`
           },
           {
             role: 'user',
@@ -82,19 +82,42 @@ export async function analyzeTextWithGPT(text: string): Promise<{ segments: Segm
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status, await response.text());
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    const result = JSON.parse(data.choices[0].message.content);
+    console.log('Raw GPT response:', JSON.stringify(data, null, 2));
 
-    // Validate the response structure
+    const result = JSON.parse(data.choices[0].message.content);
+    console.log('Parsed GPT response:', JSON.stringify(result, null, 2));
+
+    // Validate response structure
     if (!result.segments || !Array.isArray(result.segments)) {
-      throw new Error('Invalid response format from GPT');
+      throw new Error('Invalid response format: missing segments array');
     }
 
-    console.log('GPT Response:', JSON.stringify(result, null, 2));
+    // Validate each segment
+    result.segments.forEach((segment: any, index: number) => {
+      if (!segment.title || typeof segment.title !== 'string') {
+        throw new Error(`Invalid title in segment ${index}`);
+      }
+      if (!segment.content) {
+        throw new Error(`Missing content in segment ${index}`);
+      }
+      if (!segment.content.theory_slide_1 || !segment.content.theory_slide_2) {
+        throw new Error(`Missing theory slides in segment ${index}`);
+      }
+      if (!segment.content.quiz_question_1 || !segment.content.quiz_question_2) {
+        throw new Error(`Missing quiz questions in segment ${index}`);
+      }
+      if (!Array.isArray(segment.content.quiz_question_1.options) || 
+          segment.content.quiz_question_1.options.length !== 4) {
+        throw new Error(`Invalid options array in segment ${index}`);
+      }
+    });
+
     return result;
   } catch (error) {
     console.error('Error in analyzeTextWithGPT:', error);

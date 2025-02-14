@@ -64,14 +64,28 @@ serve(async (req) => {
 
     try {
       // Get segments with titles and content from GPT
+      console.log('Starting GPT analysis...');
       const { segments } = await analyzeTextWithGPT(normalizedText);
       console.log('GPT Analysis complete, segments:', segments.length);
       
+      // Delete existing segments and content for this lecture (to handle re-uploads)
+      const { error: deleteError } = await supabaseClient
+        .from('lecture_segments')
+        .delete()
+        .eq('lecture_id', parseInt(lectureId));
+
+      if (deleteError) {
+        console.error('Error deleting existing segments:', deleteError);
+        throw deleteError;
+      }
+
       // Store segments
       for (let i = 0; i < segments.length; i++) {
         const segmentNumber = i + 1;
         const segment = segments[i];
         
+        console.log(`Processing segment ${segmentNumber}:`, segment.title);
+
         // Store in lecture_segments table
         const { error: segmentError } = await supabaseClient
           .from('lecture_segments')
@@ -86,29 +100,31 @@ serve(async (req) => {
           throw segmentError;
         }
 
-        // Store in segments_content table with new structure
+        // Store in segments_content table
         const { error: contentError } = await supabaseClient
           .from('segments_content')
           .insert({
             lecture_id: parseInt(lectureId),
             sequence_number: segmentNumber,
-            theory_slide_1: segment.content.theory_slide_1 || '',
-            theory_slide_2: segment.content.theory_slide_2 || '',
-            quiz_1_type: segment.content.quiz_question_1?.type || 'multiple_choice',
-            quiz_1_question: segment.content.quiz_question_1?.question || '',
-            quiz_1_options: segment.content.quiz_question_1?.options || [],
-            quiz_1_correct_answer: segment.content.quiz_question_1?.correctAnswer || '',
-            quiz_1_explanation: segment.content.quiz_question_1?.explanation || '',
+            theory_slide_1: segment.content.theory_slide_1,
+            theory_slide_2: segment.content.theory_slide_2,
+            quiz_1_type: segment.content.quiz_question_1.type,
+            quiz_1_question: segment.content.quiz_question_1.question,
+            quiz_1_options: segment.content.quiz_question_1.options,
+            quiz_1_correct_answer: segment.content.quiz_question_1.correctAnswer,
+            quiz_1_explanation: segment.content.quiz_question_1.explanation,
             quiz_2_type: 'true_false',
-            quiz_2_question: segment.content.quiz_question_2?.question || '',
-            quiz_2_correct_answer: segment.content.quiz_question_2?.correctAnswer || false,
-            quiz_2_explanation: segment.content.quiz_question_2?.explanation || ''
+            quiz_2_question: segment.content.quiz_question_2.question,
+            quiz_2_correct_answer: segment.content.quiz_question_2.correctAnswer,
+            quiz_2_explanation: segment.content.quiz_question_2.explanation
           });
 
         if (contentError) {
           console.error(`Error storing segment content ${segmentNumber}:`, contentError);
           throw contentError;
         }
+
+        console.log(`Successfully stored segment ${segmentNumber}`);
       }
 
       console.log('Successfully stored all segments and content');
