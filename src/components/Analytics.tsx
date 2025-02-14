@@ -40,15 +40,33 @@ const Analytics = () => {
     queryKey: ['user-progress', user?.id, timeRange],
     queryFn: async () => {
       const startDate = getDateRange();
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('completed_at, lecture_id, score')
+      
+      // First, get all quiz progress records
+      const { data: quizData, error } = await supabase
+        .from('quiz_progress')
+        .select('completed_at, lecture_id, quiz_number, quiz_score')
         .eq('user_id', user?.id)
         .gte('completed_at', startDate.toISOString())
         .order('completed_at', { ascending: true });
       
       if (error) throw error;
-      return data;
+      
+      // Process the data to determine completed lectures
+      const lectureProgress = new Map();
+      quizData?.forEach(progress => {
+        if (!lectureProgress.has(progress.lecture_id)) {
+          lectureProgress.set(progress.lecture_id, new Set());
+        }
+        if (progress.quiz_number === 2) { // Only track quiz_number 2 completions
+          lectureProgress.get(progress.lecture_id).add(progress.completed_at);
+        }
+      });
+
+      // Transform the data for the component
+      return quizData?.map(progress => ({
+        ...progress,
+        isLectureCompleted: lectureProgress.get(progress.lecture_id)?.size === 5 // A lecture is completed when it has 5 quiz_number=2 entries
+      }));
     },
     enabled: !!user
   });
@@ -56,8 +74,10 @@ const Analytics = () => {
   const calculateStreak = () => {
     if (!userProgress?.length) return 0;
     const today = startOfDay(new Date());
-    const dates = userProgress.map(p => startOfDay(new Date(p.completed_at)));
-    const uniqueDates = new Set(dates.map(d => d.toISOString()));
+    const completedLectureDates = userProgress
+      .filter(p => p.isLectureCompleted)
+      .map(p => startOfDay(new Date(p.completed_at)));
+    const uniqueDates = new Set(completedLectureDates.map(d => d.toISOString()));
     let streak = 0;
     let currentDate = today;
     while (uniqueDates.has(currentDate.toISOString())) {
@@ -74,27 +94,31 @@ const Analytics = () => {
       start: startDate,
       end: new Date()
     });
+
     let cumulativeCount = 0;
     const lecturesByDate = dateRange.map(date => {
       const dateStr = startOfDay(date).toISOString();
-      const lecturesCompleted = new Set(userProgress.filter(p => startOfDay(new Date(p.completed_at)).toISOString() === dateStr).map(p => p.lecture_id)).size;
-      cumulativeCount += lecturesCompleted;
+      const completedLectures = new Set(
+        userProgress
+          .filter(p => p.isLectureCompleted && startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
+          .map(p => p.lecture_id)
+      ).size;
+      cumulativeCount += completedLectures;
       return {
         date: format(date, 'MMM dd'),
-        lectures: lecturesCompleted,
+        lectures: completedLectures,
         cumulative: cumulativeCount
       };
     });
     return lecturesByDate;
   };
 
-  // Update the totalLectures calculation to only count lectures where all segments of a lecture are completed
-  const totalLectures = userProgress?.reduce((uniqueLectures, progress) => {
-    // Only count lectures where there's a completed_at timestamp (indicating full completion)
-    if (progress.completed_at && !uniqueLectures.has(progress.lecture_id)) {
-      uniqueLectures.add(progress.lecture_id);
+  // Count unique completed lectures
+  const totalLectures = userProgress?.reduce((completedLectures, progress) => {
+    if (progress.isLectureCompleted) {
+      completedLectures.add(progress.lecture_id);
     }
-    return uniqueLectures;
+    return completedLectures;
   }, new Set<number>()).size || 0;
 
   const currentStreak = calculateStreak();
