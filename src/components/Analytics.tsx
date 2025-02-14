@@ -41,25 +41,15 @@ const Analytics = () => {
     queryFn: async () => {
       const startDate = getDateRange();
       
-      // Get quiz progress records
-      const { data: quizData, error: quizError } = await supabase
+      // First, get all quiz progress records
+      const { data: quizData, error } = await supabase
         .from('quiz_progress')
         .select('completed_at, lecture_id, quiz_number, quiz_score')
         .eq('user_id', user?.id)
         .gte('completed_at', startDate.toISOString())
         .order('completed_at', { ascending: true });
       
-      if (quizError) throw quizError;
-      
-      // Get user progress records for streak calculation
-      const { data: progressData, error: progressError } = await supabase
-        .from('user_progress')
-        .select('completed_at')
-        .eq('user_id', user?.id)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false });
-      
-      if (progressError) throw progressError;
+      if (error) throw error;
       
       // Process the data to determine completed lectures
       const lectureProgress = new Map();
@@ -73,38 +63,32 @@ const Analytics = () => {
       });
 
       // Transform the data for the component
-      return {
-        quizProgress: quizData || [],
-        segmentProgress: progressData || []
-      };
+      return quizData?.map(progress => ({
+        ...progress,
+        isLectureCompleted: lectureProgress.get(progress.lecture_id)?.size === 5 // A lecture is completed when it has 5 quiz_number=2 entries
+      }));
     },
     enabled: !!user
   });
 
   const calculateStreak = () => {
-    if (!userProgress?.segmentProgress.length) return 0;
-    
+    if (!userProgress?.length) return 0;
     const today = startOfDay(new Date());
-    const uniqueDates = new Set(
-      userProgress.segmentProgress.map(p => 
-        startOfDay(new Date(p.completed_at)).toISOString()
-      )
-    );
-
+    const completedLectureDates = userProgress
+      .filter(p => p.isLectureCompleted)
+      .map(p => startOfDay(new Date(p.completed_at)));
+    const uniqueDates = new Set(completedLectureDates.map(d => d.toISOString()));
     let streak = 0;
     let currentDate = today;
-
-    // Check each day, moving backwards from today
     while (uniqueDates.has(currentDate.toISOString())) {
       streak++;
       currentDate = subDays(currentDate, 1);
     }
-
     return streak;
   };
 
   const prepareChartData = () => {
-    if (!userProgress?.quizProgress.length) return [];
+    if (!userProgress?.length) return [];
     const startDate = getDateRange();
     const dateRange = eachDayOfInterval({
       start: startDate,
@@ -115,8 +99,8 @@ const Analytics = () => {
     const lecturesByDate = dateRange.map(date => {
       const dateStr = startOfDay(date).toISOString();
       const completedLectures = new Set(
-        userProgress.quizProgress
-          .filter(p => startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
+        userProgress
+          .filter(p => p.isLectureCompleted && startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
           .map(p => p.lecture_id)
       ).size;
       cumulativeCount += completedLectures;
@@ -130,11 +114,12 @@ const Analytics = () => {
   };
 
   // Count unique completed lectures
-  const totalLectures = userProgress?.quizProgress ? 
-    new Set(userProgress.quizProgress.map(p => p.lecture_id)).size : 0;
-
-  const totalXP = userProgress?.quizProgress ? 
-    userProgress.quizProgress.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) : 0;
+  const totalLectures = userProgress?.reduce((completedLectures, progress) => {
+    if (progress.isLectureCompleted) {
+      completedLectures.add(progress.lecture_id);
+    }
+    return completedLectures;
+  }, new Set<number>()).size || 0;
 
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
@@ -196,7 +181,9 @@ const Analytics = () => {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
-                    <p className="text-3xl font-bold text-white">{totalXP}</p>
+                    <p className="text-3xl font-bold text-white">
+                      {userProgress?.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) || 0}
+                    </p>
                   </div>
                 </div>
               </CardContent>
