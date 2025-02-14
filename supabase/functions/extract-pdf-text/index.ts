@@ -86,13 +86,23 @@ serve(async (req) => {
           throw segmentError;
         }
 
-        // Store in segments_content table
+        // Store in segments_content table with new structure
         const { error: contentError } = await supabaseClient
           .from('segments_content')
           .insert({
             lecture_id: parseInt(lectureId),
             sequence_number: segmentNumber,
-            content: segment.content
+            theory_slide_1: segment.content.theory_slide_1 || '',
+            theory_slide_2: segment.content.theory_slide_2 || '',
+            quiz_1_type: segment.content.quiz_question_1?.type || 'multiple_choice',
+            quiz_1_question: segment.content.quiz_question_1?.question || '',
+            quiz_1_options: segment.content.quiz_question_1?.options || [],
+            quiz_1_correct_answer: segment.content.quiz_question_1?.correctAnswer || '',
+            quiz_1_explanation: segment.content.quiz_question_1?.explanation || '',
+            quiz_2_type: 'true_false',
+            quiz_2_question: segment.content.quiz_question_2?.question || '',
+            quiz_2_correct_answer: segment.content.quiz_question_2?.correctAnswer || false,
+            quiz_2_explanation: segment.content.quiz_question_2?.explanation || ''
           });
 
         if (contentError) {

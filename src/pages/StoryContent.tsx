@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -106,7 +105,7 @@ const StoryContent = () => {
       // Fetch corresponding content
       const { data: segmentContent, error: contentError } = await supabase
         .from('segments_content')
-        .select('content')
+        .select('theory_slide_1, theory_slide_2, quiz_1_type, quiz_1_question, quiz_1_options, quiz_1_correct_answer, quiz_1_explanation, quiz_2_type, quiz_2_question, quiz_2_correct_answer, quiz_2_explanation')
         .eq('lecture_id', numericLectureId)
         .eq('sequence_number', sequenceNumber)
         .single();
@@ -116,34 +115,28 @@ const StoryContent = () => {
         throw contentError;
       }
 
-      const content = segmentContent as SegmentContent;
-
-      if (!content?.content) {
-        console.log('No content found for segment:', sequenceNumber);
-        return {
-          segments: [{
-            id: nodeId || '',
-            title: segment.title,
-            slides: [],
-            questions: []
-          }]
-        };
-      }
-
-      // Add debug logging to see the content structure
-      console.log('Raw segment content:', content);
-
       return {
         segments: [{
           id: nodeId || '',
           title: segment.title,
           slides: [
-            { id: 'slide-1', content: content.content.theory_slide_1 },
-            { id: 'slide-2', content: content.content.theory_slide_2 }
+            { id: 'slide-1', content: segmentContent.theory_slide_1 },
+            { id: 'slide-2', content: segmentContent.theory_slide_2 }
           ],
           questions: [
-            content.content.quiz_question_1,
-            content.content.quiz_question_2
+            {
+              type: segmentContent.quiz_1_type,
+              question: segmentContent.quiz_1_question,
+              options: segmentContent.quiz_1_options,
+              correctAnswer: segmentContent.quiz_1_correct_answer,
+              explanation: segmentContent.quiz_1_explanation
+            },
+            {
+              type: segmentContent.quiz_2_type,
+              question: segmentContent.quiz_2_question,
+              correctAnswer: segmentContent.quiz_2_correct_answer,
+              explanation: segmentContent.quiz_2_explanation
+            }
           ].filter(Boolean)
         }]
       };
