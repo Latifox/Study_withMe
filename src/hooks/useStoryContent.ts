@@ -1,25 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Json } from "@/integrations/supabase/types";
-
-interface SegmentContent {
-  theory_slide_1: string;
-  theory_slide_2: string;
-  quiz_question_1: {
-    type: "multiple_choice";
-    question: string;
-    options: string[];
-    correctAnswer: string;
-    explanation: string;
-  };
-  quiz_question_2: {
-    type: "true_false";
-    question: string;
-    correctAnswer: boolean;
-    explanation: string;
-  };
-}
 
 export interface StoryContent {
   segments: StorySegment[];
@@ -68,7 +49,20 @@ export const useStoryContent = (lectureId: string | undefined) => {
       // Fetch content for all segments
       const { data: segmentContents, error: contentsError } = await supabase
         .from('segments_content')
-        .select('sequence_number, content')
+        .select(`
+          sequence_number,
+          theory_slide_1,
+          theory_slide_2,
+          quiz_1_type,
+          quiz_1_question,
+          quiz_1_options,
+          quiz_1_correct_answer,
+          quiz_1_explanation,
+          quiz_2_type,
+          quiz_2_question,
+          quiz_2_correct_answer,
+          quiz_2_explanation
+        `)
         .eq('lecture_id', numericLectureId)
         .order('sequence_number', { ascending: true });
 
@@ -85,18 +79,28 @@ export const useStoryContent = (lectureId: string | undefined) => {
           (content) => content.sequence_number === segment.sequence_number
         );
 
-        if (content?.content) {
-          const segmentContent = content.content as SegmentContent;
+        if (content) {
           return {
             id: segment.id.toString(),
             title: segment.title,
             slides: [
-              { content: segmentContent.theory_slide_1 || '' },
-              { content: segmentContent.theory_slide_2 || '' }
+              { content: content.theory_slide_1 || '' },
+              { content: content.theory_slide_2 || '' }
             ],
             questions: [
-              segmentContent.quiz_question_1,
-              segmentContent.quiz_question_2
+              {
+                type: content.quiz_1_type as "multiple_choice",
+                question: content.quiz_1_question,
+                options: content.quiz_1_options || [],
+                correctAnswer: content.quiz_1_correct_answer,
+                explanation: content.quiz_1_explanation
+              },
+              {
+                type: content.quiz_2_type as "true_false",
+                question: content.quiz_2_question,
+                correctAnswer: content.quiz_2_correct_answer,
+                explanation: content.quiz_2_explanation
+              }
             ].filter(Boolean)
           };
         }

@@ -187,32 +187,62 @@ export type Database = {
       }
       segments_content: {
         Row: {
-          content: Json
           created_at: string
           id: number
           lecture_id: number | null
+          quiz_1_correct_answer: string
+          quiz_1_explanation: string
+          quiz_1_options: string[] | null
+          quiz_1_question: string
+          quiz_1_type: string
+          quiz_2_correct_answer: boolean
+          quiz_2_explanation: string
+          quiz_2_question: string
+          quiz_2_type: string
           sequence_number: number
+          theory_slide_1: string
+          theory_slide_2: string
           updated_at: string
         }
         Insert: {
-          content?: Json
           created_at?: string
           id?: number
           lecture_id?: number | null
+          quiz_1_correct_answer?: string
+          quiz_1_explanation?: string
+          quiz_1_options?: string[] | null
+          quiz_1_question?: string
+          quiz_1_type?: string
+          quiz_2_correct_answer?: boolean
+          quiz_2_explanation?: string
+          quiz_2_question?: string
+          quiz_2_type?: string
           sequence_number: number
+          theory_slide_1?: string
+          theory_slide_2?: string
           updated_at?: string
         }
         Update: {
-          content?: Json
           created_at?: string
           id?: number
           lecture_id?: number | null
+          quiz_1_correct_answer?: string
+          quiz_1_explanation?: string
+          quiz_1_options?: string[] | null
+          quiz_1_question?: string
+          quiz_1_type?: string
+          quiz_2_correct_answer?: boolean
+          quiz_2_explanation?: string
+          quiz_2_question?: string
+          quiz_2_type?: string
           sequence_number?: number
+          theory_slide_1?: string
+          theory_slide_2?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "segments_lecture_id_fkey"
+            foreignKeyName: "segments_content_lecture_id_fkey"
             columns: ["lecture_id"]
             isOneToOne: false
             referencedRelation: "lectures"
