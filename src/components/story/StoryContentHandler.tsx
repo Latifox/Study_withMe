@@ -89,17 +89,24 @@ export const useStoryContentHandler = ({
     const currentQuestionIndex = currentStep - 2;
     setFailedQuestions(prev => new Set([...prev, currentQuestionIndex]));
 
-    // Reset the score to 0 both in state and in the database
+    // Reset the score in state
     setSegmentScores(prev => ({ ...prev, [nodeId]: 0 }));
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Update the progress in the database to reflect the reset score
-        await updateUserProgress(user.id, numericLectureId, sequenceNumber, 0);
+        // Call the database function to delete all progress for this segment
+        const { error } = await supabase
+          .rpc('delete_segment_progress', {
+            p_user_id: user.id,
+            p_lecture_id: numericLectureId,
+            p_segment_number: sequenceNumber
+          });
+
+        if (error) throw error;
       }
     } catch (error) {
-      console.error('Error updating progress after wrong answer:', error);
+      console.error('Error deleting segment progress:', error);
     }
     
     toast({

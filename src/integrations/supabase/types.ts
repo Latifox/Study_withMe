@@ -296,6 +296,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_segment_progress: {
+        Args: {
+          p_user_id: string
+          p_lecture_id: number
+          p_segment_number: number
+        }
+        Returns: undefined
+      }
       get_next_segment_content_id: {
         Args: Record<PropertyKey, never>
         Returns: number
