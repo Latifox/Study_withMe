@@ -16,6 +16,7 @@ const Analytics = () => {
   } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
   const [viewType, setViewType] = useState<'daily' | 'cumulative'>('daily');
+
   const getDateRange = () => {
     const now = new Date();
     switch (timeRange) {
@@ -26,12 +27,12 @@ const Analytics = () => {
       case 'year':
         return subYears(now, 1);
       case 'all':
-        return subYears(now, 10);
-      // Effectively "all" data
+        return subYears(now, 10); // Effectively "all" data
       default:
         return subDays(now, 7);
     }
   };
+
   const {
     data: userProgress,
     isLoading
@@ -39,17 +40,19 @@ const Analytics = () => {
     queryKey: ['user-progress', user?.id, timeRange],
     queryFn: async () => {
       const startDate = getDateRange();
-      const {
-        data,
-        error
-      } = await supabase.from('user_progress').select('completed_at, lecture_id').eq('user_id', user?.id).gte('completed_at', startDate.toISOString()).order('completed_at', {
-        ascending: true
-      });
+      const { data, error } = await supabase
+        .from('user_progress')
+        .select('completed_at, lecture_id, score')
+        .eq('user_id', user?.id)
+        .gte('completed_at', startDate.toISOString())
+        .order('completed_at', { ascending: true });
+      
       if (error) throw error;
       return data;
     },
     enabled: !!user
   });
+
   const calculateStreak = () => {
     if (!userProgress?.length) return 0;
     const today = startOfDay(new Date());
@@ -63,6 +66,7 @@ const Analytics = () => {
     }
     return streak;
   };
+
   const prepareChartData = () => {
     if (!userProgress?.length) return [];
     const startDate = getDateRange();
@@ -83,9 +87,11 @@ const Analytics = () => {
     });
     return lecturesByDate;
   };
+
   const totalLectures = new Set(userProgress?.map(p => p.lecture_id)).size || 0;
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
+
   if (isLoading) {
     return <div className="space-y-4">
       <Skeleton className="h-[400px] w-full" />
@@ -95,6 +101,7 @@ const Analytics = () => {
       </div>
     </div>;
   }
+
   return <div className="space-y-6">
       <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/30 via-purple-500/30 to-indigo-600/30"></div>
