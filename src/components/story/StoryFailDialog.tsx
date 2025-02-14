@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,7 @@ interface StoryFailDialogProps {
   onRestart: () => void;
   courseId: string;
   score: number;
+  hasFailedQuestions?: boolean;
 }
 
 const StoryFailDialog = ({
@@ -23,6 +25,7 @@ const StoryFailDialog = ({
   onRestart,
   courseId,
   score,
+  hasFailedQuestions = false,
 }: StoryFailDialogProps) => {
   const navigate = useNavigate();
 
@@ -34,14 +37,28 @@ const StoryFailDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Keep practicing!</DialogTitle>
+          <DialogTitle>
+            {hasFailedQuestions ? "Review Required Questions" : "Keep practicing!"}
+          </DialogTitle>
           <DialogDescription className="space-y-2">
-            <p>
-              You need 10 XP to complete this node. Current score: {score} XP.
-            </p>
-            <p>
-              Would you like to try again or return to the course?
-            </p>
+            {hasFailedQuestions ? (
+              <>
+                <p>
+                  You need to correctly answer all questions to complete this node.
+                  Let's review the questions you missed.
+                </p>
+                <p>Current score: {score} XP</p>
+              </>
+            ) : (
+              <>
+                <p>
+                  You need 10 XP to complete this node. Current score: {score} XP.
+                </p>
+                <p>
+                  Would you like to try again or return to the course?
+                </p>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex justify-end space-x-2">
@@ -49,7 +66,7 @@ const StoryFailDialog = ({
             Back to Course
           </Button>
           <Button onClick={onRestart}>
-            Try Again
+            {hasFailedQuestions ? "Review Questions" : "Try Again"}
           </Button>
         </DialogFooter>
       </DialogContent>

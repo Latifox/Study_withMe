@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { handleQuizProgress } from "../QuizProgressHandler";
 import StoryQuiz from "../StoryQuiz";
 import StoryFailDialog from "../StoryFailDialog";
 import { MAX_SCORE } from "@/utils/scoreUtils";
@@ -33,6 +32,7 @@ const QuizHandler = ({
 }: QuizHandlerProps) => {
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const [showFailDialog, setShowFailDialog] = useState(false);
+  const [failedQuestions, setFailedQuestions] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   const handleCorrectAnswer = async () => {
@@ -53,40 +53,50 @@ const QuizHandler = ({
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
       const quizNumber = questionIndex + 1;
 
-      await handleQuizProgress({
-        userId: user.id,
-        lectureId: parseInt(lectureId),
-        segmentNumber,
-        quizNumber,
-        isCorrect: true,
-        onSuccess: (newScore) => {
-          toast({
-            title: "🎯 Correct!",
-            description: `+5 points earned! Total: ${newScore}/10 XP`,
-          });
+      const { error } = await supabase
+        .from('quiz_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: parseInt(lectureId),
+          segment_number: segmentNumber,
+          quiz_number: quizNumber,
+          quiz_score: 5,
+          completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
+        });
 
-          if (quizNumber === 2) {
-            if (newScore >= 10) {
-              onCorrectAnswer();
-              toast({
-                title: "🌟 Node Complete!",
-                description: "Great job! You've mastered this node.",
-              });
-            } else {
-              setShowFailDialog(true);
-            }
-          } else {
-            handleContinue();
-          }
-        },
-        onError: () => {
+      if (error) {
+        console.error('Error saving quiz progress:', error);
+        throw error;
+      }
+
+      toast({
+        title: "🎯 Correct!",
+        description: `+5 points earned!`,
+      });
+
+      // Remove from failed questions if it was there
+      if (failedQuestions.has(questionIndex)) {
+        const updatedFailedQuestions = new Set(failedQuestions);
+        updatedFailedQuestions.delete(questionIndex);
+        setFailedQuestions(updatedFailedQuestions);
+      }
+
+      if (quizNumber === 2) {
+        // Check if there are any failed questions that need to be retaken
+        if (failedQuestions.size > 0) {
+          setShowFailDialog(true);
+        } else {
+          onCorrectAnswer();
           toast({
-            title: "Error",
-            description: "Failed to save progress. Please try again.",
-            variant: "destructive",
+            title: "🌟 Node Complete!",
+            description: "Great job! You've mastered this node.",
           });
         }
-      });
+      } else {
+        handleContinue();
+      }
 
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);
@@ -111,34 +121,35 @@ const QuizHandler = ({
       const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
       const quizNumber = questionIndex + 1;
 
-      await handleQuizProgress({
-        userId: user.id,
-        lectureId: parseInt(lectureId),
-        segmentNumber,
-        quizNumber,
-        isCorrect: false,
-        onSuccess: (newScore) => {
-          if (quizNumber === 2 && newScore < 10) {
-            setShowFailDialog(true);
-          } else {
-            setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
-            onWrongAnswer();
-            toast({
-              title: "Keep trying!",
-              description: "Don't worry, mistakes help us learn.",
-              variant: "destructive"
-            });
-            handleContinue();
-          }
-        },
-        onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to save progress. Please try again.",
-            variant: "destructive",
-          });
-        }
+      const { error } = await supabase
+        .from('quiz_progress')
+        .upsert({
+          user_id: user.id,
+          lecture_id: parseInt(lectureId),
+          segment_number: segmentNumber,
+          quiz_number: quizNumber,
+          quiz_score: 0,
+          completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
+        });
+
+      if (error) {
+        console.error('Error saving quiz progress:', error);
+        throw error;
+      }
+
+      // Add to failed questions set
+      setFailedQuestions(prev => new Set([...prev, questionIndex]));
+      
+      setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
+      onWrongAnswer();
+      toast({
+        title: "Keep trying!",
+        description: "Don't worry, mistakes help us learn.",
+        variant: "destructive"
       });
+      handleContinue();
     } catch (error) {
       console.error('Error in handleWrongAnswer:', error);
     }
@@ -147,6 +158,12 @@ const QuizHandler = ({
   const handleContinue = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     onContinue();
+  };
+
+  const handleRetakeFailedQuestions = () => {
+    setShowFailDialog(false);
+    // Logic to go back to the first failed question will be handled by parent component
+    onWrongAnswer();
   };
 
   return (
@@ -161,9 +178,10 @@ const QuizHandler = ({
       <StoryFailDialog
         isOpen={showFailDialog}
         onClose={() => setShowFailDialog(false)}
-        onRestart={() => window.location.reload()}
+        onRestart={handleRetakeFailedQuestions}
         courseId={courseId || ""}
         score={currentScore}
+        hasFailedQuestions={failedQuestions.size > 0}
       />
     </>
   );
