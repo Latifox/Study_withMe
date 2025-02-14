@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -55,14 +56,14 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border-none bg-white/10 backdrop-blur-md shadow-2xl">
         <DialogHeader>
-          <DialogTitle>Lecture Actions</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-white text-center">Lecture Actions</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-3 py-4">
           <Button
             onClick={handleMindmapAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <Network className="w-5 h-5" />
@@ -70,7 +71,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handleStoryModeAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <BookOpen className="w-5 h-5" />
@@ -78,7 +79,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handleSummaryAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <FileText className="w-5 h-5" />
@@ -86,7 +87,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handleChatAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <MessageSquare className="w-5 h-5" />
@@ -94,7 +95,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handleFlashcardsAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <Activity className="w-5 h-5" />
@@ -102,7 +103,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handleQuizAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <HelpCircle className="w-5 h-5" />
@@ -110,7 +111,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handleResourcesAction}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-3 w-full bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.02]"
             size="lg"
           >
             <Link className="w-5 h-5" />
