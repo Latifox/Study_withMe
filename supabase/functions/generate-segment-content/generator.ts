@@ -6,7 +6,7 @@ export const generatePrompt = (
   chunkPair: { chunk1: string; chunk2: string }, 
   aiConfig: any
 ) => {
-  const basePrompt = `Generate segment titles and content in the same language as the provided lecture. Focus on accuracy and relevance to the lecture content. Ensure the content is detailed, with a clear and friendly tone. Focus only on information from the lecture to ensure accuracy and relevance.
+  const basePrompt = `Generate segment titles and content in the same language as the provided lecture. Focus on accuracy and relevance to the lecture content. Create detailed, well-structured content that maximizes learning effectiveness.
 
 For this segment titled "${segmentTitle}", use the following content:
 
@@ -26,24 +26,27 @@ REQUIREMENTS:
 
 1. Theory Slide 1:
    - Focus ONLY on content from Chunk 1
-   - Present core concepts exactly as they appear
-   - Use mathematical foundations present in the chunk
-   - Maintain precise adherence to the original content
-   - Preserve the original language of the lecture
+   - Present core concepts with clear hierarchy and structure
+   - Use markdown for rich text formatting:
+     * Headers (##, ###) for clear section breaks
+     * Bullet points and numbered lists for organized information
+     * **Bold** for key terms and important concepts
+     * *Italic* for emphasis and definitions
+     * > Blockquotes for important statements or theorems
+   - Use LaTeX for mathematical expressions:
+     * Inline math mode with single $ for short expressions
+     * Display math mode with $$ for complex equations
+     * Use proper LaTeX environments (align*, equation*, array)
+   - Break down complex concepts into digestible parts
+   - Include examples and explanations when present in the chunk
 
 2. Theory Slide 2:
    - Focus ONLY on content from Chunk 2
-   - Present applications and examples from the chunk
-   - Do not create new examples or applications
-   - Use only connections mentioned in the chunk
-   - Maintain the same language as the original lecture
-
-3. Quiz Questions:
-   - Question 1 should test understanding of Chunk 1 content
-   - Question 2 should test understanding of Chunk 2 content
-   - Each question must be based solely on its respective chunk
-   - Do not mix content between chunks in questions
-   - Use the same language as the lecture content
+   - Structure content with clear hierarchy
+   - Use the same markdown and LaTeX formatting rules
+   - Emphasize practical applications and examples
+   - Include relevant diagrams or illustrations mentioned
+   - Create clear connections between concepts
 
 LATEX FORMATTING REQUIREMENTS:
 1. Use these LaTeX commands and environments:
@@ -68,6 +71,29 @@ LATEX FORMATTING REQUIREMENTS:
 
 3. Inline Math Format:
    $\\vec{v} = \\frac{d\\vec{r}}{dt}$
+
+MARKDOWN STRUCTURE REQUIREMENTS:
+1. Organize content with clear hierarchy:
+   ```markdown
+   ## Main Topic
+   
+   ### Subtopic 1
+   * Key point 1
+   * Key point 2
+     * Sub-point A
+     * Sub-point B
+   
+   ### Subtopic 2
+   1. First step
+   2. Second step
+   
+   > Important theorem or definition
+   ```
+
+2. Use emphasis appropriately:
+   ```markdown
+   **Key Term**: *definition or explanation*
+   ```
 
 Required JSON Structure:
 {
