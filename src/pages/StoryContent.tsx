@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -156,7 +157,9 @@ const StoryContent = () => {
       const newStep = prev + 1;
       if (newStep === 4) {
         const totalScore = segmentScores[nodeId || ''] || 0;
-        if (failedQuestions.size > 0 || totalScore < 10) {
+        console.log('Current score:', totalScore, 'Failed questions:', failedQuestions);
+        // Only check failed questions, not total score since it's updated after this
+        if (failedQuestions.size > 0) {
           toast({
             title: "Review Required!",
             description: "You need to correctly answer all questions to complete this node. Let's review the material again!",
@@ -186,11 +189,9 @@ const StoryContent = () => {
     const currentQuestionIndex = currentStep - 2;
     
     // Remove from failed questions if it was there
-    if (failedQuestions.has(currentQuestionIndex)) {
-      const updatedFailedQuestions = new Set(failedQuestions);
-      updatedFailedQuestions.delete(currentQuestionIndex);
-      setFailedQuestions(updatedFailedQuestions);
-    }
+    const updatedFailedQuestions = new Set(failedQuestions);
+    updatedFailedQuestions.delete(currentQuestionIndex);
+    setFailedQuestions(updatedFailedQuestions);
 
     const newScore = (segmentScores[nodeId] || 0) + 5;
     setSegmentScores(prev => ({
@@ -200,7 +201,7 @@ const StoryContent = () => {
 
     try {
       // Only update progress if both questions are answered correctly
-      if (failedQuestions.size === 0 && currentStep === 3) {
+      if (updatedFailedQuestions.size === 0 && currentStep === 3) {
         await updateUserProgress(user.id, numericLectureId, sequenceNumber, newScore);
       }
 
