@@ -228,13 +228,13 @@ const Analytics = () => {
                   <Line 
                     type="monotone" 
                     dataKey={viewType === 'daily' ? 'lectures' : 'cumulative'} 
-                    stroke="#8B5CF6" 
-                    strokeWidth={3}
+                    stroke="#ffffff" 
+                    strokeWidth={4}
                     dot={false}
                     activeDot={{
                       r: 8,
                       style: {
-                        fill: "#8B5CF6",
+                        fill: "#ffffff",
                         stroke: "white",
                         strokeWidth: 2
                       }
