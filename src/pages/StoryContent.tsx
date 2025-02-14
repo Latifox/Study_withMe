@@ -42,7 +42,7 @@ const StoryContent = () => {
       const { data: progress } = await supabase
         .from('user_progress')
         .select('score, completed_at')
-        .eq('segment_number', sequenceNumber)
+        .eq('sequence_number', sequenceNumber)
         .eq('lecture_id', numericLectureId)
         .eq('user_id', user.id)
         .maybeSingle();
@@ -63,6 +63,8 @@ const StoryContent = () => {
     queryFn: async () => {
       if (!numericLectureId || !sequenceNumber) throw new Error('Invalid parameters');
 
+      console.log('Fetching content for lecture:', numericLectureId, 'sequence:', sequenceNumber);
+
       // Fetch segment info
       const { data: segment, error: segmentError } = await supabase
         .from('lecture_segments')
@@ -71,9 +73,13 @@ const StoryContent = () => {
         .eq('sequence_number', sequenceNumber)
         .single();
 
-      if (segmentError) throw segmentError;
+      if (segmentError) {
+        console.error('Error fetching segment:', segmentError);
+        throw segmentError;
+      }
 
       if (!segment) {
+        console.error('No segment found');
         throw new Error('Segment not found');
       }
 
@@ -85,9 +91,12 @@ const StoryContent = () => {
         .eq('sequence_number', sequenceNumber)
         .single();
 
-      if (contentError) throw contentError;
+      if (contentError) {
+        console.error('Error fetching content:', contentError);
+        throw contentError;
+      }
 
-      if (!segmentContent) {
+      if (!segmentContent?.content) {
         console.log('No content found for segment:', sequenceNumber);
         return {
           segments: [{
@@ -99,33 +108,21 @@ const StoryContent = () => {
         };
       }
 
-      const content = segmentContent.content as {
-        theory_slide_1: string;
-        theory_slide_2: string;
-        quiz_question_1: {
-          type: "multiple_choice";
-          question: string;
-          options: string[];
-          correctAnswer: string;
-          explanation: string;
-        };
-        quiz_question_2: {
-          type: "true_false";
-          question: string;
-          correctAnswer: boolean;
-          explanation: string;
-        };
-      };
+      // Add debug logging to see the content structure
+      console.log('Raw segment content:', segmentContent.content);
 
       return {
         segments: [{
           id: nodeId || '',
           title: segment.title,
           slides: [
-            { id: 'slide-1', content: content.theory_slide_1 },
-            { id: 'slide-2', content: content.theory_slide_2 }
+            { id: 'slide-1', content: segmentContent.content.theory_slide_1 },
+            { id: 'slide-2', content: segmentContent.content.theory_slide_2 }
           ],
-          questions: [content.quiz_question_1, content.quiz_question_2].filter(Boolean)
+          questions: [
+            segmentContent.content.quiz_question_1,
+            segmentContent.content.quiz_question_2
+          ].filter(Boolean)
         }]
       };
     }
