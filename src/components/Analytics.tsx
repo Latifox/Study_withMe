@@ -151,18 +151,34 @@ const Analytics = () => {
   const chartData = prepareChartData();
   const heatmapData = prepareHeatmapData();
 
-  // Generate last year of weeks for heatmap
+  // Generate exactly 365 days for heatmap
   const endDate = new Date();
-  const startDate = subYears(endDate, 1);
+  const startDate = subDays(endDate, 364); // This gives us exactly 365 days including today
   
-  // Generate weeks
-  const weeks = eachWeekOfInterval(
-    { start: startDate, end: endDate },
-    { weekStartsOn: 1 } // Week starts on Monday
+  // Generate all days
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  
+  // Group days by week (7 days per column)
+  const weeks = Array.from({ length: Math.ceil(days.length / 7) }, (_, weekIndex) => 
+    days.slice(weekIndex * 7, (weekIndex + 1) * 7)
   );
 
-  // Generate days of the week (Mon-Sun)
-  const weekDays = Array.from({ length: 7 }, (_, i) => i);
+  // Get unique months for labels
+  const months = Array.from(new Set(days.map(date => format(date, 'MMM'))));
+
+  // Calculate how many weeks each month spans
+  const monthSpans = months.map(month => {
+    const monthDays = days.filter(date => format(date, 'MMM') === month);
+    const firstDay = monthDays[0];
+    const lastDay = monthDays[monthDays.length - 1];
+    const weekStart = Math.floor(days.indexOf(firstDay) / 7);
+    const weekEnd = Math.floor(days.indexOf(lastDay) / 7);
+    return {
+      month,
+      span: weekEnd - weekStart + 1,
+      start: weekStart
+    };
+  });
 
   if (isLoading) {
     return <div className="space-y-4">
@@ -315,11 +331,10 @@ const Analytics = () => {
                     <div>Sun</div>
                   </div>
                   
-                  <div className="grid grid-cols-[repeat(53,1fr)] gap-1 flex-1">
-                    {weeks.map((week) => (
-                      <div key={week.toISOString()} className="grid grid-rows-7 gap-1">
-                        {weekDays.map((dayOffset) => {
-                          const date = addDays(week, dayOffset);
+                  <div className="grid grid-cols-[repeat(52,1fr)] gap-1 flex-1">
+                    {weeks.map((weekDays, weekIndex) => (
+                      <div key={weekIndex} className="grid grid-rows-7 gap-1">
+                        {weekDays.map((date) => {
                           const dateStr = startOfDay(date).toISOString();
                           const score = heatmapData.get(dateStr) || 0;
                           
@@ -353,13 +368,18 @@ const Analytics = () => {
 
                 <div className="mt-2 grid grid-cols-[auto,1fr] gap-2">
                   <div className="w-8" /> {/* Spacer for day labels */}
-                  <div className="grid grid-cols-[repeat(53,1fr)] text-xs text-white/40">
-                    {weeks.map((week, index) => (
-                      index % 4 === 0 && (
-                        <div key={week.toISOString()} className="text-center">
-                          {format(week, 'MMM')}
-                        </div>
-                      )
+                  <div className="grid grid-cols-[repeat(52,1fr)] text-xs text-white/40">
+                    {monthSpans.map(({ month, span, start }) => (
+                      <div 
+                        key={month} 
+                        className="text-center"
+                        style={{ 
+                          gridColumn: `${start + 1} / span ${span}`,
+                          borderLeft: start !== 0 ? '1px solid rgba(255,255,255,0.1)' : 'none'
+                        }}
+                      >
+                        {month}
+                      </div>
                     ))}
                   </div>
                 </div>
