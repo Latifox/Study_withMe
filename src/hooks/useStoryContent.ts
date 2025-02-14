@@ -9,23 +9,16 @@ export interface StoryContent {
 export interface StorySegment {
   id: string;
   title: string;
-  slides: SegmentContent['slides'];
-  questions: SegmentContent['questions'];
+  slides: string[];
+  questions: Question[];
 }
 
-export interface SegmentContent {
-  slides: {
-    id: string;
-    content: string;
-  }[];
-  questions: {
-    id: string;
-    type: "multiple_choice" | "true_false";
-    question: string;
-    options?: string[];
-    correctAnswer: string | boolean;
-    explanation: string;
-  }[];
+interface Question {
+  type: "multiple_choice" | "true_false";
+  question: string;
+  options?: string[];
+  correctAnswer: string | boolean;
+  explanation: string;
 }
 
 export const useStoryContent = (lectureId: string | undefined) => {
@@ -38,12 +31,12 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       console.log('Fetching story content for lecture:', numericLectureId);
 
-      // Fetch segments
+      // Fetch segments with titles
       const { data: segments, error: segmentsError } = await supabase
         .from('lecture_segments')
-        .select('*')
+        .select('id, title, sequence_number')
         .eq('lecture_id', numericLectureId)
-        .order('segment_number', { ascending: true });
+        .order('sequence_number', { ascending: true });
 
       if (segmentsError) {
         console.error('Error fetching segments:', segmentsError);
@@ -55,62 +48,36 @@ export const useStoryContent = (lectureId: string | undefined) => {
         return { segments: [] };
       }
 
-      // For each segment, fetch its corresponding chunks
-      const formattedSegments = await Promise.all(segments.map(async (segment) => {
-        const { data: chunks, error: chunksError } = await supabase
-          .from('lecture_polished_chunks')
-          .select('chunk_order, polished_content')
-          .eq('lecture_id', numericLectureId)
-          .gte('chunk_order', (segment.segment_number * 2) - 1)
-          .lte('chunk_order', segment.segment_number * 2)
-          .order('chunk_order', { ascending: true });
+      // Fetch content for all segments
+      const { data: segmentContents, error: contentsError } = await supabase
+        .from('segments_content')
+        .select('*')
+        .eq('lecture_id', numericLectureId)
+        .order('sequence_number', { ascending: true });
 
-        if (chunksError) {
-          console.error('Error fetching chunks:', chunksError);
-          throw chunksError;
-        }
+      if (contentsError) {
+        console.error('Error fetching segment contents:', contentsError);
+        throw contentsError;
+      }
 
-        if (!chunks) {
-          console.log('No chunks found for segment:', segment.segment_number);
-          return {
-            id: segment.id.toString(),
-            title: segment.title,
-            slides: [],
-            questions: []
-          };
-        }
-
-        const slides = chunks.map((chunk, i) => ({
-          id: `slide-${i + 1}`,
-          content: chunk.polished_content
-        }));
-
-        // Generate placeholder questions (these will be replaced by actual questions from the edge function)
-        const questions = [
-          {
-            id: 'q1',
-            type: "multiple_choice" as const,
-            question: "Question 1",
-            options: ["Option 1", "Option 2", "Option 3"],
-            correctAnswer: "Option 1",
-            explanation: "Explanation 1"
-          },
-          {
-            id: 'q2',
-            type: "true_false" as const,
-            question: "Question 2",
-            correctAnswer: true,
-            explanation: "Explanation 2"
-          }
-        ];
+      // Map segments to their content
+      const formattedSegments = segments.map((segment) => {
+        const content = segmentContents?.find(
+          (content) => content.sequence_number === segment.sequence_number
+        )?.content || {
+          theory_slide_1: '',
+          theory_slide_2: '',
+          quiz_question_1: null,
+          quiz_question_2: null
+        };
 
         return {
           id: segment.id.toString(),
           title: segment.title,
-          slides,
-          questions
+          slides: [content.theory_slide_1, content.theory_slide_2],
+          questions: [content.quiz_question_1, content.quiz_question_2].filter(Boolean)
         };
-      }));
+      });
 
       return { segments: formattedSegments };
     },

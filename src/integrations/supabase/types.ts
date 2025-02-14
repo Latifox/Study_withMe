@@ -185,14 +185,13 @@ export type Database = {
           },
         ]
       }
-      segments: {
+      segments_content: {
         Row: {
           content: Json
           created_at: string
           id: number
           lecture_id: number | null
           sequence_number: number
-          title: string
           updated_at: string
         }
         Insert: {
@@ -201,7 +200,6 @@ export type Database = {
           id?: number
           lecture_id?: number | null
           sequence_number: number
-          title: string
           updated_at?: string
         }
         Update: {
@@ -210,7 +208,6 @@ export type Database = {
           id?: number
           lecture_id?: number | null
           sequence_number?: number
-          title?: string
           updated_at?: string
         }
         Relationships: [
