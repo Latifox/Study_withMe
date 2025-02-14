@@ -23,7 +23,7 @@ const AIProfessorLoading = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 3000);
+    }, 5000); // Changed from 3000 to 5000 ms (5 seconds per message)
 
     return () => clearInterval(interval);
   }, []);

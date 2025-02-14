@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,8 @@ const Course = () => {
       
       if (error) throw error;
       return data;
-    }
+    },
+    refetchInterval: 1000, // Refetch every second while the component is mounted
   });
 
   return (
