@@ -1,6 +1,25 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
+
+interface SegmentContent {
+  theory_slide_1: string;
+  theory_slide_2: string;
+  quiz_question_1: {
+    type: "multiple_choice";
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+  };
+  quiz_question_2: {
+    type: "true_false";
+    question: string;
+    correctAnswer: boolean;
+    explanation: string;
+  };
+}
 
 export interface StoryContent {
   segments: StorySegment[];
@@ -67,16 +86,17 @@ export const useStoryContent = (lectureId: string | undefined) => {
         );
 
         if (content?.content) {
+          const segmentContent = content.content as SegmentContent;
           return {
             id: segment.id.toString(),
             title: segment.title,
             slides: [
-              { content: content.content.theory_slide_1 || '' },
-              { content: content.content.theory_slide_2 || '' }
+              { content: segmentContent.theory_slide_1 || '' },
+              { content: segmentContent.theory_slide_2 || '' }
             ],
             questions: [
-              content.content.quiz_question_1,
-              content.content.quiz_question_2
+              segmentContent.quiz_question_1,
+              segmentContent.quiz_question_2
             ].filter(Boolean)
           };
         }

@@ -35,50 +35,31 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch existing configuration and subjects
+  // Fetch existing configuration
   const { data: config } = useQuery({
     queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
       if (!lectureId) return null;
       
-      const [configData, subjectsData] = await Promise.all([
-        supabase
-          .from("lecture_ai_configs")
-          .select("*")
-          .eq("lecture_id", lectureId)
-          .maybeSingle(),
-        supabase
-          .from("subject_definitions")
-          .select("*")
-          .eq("lecture_id", lectureId)
-          .order("chronological_order", { ascending: true })
-      ]);
+      const { data: configData, error: configError } = await supabase
+        .from("lecture_ai_configs")
+        .select("*")
+        .eq("lecture_id", lectureId)
+        .maybeSingle();
 
-      if (configData.error) throw configData.error;
-      if (subjectsData.error) throw subjectsData.error;
+      if (configError) throw configError;
 
-      return {
-        config: configData.data,
-        subjects: subjectsData.data.map(subject => ({
-          title: subject.title,
-          details: subject.details || ""
-        }))
-      };
+      return { config: configData };
     },
     enabled: !!lectureId && isOpen,
   });
 
   // Update local state when config is fetched
   useEffect(() => {
-    if (config) {
-      if (config.config) {
-        setTemperature([config.config.temperature]);
-        setCreativity([config.config.creativity_level]);
-        setDetailLevel([config.config.detail_level]);
-      }
-      if (config.subjects) {
-        setSubjects(config.subjects);
-      }
+    if (config?.config) {
+      setTemperature([config.config.temperature]);
+      setCreativity([config.config.creativity_level]);
+      setDetailLevel([config.config.detail_level]);
     }
   }, [config]);
 
@@ -120,45 +101,44 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             detail_level: detailLevel[0],
           },
           {
-            onConflict: 'lecture_id',
-            ignoreDuplicates: false
+            onConflict: 'lecture_id'
           }
         );
 
       if (configError) throw configError;
 
-      // Delete existing subjects
-      const { error: deleteError } = await supabase
-        .from("subject_definitions")
-        .delete()
-        .eq("lecture_id", lectureId);
-
-      if (deleteError) throw deleteError;
-
-      // Insert new subjects
-      const { error: subjectsError } = await supabase
-        .from("subject_definitions")
+      // Handle the subjects separately through content
+      const { error: contentError } = await supabase
+        .from("segments_content")
         .insert(
           subjects.map((subject, index) => ({
             lecture_id: lectureId,
-            chronological_order: index + 1,
-            title: subject.title,
-            details: subject.details || null
+            sequence_number: index + 1,
+            content: {
+              theory_slide_1: subject.title,
+              theory_slide_2: subject.details,
+              quiz_question_1: {
+                type: "multiple_choice",
+                question: "",
+                options: [],
+                correctAnswer: "",
+                explanation: ""
+              },
+              quiz_question_2: {
+                type: "true_false",
+                question: "",
+                correctAnswer: false,
+                explanation: ""
+              }
+            }
           }))
         );
 
-      if (subjectsError) throw subjectsError;
-
-      // Trigger content mapping
-      const { error: mappingError } = await supabase.functions.invoke('map-subject-content', {
-        body: { lectureId }
-      });
-
-      if (mappingError) throw mappingError;
+      if (contentError) throw contentError;
 
       toast({
         title: "Success",
-        description: "AI configuration and subjects saved successfully",
+        description: "AI configuration saved successfully",
       });
 
       queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
