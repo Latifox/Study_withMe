@@ -1,8 +1,8 @@
+
 import { Card } from "@/components/ui/card";
-import TheorySlide from "../TheorySlide";
-import QuizHandler from "../quiz/QuizHandler";
-import SegmentProgress from "../SegmentProgress";
-import { MAX_SCORE } from "@/utils/scoreUtils";
+import TheorySlide from "./TheorySlide";
+import QuizHandler from "./quiz/QuizHandler";
+import SegmentProgress from "./SegmentProgress";
 import { AlertCircle } from "lucide-react";
 
 interface ContentDisplayProps {
