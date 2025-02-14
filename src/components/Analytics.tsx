@@ -2,47 +2,45 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+import { Flame, Trophy, BookOpen } from "lucide-react";
 
 const Analytics = () => {
   const { user } = useAuth();
-  const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
-  const { data: quizProgress, isLoading: loadingQuiz } = useQuery({
-    queryKey: ['quiz-progress', user?.id, dateRange],
+  const getDateRange = () => {
+    const now = new Date();
+    switch (timeRange) {
+      case 'week':
+        return subDays(now, 7);
+      case 'month':
+        return subMonths(now, 1);
+      case 'year':
+        return subYears(now, 1);
+      case 'all':
+        return subYears(now, 10); // Effectively "all" data
+      default:
+        return subDays(now, 7);
+    }
+  };
+
+  const { data: userProgress, isLoading } = useQuery({
+    queryKey: ['user-progress', user?.id, timeRange],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quiz_progress')
-        .select('quiz_score, completed_at, lecture_id')
-        .eq('user_id', user?.id)
-        .gte('completed_at', format(dateRange || new Date(), 'yyyy-MM-dd'));
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const { data: userProgress, isLoading: loadingProgress } = useQuery({
-    queryKey: ['user-progress', user?.id, dateRange],
-    queryFn: async () => {
+      const startDate = getDateRange();
       const { data, error } = await supabase
         .from('user_progress')
-        .select('score, completed_at, lecture_id')
+        .select('completed_at, lecture_id')
         .eq('user_id', user?.id)
-        .gte('completed_at', format(dateRange || new Date(), 'yyyy-MM-dd'));
+        .gte('completed_at', startDate.toISOString())
+        .order('completed_at', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -50,31 +48,57 @@ const Analytics = () => {
     enabled: !!user,
   });
 
-  // Process data for charts
-  const quizScoreData = quizProgress?.map(q => ({
-    date: format(new Date(q.completed_at), 'MM/dd'),
-    score: q.quiz_score
-  })) || [];
+  // Calculate learning streak
+  const calculateStreak = () => {
+    if (!userProgress?.length) return 0;
+    
+    const today = startOfDay(new Date());
+    const dates = userProgress.map(p => startOfDay(new Date(p.completed_at)));
+    const uniqueDates = new Set(dates.map(d => d.toISOString()));
+    
+    let streak = 0;
+    let currentDate = today;
+    
+    while (uniqueDates.has(currentDate.toISOString())) {
+      streak++;
+      currentDate = subDays(currentDate, 1);
+    }
+    
+    return streak;
+  };
 
-  const progressByLecture = userProgress?.reduce((acc: any, curr) => {
-    acc[curr.lecture_id] = (acc[curr.lecture_id] || 0) + curr.score;
-    return acc;
-  }, {});
+  // Process data for the chart
+  const prepareChartData = () => {
+    if (!userProgress?.length) return [];
 
-  const lectureProgressData = Object.entries(progressByLecture || {}).map(([id, score]) => ({
-    lecture: `Lecture ${id}`,
-    score
-  }));
+    const startDate = getDateRange();
+    const dateRange = eachDayOfInterval({ start: startDate, end: new Date() });
+    
+    const lecturesByDate = dateRange.map(date => {
+      const dateStr = startOfDay(date).toISOString();
+      const lecturesCompleted = new Set(
+        userProgress
+          .filter(p => startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
+          .map(p => p.lecture_id)
+      ).size;
 
-  const averageScore = quizProgress?.reduce((sum, q) => sum + q.quiz_score, 0) / (quizProgress?.length || 1);
-  const completedQuizzes = quizProgress?.length || 0;
-  const completedLectures = new Set(userProgress?.map(p => p.lecture_id)).size || 0;
+      return {
+        date: format(date, 'MMM dd'),
+        lectures: lecturesCompleted
+      };
+    });
 
-  if (loadingQuiz || loadingProgress) {
+    return lecturesByDate;
+  };
+
+  const totalLectures = new Set(userProgress?.map(p => p.lecture_id)).size || 0;
+  const currentStreak = calculateStreak();
+  const chartData = prepareChartData();
+
+  if (isLoading) {
     return <div className="space-y-4">
       <Skeleton className="h-[400px] w-full" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Skeleton className="h-[100px]" />
         <Skeleton className="h-[100px]" />
         <Skeleton className="h-[100px]" />
       </div>
@@ -82,101 +106,120 @@ const Analytics = () => {
   }
 
   return (
-    <div className="space-y-6 mt-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Learning Analytics</h2>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              {dateRange ? format(dateRange, 'PPP') : 'Pick a date'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={dateRange}
-              onSelect={setDateRange}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+    <div className="space-y-6">
+      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-xl p-6 shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-100 rounded-full">
+                  <Flame className="w-6 h-6 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Current Streak</p>
+                  <p className="text-2xl font-bold text-gray-900">{currentStreak} days</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <Trophy className="w-6 h-6 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Lectures</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalLectures}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <BookOpen className="w-6 h-6 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Daily Average</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {chartData.length ? (totalLectures / chartData.length).toFixed(1) : '0'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-800">Learning Activity</h2>
+            <div className="flex gap-2">
+              {(['week', 'month', 'year', 'all'] as const).map((range) => (
+                <Button
+                  key={range}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTimeRange(range)}
+                  className={cn(
+                    "border-2",
+                    timeRange === range
+                      ? "border-purple-500 text-purple-500 bg-purple-50"
+                      : "border-gray-200 hover:border-purple-500 hover:text-purple-500"
+                  )}
+                >
+                  {range.charAt(0).toUpperCase() + range.slice(1)}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-[400px] bg-white rounded-lg p-4 shadow-inner">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                  labelStyle={{ color: "#374151" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="lectures"
+                  stroke="#8B5CF6"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{
+                    r: 6,
+                    style: { fill: "#8B5CF6", strokeWidth: 0 }
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Average Quiz Score</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averageScore.toFixed(1)}%</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Completed Quizzes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedQuizzes}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Lectures in Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedLectures}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Learning Progress</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="scores" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="scores">Quiz Scores</TabsTrigger>
-              <TabsTrigger value="progress">Lecture Progress</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="scores" className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={quizScoreData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="score" 
-                    stroke="#8884d8" 
-                    strokeWidth={2}
-                    dot={{ fill: '#8884d8' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </TabsContent>
-
-            <TabsContent value="progress" className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={lectureProgressData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="lecture" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="score" fill="#8884d8">
-                    {lectureProgressData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
     </div>
   );
 };
