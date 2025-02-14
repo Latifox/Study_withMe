@@ -74,26 +74,23 @@ LATEX FORMATTING REQUIREMENTS:
 
 MARKDOWN STRUCTURE REQUIREMENTS:
 1. Organize content with clear hierarchy:
-   ```markdown
-   ## Main Topic
-   
-   ### Subtopic 1
-   * Key point 1
-   * Key point 2
-     * Sub-point A
-     * Sub-point B
-   
-   ### Subtopic 2
-   1. First step
-   2. Second step
-   
-   > Important theorem or definition
-   ```
+
+## Main Topic
+
+### Subtopic 1
+* Key point 1
+* Key point 2
+  * Sub-point A
+  * Sub-point B
+
+### Subtopic 2
+1. First step
+2. Second step
+
+> Important theorem or definition
 
 2. Use emphasis appropriately:
-   ```markdown
-   **Key Term**: *definition or explanation*
-   ```
+**Key Term**: *definition or explanation*
 
 Required JSON Structure:
 {
