@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -21,12 +22,51 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
+      console.log('Deleting lecture:', lectureId);
+      
+      // First, delete any related content
+      const { error: segmentsError } = await supabase
+        .from('segments_content')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (segmentsError) {
+        console.error('Error deleting segments:', segmentsError);
+        throw segmentsError;
+      }
+
+      // Delete any AI configs
+      const { error: configError } = await supabase
+        .from('lecture_ai_configs')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (configError) {
+        console.error('Error deleting AI configs:', configError);
+        throw configError;
+      }
+
+      // Delete segments info
+      const { error: segmentInfoError } = await supabase
+        .from('lecture_segments')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (segmentInfoError) {
+        console.error('Error deleting segment info:', segmentInfoError);
+        throw segmentInfoError;
+      }
+
+      // Finally delete the lecture
+      const { error: lectureError } = await supabase
         .from('lectures')
         .delete()
         .eq('id', lectureId);
 
-      if (error) throw error;
+      if (lectureError) {
+        console.error('Error deleting lecture:', lectureError);
+        throw lectureError;
+      }
 
       toast({
         title: "Success",
@@ -35,10 +75,11 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
       
       queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
       setOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete lecture",
+        description: "Failed to delete lecture: " + error.message,
         variant: "destructive",
       });
     } finally {

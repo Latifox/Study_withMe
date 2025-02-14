@@ -21,15 +21,54 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // First, delete all lectures associated with this course
-      const { error: lecturesError } = await supabase
+      console.log('Deleting course:', courseId);
+      
+      // Get all lectures for this course
+      const { data: lectures, error: lecturesQueryError } = await supabase
         .from('lectures')
-        .delete()
+        .select('id')
         .eq('course_id', courseId);
 
-      if (lecturesError) throw lecturesError;
+      if (lecturesQueryError) throw lecturesQueryError;
 
-      // Then delete the course
+      // Delete related content for each lecture
+      if (lectures && lectures.length > 0) {
+        const lectureIds = lectures.map(lecture => lecture.id);
+        
+        // Delete segments content
+        const { error: segmentsError } = await supabase
+          .from('segments_content')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (segmentsError) throw segmentsError;
+
+        // Delete AI configs
+        const { error: configError } = await supabase
+          .from('lecture_ai_configs')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (configError) throw configError;
+
+        // Delete segments info
+        const { error: segmentInfoError } = await supabase
+          .from('lecture_segments')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (segmentInfoError) throw segmentInfoError;
+
+        // Delete all lectures
+        const { error: lecturesError } = await supabase
+          .from('lectures')
+          .delete()
+          .eq('course_id', courseId);
+
+        if (lecturesError) throw lecturesError;
+      }
+
+      // Finally delete the course
       const { error: courseError } = await supabase
         .from('courses')
         .delete()
@@ -39,7 +78,7 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
 
       toast({
         title: "Success",
-        description: "Course and all its lectures deleted successfully",
+        description: "Course and all its content deleted successfully",
       });
       
       queryClient.invalidateQueries({ queryKey: ['uploaded-courses'] });
@@ -67,7 +106,7 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
         <DialogHeader>
           <DialogTitle>Delete Course</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete "{courseTitle}"? This will also delete all lectures associated with this course. This action cannot be undone.
+            Are you sure you want to delete "{courseTitle}"? This will also delete all lectures and related content. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-4 mt-4">
