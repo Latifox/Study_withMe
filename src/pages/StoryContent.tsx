@@ -37,18 +37,21 @@ const StoryContent = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
+  const [failedQuestions, setFailedQuestions] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   const sequenceNumber = nodeId ? parseInt(nodeId.split('_')[1]) : null;
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
-  // Reset score when starting/restarting a node
+  // Reset state when starting/restarting a node
   useEffect(() => {
     if (nodeId) {
       setSegmentScores(prev => ({
         ...prev,
         [nodeId]: 0
       }));
+      setFailedQuestions(new Set());
+      setCurrentStep(0);
     }
   }, [nodeId]);
 
@@ -154,15 +157,16 @@ const StoryContent = () => {
       const newStep = prev + 1;
       if (newStep === 4) {
         const totalScore = segmentScores[nodeId || ''] || 0;
-        if (totalScore < 10) {
+        if (failedQuestions.size > 0 || totalScore < 10) {
           toast({
-            title: "Not enough points!",
-            description: `You need 10 XP to complete this node. Current: ${totalScore} XP. Try again!`,
+            title: "Review Required!",
+            description: "You need to correctly answer all questions to complete this node. Let's try again!",
             variant: "destructive",
           });
           // Reset progress for this node
           setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
-          return 0; // Reset to beginning
+          setCurrentStep(2); // Go back to first quiz
+          return 2;
         } else {
           toast({
             title: "🎉 Node Completed!",
@@ -180,6 +184,15 @@ const StoryContent = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const currentQuestionIndex = currentStep - 2;
+    
+    // Remove from failed questions if it was there
+    if (failedQuestions.has(currentQuestionIndex)) {
+      const updatedFailedQuestions = new Set(failedQuestions);
+      updatedFailedQuestions.delete(currentQuestionIndex);
+      setFailedQuestions(updatedFailedQuestions);
+    }
+
     const newScore = (segmentScores[nodeId] || 0) + 5;
     setSegmentScores(prev => ({
       ...prev,
@@ -187,7 +200,10 @@ const StoryContent = () => {
     }));
 
     try {
-      await updateUserProgress(user.id, numericLectureId, sequenceNumber, newScore);
+      // Only update progress if both questions are answered correctly
+      if (failedQuestions.size === 0 && currentStep === 3) {
+        await updateUserProgress(user.id, numericLectureId, sequenceNumber, newScore);
+      }
 
       toast({
         title: "🌟 Correct Answer!",
@@ -205,9 +221,15 @@ const StoryContent = () => {
   };
 
   const handleWrongAnswer = () => {
+    const currentQuestionIndex = currentStep - 2;
+    setFailedQuestions(prev => new Set([...prev, currentQuestionIndex]));
+    
+    // Reset the score when answering incorrectly
+    setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
+    
     toast({
       title: "Keep trying!",
-      description: "Don't worry, mistakes help us learn.",
+      description: "Don't worry, mistakes help us learn. Let's try again from the beginning.",
       variant: "destructive"
     });
     handleContinue();
