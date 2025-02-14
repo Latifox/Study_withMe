@@ -36,9 +36,24 @@ const StoryContent = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
   };
 
+  // Calculate progress percentage for gradient
+  const progressPercentage = sequenceNumber ? ((sequenceNumber - 1) / 4) * 100 : 0;
+
+  // Dynamic gradient based on progress
+  const getBackgroundStyle = () => {
+    const yellow = "rgb(250, 204, 21)"; // Yellow-400
+    const blue = "rgb(59, 130, 246)";   // Blue-500
+    
+    return {
+      background: `linear-gradient(135deg, 
+        ${yellow} ${progressPercentage}%, 
+        ${blue} ${100 - progressPercentage}%)`
+    };
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+      <div className="min-h-screen" style={getBackgroundStyle()}>
         <div className="container mx-auto p-4">
           <StoryLoading />
         </div>
@@ -48,7 +63,7 @@ const StoryContent = () => {
 
   if (error || !content) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+      <div className="min-h-screen" style={getBackgroundStyle()}>
         <div className="container mx-auto p-4">
           <StoryError 
             message={error instanceof Error ? error.message : "Failed to load segment content"}
@@ -63,7 +78,7 @@ const StoryContent = () => {
 
   if (currentStep >= 4 && currentScore >= 10) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+      <div className="min-h-screen" style={getBackgroundStyle()}>
         <StoryCompletionScreen onBack={handleBack} />
       </div>
     );
@@ -71,36 +86,28 @@ const StoryContent = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Bold animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-        {/* Animated mesh pattern */}
-        <div className="absolute inset-0 opacity-20">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 transition-colors duration-1000" style={getBackgroundStyle()}>
+        {/* Very subtle mesh pattern */}
+        <div className="absolute inset-0 opacity-5">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
           </svg>
         </div>
-        
-        {/* Animated orbs */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-        
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
       </div>
 
       {/* Content */}
-      <div className="relative p-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="relative p-4 sm:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.3 }}
           >
             <StoryScoreHeader
               currentScore={currentScore}
@@ -110,13 +117,13 @@ const StoryContent = () => {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="relative mt-8"
+            transition={{ duration: 0.3 }}
+            className="relative mt-6"
           >
-            {/* Glass card effect for main content */}
-            <div className="absolute inset-0 bg-white/10 backdrop-blur-md border-white/20 rounded-lg" />
+            {/* Subtle glass effect for main content */}
+            <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10" />
             
             <div className="relative">
               <StoryMainContent

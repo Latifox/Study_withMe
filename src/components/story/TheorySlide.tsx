@@ -47,104 +47,77 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-6"
+      transition={{ duration: 0.3 }}
+      className="space-y-4"
     >
-      <Card className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 opacity-50" />
-        
-        <div className="relative p-8 backdrop-blur-sm">
+      <Card className="relative overflow-hidden bg-white/10 backdrop-blur-md border-white/10">
+        <div className="relative p-6">
           <div className="prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkMath]}
               rehypePlugins={[rehypeKatex]}
               components={{
                 h1: ({ node, ...props }) => (
-                  <MotionH1 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-4xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+                  <h1 
+                    className="text-3xl font-bold mb-4 text-gray-800/90"
                     {...props}
                   />
                 ),
                 h2: ({ node, ...props }) => (
-                  <MotionH2
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="text-3xl font-semibold mb-4 text-primary/90"
+                  <h2
+                    className="text-2xl font-semibold mb-3 text-gray-800/90"
                     {...props}
                   />
                 ),
                 h3: ({ node, ...props }) => (
-                  <MotionH3
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-2xl font-medium mb-3 text-primary/80"
+                  <h3
+                    className="text-xl font-medium mb-2 text-gray-800/90"
                     {...props}
                   />
                 ),
                 p: ({ node, ...props }) => (
-                  <MotionP
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="mb-4 leading-relaxed text-foreground/90 [&_*]:text-foreground/90"
+                  <p
+                    className="mb-4 leading-relaxed text-gray-700/90"
                     {...props}
                   />
                 ),
                 ul: ({ node, ...props }) => (
-                  <MotionUl
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="list-disc pl-6 mb-4 space-y-2 marker:text-primary"
+                  <ul
+                    className="list-disc pl-6 mb-4 space-y-2 marker:text-gray-600"
                     {...props}
                   />
                 ),
                 ol: ({ node, ...props }) => (
-                  <MotionOl
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="list-decimal pl-6 mb-4 space-y-2 marker:text-primary"
+                  <ol
+                    className="list-decimal pl-6 mb-4 space-y-2 marker:text-gray-600"
                     {...props}
                   />
                 ),
                 li: ({ node, ...props }) => (
-                  <MotionLi
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    className="mb-1"
+                  <li
+                    className="mb-1 text-gray-700"
                     {...props}
                   />
                 ),
                 code: ({ node, inline, className, children, ...props }: CodeProps) => 
                   inline ? (
-                    <code className="bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded text-sm font-mono text-primary" {...props}>
+                    <code className="bg-black/5 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800" {...props}>
                       {children}
                     </code>
                   ) : (
-                    <div className="relative group">
-                      <pre className="overflow-x-auto p-4 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/10">
-                        <code className="text-sm font-mono text-primary/90" {...props}>
+                    <div className="relative">
+                      <pre className="overflow-x-auto p-4 rounded-lg bg-black/5 border border-black/10">
+                        <code className="text-sm font-mono text-gray-800" {...props}>
                           {children}
                         </code>
                       </pre>
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   ),
                 blockquote: ({ node, ...props }) => (
-                  <MotionBlockquote 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.8 }}
-                    className="border-l-4 border-primary/50 pl-4 my-6 italic text-foreground/80"
+                  <blockquote 
+                    className="border-l-4 border-gray-300/50 pl-4 my-4 italic text-gray-600"
                     {...props}
                   />
                 )
@@ -157,17 +130,17 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       </Card>
       
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.9 }}
+        transition={{ delay: 0.2 }}
         className="sticky bottom-4"
       >
         <Button
           onClick={onContinue}
-          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+          className="w-full bg-white/20 hover:bg-white/30 text-gray-800 backdrop-blur-sm border border-white/10 shadow-sm hover:shadow transition-all duration-300"
         >
           Continue
-          <ChevronRight className="ml-2 h-4 w-4 animate-pulse" />
+          <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
       </motion.div>
     </motion.div>
