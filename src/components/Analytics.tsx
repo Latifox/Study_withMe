@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -141,11 +140,12 @@ const Analytics = () => {
     return 'bg-blue-500';
   };
 
-  // Count unique lectures and total XP
+  // Count unique lectures and total XP with proper null checks
   const totalLectures = userProgress?.quizProgress ? 
     new Set(userProgress.quizProgress.map(p => p.lecture_id)).size : 0;
 
-  const totalXP = userProgress?.quizProgress.reduce((sum, p) => sum + (p.quiz_score || 0), 0) || 0;
+  const totalXP = userProgress?.quizProgress ? 
+    userProgress.quizProgress.reduce((sum, p) => sum + (p.quiz_score || 0), 0) : 0;
 
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
