@@ -54,8 +54,7 @@ export const updateUserProgress = async (
       lecture_id: lectureId,
       segment_number: segmentNumber,
       score: totalScore,
-      completed_at: totalScore >= 10 ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString()
+      completed_at: totalScore >= 10 ? new Date().toISOString() : null
     }, {
       onConflict: 'user_id,lecture_id,segment_number'
     });
