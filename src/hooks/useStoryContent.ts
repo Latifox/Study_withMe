@@ -51,7 +51,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
       // Fetch content for all segments
       const { data: segmentContents, error: contentsError } = await supabase
         .from('segments_content')
-        .select('*')
+        .select('sequence_number, content')
         .eq('lecture_id', numericLectureId)
         .order('sequence_number', { ascending: true });
 
@@ -64,18 +64,22 @@ export const useStoryContent = (lectureId: string | undefined) => {
       const formattedSegments = segments.map((segment) => {
         const content = segmentContents?.find(
           (content) => content.sequence_number === segment.sequence_number
-        )?.content || {
+        );
+
+        const defaultContent = {
           theory_slide_1: '',
           theory_slide_2: '',
           quiz_question_1: null,
           quiz_question_2: null
         };
 
+        const segmentContent = content?.content as any || defaultContent;
+
         return {
           id: segment.id.toString(),
           title: segment.title,
-          slides: [content.theory_slide_1, content.theory_slide_2],
-          questions: [content.quiz_question_1, content.quiz_question_2].filter(Boolean)
+          slides: [segmentContent.theory_slide_1, segmentContent.theory_slide_2],
+          questions: [segmentContent.quiz_question_1, segmentContent.quiz_question_2].filter(Boolean)
         };
       });
 

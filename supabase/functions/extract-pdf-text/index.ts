@@ -86,13 +86,12 @@ serve(async (req) => {
           throw segmentError;
         }
 
-        // Store in segments table with content
+        // Store in segments_content table
         const { error: contentError } = await supabaseClient
-          .from('segments')
+          .from('segments_content')
           .insert({
             lecture_id: parseInt(lectureId),
             sequence_number: segmentNumber,
-            title: segment.title,
             content: segment.content
           });
 
