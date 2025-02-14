@@ -102,63 +102,63 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
   };
 
+  if (showAIProfessor) {
+    return <AIProfessorLoading />;
+  }
+
   return (
-    <>
-      <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Upload New Lecture</DialogTitle>
-          </DialogHeader>
-          
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-            <div className="flex items-start space-x-2">
-              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-amber-800 mb-2">File Requirements:</h4>
-                <ul className="text-sm text-amber-700 space-y-1 list-disc pl-4">
-                  <li>PDF files only</li>
-                  <li>Text must be searchable (not scanned documents)</li>
-                  <li>Maximum file size: 10MB</li>
-                  <li>Clear, readable text formatting</li>
-                  <li>No password-protected documents</li>
-                </ul>
-              </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Upload New Lecture</DialogTitle>
+        </DialogHeader>
+        
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800 mb-2">File Requirements:</h4>
+              <ul className="text-sm text-amber-700 space-y-1 list-disc pl-4">
+                <li>PDF files only</li>
+                <li>Text must be searchable (not scanned documents)</li>
+                <li>Maximum file size: 10MB</li>
+                <li>Clear, readable text formatting</li>
+                <li>No password-protected documents</li>
+              </ul>
             </div>
           </div>
+        </div>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Lecture Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter lecture title"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="file">PDF File</Label>
-              <Input
-                id="file"
-                type="file"
-                accept=".pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </div>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="title">Lecture Title</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter lecture title"
+            />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose} disabled={showAIProfessor}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpload} disabled={showAIProfessor}>
-              {showAIProfessor ? "Processing..." : "Upload"}
-            </Button>
+          <div className="grid gap-2">
+            <Label htmlFor="file">PDF File</Label>
+            <Input
+              id="file"
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {showAIProfessor && <AIProfessorLoading />}
-    </>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleUpload}>
+            Upload
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
