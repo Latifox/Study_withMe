@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -160,13 +159,13 @@ const StoryContent = () => {
         if (failedQuestions.size > 0 || totalScore < 10) {
           toast({
             title: "Review Required!",
-            description: "You need to correctly answer all questions to complete this node. Let's try again!",
+            description: "You need to correctly answer all questions to complete this node. Let's review the material again!",
             variant: "destructive",
           });
           // Reset progress for this node
           setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
-          setCurrentStep(2); // Go back to first quiz
-          return 2;
+          setCurrentStep(0); // Go back to first theory slide
+          return 0;
         } else {
           toast({
             title: "🎉 Node Completed!",
@@ -228,11 +227,13 @@ const StoryContent = () => {
     setSegmentScores(prev => ({ ...prev, [nodeId || '']: 0 }));
     
     toast({
-      title: "Keep trying!",
-      description: "Don't worry, mistakes help us learn. Let's try again from the beginning.",
+      title: "Let's review!",
+      description: "Let's go back to the theory slides to better understand the material.",
       variant: "destructive"
     });
-    handleContinue();
+    
+    // Go back to the first theory slide
+    setCurrentStep(0);
   };
 
   if (isLoading) {
