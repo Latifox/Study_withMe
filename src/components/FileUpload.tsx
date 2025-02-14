@@ -18,7 +18,7 @@ interface FileUploadProps {
 const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [showAIProfessor, setShowAIProfessor] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -33,7 +33,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     try {
-      setIsUploading(true);
+      setShowAIProfessor(true); // Show AI Professor immediately when clicking upload
 
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
@@ -98,7 +98,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         variant: "destructive",
       });
     } finally {
-      setIsUploading(false);
+      setShowAIProfessor(false);
     }
   };
 
@@ -147,17 +147,17 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose} disabled={isUploading}>
+            <Button variant="outline" onClick={onClose} disabled={showAIProfessor}>
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={isUploading}>
-              {isUploading ? "Uploading..." : "Upload"}
+            <Button onClick={handleUpload} disabled={showAIProfessor}>
+              {showAIProfessor ? "Processing..." : "Upload"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {isUploading && <AIProfessorLoading />}
+      {showAIProfessor && <AIProfessorLoading />}
     </>
   );
 };
