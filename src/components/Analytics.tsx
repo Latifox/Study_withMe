@@ -57,7 +57,7 @@ const Analytics = () => {
         .from('user_progress')
         .select('completed_at')
         .eq('user_id', user?.id)
-        .is('completed_at', 'NOT NULL')
+        .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
       
       if (progressError) throw progressError;
