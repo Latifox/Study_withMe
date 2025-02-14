@@ -18,7 +18,7 @@ const StoryContent = () => {
   const [segmentScores, setSegmentScores] = useState<{ [key: string]: number }>({});
   const { toast } = useToast();
 
-  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) : null;
+  const sequenceNumber = nodeId ? parseInt(nodeId.split('_')[1]) : null;
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
   // Reset score when starting/restarting a node
@@ -34,7 +34,7 @@ const StoryContent = () => {
   // Fetch existing progress
   useEffect(() => {
     const fetchExistingProgress = async () => {
-      if (!segmentNumber || !numericLectureId) return;
+      if (!sequenceNumber || !numericLectureId) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -42,7 +42,7 @@ const StoryContent = () => {
       const { data: progress } = await supabase
         .from('user_progress')
         .select('score, completed_at')
-        .eq('segment_number', segmentNumber)
+        .eq('segment_number', sequenceNumber)
         .eq('lecture_id', numericLectureId)
         .eq('user_id', user.id)
         .maybeSingle();
@@ -56,19 +56,19 @@ const StoryContent = () => {
     };
 
     fetchExistingProgress();
-  }, [nodeId, numericLectureId, segmentNumber]);
+  }, [nodeId, numericLectureId, sequenceNumber]);
 
   const { data: content, isLoading, error } = useQuery({
-    queryKey: ['segment-content', numericLectureId, segmentNumber],
+    queryKey: ['segment-content', numericLectureId, sequenceNumber],
     queryFn: async () => {
-      if (!numericLectureId || !segmentNumber) throw new Error('Invalid parameters');
+      if (!numericLectureId || !sequenceNumber) throw new Error('Invalid parameters');
 
       // Fetch segment info
       const { data: segment, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('*')
         .eq('lecture_id', numericLectureId)
-        .eq('segment_number', segmentNumber)
+        .eq('sequence_number', sequenceNumber)
         .single();
 
       if (segmentError) throw segmentError;
@@ -77,19 +77,18 @@ const StoryContent = () => {
         throw new Error('Segment not found');
       }
 
-      // Fetch corresponding chunks
-      const { data: chunks, error: chunksError } = await supabase
-        .from('lecture_polished_chunks')
-        .select('chunk_order, polished_content')
+      // Fetch corresponding content
+      const { data: segmentContent, error: contentError } = await supabase
+        .from('segments_content')
+        .select('content')
         .eq('lecture_id', numericLectureId)
-        .gte('chunk_order', (segmentNumber * 2) - 1)
-        .lte('chunk_order', segmentNumber * 2)
-        .order('chunk_order', { ascending: true });
+        .eq('sequence_number', sequenceNumber)
+        .single();
 
-      if (chunksError) throw chunksError;
+      if (contentError) throw contentError;
 
-      if (!chunks || chunks.length === 0) {
-        console.log('No chunks found for segment:', segmentNumber);
+      if (!segmentContent) {
+        console.log('No content found for segment:', sequenceNumber);
         return {
           segments: [{
             id: nodeId || '',
@@ -100,31 +99,33 @@ const StoryContent = () => {
         };
       }
 
+      const content = segmentContent.content as {
+        theory_slide_1: string;
+        theory_slide_2: string;
+        quiz_question_1: {
+          type: "multiple_choice";
+          question: string;
+          options: string[];
+          correctAnswer: string;
+          explanation: string;
+        };
+        quiz_question_2: {
+          type: "true_false";
+          question: string;
+          correctAnswer: boolean;
+          explanation: string;
+        };
+      };
+
       return {
         segments: [{
           id: nodeId || '',
           title: segment.title,
-          slides: chunks.map((chunk, i) => ({
-            id: `slide-${i + 1}`,
-            content: chunk.polished_content
-          })),
-          questions: [
-            {
-              id: 'q1',
-              type: "multiple_choice" as const,
-              question: "Sample Question 1",
-              options: ["Option 1", "Option 2", "Option 3"],
-              correctAnswer: "Option 1",
-              explanation: "Sample explanation 1"
-            },
-            {
-              id: 'q2',
-              type: "true_false" as const,
-              question: "Sample Question 2",
-              correctAnswer: true,
-              explanation: "Sample explanation 2"
-            }
-          ]
+          slides: [
+            { id: 'slide-1', content: content.theory_slide_1 },
+            { id: 'slide-2', content: content.theory_slide_2 }
+          ],
+          questions: [content.quiz_question_1, content.quiz_question_2].filter(Boolean)
         }]
       };
     }
@@ -160,7 +161,7 @@ const StoryContent = () => {
   };
 
   const handleCorrectAnswer = async () => {
-    if (!nodeId || !numericLectureId || !segmentNumber) return;
+    if (!nodeId || !numericLectureId || !sequenceNumber) return;
 
     const newScore = (segmentScores[nodeId] || 0) + 5;
     setSegmentScores(prev => ({
@@ -177,7 +178,7 @@ const StoryContent = () => {
       .upsert({
         user_id: user.id,
         lecture_id: numericLectureId,
-        segment_number: segmentNumber,
+        segment_number: sequenceNumber,
         score: newScore,
         completed_at: newScore >= 10 ? new Date().toISOString() : null
       });
