@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { GeneratedContent, SegmentRequest } from "./types.ts";
 
@@ -34,31 +35,23 @@ export const getExistingContent = async (supabaseClient: any, storyStructureId: 
   return existingContent;
 };
 
-export const getLectureChunks = async (supabaseClient: any, lectureId: number, segmentNumber: number) => {
-  // Calculate the chunk indices for this segment
-  const startChunkOrder = (segmentNumber - 1) * 2 + 1;
-  const endChunkOrder = startChunkOrder + 1;
+export const getLectureContent = async (supabaseClient: any, lectureId: number) => {
+  const { data: lecture, error } = await supabaseClient
+    .from('lectures')
+    .select('content')
+    .eq('id', lectureId)
+    .single();
 
-  const { data: chunks, error: chunksError } = await supabaseClient
-    .from('lecture_polished_chunks')
-    .select('polished_content')
-    .eq('lecture_id', lectureId)
-    .in('chunk_order', [startChunkOrder, endChunkOrder])
-    .order('chunk_order', { ascending: true });
-
-  if (chunksError) {
-    console.error('Failed to fetch polished lecture chunks:', chunksError);
-    throw new Error(`Failed to fetch polished lecture chunks: ${chunksError.message}`);
+  if (error) {
+    console.error('Failed to fetch lecture content:', error);
+    throw new Error(`Failed to fetch lecture content: ${error.message}`);
   }
 
-  if (!chunks || chunks.length < 2) {
-    throw new Error(`Not enough chunks found for segment ${segmentNumber}. Expected 2 chunks, found ${chunks?.length || 0}.`);
+  if (!lecture?.content) {
+    throw new Error('No content found for this lecture');
   }
 
-  return {
-    chunk1: chunks[0].polished_content,
-    chunk2: chunks[1].polished_content
-  };
+  return lecture.content;
 };
 
 export const getAIConfig = async (supabaseClient: any, lectureId: number) => {

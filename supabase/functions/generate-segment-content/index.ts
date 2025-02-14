@@ -1,7 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureChunks, getAIConfig, saveSegmentContent } from "./db.ts";
+import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureContent, getAIConfig, saveSegmentContent } from "./db.ts";
 import { validateContent } from "./validator.ts";
 import { generatePrompt, generateContent } from "./generator.ts";
 import { GeneratedContent, SegmentRequest } from "./types.ts";
@@ -46,22 +46,22 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the lecture chunks for this segment
-    const chunkPair = await getLectureChunks(supabaseClient, lectureId, segmentNumber);
-    console.log('Retrieved chunks for segment:', segmentNumber);
+    // Get the lecture content
+    const lectureContent = await getLectureContent(supabaseClient, lectureId);
+    console.log('Retrieved lecture content');
 
     // Get AI config
     const aiConfig = await getAIConfig(supabaseClient, lectureId);
 
-    console.log('Calling OpenAI API for content generation...');
+    console.log('Calling Gemini API for content generation...');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     try {
-      const prompt = generatePrompt(segmentTitle, chunkPair, aiConfig);
+      const prompt = generatePrompt(segmentTitle, lectureContent, aiConfig);
       const responseContent = await generateContent(prompt);
       
-      console.log('Successfully received OpenAI response');
+      console.log('Successfully received Gemini response');
       console.log('Raw response content:', responseContent);
       
       const content = JSON.parse(responseContent) as GeneratedContent;
