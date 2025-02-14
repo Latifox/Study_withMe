@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
@@ -136,13 +137,25 @@ const StoryNodes = () => {
           </div>
         </div>
 
-        <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20 shadow-xl">
-          <LearningPathway 
-            nodes={storyContent?.segments || []} 
-            completedNodes={completedNodes} 
-            currentNode={loadingNode} 
-            onNodeSelect={handleNodeSelect} 
-          />
+        <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 opacity-20">
+            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
+          </div>
+          <div className="relative z-10">
+            <LearningPathway 
+              nodes={storyContent?.segments || []} 
+              completedNodes={completedNodes} 
+              currentNode={loadingNode} 
+              onNodeSelect={handleNodeSelect} 
+            />
+          </div>
         </Card>
       </div>
     </div>
