@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
@@ -94,24 +95,27 @@ const StoryNodes = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Soft gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#F2FCE2] via-[#FEF7CD] to-[#FDE1D3]">
-        {/* Soft mesh pattern */}
-        <div className="absolute inset-0 opacity-10">
+      {/* Bold animated background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+        {/* Animated mesh pattern */}
+        <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="black" strokeWidth="1" />
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
           </svg>
         </div>
         
-        {/* Soft animated orbs */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[#E5DEFF] rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FFDEE2] rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-[#D3E4FD] rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-blob animation-delay-4000"></div>
+        {/* Animated orbs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
       </div>
 
       <div className="container mx-auto p-4 relative">
@@ -119,7 +123,7 @@ const StoryNodes = () => {
           <Button 
             variant="ghost" 
             onClick={handleBack} 
-            className="flex items-center gap-2 bg-white/30 hover:bg-white/40 text-gray-700"
+            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Course
@@ -129,23 +133,23 @@ const StoryNodes = () => {
             <Button 
               variant="outline" 
               onClick={handleStudyInDetail} 
-              className="flex items-center gap-2 bg-white/40 hover:bg-white/50 text-gray-700 border-gray-200/50"
+              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20"
             >
               <BookOpen className="h-4 w-4" />
               Study the lecture in detail
             </Button>
-            <div className="flex items-center gap-2 bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
               <Star className="h-5 w-5 text-yellow-400" />
-              <span className="font-bold text-gray-700">{totalXP} XP</span>
+              <span className="font-bold text-white">{totalXP} XP</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg">
-              <Trophy className="h-5 w-5 text-purple-500" />
-              <span className="font-bold text-gray-700">{completedNodesCount}</span>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+              <Trophy className="h-5 w-5 text-purple-300" />
+              <span className="font-bold text-white">{completedNodesCount}</span>
             </div>
           </div>
         </div>
 
-        <Card className="p-6 bg-white/50 backdrop-blur-sm border-white/20 shadow-xl">
+        <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20 shadow-xl">
           <LearningPathway 
             nodes={storyContent?.segments || []} 
             completedNodes={completedNodes} 
