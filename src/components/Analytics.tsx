@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, parseISO } from "date-fns";
+import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfWeek, eachWeekOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen, Star } from "lucide-react";
 import {
@@ -132,12 +132,12 @@ const Analytics = () => {
   };
 
   const getHeatmapColor = (score: number) => {
-    if (score === 0) return 'bg-white/10';
-    if (score < 10) return 'bg-blue-500/20';
-    if (score < 20) return 'bg-blue-500/40';
-    if (score < 30) return 'bg-blue-500/60';
-    if (score < 40) return 'bg-blue-500/80';
-    return 'bg-blue-500';
+    if (score === 0) return 'bg-white/5 border border-white/10';
+    if (score < 10) return 'bg-gradient-to-br from-blue-500/20 to-cyan-400/20 border border-blue-500/20';
+    if (score < 20) return 'bg-gradient-to-br from-blue-500/40 to-cyan-400/40 border border-blue-500/30';
+    if (score < 30) return 'bg-gradient-to-br from-blue-500/60 to-cyan-400/60 border border-blue-500/40';
+    if (score < 40) return 'bg-gradient-to-br from-blue-500/80 to-cyan-400/80 border border-blue-500/50';
+    return 'bg-gradient-to-br from-blue-500 to-cyan-400 border border-blue-500';
   };
 
   // Count unique lectures and total XP with proper null checks
@@ -151,14 +151,18 @@ const Analytics = () => {
   const chartData = prepareChartData();
   const heatmapData = prepareHeatmapData();
 
-  // Generate last 7 days for heatmap
-  const heatmapDays = Array.from({ length: 7 }, (_, i) => 
-    subDays(new Date(), 6 - i)
-  ).map(date => ({
-    date,
-    dateStr: startOfDay(date).toISOString(),
-    score: heatmapData.get(startOfDay(date).toISOString()) || 0
-  }));
+  // Generate last year of weeks for heatmap
+  const endDate = new Date();
+  const startDate = subYears(endDate, 1);
+  
+  // Generate weeks
+  const weeks = eachWeekOfInterval(
+    { start: startDate, end: endDate },
+    { weekStartsOn: 1 } // Week starts on Monday
+  );
+
+  // Generate days of the week (Mon-Sun)
+  const weekDays = Array.from({ length: 7 }, (_, i) => i);
 
   if (isLoading) {
     return <div className="space-y-4">
@@ -279,31 +283,86 @@ const Analytics = () => {
               </ResponsiveContainer>
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-white">Daily Activity</h3>
-              <div className="flex items-center gap-1 p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <TooltipProvider>
-                  {heatmapDays.map((day) => (
-                    <TooltipUI key={day.dateStr}>
-                      <TooltipTrigger>
-                        <div 
-                          className={cn(
-                            "w-8 h-8 rounded-sm transition-colors",
-                            getHeatmapColor(day.score)
-                          )}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-medium">
-                          {format(day.date, 'MMM dd, yyyy')}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {day.score} XP earned
-                        </p>
-                      </TooltipContent>
-                    </TooltipUI>
-                  ))}
-                </TooltipProvider>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Activity History</h3>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-white/60">Less</div>
+                  <div className="flex gap-1">
+                    {[0, 10, 20, 30, 40].map((score) => (
+                      <div
+                        key={score}
+                        className={cn(
+                          "w-3 h-3 rounded-sm",
+                          getHeatmapColor(score)
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-sm text-white/60">More</div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
+                <div className="flex gap-2">
+                  <div className="grid grid-rows-7 gap-1 text-xs text-white/40 pr-2">
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                    <div>Sun</div>
+                  </div>
+                  
+                  <div className="grid grid-cols-[repeat(53,1fr)] gap-1 flex-1">
+                    {weeks.map((week) => (
+                      <div key={week.toISOString()} className="grid grid-rows-7 gap-1">
+                        {weekDays.map((dayOffset) => {
+                          const date = addDays(week, dayOffset);
+                          const dateStr = startOfDay(date).toISOString();
+                          const score = heatmapData.get(dateStr) || 0;
+                          
+                          return (
+                            <TooltipProvider key={dateStr}>
+                              <TooltipUI>
+                                <TooltipTrigger>
+                                  <div 
+                                    className={cn(
+                                      "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                      getHeatmapColor(score)
+                                    )}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">
+                                    {format(date, 'MMM dd, yyyy')}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {score} XP earned
+                                  </p>
+                                </TooltipContent>
+                              </TooltipUI>
+                            </TooltipProvider>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-[auto,1fr] gap-2">
+                  <div className="w-8" /> {/* Spacer for day labels */}
+                  <div className="grid grid-cols-[repeat(53,1fr)] text-xs text-white/40">
+                    {weeks.map((week, index) => (
+                      index % 4 === 0 && (
+                        <div key={week.toISOString()} className="text-center">
+                          {format(week, 'MMM')}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
