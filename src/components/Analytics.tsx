@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,10 +74,7 @@ const Analytics = () => {
 
       // Transform the data for the component
       return {
-        quizProgress: quizData?.map(progress => ({
-          ...progress,
-          isLectureCompleted: lectureProgress.get(progress.lecture_id)?.size === 5 // A lecture is completed when it has 5 quiz_number=2 entries
-        })),
+        quizProgress: quizData || [],
         segmentProgress: progressData || []
       };
     },
@@ -120,7 +116,7 @@ const Analytics = () => {
       const dateStr = startOfDay(date).toISOString();
       const completedLectures = new Set(
         userProgress.quizProgress
-          .filter(p => p.isLectureCompleted && startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
+          .filter(p => startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
           .map(p => p.lecture_id)
       ).size;
       cumulativeCount += completedLectures;
@@ -134,12 +130,11 @@ const Analytics = () => {
   };
 
   // Count unique completed lectures
-  const totalLectures = userProgress?.quizProgress.reduce((completedLectures, progress) => {
-    if (progress.isLectureCompleted) {
-      completedLectures.add(progress.lecture_id);
-    }
-    return completedLectures;
-  }, new Set<number>()).size || 0;
+  const totalLectures = userProgress?.quizProgress ? 
+    new Set(userProgress.quizProgress.map(p => p.lecture_id)).size : 0;
+
+  const totalXP = userProgress?.quizProgress ? 
+    userProgress.quizProgress.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) : 0;
 
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
@@ -201,9 +196,7 @@ const Analytics = () => {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
-                    <p className="text-3xl font-bold text-white">
-                      {userProgress?.quizProgress.reduce((sum, progress) => sum + (progress.quiz_score || 0), 0) || 0}
-                    </p>
+                    <p className="text-3xl font-bold text-white">{totalXP}</p>
                   </div>
                 </div>
               </CardContent>
