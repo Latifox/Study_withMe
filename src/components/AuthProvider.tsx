@@ -54,17 +54,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (event === 'SIGNED_IN') {
           setUser(session?.user ?? null);
           navigate('/');
-        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           navigate('/auth');
         } else if (event === 'TOKEN_REFRESHED') {
           setUser(session?.user ?? null);
         } else if (event === 'USER_UPDATED') {
           setUser(session?.user ?? null);
-        }
-
-        // Handle auth errors
-        if (event === 'INITIAL_SESSION') {
+        } else if (event === 'INITIAL_SESSION') {
           if (!session) {
             if (window.location.pathname !== '/auth') {
               navigate('/auth');
