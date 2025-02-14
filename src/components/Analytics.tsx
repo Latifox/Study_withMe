@@ -88,10 +88,10 @@ const Analytics = () => {
     return lecturesByDate;
   };
 
-  // Update the totalLectures calculation to only count completed lectures
+  // Update the totalLectures calculation to only count lectures where all segments of a lecture are completed
   const totalLectures = userProgress?.reduce((uniqueLectures, progress) => {
-    // Only count lectures where there's a score (indicating completion)
-    if (progress.score && !uniqueLectures.has(progress.lecture_id)) {
+    // Only count lectures where there's a completed_at timestamp (indicating full completion)
+    if (progress.completed_at && !uniqueLectures.has(progress.lecture_id)) {
       uniqueLectures.add(progress.lecture_id);
     }
     return uniqueLectures;
@@ -139,7 +139,7 @@ const Analytics = () => {
               <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-emerald-500/80 to-teal-400/80 hover:from-emerald-500/90 hover:to-teal-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <Trophy className="w-6 h-6 text-white" />
+                    <BookOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total Lectures</p>
