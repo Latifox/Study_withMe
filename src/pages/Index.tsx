@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { Upload, Mail, LogOut } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import Analytics from "@/components/Analytics";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -49,7 +51,7 @@ const Index = () => {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-12">
           <Card 
             className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
             onClick={() => navigate('/uploaded-courses')}
@@ -84,6 +86,8 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Analytics />
       </div>
     </div>
   );
