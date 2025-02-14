@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen } from "lucide-react";
-
 const Analytics = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
   const [viewType, setViewType] = useState<'daily' | 'cumulative'>('daily');
-
   const getDateRange = () => {
     const now = new Date();
     switch (timeRange) {
@@ -25,78 +25,66 @@ const Analytics = () => {
       case 'year':
         return subYears(now, 1);
       case 'all':
-        return subYears(now, 10); // Effectively "all" data
+        return subYears(now, 10);
+      // Effectively "all" data
       default:
         return subDays(now, 7);
     }
   };
-
-  const { data: userProgress, isLoading } = useQuery({
+  const {
+    data: userProgress,
+    isLoading
+  } = useQuery({
     queryKey: ['user-progress', user?.id, timeRange],
     queryFn: async () => {
       const startDate = getDateRange();
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('completed_at, lecture_id')
-        .eq('user_id', user?.id)
-        .gte('completed_at', startDate.toISOString())
-        .order('completed_at', { ascending: true });
-
+      const {
+        data,
+        error
+      } = await supabase.from('user_progress').select('completed_at, lecture_id').eq('user_id', user?.id).gte('completed_at', startDate.toISOString()).order('completed_at', {
+        ascending: true
+      });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user
   });
-
   const calculateStreak = () => {
     if (!userProgress?.length) return 0;
-    
     const today = startOfDay(new Date());
     const dates = userProgress.map(p => startOfDay(new Date(p.completed_at)));
     const uniqueDates = new Set(dates.map(d => d.toISOString()));
-    
     let streak = 0;
     let currentDate = today;
-    
     while (uniqueDates.has(currentDate.toISOString())) {
       streak++;
       currentDate = subDays(currentDate, 1);
     }
-    
     return streak;
   };
-
   const prepareChartData = () => {
     if (!userProgress?.length) return [];
-
     const startDate = getDateRange();
-    const dateRange = eachDayOfInterval({ start: startDate, end: new Date() });
-    
+    const dateRange = eachDayOfInterval({
+      start: startDate,
+      end: new Date()
+    });
     let cumulativeCount = 0;
     const lecturesByDate = dateRange.map(date => {
       const dateStr = startOfDay(date).toISOString();
-      const lecturesCompleted = new Set(
-        userProgress
-          .filter(p => startOfDay(new Date(p.completed_at)).toISOString() === dateStr)
-          .map(p => p.lecture_id)
-      ).size;
-
+      const lecturesCompleted = new Set(userProgress.filter(p => startOfDay(new Date(p.completed_at)).toISOString() === dateStr).map(p => p.lecture_id)).size;
       cumulativeCount += lecturesCompleted;
-
       return {
         date: format(date, 'MMM dd'),
         lectures: lecturesCompleted,
         cumulative: cumulativeCount
       };
     });
-
     return lecturesByDate;
   };
-
   const totalLectures = new Set(userProgress?.map(p => p.lecture_id)).size || 0;
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
-
   if (isLoading) {
     return <div className="space-y-4">
       <Skeleton className="h-[400px] w-full" />
@@ -106,9 +94,7 @@ const Analytics = () => {
       </div>
     </div>;
   }
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/30 via-purple-500/30 to-indigo-600/30"></div>
         <div className="absolute inset-0">
@@ -120,9 +106,9 @@ const Analytics = () => {
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 bg-purple-400 hover:bg-purple-300 rounded-lg">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-orange-100 rounded-full">
+                  <div className="p-3 rounded-full bg-red-300 hover:bg-red-200">
                     <Flame className="w-6 h-6 text-orange-500" />
                   </div>
                   <div>
@@ -136,7 +122,7 @@ const Analytics = () => {
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 rounded-full">
+                  <div className="p-3 rounded-full bg-purple-300 hover:bg-purple-200">
                     <Trophy className="w-6 h-6 text-purple-500" />
                   </div>
                   <div>
@@ -169,51 +155,18 @@ const Analytics = () => {
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold text-gray-800">Learning Activity</h2>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewType('daily')}
-                    className={cn(
-                      "border-2",
-                      viewType === 'daily'
-                        ? "border-purple-500 text-purple-500 bg-purple-50"
-                        : "border-gray-200 hover:border-purple-500 hover:text-purple-500"
-                    )}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setViewType('daily')} className={cn("border-2", viewType === 'daily' ? "border-purple-500 text-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-500 hover:text-purple-500")}>
                     Daily
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewType('cumulative')}
-                    className={cn(
-                      "border-2",
-                      viewType === 'cumulative'
-                        ? "border-purple-500 text-purple-500 bg-purple-50"
-                        : "border-gray-200 hover:border-purple-500 hover:text-purple-500"
-                    )}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setViewType('cumulative')} className={cn("border-2", viewType === 'cumulative' ? "border-purple-500 text-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-500 hover:text-purple-500")}>
                     Cumulative
                   </Button>
                 </div>
               </div>
               <div className="flex gap-2">
-                {(['week', 'month', 'year', 'all'] as const).map((range) => (
-                  <Button
-                    key={range}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTimeRange(range)}
-                    className={cn(
-                      "border-2",
-                      timeRange === range
-                        ? "border-purple-500 text-purple-500 bg-purple-50"
-                        : "border-gray-200 hover:border-purple-500 hover:text-purple-500"
-                    )}
-                  >
+                {(['week', 'month', 'year', 'all'] as const).map(range => <Button key={range} variant="outline" size="sm" onClick={() => setTimeRange(range)} className={cn("border-2", timeRange === range ? "border-purple-500 text-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-500 hover:text-purple-500")}>
                     {range.charAt(0).toUpperCase() + range.slice(1)}
-                  </Button>
-                ))}
+                  </Button>)}
               </div>
             </div>
 
@@ -221,48 +174,29 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={prepareChartData()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${value}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    }}
-                    labelStyle={{ color: "#374151" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey={viewType === 'daily' ? 'lectures' : 'cumulative'}
-                    stroke="#8B5CF6"
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{
-                      r: 6,
-                      style: { fill: "#8B5CF6", strokeWidth: 0 }
-                    }}
-                  />
+                  <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={value => `${value}`} />
+                  <Tooltip contentStyle={{
+                  backgroundColor: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                }} labelStyle={{
+                  color: "#374151"
+                }} />
+                  <Line type="monotone" dataKey={viewType === 'daily' ? 'lectures' : 'cumulative'} stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{
+                  r: 6,
+                  style: {
+                    fill: "#8B5CF6",
+                    strokeWidth: 0
+                  }
+                }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Analytics;

@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -8,40 +7,41 @@ import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import Analytics from "@/components/Analytics";
-
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const { toast } = useToast();
-
+  const {
+    user,
+    loading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
-
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const {
+        error
+      } = await supabase.auth.signOut();
       if (error) throw error;
       navigate('/auth');
     } catch (error: any) {
       toast({
         title: "Error signing out",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
       Loading...
     </div>;
   }
-
-  return (
-    <div className="relative min-h-screen overflow-hidden">
+  return <div className="relative min-h-screen overflow-hidden">
       {/* Bold animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
         {/* Animated mesh pattern */}
@@ -49,7 +49,7 @@ const Index = () => {
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1"/>
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
@@ -70,38 +70,28 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-white">Welcome to Course Manager</h1>
-            <Button 
-              variant="outline" 
-              onClick={handleSignOut} 
-              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
-            >
+            <Button variant="outline" onClick={handleSignOut} className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
               <LogOut className="w-4 h-4" />
               Sign Out
             </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-12">
-            <Card 
-              className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20"
-              onClick={() => navigate('/uploaded-courses')}
-            >
+            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/uploaded-courses')}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90">
+                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
                   <Upload className="w-6 h-6" />
                   My Uploaded Courses
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-white/80">
+                <p className="text-white/80 font-bold">
                   Access and manage courses you've created and uploaded
                 </p>
               </CardContent>
             </Card>
 
-            <Card 
-              className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20"
-              onClick={() => navigate('/invited-courses')}
-            >
+            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/invited-courses')}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90">
                   <Mail className="w-6 h-6" />
@@ -109,7 +99,7 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-white/80">
+                <p className="text-white/80 font-extrabold">
                   View courses you've been invited to join
                 </p>
               </CardContent>
@@ -119,8 +109,6 @@ const Index = () => {
           <Analytics />
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
