@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trophy, BookOpen } from "lucide-react";
@@ -95,27 +94,15 @@ const StoryNodes = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Bold animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-        {/* Animated mesh pattern */}
-        <div className="absolute inset-0 opacity-20">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-        
+      {/* Gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/80 to-teal-400/80">
         {/* Animated orbs */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
         
         {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 via-transparent to-transparent"></div>
       </div>
 
       <div className="container mx-auto p-4 relative">
@@ -143,7 +130,7 @@ const StoryNodes = () => {
               <span className="font-bold text-white">{totalXP} XP</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-              <Trophy className="h-5 w-5 text-purple-300" />
+              <Trophy className="h-5 w-5 text-emerald-200" />
               <span className="font-bold text-white">{completedNodesCount}</span>
             </div>
           </div>
