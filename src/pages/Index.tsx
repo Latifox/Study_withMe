@@ -35,26 +35,46 @@ const Index = () => {
   };
 
   if (loading) {
-    return <div className="min-h-screen animate-gradient bg-gradient-to-br from-purple-50 via-white to-indigo-50 p-8 flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
       Loading...
     </div>;
   }
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Animated background with gradient mesh */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-white/20"></div>
-        <div className="absolute inset-0 animate-pulse-slow bg-gradient-to-br from-purple-100/30 via-transparent to-indigo-100/30"></div>
+      {/* Bold animated background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+        {/* Animated mesh pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+        
+        {/* Animated orbs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
       </div>
 
       {/* Content */}
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800">Welcome to Course Manager</h1>
-            <Button variant="outline" onClick={handleSignOut} className="gap-2 bg-white/80 backdrop-blur-sm hover:bg-white/90">
+            <h1 className="text-4xl font-bold text-white">Welcome to Course Manager</h1>
+            <Button 
+              variant="outline" 
+              onClick={handleSignOut} 
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+            >
               <LogOut className="w-4 h-4" />
               Sign Out
             </Button>
@@ -62,34 +82,34 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-12">
             <Card 
-              className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-gradient-to-br from-indigo-50 via-white to-purple-50 border-0 backdrop-blur-sm hover:scale-[1.02]"
+              className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20"
               onClick={() => navigate('/uploaded-courses')}
             >
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90">
                   <Upload className="w-6 h-6" />
                   My Uploaded Courses
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-white/80">
                   Access and manage courses you've created and uploaded
                 </p>
               </CardContent>
             </Card>
 
             <Card 
-              className="hover:shadow-lg transition-all duration-300 cursor-pointer bg-gradient-to-br from-indigo-50 via-white to-purple-50 border-0 backdrop-blur-sm hover:scale-[1.02]"
+              className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20"
               onClick={() => navigate('/invited-courses')}
             >
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90">
                   <Mail className="w-6 h-6" />
                   Invited Courses
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-white/80">
                   View courses you've been invited to join
                 </p>
               </CardContent>
