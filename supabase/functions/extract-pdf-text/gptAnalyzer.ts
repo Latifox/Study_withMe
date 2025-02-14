@@ -37,15 +37,8 @@ export async function analyzeTextWithGPT(text: string): Promise<{ segments: Segm
             role: 'system',
             content: `You are an expert at analyzing academic text and creating educational content.
             Your task is to break the provided text into 4-6 logical segments and create educational content for each.
+            You MUST return your response as a valid JSON object with the following structure:
 
-            For each segment you MUST create:
-            1. A descriptive title summarizing the main topic
-            2. Two theory slides explaining the key concepts
-            3. Two quiz questions:
-               - One multiple choice with exactly 4 options
-               - One true/false question
-
-            Output format MUST be exactly:
             {
               "segments": [
                 {
