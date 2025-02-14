@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen } from "lucide-react";
+
 const Analytics = () => {
   const {
     user
@@ -106,42 +107,42 @@ const Analytics = () => {
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-purple-400 hover:bg-purple-300">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-red-500/80 to-orange-400/80 hover:from-red-500/90 hover:to-orange-400/90 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-red-600 hover:bg-red-500">
-                    <Flame className="w-6 h-6 text-orange-500 bg-red-600 hover:bg-red-500" />
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                    <Flame className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="font-bold text-lg text-red-600">Current Streak</p>
-                    <p className="text-2xl font-bold text-red-600">{currentStreak} days</p>
+                    <p className="font-semibold text-lg text-white/90">Current Streak</p>
+                    <p className="text-3xl font-bold text-white">{currentStreak} days</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-emerald-500/80 to-teal-400/80 hover:from-emerald-500/90 hover:to-teal-400/90 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-green-500 hover:bg-green-400">
-                    <Trophy className="w-6 h-6 text-purple-500" />
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                    <Trophy className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-green-500">Total Lectures</p>
-                    <p className="text-2xl font-bold text-green-500">{totalLectures}</p>
+                    <p className="text-lg font-semibold text-white/90">Total Lectures</p>
+                    <p className="text-3xl font-bold text-white">{totalLectures}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-cyan-600 hover:bg-cyan-500">
-                    <BookOpen className="w-6 h-6 text-blue-500 bg-cyan-600 hover:bg-cyan-500" />
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                    <BookOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-sky-600">Daily Average</p>
-                    <p className="text-2xl font-bold text-cyan-600">
+                    <p className="text-lg font-semibold text-white/90">Daily Average</p>
+                    <p className="text-3xl font-bold text-white">
                       {chartData.length ? (totalLectures / chartData.length).toFixed(1) : '0'}
                     </p>
                   </div>
@@ -153,44 +154,92 @@ const Analytics = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <h2 className="text-xl font-bold text-gray-800">Learning Activity</h2>
+                <h2 className="text-xl font-bold text-white">Learning Activity</h2>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setViewType('daily')} className={cn("border-2", viewType === 'daily' ? "border-purple-500 text-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-500 hover:text-purple-500")}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setViewType('daily')} 
+                    className={cn(
+                      "border-2 text-white transition-all duration-300",
+                      viewType === 'daily' 
+                        ? "border-purple-400 bg-purple-500/50 hover:bg-purple-500/60" 
+                        : "border-white/20 bg-white/10 hover:bg-white/20 hover:border-purple-400"
+                    )}
+                  >
                     Daily
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setViewType('cumulative')} className={cn("border-2", viewType === 'cumulative' ? "border-purple-500 text-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-500 hover:text-purple-500")}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setViewType('cumulative')} 
+                    className={cn(
+                      "border-2 text-white transition-all duration-300",
+                      viewType === 'cumulative' 
+                        ? "border-purple-400 bg-purple-500/50 hover:bg-purple-500/60" 
+                        : "border-white/20 bg-white/10 hover:bg-white/20 hover:border-purple-400"
+                    )}
+                  >
                     Cumulative
                   </Button>
                 </div>
               </div>
               <div className="flex gap-2">
-                {(['week', 'month', 'year', 'all'] as const).map(range => <Button key={range} variant="outline" size="sm" onClick={() => setTimeRange(range)} className={cn("border-2", timeRange === range ? "border-purple-500 text-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-500 hover:text-purple-500")}>
+                {(['week', 'month', 'year', 'all'] as const).map(range => (
+                  <Button 
+                    key={range} 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setTimeRange(range)} 
+                    className={cn(
+                      "border-2 text-white transition-all duration-300",
+                      timeRange === range 
+                        ? "border-purple-400 bg-purple-500/50 hover:bg-purple-500/60" 
+                        : "border-white/20 bg-white/10 hover:bg-white/20 hover:border-purple-400"
+                    )}
+                  >
                     {range.charAt(0).toUpperCase() + range.slice(1)}
-                  </Button>)}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            <div className="h-[400px] rounded-lg p-4 shadow-inner bg-purple-300 hover:bg-purple-200">
+            <div className="h-[400px] rounded-lg p-4 bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={prepareChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={value => `${value}`} />
-                  <Tooltip contentStyle={{
-                  backgroundColor: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
-                }} labelStyle={{
-                  color: "#374151"
-                }} />
-                  <Line type="monotone" dataKey={viewType === 'daily' ? 'lectures' : 'cumulative'} stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{
-                  r: 6,
-                  style: {
-                    fill: "#8B5CF6",
-                    strokeWidth: 0
-                  }
-                }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="date" stroke="#fff" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#fff" fontSize={12} tickLine={false} axisLine={false} tickFormatter={value => `${value}`} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                      backdropFilter: "blur(8px)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "8px",
+                      color: "white"
+                    }} 
+                    labelStyle={{
+                      color: "white"
+                    }}
+                    itemStyle={{
+                      color: "white"
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey={viewType === 'daily' ? 'lectures' : 'cumulative'} 
+                    stroke="#8B5CF6" 
+                    strokeWidth={3}
+                    dot={false}
+                    activeDot={{
+                      r: 8,
+                      style: {
+                        fill: "#8B5CF6",
+                        stroke: "white",
+                        strokeWidth: 2
+                      }
+                    }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -199,4 +248,5 @@ const Analytics = () => {
       </div>
     </div>;
 };
+
 export default Analytics;
