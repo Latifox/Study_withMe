@@ -1,91 +1,176 @@
-
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { BookOpen, Star, Flame } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfWeek, eachWeekOfInterval } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Flame, Trophy, BookOpen, Star } from "lucide-react";
+import {
+  Tooltip as TooltipUI,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Analytics = () => {
   const { user } = useAuth();
-  const [selectedTimeRange, setSelectedTimeRange] = useState("7");
-  const [totalLectures, setTotalLectures] = useState(0);
-  const [totalXP, setTotalXP] = useState(0);
-  const [currentStreak, setCurrentStreak] = useState(0);
+  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
-  const { data: analyticsData, isLoading } = useQuery({
-    queryKey: ["analytics", user?.id, selectedTimeRange],
+  const getDateRange = () => {
+    const now = new Date();
+    switch (timeRange) {
+      case 'week':
+        return subDays(now, 7);
+      case 'month':
+        return subMonths(now, 1);
+      case 'year':
+        return subYears(now, 1);
+      case 'all':
+        return subYears(now, 10); // Effectively "all" data
+      default:
+        return subDays(now, 7);
+    }
+  };
+
+  const {
+    data: userProgress,
+    isLoading
+  } = useQuery({
+    queryKey: ['user-progress', user?.id, timeRange],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_progress")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: true });
+      const startDate = getDateRange();
+      
+      const { data: quizProgress, error: quizError } = await supabase
+        .from('quiz_progress')
+        .select('completed_at, lecture_id, quiz_number, quiz_score')
+        .eq('user_id', user?.id)
+        .gte('completed_at', startDate.toISOString())
+        .order('completed_at', { ascending: true });
+      
+      if (quizError) throw quizError;
+      
+      // Get user progress records for streak calculation
+      const { data: progressData, error: progressError } = await supabase
+        .from('user_progress')
+        .select('completed_at')
+        .eq('user_id', user?.id)
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: false });
+      
+      if (progressError) throw progressError;
 
-      if (error) throw error;
-      return data;
+      return {
+        quizProgress: quizProgress || [],
+        progressData: progressData || []
+      };
     },
-    enabled: !!user?.id,
+    enabled: !!user
   });
 
-  useEffect(() => {
-    const fetchTotalLectures = async () => {
-      const { count, error } = await supabase
-        .from("lectures")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id);
+  const calculateStreak = () => {
+    if (!userProgress?.progressData.length) return 0;
+    
+    const today = startOfDay(new Date());
+    const uniqueDates = new Set(
+      userProgress.progressData.map(p => 
+        startOfDay(new Date(p.completed_at)).toISOString()
+      )
+    );
 
-      if (!error && count !== null) {
-        setTotalLectures(count);
-      }
-    };
+    let streak = 0;
+    let currentDate = today;
 
-    const fetchTotalXP = async () => {
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("xp")
-        .eq("id", user?.id)
-        .single();
-
-      if (!error && data) {
-        setTotalXP(data.xp);
-      }
-    };
-
-    const fetchCurrentStreak = async () => {
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("current_streak")
-        .eq("id", user?.id)
-        .single();
-
-      if (!error && data) {
-        setCurrentStreak(data.current_streak);
-      }
-    };
-
-    if (user?.id) {
-      fetchTotalLectures();
-      fetchTotalXP();
-      fetchCurrentStreak();
+    while (uniqueDates.has(currentDate.toISOString())) {
+      streak++;
+      currentDate = subDays(currentDate, 1);
     }
-  }, [user?.id]);
 
-  const chartData = analyticsData?.map(item => ({
-    date: format(new Date(item.created_at), "MMM d"),
-    lectures: item.lectures_completed || 0,
-    xp: item.xp_earned || 0
-  })) || [];
+    return streak;
+  };
+
+  const prepareChartData = () => {
+    if (!userProgress?.quizProgress.length) return [];
+    const startDate = getDateRange();
+    const dateRange = eachDayOfInterval({
+      start: startDate,
+      end: new Date()
+    });
+
+    const dateScores = new Map();
+    userProgress.quizProgress.forEach(progress => {
+      const dateKey = startOfDay(new Date(progress.completed_at)).toISOString();
+      dateScores.set(dateKey, (dateScores.get(dateKey) || 0) + (progress.quiz_score || 0));
+    });
+
+    let cumulative = 0;
+    return dateRange.map(date => {
+      const dateStr = format(date, 'MMM dd');
+      const dateKey = startOfDay(date).toISOString();
+      const dailyScore = dateScores.get(dateKey) || 0;
+      cumulative += dailyScore;
+      return {
+        date: dateStr,
+        cumulative
+      };
+    });
+  };
+
+  const prepareHeatmapData = () => {
+    if (!userProgress?.quizProgress.length) return new Map();
+    
+    const dateScores = new Map();
+    userProgress.quizProgress.forEach(progress => {
+      const dateKey = startOfDay(new Date(progress.completed_at)).toISOString();
+      dateScores.set(dateKey, (dateScores.get(dateKey) || 0) + (progress.quiz_score || 0));
+    });
+    
+    return dateScores;
+  };
+
+  const getHeatmapColor = (score: number) => {
+    if (score === 0) return 'bg-white/5 border border-white/10';
+    if (score < 10) return 'bg-gradient-to-br from-blue-500/20 to-cyan-400/20 border border-blue-500/20';
+    if (score < 20) return 'bg-gradient-to-br from-blue-500/40 to-cyan-400/40 border border-blue-500/30';
+    if (score < 30) return 'bg-gradient-to-br from-blue-500/60 to-cyan-400/60 border border-blue-500/40';
+    if (score < 40) return 'bg-gradient-to-br from-blue-500/80 to-cyan-400/80 border border-blue-500/50';
+    return 'bg-gradient-to-br from-blue-500 to-cyan-400 border border-blue-500';
+  };
+
+  // Count unique lectures and total XP with proper null checks
+  const totalLectures = userProgress?.quizProgress ? 
+    new Set(userProgress.quizProgress.map(p => p.lecture_id)).size : 0;
+
+  const totalXP = userProgress?.quizProgress ? 
+    userProgress.quizProgress.reduce((sum, p) => sum + (p.quiz_score || 0), 0) : 0;
+
+  const currentStreak = calculateStreak();
+  const chartData = prepareChartData();
+  const heatmapData = prepareHeatmapData();
+
+  // Generate last year of weeks for heatmap
+  const endDate = new Date();
+  const startDate = subYears(endDate, 1);
+  
+  // Generate weeks
+  const weeks = eachWeekOfInterval(
+    { start: startDate, end: endDate },
+    { weekStartsOn: 1 } // Week starts on Monday
+  );
+
+  // Generate days of the week (Mon-Sun)
+  const weekDays = Array.from({ length: 7 }, (_, i) => i);
 
   if (isLoading) {
     return <div className="space-y-4">
-      <Skeleton className="h-[200px] w-full" />
       <Skeleton className="h-[400px] w-full" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Skeleton className="h-[100px]" />
+        <Skeleton className="h-[100px]" />
+      </div>
     </div>;
   }
 
@@ -101,10 +186,10 @@ const Analytics = () => {
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-green-500/80 to-emerald-400/80 hover:from-green-500/90 hover:to-emerald-400/90 transition-colors">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <BookOpen className="w-6 h-6 text-blue-500 stroke-[2.5] drop-shadow-[0_0_3px_rgba(255,255,255,0.7)]" />
+                    <BookOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total Lectures</p>
@@ -129,10 +214,10 @@ const Analytics = () => {
             </Card>
 
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-emerald-500/80 to-teal-400/80 hover:from-emerald-500/90 hover:to-teal-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <Star className="w-6 h-6 text-yellow-400 stroke-[2.5] drop-shadow-[0_0_3px_rgba(255,255,255,0.7)]" />
+                    <Star className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
@@ -143,68 +228,143 @@ const Analytics = () => {
             </Card>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-white">Activity Overview</h2>
-              <Select
-                value={selectedTimeRange}
-                onValueChange={setSelectedTimeRange}
-              >
-                <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
-                  <SelectValue placeholder="Select time range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="14">Last 14 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Learning Activity</h2>
+              <div className="flex gap-2">
+                {(['week', 'month', 'year', 'all'] as const).map(range => (
+                  <Button 
+                    key={range} 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setTimeRange(range)} 
+                    className={cn(
+                      "border-2 text-white transition-all duration-300",
+                      timeRange === range 
+                        ? "border-purple-400 bg-purple-500/50 hover:bg-purple-500/60" 
+                        : "border-white/20 bg-white/10 hover:bg-white/20 hover:border-purple-400"
+                    )}
+                  >
+                    {range.charAt(0).toUpperCase() + range.slice(1)}
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
-              <CardContent className="pt-6">
-                <ResponsiveContainer width="100%" height={400}>
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorLectures" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorXP" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#EC4899" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#EC4899" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                    <XAxis dataKey="date" stroke="#ffffff80" />
-                    <YAxis stroke="#ffffff80" />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: "rgba(255, 255, 255, 0.1)",
-                        backdropFilter: "blur(10px)",
-                        borderColor: "rgba(255, 255, 255, 0.2)",
-                        borderRadius: "0.5rem"
-                      }}
-                      labelStyle={{ color: "white" }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="lectures"
-                      stroke="#8B5CF6"
-                      fillOpacity={1}
-                      fill="url(#colorLectures)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="xp"
-                      stroke="#EC4899"
-                      fillOpacity={1}
-                      fill="url(#colorXP)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <div className="h-[400px] rounded-lg p-4 bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="date" stroke="#fff" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#fff" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                      backdropFilter: "blur(8px)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: "8px",
+                      color: "white"
+                    }} 
+                    labelStyle={{ color: "white" }}
+                    itemStyle={{ color: "white" }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="cumulative" 
+                    stroke="#ffffff" 
+                    strokeWidth={4}
+                    dot={false}
+                    activeDot={{
+                      r: 8,
+                      style: { fill: "#ffffff", stroke: "white", strokeWidth: 2 }
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Activity History</h3>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-white/60">Less</div>
+                  <div className="flex gap-1">
+                    {[0, 10, 20, 30, 40].map((score) => (
+                      <div
+                        key={score}
+                        className={cn(
+                          "w-3 h-3 rounded-sm",
+                          getHeatmapColor(score)
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-sm text-white/60">More</div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
+                <div className="flex gap-2">
+                  <div className="grid grid-rows-7 gap-1 text-xs text-white/40 pr-2">
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                    <div>Sun</div>
+                  </div>
+                  
+                  <div className="grid grid-cols-[repeat(53,1fr)] gap-1 flex-1">
+                    {weeks.map((week) => (
+                      <div key={week.toISOString()} className="grid grid-rows-7 gap-1">
+                        {weekDays.map((dayOffset) => {
+                          const date = addDays(week, dayOffset);
+                          const dateStr = startOfDay(date).toISOString();
+                          const score = heatmapData.get(dateStr) || 0;
+                          
+                          return (
+                            <TooltipProvider key={dateStr}>
+                              <TooltipUI>
+                                <TooltipTrigger>
+                                  <div 
+                                    className={cn(
+                                      "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                      getHeatmapColor(score)
+                                    )}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">
+                                    {format(date, 'MMM dd, yyyy')}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {score} XP earned
+                                  </p>
+                                </TooltipContent>
+                              </TooltipUI>
+                            </TooltipProvider>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-[auto,1fr] gap-2">
+                  <div className="w-8" /> {/* Spacer for day labels */}
+                  <div className="grid grid-cols-[repeat(53,1fr)] text-xs text-white/40">
+                    {weeks.map((week, index) => (
+                      index % 4 === 0 && (
+                        <div key={week.toISOString()} className="text-center">
+                          {format(week, 'MMM')}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
