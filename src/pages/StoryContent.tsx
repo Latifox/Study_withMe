@@ -38,28 +38,28 @@ const StoryContent = () => {
 
   const currentScore = segmentScores[nodeId || ''] || 0;
 
-  const baseLayout = (children: React.ReactNode) => (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Single consistent background for all states */}
-      <div className="fixed inset-0">
-        {/* Base gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-blue-50" />
-        
-        {/* Grid overlay */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(250, 204, 21, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: '25px 25px'
-          }}
-        />
-      </div>
+  // Common background component to ensure consistency
+  const PageBackground = () => (
+    <>
+      {/* Fixed position background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-yellow-50 to-blue-50" />
       
-      {/* Content */}
-      <div className="relative">
+      {/* Fixed position grid overlay */}
+      <div 
+        className="fixed inset-0"
+        style={{
+          backgroundImage: `linear-gradient(rgba(250, 204, 21, 0.1) 1px, transparent 1px),
+                           linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)`,
+          backgroundSize: '25px 25px'
+        }}
+      />
+    </>
+  );
+
+  const baseLayout = (children: React.ReactNode) => (
+    <div className="min-h-screen">
+      <PageBackground />
+      <div className="relative z-10">
         {children}
       </div>
     </div>
