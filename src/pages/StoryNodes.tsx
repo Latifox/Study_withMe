@@ -209,15 +209,15 @@ const StoryNodes = () => {
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
-              <BookOpen className="h-5 w-5 text-emerald-200" />
-              <span className="font-bold text-white">{completedNodesCount}</span>
+              <Flame className="h-5 w-5 text-red-500 fill-red-500" />
+              <span className="font-bold text-white">{currentStreak}</span>
             </motion.div>
             <motion.div 
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
-              <Flame className="h-5 w-5 text-red-500 fill-red-500" />
-              <span className="font-bold text-white">{currentStreak}</span>
+              <BookOpen className="h-5 w-5 text-emerald-200" />
+              <span className="font-bold text-white">{completedNodesCount}</span>
             </motion.div>
           </div>
         </motion.div>
