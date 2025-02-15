@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Trophy, BookOpen, Sparkles } from "lucide-react";
+import { ArrowLeft, Star, Trophy, BookOpen, Sparkles, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import LearningPathway from "@/components/story/LearningPathway";
@@ -39,6 +38,7 @@ const StoryNodes = () => {
 
   const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
   const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
+  const currentStreak = 5; // This should be fetched from your backend, using a placeholder for now
 
   const {
     data: storyContent,
@@ -173,7 +173,7 @@ const StoryNodes = () => {
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
               <Star className="h-5 w-5 text-yellow-400" />
-              <span className="font-bold text-white">{totalXP} XP</span>
+              <span className="font-bold text-white">{totalXP}</span>
             </motion.div>
             <motion.div 
               whileHover={{ scale: 1.05 }}
@@ -181,6 +181,13 @@ const StoryNodes = () => {
             >
               <Trophy className="h-5 w-5 text-emerald-200" />
               <span className="font-bold text-white">{completedNodesCount}</span>
+            </motion.div>
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
+            >
+              <Flame className="h-5 w-5 text-red-400" />
+              <span className="font-bold text-white">{currentStreak}</span>
             </motion.div>
           </div>
         </motion.div>
@@ -252,4 +259,3 @@ const StoryNodes = () => {
 };
 
 export default StoryNodes;
-

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Lock, CheckCircle2, Circle, Trophy, Star, Sparkles } from "lucide-react";
+import { Lock, CheckCircle2, Circle, Trophy, Star, Sparkles, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -173,6 +173,7 @@ const LearningPathway = ({
           const isActive = currentNode === node.id;
           const isHovered = hoveredNode === node.id;
           const currentScore = nodeProgress[node.id] || 0;
+          const streak = 3; // This should be fetched from your backend, using a placeholder for now
 
           return (
             <motion.div 
@@ -244,7 +245,15 @@ const LearningPathway = ({
                               <Star className="w-6 h-6 text-yellow-400 drop-shadow-lg" />
                               <span className="text-sm text-yellow-200">{currentScore}/10</span>
                             </motion.div>
-                          </div>
+                          
+                          {status === "completed" && (
+                            <>
+                              <Trophy className="w-6 h-6 text-yellow-400" />
+                              <Flame className="w-6 h-6 text-red-400" />
+                              <span className="text-sm text-red-200">{streak}</span>
+                            </>
+                          )}
+                        </div>
                         </div>
                       </div>
 
