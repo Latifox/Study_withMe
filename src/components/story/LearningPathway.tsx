@@ -145,9 +145,9 @@ const LearningPathway = ({
 
   const getNodeIcon = (status: string, isHovered: boolean) => {
     if (status === "locked") return <Lock className="w-4 h-4 text-gray-400" />;
-    if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+    if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
     if (isHovered) return <Sparkles className="w-4 h-4 text-yellow-500" />;
-    return <Circle className="w-4 h-4 text-blue-500" />;
+    return <Circle className="w-4 h-4 text-blue-400" />;
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -197,13 +197,13 @@ const LearningPathway = ({
                           ? "bg-gray-800/50 cursor-not-allowed" 
                           : "hover:scale-105 hover:shadow-xl",
                         status === "completed" 
-                          ? "bg-emerald-600/30 border-2 border-emerald-400/50" 
+                          ? "bg-emerald-600/40 border-2 border-emerald-400/70"
                           : "",
                         status === "available" 
                           ? "bg-teal-600/30 border-2 border-teal-400/50" 
                           : "",
                         isActive 
-                          ? "ring-2 ring-white ring-offset-2 ring-offset-emerald-900" 
+                          ? "ring-4 ring-blue-400 ring-offset-2 ring-offset-emerald-900"
                           : ""
                       )}
                       whileHover={status !== "locked" ? { scale: 1.05 } : {}}
@@ -215,9 +215,10 @@ const LearningPathway = ({
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center",
                           "transition-all duration-300",
-                          status === "completed" ? "bg-emerald-500" : "",
-                          status === "available" ? "bg-teal-500" : "",
-                          status === "locked" ? "bg-gray-700" : ""
+                          status === "completed" ? "bg-emerald-500/80" : "",
+                          status === "available" ? "bg-teal-500/80" : "",
+                          status === "locked" ? "bg-gray-700" : "",
+                          isActive ? "ring-2 ring-blue-400" : ""
                         )}>
                           {getNodeIcon(status, isHovered)}
                         </div>
@@ -282,7 +283,7 @@ const LearningPathway = ({
 
               {index < nodes.length - 1 && (
                 <motion.div 
-                  className="h-8 w-0.5 bg-emerald-400/30 mx-auto my-2"
+                  className="h-8 w-0.5 bg-emerald-400/50 mx-auto my-2"
                   initial={{ height: 0 }}
                   animate={{ height: 32 }}
                   transition={{ delay: index * 0.1 + 0.2 }}
