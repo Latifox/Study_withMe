@@ -39,8 +39,17 @@ const StoryContent = () => {
   const currentScore = segmentScores[nodeId || ''] || 0;
 
   const baseLayout = (children: React.ReactNode) => (
-    <div className="min-h-screen bg-white">
-      <div className="relative">
+    // Adding !important to override any inherited styles
+    <div className="!min-h-screen !bg-white" style={{ background: 'white !important' }}>
+      {/* Reset any background styles */}
+      <style>
+        {`
+          body, #root {
+            background: white !important;
+          }
+        `}
+      </style>
+      <div className="relative !bg-white">
         {children}
       </div>
     </div>
@@ -70,7 +79,7 @@ const StoryContent = () => {
   }
 
   return baseLayout(
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 !bg-white">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -90,8 +99,8 @@ const StoryContent = () => {
           transition={{ duration: 0.3 }}
           className="relative mt-6"
         >
-          {/* Glass effect container */}
-          <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10" />
+          {/* Glass effect container with white background */}
+          <div className="absolute inset-0 !bg-white rounded-lg border border-gray-200" />
           
           <div className="relative">
             <StoryMainContent
