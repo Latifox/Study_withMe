@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Trophy, BookOpen, Sparkles, Flame } from "lucide-react";
+import { ArrowLeft, Star, BookOpen, Sparkles, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import LearningPathway from "@/components/story/LearningPathway";
@@ -117,15 +117,13 @@ const StoryNodes = () => {
   };
 
   if (isLoading) {
-    return <div className="container mx-auto p-4">
-        <StoryLoading />
-      </div>;
+    return <div className="container mx-auto p-4"><StoryLoading /></div>;
   }
 
   if (error || !storyContent) {
     return <div className="container mx-auto p-4">
-        <StoryError message={error instanceof Error ? error.message : "Failed to load story content"} onBack={handleBack} />
-      </div>;
+      <StoryError message={error instanceof Error ? error.message : "Failed to load story content"} onBack={handleBack} />
+    </div>;
   }
 
   return (
