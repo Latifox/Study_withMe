@@ -42,3 +42,6 @@ const StoryLoading = () => (
       </motion.div>
     </motion.div>
   </Card>
+);
+
+export default StoryLoading;
