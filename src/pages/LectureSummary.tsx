@@ -29,6 +29,17 @@ const LectureCard = ({ children, className }: { children: React.ReactNode, class
   </Card>
 );
 
+const StylizedCardTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: string }) => (
+  <div className="flex items-center gap-3">
+    <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
+      <Icon className="w-5 h-5 text-yellow-400" />
+    </div>
+    <h3 className="text-lg font-semibold bg-gradient-to-r from-yellow-200 to-yellow-100 bg-clip-text text-transparent">
+      {title}
+    </h3>
+  </div>
+);
+
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const { toast } = useToast();
@@ -140,8 +151,12 @@ const LectureSummary = () => {
           <LectureCard>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-6 h-6" />
-                {lecture?.title} - Summary
+                <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
+                  <BookOpen className="w-6 h-6 text-yellow-400" />
+                </div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-200 to-yellow-100 bg-clip-text text-transparent">
+                  {lecture?.title} - Summary
+                </h2>
               </CardTitle>
             </CardHeader>
           </LectureCard>
@@ -149,72 +164,54 @@ const LectureSummary = () => {
           <div className="grid gap-6 md:grid-cols-2">
             <LectureCard>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <LayoutTemplate className="w-5 h-5" />
-                  Structure
-                </CardTitle>
+                <StylizedCardTitle icon={LayoutTemplate} title="Structure" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
                 <ReactMarkdown>{summary?.structure || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
 
             <LectureCard>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Brain className="w-5 h-5" />
-                  Key Concepts
-                </CardTitle>
+                <StylizedCardTitle icon={Brain} title="Key Concepts" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
                 <ReactMarkdown>{summary?.keyConcepts || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
 
             <LectureCard>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Lightbulb className="w-5 h-5" />
-                  Main Ideas
-                </CardTitle>
+                <StylizedCardTitle icon={Lightbulb} title="Main Ideas" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
                 <ReactMarkdown>{summary?.mainIdeas || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
 
             <LectureCard>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Quote className="w-5 h-5" />
-                  Important Quotes
-                </CardTitle>
+                <StylizedCardTitle icon={Quote} title="Important Quotes" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
                 <ReactMarkdown>{summary?.importantQuotes || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
 
             <LectureCard>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Network className="w-5 h-5" />
-                  Relationships and Connections
-                </CardTitle>
+                <StylizedCardTitle icon={Network} title="Relationships and Connections" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
                 <ReactMarkdown>{summary?.relationships || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
 
             <LectureCard>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <ClipboardList className="w-5 h-5" />
-                  Supporting Evidence & Examples
-                </CardTitle>
+                <StylizedCardTitle icon={ClipboardList} title="Supporting Evidence & Examples" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
                 <ReactMarkdown>{summary?.supportingEvidence || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
