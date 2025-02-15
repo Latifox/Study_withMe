@@ -202,7 +202,7 @@ const StoryNodes = () => {
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
-              <Star className="h-5 w-5 text-yellow-400" />
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
               <span className="font-bold text-white">{totalXP}</span>
             </motion.div>
             <motion.div 
@@ -216,8 +216,8 @@ const StoryNodes = () => {
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
-              <Flame className="h-5 w-5 text-red-400" />
-              <span className="font-bold text-white">{currentStreak} days</span>
+              <Flame className="h-5 w-5 text-red-500 fill-red-500" />
+              <span className="font-bold text-white">{currentStreak}</span>
             </motion.div>
           </div>
         </motion.div>

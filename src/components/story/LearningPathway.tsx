@@ -292,15 +292,15 @@ const LearningPathway = ({
                               transition={{ duration: 0.3 }}
                               key={currentScore}
                             >
-                              <Star className="w-6 h-6 text-yellow-400 drop-shadow-lg" />
+                              <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                               <span className="text-sm text-yellow-200">{currentScore}/10</span>
                             </motion.div>
                           
                           {status === "completed" && (
                             <>
                               <Trophy className="w-6 h-6 text-yellow-400" />
-                              <Flame className="w-6 h-6 text-red-400" />
-                              <span className="text-sm text-red-200">{nodeStreak} days</span>
+                              <Flame className="w-6 h-6 text-red-500 fill-red-500" />
+                              <span className="text-sm text-red-200">{nodeStreak}</span>
                             </>
                           )}
                         </div>
