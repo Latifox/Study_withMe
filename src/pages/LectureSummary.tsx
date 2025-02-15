@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,9 +33,9 @@ const LectureCard = ({ children, className }: { children: React.ReactNode, class
 const StylizedCardTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: string }) => (
   <div className="flex items-center gap-3">
     <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-      <Icon className="w-5 h-5 text-yellow-400" />
+      <Icon className="w-5 h-5 text-blue-600" />
     </div>
-    <h3 className="text-lg font-semibold bg-gradient-to-r from-yellow-200 to-yellow-100 bg-clip-text text-transparent">
+    <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
       {title}
     </h3>
   </div>
@@ -152,9 +153,9 @@ const LectureSummary = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-                  <BookOpen className="w-6 h-6 text-yellow-400" />
+                  <BookOpen className="w-6 h-6 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-200 to-yellow-100 bg-clip-text text-transparent">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   {lecture?.title} - Summary
                 </h2>
               </CardTitle>
@@ -166,7 +167,7 @@ const LectureSummary = () => {
               <CardHeader>
                 <StylizedCardTitle icon={LayoutTemplate} title="Structure" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
                 <ReactMarkdown>{summary?.structure || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
@@ -175,7 +176,7 @@ const LectureSummary = () => {
               <CardHeader>
                 <StylizedCardTitle icon={Brain} title="Key Concepts" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
                 <ReactMarkdown>{summary?.keyConcepts || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
@@ -184,7 +185,7 @@ const LectureSummary = () => {
               <CardHeader>
                 <StylizedCardTitle icon={Lightbulb} title="Main Ideas" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
                 <ReactMarkdown>{summary?.mainIdeas || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
@@ -193,7 +194,7 @@ const LectureSummary = () => {
               <CardHeader>
                 <StylizedCardTitle icon={Quote} title="Important Quotes" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
                 <ReactMarkdown>{summary?.importantQuotes || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
@@ -202,7 +203,7 @@ const LectureSummary = () => {
               <CardHeader>
                 <StylizedCardTitle icon={Network} title="Relationships and Connections" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
                 <ReactMarkdown>{summary?.relationships || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
@@ -211,7 +212,7 @@ const LectureSummary = () => {
               <CardHeader>
                 <StylizedCardTitle icon={ClipboardList} title="Supporting Evidence & Examples" />
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-200 prose-strong:text-yellow-200 prose-headings:text-yellow-100">
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
                 <ReactMarkdown>{summary?.supportingEvidence || ''}</ReactMarkdown>
               </CardContent>
             </LectureCard>
