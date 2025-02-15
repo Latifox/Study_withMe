@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import Analytics from "@/components/Analytics";
+
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -16,11 +18,13 @@ const Index = () => {
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
   const handleSignOut = async () => {
     try {
       const {
@@ -36,11 +40,13 @@ const Index = () => {
       });
     }
   };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
       Loading...
     </div>;
   }
+
   return <div className="relative min-h-screen overflow-hidden">
       {/* Bold animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
@@ -111,4 +117,5 @@ const Index = () => {
       </div>
     </div>;
 };
+
 export default Index;
