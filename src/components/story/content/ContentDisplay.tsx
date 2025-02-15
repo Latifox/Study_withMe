@@ -66,7 +66,7 @@ const ContentDisplay = ({
   console.log('Has valid question:', hasValidQuestion);
 
   return (
-    <Card className="p-2">
+    <Card className="p-2 bg-transparent border-none shadow-none">
       <div className="mb-2">
         <SegmentProgress
           currentSegment={currentSegment}
@@ -76,7 +76,7 @@ const ContentDisplay = ({
         />
       </div>
 
-      <h2 className="text-base font-bold mb-2">{currentSegmentData.title}</h2>
+      <h2 className="text-base font-bold mb-2 text-gray-700">{currentSegmentData.title}</h2>
       
       {isSlide ? (
         hasValidSlide ? (
@@ -85,12 +85,12 @@ const ContentDisplay = ({
             onContinue={onContinue}
           />
         ) : (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="p-4 bg-amber-50/50 border border-amber-200/50 rounded-lg">
             <div className="flex items-start space-x-2">
               <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <h4 className="font-medium text-amber-800">No Content Available</h4>
-                <p className="text-sm text-amber-700">
+                <h4 className="font-medium text-amber-800/90">No Content Available</h4>
+                <p className="text-sm text-amber-700/90">
                   The content for this slide is still being generated. Please try again in a few moments.
                 </p>
               </div>
@@ -110,12 +110,12 @@ const ContentDisplay = ({
             onContinue={onContinue}
           />
         ) : (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="p-4 bg-amber-50/50 border border-amber-200/50 rounded-lg">
             <div className="flex items-start space-x-2">
               <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <h4 className="font-medium text-amber-800">No Questions Available</h4>
-                <p className="text-sm text-amber-700">
+                <h4 className="font-medium text-amber-800/90">No Questions Available</h4>
+                <p className="text-sm text-amber-700/90">
                   The questions for this segment are still being generated. Please try again in a few moments.
                 </p>
               </div>
