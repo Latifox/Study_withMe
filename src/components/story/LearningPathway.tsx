@@ -48,6 +48,7 @@ const LearningPathway = ({
   const [nodeProgress, setNodeProgress] = useState<{
     [key: string]: number;
   }>({});
+  const [streaks, setStreaks] = useState<{ [key: string]: number }>({});
   const {
     toast
   } = useToast();
@@ -103,6 +104,55 @@ const LearningPathway = ({
       supabase.removeChannel(channel);
     };
   }, [lectureId]);
+
+  const calculateNodeStreak = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: progressData } = await supabase
+      .from('quiz_progress')
+      .select('segment_number, completed_at')
+      .order('completed_at', { ascending: false });
+
+    if (progressData) {
+      const streaksByNode: { [key: string]: number } = {};
+      
+      // Group completions by segment
+      const completionsBySegment = progressData.reduce((acc: { [key: string]: Date[] }, curr) => {
+        const segmentKey = `segment_${curr.segment_number}`;
+        if (!acc[segmentKey]) acc[segmentKey] = [];
+        if (curr.completed_at) {
+          const date = new Date(curr.completed_at);
+          date.setHours(0, 0, 0, 0);
+          acc[segmentKey].push(date);
+        }
+        return acc;
+      }, {});
+
+      // Calculate streak for each segment
+      Object.entries(completionsBySegment).forEach(([segmentKey, dates]) => {
+        const uniqueDates = new Set(dates.map(d => d.toISOString()));
+        let streak = 0;
+        let currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+
+        while (uniqueDates.has(currentDate.toISOString())) {
+          streak++;
+          currentDate = new Date(currentDate);
+          currentDate.setDate(currentDate.getDate() - 1);
+          currentDate.setHours(0, 0, 0, 0);
+        }
+
+        streaksByNode[segmentKey] = streak;
+      });
+
+      setStreaks(streaksByNode);
+    }
+  };
+
+  useEffect(() => {
+    calculateNodeStreak();
+  }, []);
 
   const isNodeAvailable = (node: LessonNode) => {
     if (node.prerequisites.length === 0) return true;
@@ -173,7 +223,7 @@ const LearningPathway = ({
           const isActive = currentNode === node.id;
           const isHovered = hoveredNode === node.id;
           const currentScore = nodeProgress[node.id] || 0;
-          const streak = 3; // This should be fetched from your backend, using a placeholder for now
+          const nodeStreak = streaks[node.id] || 0;
 
           return (
             <motion.div 
@@ -250,7 +300,7 @@ const LearningPathway = ({
                             <>
                               <Trophy className="w-6 h-6 text-yellow-400" />
                               <Flame className="w-6 h-6 text-red-400" />
-                              <span className="text-sm text-red-200">{streak}</span>
+                              <span className="text-sm text-red-200">{nodeStreak} days</span>
                             </>
                           )}
                         </div>

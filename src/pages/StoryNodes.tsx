@@ -24,21 +24,51 @@ const StoryNodes = () => {
     queryKey: ['user-progress', lectureId],
     queryFn: async () => {
       const {
-        data: {
-          user
-        }
+        data: { user }
       } = await supabase.auth.getUser();
       if (!user || !lectureId) return null;
-      const {
-        data
-      } = await supabase.from('user_progress').select('score').eq('user_id', user.id).eq('lecture_id', parseInt(lectureId));
+      const { data } = await supabase
+        .from('user_progress')
+        .select('score, completed_at')
+        .eq('user_id', user.id)
+        .eq('lecture_id', parseInt(lectureId))
+        .order('completed_at', { ascending: false });
       return data;
     }
   });
 
+  const calculateStreak = () => {
+    if (!userProgress?.length) return 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const uniqueDates = new Set(
+      userProgress
+        .filter(p => p.completed_at)
+        .map(p => {
+          const date = new Date(p.completed_at);
+          date.setHours(0, 0, 0, 0);
+          return date.toISOString();
+        })
+    );
+
+    let streak = 0;
+    let currentDate = today;
+
+    while (uniqueDates.has(currentDate.toISOString())) {
+      streak++;
+      currentDate = new Date(currentDate);
+      currentDate.setDate(currentDate.getDate() - 1);
+      currentDate.setHours(0, 0, 0, 0);
+    }
+
+    return streak;
+  };
+
   const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
   const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
-  const currentStreak = 5; // This should be fetched from your backend, using a placeholder for now
+  const currentStreak = calculateStreak();
 
   const {
     data: storyContent,
@@ -187,7 +217,7 @@ const StoryNodes = () => {
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
               <Flame className="h-5 w-5 text-red-400" />
-              <span className="font-bold text-white">{currentStreak}</span>
+              <span className="font-bold text-white">{currentStreak} days</span>
             </motion.div>
           </div>
         </motion.div>
