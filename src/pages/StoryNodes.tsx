@@ -209,7 +209,7 @@ const StoryNodes = () => {
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
-              <Trophy className="h-5 w-5 text-emerald-200" />
+              <BookOpen className="h-5 w-5 text-emerald-200" />
               <span className="font-bold text-white">{completedNodesCount}</span>
             </motion.div>
             <motion.div 
