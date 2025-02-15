@@ -53,7 +53,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       transition={{ duration: 0.3 }}
       className="space-y-4"
     >
-      <Card className="relative overflow-hidden bg-white/10 backdrop-blur-md border-white/10">
+      <Card className="relative overflow-hidden bg-white/20 backdrop-blur-md border-white/20">
         <div className="relative p-6">
           <div className="prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
             <ReactMarkdown
@@ -62,55 +62,55 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
               components={{
                 h1: ({ node, ...props }) => (
                   <h1 
-                    className="text-3xl font-bold mb-4 text-gray-800/90"
+                    className="text-3xl font-bold mb-4 text-gray-900"
                     {...props}
                   />
                 ),
                 h2: ({ node, ...props }) => (
                   <h2
-                    className="text-2xl font-semibold mb-3 text-gray-800/90"
+                    className="text-2xl font-semibold mb-3 text-gray-900"
                     {...props}
                   />
                 ),
                 h3: ({ node, ...props }) => (
                   <h3
-                    className="text-xl font-medium mb-2 text-gray-800/90"
+                    className="text-xl font-medium mb-2 text-gray-900"
                     {...props}
                   />
                 ),
                 p: ({ node, ...props }) => (
                   <p
-                    className="mb-4 leading-relaxed text-gray-700/90"
+                    className="mb-4 leading-relaxed text-gray-800"
                     {...props}
                   />
                 ),
                 ul: ({ node, ...props }) => (
                   <ul
-                    className="list-disc pl-6 mb-4 space-y-2 marker:text-gray-600"
+                    className="list-disc pl-6 mb-4 space-y-2 marker:text-gray-700"
                     {...props}
                   />
                 ),
                 ol: ({ node, ...props }) => (
                   <ol
-                    className="list-decimal pl-6 mb-4 space-y-2 marker:text-gray-600"
+                    className="list-decimal pl-6 mb-4 space-y-2 marker:text-gray-700"
                     {...props}
                   />
                 ),
                 li: ({ node, ...props }) => (
                   <li
-                    className="mb-1 text-gray-700"
+                    className="mb-1 text-gray-800"
                     {...props}
                   />
                 ),
                 code: ({ node, inline, className, children, ...props }: CodeProps) => 
                   inline ? (
-                    <code className="bg-black/5 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800" {...props}>
+                    <code className="bg-black/10 px-1.5 py-0.5 rounded text-sm font-mono text-gray-900" {...props}>
                       {children}
                     </code>
                   ) : (
                     <div className="relative">
-                      <pre className="overflow-x-auto p-4 rounded-lg bg-black/5 border border-black/10">
-                        <code className="text-sm font-mono text-gray-800" {...props}>
+                      <pre className="overflow-x-auto p-4 rounded-lg bg-black/10 border border-black/20">
+                        <code className="text-sm font-mono text-gray-900" {...props}>
                           {children}
                         </code>
                       </pre>
@@ -118,7 +118,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   ),
                 blockquote: ({ node, ...props }) => (
                   <blockquote 
-                    className="border-l-4 border-gray-300/50 pl-4 my-4 italic text-gray-600"
+                    className="border-l-4 border-gray-400/50 pl-4 my-4 italic text-gray-700"
                     {...props}
                   />
                 )
@@ -138,7 +138,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       >
         <Button
           onClick={onContinue}
-          className="w-full bg-blue-500/80 hover:bg-blue-600/90 text-white backdrop-blur-sm border-2 border-blue-400/30 shadow-lg hover:shadow-xl transition-all duration-300 py-6 text-lg font-medium"
+          className="w-full bg-blue-600/90 hover:bg-blue-700/95 text-white backdrop-blur-sm border-2 border-blue-500/40 shadow-lg hover:shadow-xl transition-all duration-300 py-6 text-lg font-medium"
         >
           Continue
           <ChevronRight className="ml-2 h-5 w-5" />

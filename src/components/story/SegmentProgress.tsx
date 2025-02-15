@@ -9,9 +9,9 @@ interface SegmentProgressProps {
 const SegmentProgress = ({ currentSegment, totalSegments, currentStep, totalSteps }: SegmentProgressProps) => {
   return (
     <div className="space-y-2">
-      <div className="w-full bg-blue-100/50 rounded-full h-3 backdrop-blur-sm border border-blue-200/30">
+      <div className="w-full bg-blue-200/60 rounded-full h-3 backdrop-blur-sm border border-blue-300/40">
         <div
-          className="bg-blue-500/80 rounded-full h-full transition-all duration-300 shadow-sm"
+          className="bg-blue-600/90 rounded-full h-full transition-all duration-300 shadow-md"
           style={{ width: `${(currentStep / totalSteps) * 100}%` }}
         />
       </div>
