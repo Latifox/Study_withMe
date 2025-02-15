@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Lock, CheckCircle2, Circle, Trophy, Star, Sparkles, Flame } from "lucide-react";
+import { Lock, CheckCircle2, Circle, Star, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,7 +48,6 @@ const LearningPathway = ({
   const [nodeProgress, setNodeProgress] = useState<{
     [key: string]: number;
   }>({});
-  const [streaks, setStreaks] = useState<{ [key: string]: number }>({});
   const {
     toast
   } = useToast();
@@ -105,55 +104,6 @@ const LearningPathway = ({
     };
   }, [lectureId]);
 
-  const calculateNodeStreak = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: progressData } = await supabase
-      .from('quiz_progress')
-      .select('segment_number, completed_at')
-      .order('completed_at', { ascending: false });
-
-    if (progressData) {
-      const streaksByNode: { [key: string]: number } = {};
-      
-      // Group completions by segment
-      const completionsBySegment = progressData.reduce((acc: { [key: string]: Date[] }, curr) => {
-        const segmentKey = `segment_${curr.segment_number}`;
-        if (!acc[segmentKey]) acc[segmentKey] = [];
-        if (curr.completed_at) {
-          const date = new Date(curr.completed_at);
-          date.setHours(0, 0, 0, 0);
-          acc[segmentKey].push(date);
-        }
-        return acc;
-      }, {});
-
-      // Calculate streak for each segment
-      Object.entries(completionsBySegment).forEach(([segmentKey, dates]) => {
-        const uniqueDates = new Set(dates.map(d => d.toISOString()));
-        let streak = 0;
-        let currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
-
-        while (uniqueDates.has(currentDate.toISOString())) {
-          streak++;
-          currentDate = new Date(currentDate);
-          currentDate.setDate(currentDate.getDate() - 1);
-          currentDate.setHours(0, 0, 0, 0);
-        }
-
-        streaksByNode[segmentKey] = streak;
-      });
-
-      setStreaks(streaksByNode);
-    }
-  };
-
-  useEffect(() => {
-    calculateNodeStreak();
-  }, []);
-
   const isNodeAvailable = (node: LessonNode) => {
     if (node.prerequisites.length === 0) return true;
     return node.prerequisites.every(prereq => {
@@ -184,33 +134,7 @@ const LearningPathway = ({
       });
       return;
     }
-    const currentScore = nodeProgress[node.id] || 0;
-    if (currentScore >= 10 && status === "completed") {
-      toast({
-        description: "You've already completed this node with full points! You can still retry it if you want."
-      });
-    }
     onNodeSelect(node.id);
-  };
-
-  const getNodeIcon = (status: string, isHovered: boolean) => {
-    if (status === "locked") return <Lock className="w-4 h-4 text-gray-400" />;
-    if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-emerald-900" />;
-    if (isHovered) return <Sparkles className="w-4 h-4 text-emerald-900" />;
-    return <Circle className="w-4 h-4 text-emerald-900" />;
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "beginner":
-        return "bg-green-100 text-green-700";
-      case "intermediate":
-        return "bg-yellow-100 text-yellow-700";
-      case "advanced":
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
   };
 
   return <div className="relative w-full min-h-[600px] p-8">
@@ -223,7 +147,6 @@ const LearningPathway = ({
           const isActive = currentNode === node.id;
           const isHovered = hoveredNode === node.id;
           const currentScore = nodeProgress[node.id] || 0;
-          const nodeStreak = streaks[node.id] || 0;
 
           return (
             <motion.div 
@@ -271,7 +194,7 @@ const LearningPathway = ({
                           status === "locked" ? "bg-gray-700" : "",
                           isActive ? "ring-2 ring-yellow-400" : ""
                         )}>
-                          {getNodeIcon(status, isHovered)}
+                          {status === "locked" ? <Lock className="w-4 h-4 text-gray-400" /> : status === "completed" ? <CheckCircle2 className="w-4 h-4 text-emerald-900" /> : <Circle className="w-4 h-4 text-emerald-900" />}
                         </div>
                         
                         <div className="text-left">
@@ -286,30 +209,20 @@ const LearningPathway = ({
                             )}>
                               {node.difficulty}
                             </span>
-                            <motion.div 
-                              className="flex items-center space-x-1"
-                              animate={{ scale: [1, 1.2, 1] }}
-                              transition={{ duration: 0.3 }}
-                              key={currentScore}
-                            >
-                              <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-                              <span className="text-sm text-yellow-200">{currentScore}/10</span>
-                            </motion.div>
-                          
-                          {status === "completed" && (
-                            <>
-                              <Trophy className="w-6 h-6 text-yellow-400" />
-                              <Flame className="w-6 h-6 text-red-500 fill-red-500" />
-                              <span className="text-sm text-red-200">{nodeStreak}</span>
-                            </>
-                          )}
-                        </div>
+                            <div className="flex items-center space-x-1">
+                              <motion.div 
+                                className="flex items-center space-x-1"
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 0.3 }}
+                                key={currentScore}
+                              >
+                                <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                                <span className="text-sm text-yellow-200">{currentScore}/10</span>
+                              </motion.div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-
-                      {status === "completed" && (
-                        <Trophy className="w-6 h-6 text-yellow-400" />
-                      )}
                     </motion.button>
                   </TooltipTrigger>
                   <TooltipContent 
