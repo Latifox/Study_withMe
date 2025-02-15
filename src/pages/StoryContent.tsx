@@ -38,91 +38,91 @@ const StoryContent = () => {
 
   const currentScore = segmentScores[nodeId || ''] || 0;
 
-  if (currentStep >= 4 && currentScore >= 10) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-100/20 to-blue-100/20">
-        <StoryCompletionScreen onBack={handleBack} />
+  const baseLayout = (children: React.ReactNode) => (
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Single consistent background for all states */}
+      <div className="fixed inset-0">
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-blue-50" />
+        
+        {/* Grid overlay */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(250, 204, 21, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '25px 25px'
+          }}
+        />
       </div>
-    );
+      
+      {/* Content */}
+      <div className="relative">
+        {children}
+      </div>
+    </div>
+  );
+
+  if (currentStep >= 4 && currentScore >= 10) {
+    return baseLayout(<StoryCompletionScreen onBack={handleBack} />);
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-100/20 to-blue-100/20">
-        <div className="container mx-auto p-4">
-          <StoryLoading />
-        </div>
+    return baseLayout(
+      <div className="container mx-auto p-4">
+        <StoryLoading />
       </div>
     );
   }
 
   if (error || !content) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-100/20 to-blue-100/20">
-        <div className="container mx-auto p-4">
-          <StoryError 
-            message={error instanceof Error ? error.message : "Failed to load segment content"}
-            onBack={handleBack}
-          />
-        </div>
+    return baseLayout(
+      <div className="container mx-auto p-4">
+        <StoryError 
+          message={error instanceof Error ? error.message : "Failed to load segment content"}
+          onBack={handleBack}
+        />
       </div>
     );
   }
 
-  return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Base gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/20 to-blue-100/20" />
-      
-      {/* Mesh pattern overlay */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(250, 204, 21, 0.2) 1.5px, transparent 1.5px),
-            linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1.5px, transparent 1.5px)
-          `,
-          backgroundSize: '25px 25px',
-          opacity: 0.8
-        }}
-      />
+  return baseLayout(
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <StoryScoreHeader
+            currentScore={currentScore}
+            currentStep={currentStep}
+            onBack={handleBack}
+          />
+        </motion.div>
 
-      {/* Content */}
-      <div className="relative p-4 sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <StoryScoreHeader
-              currentScore={currentScore}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="relative mt-6"
+        >
+          {/* Glass effect container */}
+          <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10" />
+          
+          <div className="relative">
+            <StoryMainContent
+              content={content}
               currentStep={currentStep}
-              onBack={handleBack}
+              segmentScores={segmentScores}
+              onContinue={handleContinue}
+              onCorrectAnswer={handleCorrectAnswer}
+              onWrongAnswer={handleWrongAnswer}
             />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="relative mt-6"
-          >
-            {/* Glass effect container */}
-            <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10" />
-            
-            <div className="relative">
-              <StoryMainContent
-                content={content}
-                currentStep={currentStep}
-                segmentScores={segmentScores}
-                onContinue={handleContinue}
-                onCorrectAnswer={handleCorrectAnswer}
-                onWrongAnswer={handleWrongAnswer}
-              />
-            </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
