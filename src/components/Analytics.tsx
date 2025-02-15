@@ -63,27 +63,9 @@ const Analytics = () => {
       
       if (progressError) throw progressError;
 
-      // Get count of lectures from user's courses
-      const { data: courses, error: coursesError } = await supabase
-        .from('courses')
-        .select('id')
-        .eq('owner_id', user?.id);
-
-      if (coursesError) throw coursesError;
-
-      const courseIds = courses?.map(course => course.id) || [];
-
-      const { count: lectureCount, error: lectureError } = await supabase
-        .from('lectures')
-        .select('*', { count: 'exact', head: true })
-        .in('course_id', courseIds);
-
-      if (lectureError) throw lectureError;
-
       return {
         quizProgress: quizProgress || [],
-        progressData: progressData || [],
-        uploadedLecturesCount: lectureCount || 0
+        progressData: progressData || []
       };
     },
     enabled: !!user
@@ -210,8 +192,8 @@ const Analytics = () => {
                     <BookOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-white/90">Uploaded Lectures</p>
-                    <p className="text-3xl font-bold text-white">{userProgress?.uploadedLecturesCount || 0}</p>
+                    <p className="text-lg font-semibold text-white/90">Total Lectures</p>
+                    <p className="text-3xl font-bold text-white">{totalLectures}</p>
                   </div>
                 </div>
               </CardContent>
