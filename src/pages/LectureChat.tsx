@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -99,7 +100,7 @@ const LectureChat = () => {
           <div className="h-[calc(100vh-2rem)]">
             <PDFViewer lectureId={lectureId} />
           </div>
-          <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4 flex flex-col">
+          <div className="h-[calc(100vh-2rem)] bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
             <div className="flex-1 overflow-auto space-y-4 mb-4">
               {messages.map((message, index) => (
                 <ChatMessage key={index} message={message} />
@@ -113,6 +114,7 @@ const LectureChat = () => {
                 placeholder="Type your message..."
                 onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
                 disabled={isLoading}
+                className="bg-white/50 backdrop-blur-sm border-white/30"
               />
               <Button 
                 onClick={handleSendMessage} 
