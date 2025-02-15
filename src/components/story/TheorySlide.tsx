@@ -1,3 +1,4 @@
+
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -137,10 +138,10 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       >
         <Button
           onClick={onContinue}
-          className="w-full bg-white/20 hover:bg-white/30 text-gray-800 backdrop-blur-sm border border-white/10 shadow-sm hover:shadow transition-all duration-300"
+          className="w-full bg-blue-500/80 hover:bg-blue-600/90 text-white backdrop-blur-sm border-2 border-blue-400/30 shadow-lg hover:shadow-xl transition-all duration-300 py-6 text-lg font-medium"
         >
           Continue
-          <ChevronRight className="ml-2 h-4 w-4" />
+          <ChevronRight className="ml-2 h-5 w-5" />
         </Button>
       </motion.div>
     </motion.div>
