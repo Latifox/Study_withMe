@@ -33,9 +33,9 @@ const LectureCard = ({ children, className }: { children: React.ReactNode, class
 const StylizedCardTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: string }) => (
   <div className="flex items-center gap-3">
     <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-      <Icon className="w-5 h-5 text-blue-600" />
+      <Icon className="w-5 h-5 text-black" />
     </div>
-    <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+    <h3 className="text-lg font-bold text-black">
       {title}
     </h3>
   </div>
@@ -153,9 +153,9 @@ const LectureSummary = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
+                  <BookOpen className="w-6 h-6 text-black" />
                 </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <h2 className="text-2xl font-bold text-black">
                   {lecture?.title} - Summary
                 </h2>
               </CardTitle>
