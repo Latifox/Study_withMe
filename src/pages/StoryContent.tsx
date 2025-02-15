@@ -39,15 +39,12 @@ const StoryContent = () => {
   // Calculate progress percentage for gradient
   const progressPercentage = sequenceNumber ? ((sequenceNumber - 1) / 4) * 100 : 0;
 
-  // Dynamic gradient based on progress
+  // Dynamic gradient based on progress with paler colors
   const getBackgroundStyle = () => {
-    const yellow = "rgb(250, 204, 21)"; // Yellow-400
-    const blue = "rgb(59, 130, 246)";   // Blue-500
-    
     return {
       background: `linear-gradient(135deg, 
-        ${yellow} ${progressPercentage}%, 
-        ${blue} ${100 - progressPercentage}%)`
+        rgba(247, 252, 255, 0.8) ${progressPercentage}%, 
+        rgba(233, 242, 255, 0.8) ${100 - progressPercentage}%)`
     };
   };
 
@@ -86,19 +83,21 @@ const StoryContent = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Subtle gradient background */}
-      <div className="absolute inset-0 transition-colors duration-1000" style={getBackgroundStyle()}>
-        {/* Very subtle mesh pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
+      {/* Pale gradient background */}
+      <div 
+        className="absolute inset-0 transition-colors duration-1000" 
+        style={getBackgroundStyle()}
+      >
+        {/* Enhanced mesh pattern with better visibility */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(rgba(66, 153, 225, 0.1) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(66, 153, 225, 0.1) 1px, transparent 1px)`,
+            backgroundSize: '20px 20px',
+            opacity: 0.4
+          }}
+        />
       </div>
 
       {/* Content */}
@@ -122,8 +121,8 @@ const StoryContent = () => {
             transition={{ duration: 0.3 }}
             className="relative mt-6"
           >
-            {/* Subtle glass effect for main content */}
-            <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10" />
+            {/* Enhanced glass effect with better transparency */}
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-lg border border-white/20" />
             
             <div className="relative">
               <StoryMainContent
