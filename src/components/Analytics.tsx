@@ -191,7 +191,7 @@ const Analytics = () => {
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
                     <BookOpen 
-                      className="w-6 h-6 text-blue-500 fill-blue-500/20" 
+                      className="w-6 h-6 text-blue-500 fill-blue-500" 
                       strokeWidth={2.5}
                       style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
                     />
@@ -209,7 +209,7 @@ const Analytics = () => {
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
                     <Flame 
-                      className="w-6 h-6 text-orange-500 fill-orange-500/20" 
+                      className="w-6 h-6 text-red-500 fill-red-500" 
                       strokeWidth={2.5}
                       style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
                     />
@@ -227,7 +227,7 @@ const Analytics = () => {
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
                     <Star 
-                      className="w-6 h-6 text-yellow-400 fill-yellow-400/20" 
+                      className="w-6 h-6 text-yellow-400 fill-yellow-400" 
                       strokeWidth={2.5}
                       style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
                     />
