@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,10 +22,10 @@ const Analytics = () => {
     queryKey: ["analytics", user?.id, selectedTimeRange],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("analytics")
+        .from("user_progress")
         .select("*")
         .eq("user_id", user?.id)
-        .order("date", { ascending: true });
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       return data;
@@ -76,9 +77,9 @@ const Analytics = () => {
   }, [user?.id]);
 
   const chartData = analyticsData?.map(item => ({
-    date: format(new Date(item.date), "MMM d"),
-    lectures: item.lectures_completed,
-    xp: item.xp_earned
+    date: format(new Date(item.created_at), "MMM d"),
+    lectures: item.lectures_completed || 0,
+    xp: item.xp_earned || 0
   })) || [];
 
   if (isLoading) {
@@ -100,10 +101,10 @@ const Analytics = () => {
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-orange-500/80 to-amber-400/80 hover:from-orange-500/90 hover:to-amber-400/90 transition-colors">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-green-500/80 to-emerald-400/80 hover:from-green-500/90 hover:to-emerald-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <BookOpen className="w-6 h-6 text-white" />
+                    <BookOpen className="w-6 h-6 text-blue-500 stroke-[2.5] drop-shadow-[0_0_3px_rgba(255,255,255,0.7)]" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total Lectures</p>
@@ -128,10 +129,10 @@ const Analytics = () => {
             </Card>
 
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-violet-500/80 to-purple-400/80 hover:from-violet-500/90 hover:to-purple-400/90 transition-colors">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <Star className="w-6 h-6 text-white" />
+                    <Star className="w-6 h-6 text-yellow-400 stroke-[2.5] drop-shadow-[0_0_3px_rgba(255,255,255,0.7)]" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
