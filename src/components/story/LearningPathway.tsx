@@ -241,7 +241,7 @@ const LearningPathway = ({
                               transition={{ duration: 0.3 }}
                               key={currentScore}
                             >
-                              <Star className="w-4 h-4 text-yellow-400" />
+                              <Star className="w-6 h-6 text-yellow-400 drop-shadow-lg" />
                               <span className="text-sm text-yellow-200">{currentScore}/10 XP</span>
                             </motion.div>
                           </div>
