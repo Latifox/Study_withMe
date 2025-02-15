@@ -17,6 +17,17 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import { cn } from "@/lib/utils";
+
+const LectureCard = ({ children, className }: { children: React.ReactNode, className?: string }) => (
+  <Card className={cn(
+    "bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg",
+    "transition-all duration-300 hover:bg-white/30",
+    className
+  )}>
+    {children}
+  </Card>
+);
 
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
@@ -126,17 +137,17 @@ const LectureSummary = () => {
         </div>
 
         <div className="grid gap-6">
-          <Card>
+          <LectureCard>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="w-6 h-6" />
                 {lecture?.title} - Summary
               </CardTitle>
             </CardHeader>
-          </Card>
+          </LectureCard>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+            <LectureCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <LayoutTemplate className="w-5 h-5" />
@@ -146,9 +157,9 @@ const LectureSummary = () => {
               <CardContent className="prose prose-sm max-w-none">
                 <ReactMarkdown>{summary?.structure || ''}</ReactMarkdown>
               </CardContent>
-            </Card>
+            </LectureCard>
 
-            <Card>
+            <LectureCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Brain className="w-5 h-5" />
@@ -158,9 +169,9 @@ const LectureSummary = () => {
               <CardContent className="prose prose-sm max-w-none">
                 <ReactMarkdown>{summary?.keyConcepts || ''}</ReactMarkdown>
               </CardContent>
-            </Card>
+            </LectureCard>
 
-            <Card>
+            <LectureCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Lightbulb className="w-5 h-5" />
@@ -170,9 +181,9 @@ const LectureSummary = () => {
               <CardContent className="prose prose-sm max-w-none">
                 <ReactMarkdown>{summary?.mainIdeas || ''}</ReactMarkdown>
               </CardContent>
-            </Card>
+            </LectureCard>
 
-            <Card>
+            <LectureCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Quote className="w-5 h-5" />
@@ -182,9 +193,9 @@ const LectureSummary = () => {
               <CardContent className="prose prose-sm max-w-none">
                 <ReactMarkdown>{summary?.importantQuotes || ''}</ReactMarkdown>
               </CardContent>
-            </Card>
+            </LectureCard>
 
-            <Card>
+            <LectureCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Network className="w-5 h-5" />
@@ -194,9 +205,9 @@ const LectureSummary = () => {
               <CardContent className="prose prose-sm max-w-none">
                 <ReactMarkdown>{summary?.relationships || ''}</ReactMarkdown>
               </CardContent>
-            </Card>
+            </LectureCard>
 
-            <Card>
+            <LectureCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <ClipboardList className="w-5 h-5" />
@@ -206,7 +217,7 @@ const LectureSummary = () => {
               <CardContent className="prose prose-sm max-w-none">
                 <ReactMarkdown>{summary?.supportingEvidence || ''}</ReactMarkdown>
               </CardContent>
-            </Card>
+            </LectureCard>
           </div>
         </div>
       </div>
