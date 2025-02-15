@@ -145,9 +145,9 @@ const LearningPathway = ({
 
   const getNodeIcon = (status: string, isHovered: boolean) => {
     if (status === "locked") return <Lock className="w-4 h-4 text-gray-400" />;
-    if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-yellow-400" />;
-    if (isHovered) return <Sparkles className="w-4 h-4 text-yellow-500" />;
-    return <Circle className="w-4 h-4 text-yellow-300" />;
+    if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-emerald-900" />;
+    if (isHovered) return <Sparkles className="w-4 h-4 text-emerald-900" />;
+    return <Circle className="w-4 h-4 text-emerald-900" />;
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -241,7 +241,7 @@ const LearningPathway = ({
                               transition={{ duration: 0.3 }}
                               key={currentScore}
                             >
-                              <Star className="w-6 h-6 text-yellow-400 drop-shadow-lg" />
+                              <Star className="w-6 h-6 text-purple-500 drop-shadow-lg" />
                               <span className="text-sm text-yellow-200">{currentScore}/10 XP</span>
                             </motion.div>
                           </div>
