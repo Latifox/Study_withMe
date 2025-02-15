@@ -39,17 +39,62 @@ const StoryContent = () => {
   const currentScore = segmentScores[nodeId || ''] || 0;
 
   const baseLayout = (children: React.ReactNode) => (
-    // Adding !important to override any inherited styles
-    <div className="!min-h-screen !bg-white" style={{ background: 'white !important' }}>
-      {/* Reset any background styles */}
-      <style>
-        {`
-          body, #root {
-            background: white !important;
-          }
-        `}
-      </style>
-      <div className="relative !bg-white">
+    <div className="relative min-h-screen overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
+        <motion.div 
+          animate={{ 
+            y: [0, -30, 0],
+            x: [0, 20, 0]
+          }} 
+          transition={{ 
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        />
+        <motion.div 
+          animate={{ 
+            y: [0, 30, 0],
+            x: [0, -20, 0]
+          }} 
+          transition={{ 
+            duration: 7,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.5
+          }}
+          className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        />
+        <motion.div 
+          animate={{ 
+            y: [-20, 20, -20],
+            x: [10, -10, 10]
+          }} 
+          transition={{ 
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+          className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        />
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent" />
+      </div>
+
+      <div className="absolute inset-0">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.2" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      </div>
+
+      <div className="relative z-10">
         {children}
       </div>
     </div>
@@ -79,7 +124,7 @@ const StoryContent = () => {
   }
 
   return baseLayout(
-    <div className="p-4 sm:p-6 lg:p-8 !bg-white">
+    <div className="container mx-auto p-4">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -99,8 +144,7 @@ const StoryContent = () => {
           transition={{ duration: 0.3 }}
           className="relative mt-6"
         >
-          {/* Glass effect container with white background */}
-          <div className="absolute inset-0 !bg-white rounded-lg border border-gray-200" />
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20" />
           
           <div className="relative">
             <StoryMainContent
