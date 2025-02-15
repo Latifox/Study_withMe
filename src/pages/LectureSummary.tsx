@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import AIProfessorLoading from "@/components/AIProfessorLoading";
 
 const LectureCard = ({ children, className }: { children: React.ReactNode, className?: string }) => (
   <Card className={cn(
@@ -130,17 +130,7 @@ const LectureSummary = () => {
   });
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center h-[60vh]">
-          <div className="text-center space-y-4">
-            <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-            <p className="text-lg">Generating comprehensive summary...</p>
-            <p className="text-sm text-muted-foreground">This might take a moment as we analyze the lecture content.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <AIProfessorLoading />;
   }
 
   if (error) {

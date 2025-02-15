@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Loader2, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -41,6 +42,3 @@ const StoryLoading = () => (
       </motion.div>
     </motion.div>
   </Card>
-);
-
-export default StoryLoading;
