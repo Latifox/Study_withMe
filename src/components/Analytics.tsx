@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,10 +187,14 @@ const Analytics = () => {
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-green-500/80 to-emerald-400/80 hover:from-green-500/90 hover:to-emerald-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <BookOpen className="w-6 h-6 text-white" />
+                    <BookOpen 
+                      className="w-6 h-6 text-blue-500 fill-blue-500/20" 
+                      strokeWidth={2.5}
+                      style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
+                    />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total Lectures</p>
@@ -203,7 +208,11 @@ const Analytics = () => {
               <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-red-500/80 to-orange-400/80 hover:from-red-500/90 hover:to-orange-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <Flame className="w-6 h-6 text-white" />
+                    <Flame 
+                      className="w-6 h-6 text-orange-500 fill-orange-500/20" 
+                      strokeWidth={2.5}
+                      style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
+                    />
                   </div>
                   <div>
                     <p className="font-semibold text-lg text-white/90">Current Streak</p>
@@ -214,10 +223,14 @@ const Analytics = () => {
             </Card>
 
             <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-emerald-500/80 to-teal-400/80 hover:from-emerald-500/90 hover:to-teal-400/90 transition-colors">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <Star className="w-6 h-6 text-white" />
+                    <Star 
+                      className="w-6 h-6 text-yellow-400 fill-yellow-400/20" 
+                      strokeWidth={2.5}
+                      style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
+                    />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
