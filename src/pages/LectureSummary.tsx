@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
@@ -104,110 +105,112 @@ const LectureSummary = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/course/${courseId}`)}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Lectures
-        </Button>
-        <Button
-          onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary/fullversion`)}
-          className="gap-2"
-        >
-          <ExternalLink className="w-4 h-4" />
-          Get Full Summary
-        </Button>
-      </div>
+    <BackgroundGradient>
+      <div className="container mx-auto p-4 space-y-6">
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/course/${courseId}`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Lectures
+          </Button>
+          <Button
+            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary/fullversion`)}
+            className="gap-2"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Get Full Summary
+          </Button>
+        </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-6 h-6" />
-              {lecture?.title} - Summary
-            </CardTitle>
-          </CardHeader>
-        </Card>
-
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <LayoutTemplate className="w-5 h-5" />
-                Structure
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-6 h-6" />
+                {lecture?.title} - Summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.structure || ''}</ReactMarkdown>
-            </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Brain className="w-5 h-5" />
-                Key Concepts
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.keyConcepts || ''}</ReactMarkdown>
-            </CardContent>
-          </Card>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <LayoutTemplate className="w-5 h-5" />
+                  Structure
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none">
+                <ReactMarkdown>{summary?.structure || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Lightbulb className="w-5 h-5" />
-                Main Ideas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.mainIdeas || ''}</ReactMarkdown>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Brain className="w-5 h-5" />
+                  Key Concepts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none">
+                <ReactMarkdown>{summary?.keyConcepts || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Quote className="w-5 h-5" />
-                Important Quotes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.importantQuotes || ''}</ReactMarkdown>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Lightbulb className="w-5 h-5" />
+                  Main Ideas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none">
+                <ReactMarkdown>{summary?.mainIdeas || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Network className="w-5 h-5" />
-                Relationships and Connections
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.relationships || ''}</ReactMarkdown>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Quote className="w-5 h-5" />
+                  Important Quotes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none">
+                <ReactMarkdown>{summary?.importantQuotes || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ClipboardList className="w-5 h-5" />
-                Supporting Evidence & Examples
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <ReactMarkdown>{summary?.supportingEvidence || ''}</ReactMarkdown>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Network className="w-5 h-5" />
+                  Relationships and Connections
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none">
+                <ReactMarkdown>{summary?.relationships || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ClipboardList className="w-5 h-5" />
+                  Supporting Evidence & Examples
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none">
+                <ReactMarkdown>{summary?.supportingEvidence || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </BackgroundGradient>
   );
 };
 

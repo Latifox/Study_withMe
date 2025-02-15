@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader, RefreshCw, ArrowLeft } from "lucide-react";
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 interface Question {
   question: string;
@@ -176,10 +177,12 @@ const TakeQuiz = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
-        <Loader className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-lg text-muted-foreground">Please wait while we generate your quiz...</p>
-      </div>
+      <BackgroundGradient>
+        <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
+          <Loader className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-lg text-muted-foreground">Please wait while we generate your quiz...</p>
+        </div>
+      </BackgroundGradient>
     );
   }
 
@@ -188,110 +191,112 @@ const TakeQuiz = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="sticky top-0 bg-white z-10 p-4 border-b mb-4">
-        <div className="flex justify-between items-center">
-          <div className="text-xl font-bold">
-            Time Remaining: {formatTime(quizState.timeRemaining)}
+    <BackgroundGradient>
+      <div className="container mx-auto p-4">
+        <div className="sticky top-0 bg-white z-10 p-4 border-b mb-4">
+          <div className="flex justify-between items-center">
+            <div className="text-xl font-bold">
+              Time Remaining: {formatTime(quizState.timeRemaining)}
+            </div>
           </div>
+          {quizState.showResults && (
+            <div className="space-y-4">
+              <div className="mt-2 text-lg">
+                Final Score: {calculateScore()}
+              </div>
+              <div className="flex gap-4">
+                <Button onClick={handleGenerateNewQuiz} className="gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Generate New Quiz
+                </Button>
+                <Button onClick={handleBackToLectures} variant="outline" className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Lectures
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-        {quizState.showResults && (
-          <div className="space-y-4">
-            <div className="mt-2 text-lg">
-              Final Score: {calculateScore()}
-            </div>
-            <div className="flex gap-4">
-              <Button onClick={handleGenerateNewQuiz} className="gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Generate New Quiz
-              </Button>
-              <Button onClick={handleBackToLectures} variant="outline" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Lectures
-              </Button>
-            </div>
+
+        <div className="space-y-6">
+          {quizState.questions.map((question, index) => (
+            <Card key={index} className="p-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-lg font-semibold">
+                    {index + 1}. {question.question}
+                  </h3>
+                  {quizConfig?.config?.hintsEnabled && question.hint && (
+                    <Button
+                      variant="outline"
+                      onClick={() => toggleHint(index)}
+                      className="ml-4"
+                    >
+                      {showHint[index] ? 'Hide Hint' : 'Show Hint'}
+                    </Button>
+                  )}
+                </div>
+
+                {showHint[index] && question.hint && (
+                  <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                    Hint: {question.hint}
+                  </div>
+                )}
+
+                <RadioGroup
+                  value={quizState.userAnswers[index]}
+                  onValueChange={(value) => handleAnswerChange(index, value)}
+                  disabled={quizState.showResults}
+                >
+                  {question.options.map((option, optionIndex) => (
+                    <div
+                      key={optionIndex}
+                      className={`flex items-center space-x-2 p-2 rounded ${
+                        quizState.showResults
+                          ? option === question.correctAnswer
+                            ? 'bg-green-100'
+                            : quizState.userAnswers[index] === option
+                            ? 'bg-red-100'
+                            : ''
+                          : ''
+                      }`}
+                    >
+                      <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} />
+                      <label
+                        htmlFor={`q${index}-${optionIndex}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {option}
+                      </label>
+                    </div>
+                  ))}
+                </RadioGroup>
+
+                {quizState.showResults && (
+                  <div className="mt-2 text-sm">
+                    {quizState.userAnswers[index] === question.correctAnswer ? (
+                      <span className="text-green-600">Correct!</span>
+                    ) : (
+                      <span className="text-red-600">
+                        Incorrect. The correct answer is: {question.correctAnswer}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {!quizState.showResults && (
+          <div className="fixed bottom-4 right-4">
+            <Button onClick={submitQuiz} size="lg">
+              Submit Quiz
+            </Button>
           </div>
         )}
       </div>
-
-      <div className="space-y-6">
-        {quizState.questions.map((question, index) => (
-          <Card key={index} className="p-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-start">
-                <h3 className="text-lg font-semibold">
-                  {index + 1}. {question.question}
-                </h3>
-                {quizConfig?.config?.hintsEnabled && question.hint && (
-                  <Button
-                    variant="outline"
-                    onClick={() => toggleHint(index)}
-                    className="ml-4"
-                  >
-                    {showHint[index] ? 'Hide Hint' : 'Show Hint'}
-                  </Button>
-                )}
-              </div>
-
-              {showHint[index] && question.hint && (
-                <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                  Hint: {question.hint}
-                </div>
-              )}
-
-              <RadioGroup
-                value={quizState.userAnswers[index]}
-                onValueChange={(value) => handleAnswerChange(index, value)}
-                disabled={quizState.showResults}
-              >
-                {question.options.map((option, optionIndex) => (
-                  <div
-                    key={optionIndex}
-                    className={`flex items-center space-x-2 p-2 rounded ${
-                      quizState.showResults
-                        ? option === question.correctAnswer
-                          ? 'bg-green-100'
-                          : quizState.userAnswers[index] === option
-                          ? 'bg-red-100'
-                          : ''
-                        : ''
-                    }`}
-                  >
-                    <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} />
-                    <label
-                      htmlFor={`q${index}-${optionIndex}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {option}
-                    </label>
-                  </div>
-                ))}
-              </RadioGroup>
-
-              {quizState.showResults && (
-                <div className="mt-2 text-sm">
-                  {quizState.userAnswers[index] === question.correctAnswer ? (
-                    <span className="text-green-600">Correct!</span>
-                  ) : (
-                    <span className="text-red-600">
-                      Incorrect. The correct answer is: {question.correctAnswer}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {!quizState.showResults && (
-        <div className="fixed bottom-4 right-4">
-          <Button onClick={submitQuiz} size="lg">
-            Submit Quiz
-          </Button>
-        </div>
-      )}
-    </div>
+    </BackgroundGradient>
   );
 };
 

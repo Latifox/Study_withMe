@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, Loader } from "lucide-react";
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 const LectureChat = () => {
   const { courseId, lectureId } = useParams();
@@ -84,45 +85,47 @@ const LectureChat = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <Button 
-        variant="outline" 
-        onClick={() => navigate(`/course/${courseId}`)}
-        className="mb-4 gap-2"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Lectures
-      </Button>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="h-[calc(100vh-2rem)]">
-          <PDFViewer lectureId={lectureId} />
-        </div>
-        <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4 flex flex-col">
-          <div className="flex-1 overflow-auto space-y-4 mb-4">
-            {messages.map((message, index) => (
-              <ChatMessage key={index} message={message} />
-            ))}
-            <div ref={messagesEndRef} />
+    <BackgroundGradient>
+      <div className="container mx-auto p-4">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate(`/course/${courseId}`)}
+          className="mb-4 gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Lectures
+        </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-[calc(100vh-2rem)]">
+            <PDFViewer lectureId={lectureId} />
           </div>
-          <div className="flex gap-2">
-            <Input
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Type your message..."
-              onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={isLoading}
-              className="min-w-[80px]"
-            >
-              {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : "Send"}
-            </Button>
+          <div className="h-[calc(100vh-2rem)] bg-white rounded-lg shadow p-4 flex flex-col">
+            <div className="flex-1 overflow-auto space-y-4 mb-4">
+              {messages.map((message, index) => (
+                <ChatMessage key={index} message={message} />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Type your message..."
+                onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={handleSendMessage} 
+                disabled={isLoading}
+                className="min-w-[80px]"
+              >
+                {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : "Send"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </BackgroundGradient>
   );
 };
 

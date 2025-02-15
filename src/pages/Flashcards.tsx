@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 interface Flashcard {
   question: string;
@@ -91,7 +92,7 @@ const Flashcards = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
+    <BackgroundGradient>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Button 
@@ -136,7 +137,7 @@ const Flashcards = () => {
           </Button>
         </div>
       </div>
-    </div>
+    </BackgroundGradient>
   );
 };
 

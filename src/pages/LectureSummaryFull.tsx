@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from "@/components/ui/card";
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 const LectureSummaryFull = () => {
   const { courseId, lectureId } = useParams();
@@ -98,28 +99,30 @@ const LectureSummaryFull = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary`)}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Summary
-        </Button>
-      </div>
+    <BackgroundGradient>
+      <div className="container mx-auto p-4 space-y-6">
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Summary
+          </Button>
+        </div>
 
-      <Card className="prose prose-sm max-w-none">
-        <CardContent className="p-6">
-          <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <BookOpen className="w-6 h-6" />
-            {lecture?.title} - Full Summary
-          </h1>
-          <ReactMarkdown>{summary?.fullContent || ''}</ReactMarkdown>
-        </CardContent>
-      </Card>
-    </div>
+        <Card className="prose prose-sm max-w-none">
+          <CardContent className="p-6">
+            <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
+              <BookOpen className="w-6 h-6" />
+              {lecture?.title} - Full Summary
+            </h1>
+            <ReactMarkdown>{summary?.fullContent || ''}</ReactMarkdown>
+          </CardContent>
+        </Card>
+      </div>
+    </BackgroundGradient>
   );
 };
 
