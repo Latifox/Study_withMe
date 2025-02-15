@@ -36,15 +36,12 @@ const StoryContent = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
   };
 
-  // Calculate progress percentage for gradient
-  const progressPercentage = sequenceNumber ? ((sequenceNumber - 1) / 4) * 100 : 0;
-
-  // Dynamic gradient based on progress with paler colors
+  // Consistent background style for all segments
   const getBackgroundStyle = () => {
     return {
       background: `linear-gradient(135deg, 
-        rgba(247, 252, 255, 0.8) ${progressPercentage}%, 
-        rgba(233, 242, 255, 0.8) ${100 - progressPercentage}%)`
+        rgba(250, 204, 21, 0.15), 
+        rgba(59, 130, 246, 0.15))`
     };
   };
 
@@ -83,7 +80,7 @@ const StoryContent = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Pale gradient background */}
+      {/* Consistent pale gradient background */}
       <div 
         className="absolute inset-0 transition-colors duration-1000" 
         style={getBackgroundStyle()}
@@ -92,10 +89,12 @@ const StoryContent = () => {
         <div 
           className="absolute inset-0"
           style={{
-            backgroundImage: `linear-gradient(rgba(66, 153, 225, 0.1) 1px, transparent 1px),
-                             linear-gradient(90deg, rgba(66, 153, 225, 0.1) 1px, transparent 1px)`,
-            backgroundSize: '20px 20px',
-            opacity: 0.4
+            backgroundImage: `
+              linear-gradient(rgba(250, 204, 21, 0.2) 1.5px, transparent 1.5px),
+              linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1.5px, transparent 1.5px)
+            `,
+            backgroundSize: '25px 25px',
+            opacity: 0.8
           }}
         />
       </div>
@@ -122,7 +121,7 @@ const StoryContent = () => {
             className="relative mt-6"
           >
             {/* Enhanced glass effect with better transparency */}
-            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-lg border border-white/20" />
+            <div className="absolute inset-0 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10" />
             
             <div className="relative">
               <StoryMainContent
