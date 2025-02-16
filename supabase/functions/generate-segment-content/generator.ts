@@ -27,7 +27,7 @@ Adjust output based on these parameters:
 - Creativity Level: ${aiConfig.creativity_level} (higher means more creative examples and analogies)
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 
-Return a JSON object with this exact structure:
+IMPORTANT: Return ONLY a valid JSON object with no markdown formatting or code blocks. The response should be a plain JSON object with this exact structure:
 {
   "theory_slide_1": "First slide content with main concepts",
   "theory_slide_2": "Second slide content with examples and applications",
@@ -53,7 +53,10 @@ export const generateContent = async (prompt: string) => {
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'You are an expert educator that creates engaging educational content.' },
+        { 
+          role: 'system', 
+          content: 'You are an expert educator that creates engaging educational content. Always return ONLY valid JSON without any markdown formatting or code blocks.' 
+        },
         { role: 'user', content: prompt }
       ],
       temperature: 0.7,
@@ -65,5 +68,15 @@ export const generateContent = async (prompt: string) => {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices[0].message.content;
+  
+  // Remove any markdown code block syntax if present
+  const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
+  
+  try {
+    return cleanedContent;
+  } catch (error) {
+    console.error('Error parsing OpenAI response:', cleanedContent);
+    throw new Error('Failed to parse OpenAI response as JSON');
+  }
 };
