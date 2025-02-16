@@ -42,7 +42,7 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
       </div>
 
       <div className="min-h-screen relative z-10 flex flex-col items-center justify-center p-8">
-        <Card className="w-full max-w-5xl min-h-[600px] p-8 bg-white/95 backdrop-blur-md border-white/20">
+        <Card className="w-full max-w-5xl min-h-[600px] p-8 bg-white/20 backdrop-blur-md border-white/20">
           <motion.div 
             className="relative w-full h-full"
             initial={{ opacity: 0 }}
@@ -59,7 +59,7 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                   <motion.path
                     d={`M 50,${100} C 100,${150} 200,${200} 300,${250} S 400,${300} 500,${350}`}
                     fill="none"
-                    stroke="rgba(139, 92, 246, 0.5)"
+                    stroke="rgba(255, 255, 255, 0.5)"
                     strokeWidth="3"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
@@ -90,11 +90,11 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                       >
                         {/* Segment title */}
                         <motion.div
-                          className="bg-white/80 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-purple-200 inline-block"
+                          className="bg-white/20 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-white/30 inline-block"
                           whileHover={{ scale: 1.02 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <h3 className="text-xl font-semibold text-purple-800">
+                          <h3 className="text-xl font-semibold text-white">
                             {segment.title}
                           </h3>
                         </motion.div>
@@ -114,9 +114,9 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                             >
                               {/* Concept bubble */}
                               <div className="relative">
-                                <div className="absolute inset-0 bg-purple-100 rounded-full blur-sm" />
-                                <div className="relative bg-white/90 px-4 py-2 rounded-full border border-purple-200 shadow-sm">
-                                  <span className="text-sm text-purple-700 font-medium">
+                                <div className="absolute inset-0 bg-white/10 rounded-full blur-sm" />
+                                <div className="relative bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full border border-white/30 shadow-sm">
+                                  <span className="text-sm text-white font-medium">
                                     {concept}
                                   </span>
                                 </div>
@@ -135,17 +135,17 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                   <motion.div
                     animate={{ scale: [1, 0.9, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.3 }}
-                    className="w-2 h-2 bg-purple-600 rounded-full"
+                    className="w-2 h-2 bg-white rounded-full"
                   />
                   <motion.div
                     animate={{ scale: [1, 0.9, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.3, delay: 0.2 }}
-                    className="w-2 h-2 bg-purple-600 rounded-full"
+                    className="w-2 h-2 bg-white rounded-full"
                   />
                   <motion.div
                     animate={{ scale: [1, 0.9, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.3, delay: 0.4 }}
-                    className="w-2 h-2 bg-purple-600 rounded-full"
+                    className="w-2 h-2 bg-white rounded-full"
                   />
                 </div>
               </div>
