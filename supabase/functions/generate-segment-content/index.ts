@@ -22,6 +22,11 @@ serve(async (req) => {
       throw new Error('Method not allowed');
     }
 
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
     const { lectureId, segmentNumber }: SegmentRequest = await req.json();
     
     if (!lectureId || typeof segmentNumber !== 'number') {
@@ -30,7 +35,7 @@ serve(async (req) => {
 
     console.log('Processing request for lecture:', lectureId, 'segment:', segmentNumber);
     
-    const supabaseClient = initSupabaseClient();
+    const supabaseClient = initSupabaseClient(authHeader);
 
     // Get lecture content and segment info
     const lectureContent = await getLectureContent(supabaseClient, lectureId);
