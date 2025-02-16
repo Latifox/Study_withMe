@@ -63,65 +63,44 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
               rehypePlugins={[rehypeKatex]}
               components={{
                 h1: ({ node, ...props }) => (
-                  <motion.h1 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2"
+                  <h1 
+                    className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2 animate-fade-in"
                     {...props}
                   />
                 ),
                 h2: ({ node, ...props }) => (
-                  <motion.h2
-                    initial={{ opacity: 0, x: -15 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="text-2xl font-semibold mb-4 text-gray-800 mt-8" 
+                  <h2
+                    className="text-2xl font-semibold mb-4 text-gray-800 mt-8 animate-fade-in" 
                     {...props}
                   />
                 ),
                 h3: ({ node, ...props }) => (
-                  <motion.h3
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-xl font-medium mb-3 text-gray-800 mt-6" 
+                  <h3
+                    className="text-xl font-medium mb-3 text-gray-800 mt-6 animate-fade-in" 
                     {...props}
                   />
                 ),
                 p: ({ node, ...props }) => (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="mb-4 text-gray-700 leading-relaxed text-lg" 
+                  <p
+                    className="mb-4 text-gray-700 leading-relaxed text-lg animate-fade-in" 
                     {...props}
                   />
                 ),
                 ul: ({ node, ...props }) => (
-                  <motion.ul
-                    initial={{ opacity: 0, x: -5 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500" 
+                  <ul
+                    className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500 animate-fade-in" 
                     {...props}
                   />
                 ),
                 ol: ({ node, ...props }) => (
-                  <motion.ol
-                    initial={{ opacity: 0, x: -5 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500" 
+                  <ol
+                    className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500 animate-fade-in" 
                     {...props}
                   />
                 ),
                 li: ({ node, ...props }) => (
-                  <motion.li
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-gray-700 leading-relaxed text-lg pl-2" 
+                  <li
+                    className="text-gray-700 leading-relaxed text-lg pl-2 animate-fade-in" 
                     {...props}
                   />
                 ),
