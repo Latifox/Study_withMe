@@ -37,7 +37,7 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
       const { data, error } = await supabase
         .from('lecture_segments')
         .select('*')
-        .eq('lecture_id', lectureId)
+        .eq('lecture_id', parseInt(lectureId))
         .order('sequence_number');
 
       if (error) throw error;

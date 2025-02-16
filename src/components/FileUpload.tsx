@@ -18,7 +18,7 @@ interface FileUploadProps {
 const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [showAIProfessor, setShowAIProfessor] = useState(false);
+  const [processingLectureId, setProcessingLectureId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -33,8 +33,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     try {
-      setShowAIProfessor(true);
-
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
@@ -62,10 +60,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (dbError) throw dbError;
       console.log('Lecture saved successfully');
 
-      // Extract PDF content with the new lecture ID
       if (!lectureData?.id) {
         throw new Error('No lecture ID returned from database');
       }
+
+      // Set the lecture ID to show the loading screen
+      setProcessingLectureId(lectureData.id.toString());
 
       console.log('Extracting PDF content...');
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
@@ -128,6 +128,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         title: "Success",
         description: "Lecture uploaded and processed successfully!",
       });
+      setProcessingLectureId(null);
       onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -136,13 +137,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         description: error.message || "Failed to upload lecture",
         variant: "destructive",
       });
-    } finally {
-      setShowAIProfessor(false);
+      setProcessingLectureId(null);
     }
   };
 
-  if (showAIProfessor) {
-    return <AIProfessorLoading />;
+  if (processingLectureId) {
+    return <AIProfessorLoading lectureId={processingLectureId} />;
   }
 
   return (
