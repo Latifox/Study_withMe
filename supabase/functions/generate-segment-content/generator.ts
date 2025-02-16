@@ -1,173 +1,69 @@
-import { GeneratedContent } from "./types.ts";
+
+import { AIConfig } from "./types.ts";
 
 export const generatePrompt = (
   segmentTitle: string,
   segmentDescription: string,
   lectureContent: string,
-  aiConfig: any
+  aiConfig: AIConfig
 ) => {
-  const basePrompt = `You are tasked with generating educational content for a SPECIFIC SET OF CONCEPTS from the lecture content.
+  const languageInstruction = aiConfig.content_language 
+    ? `Generate the content in ${aiConfig.content_language}.` 
+    : 'Generate the content in the same language as the lecture content.';
 
-SEGMENT SCOPE:
-Title: "${segmentTitle}"
-Concepts to Cover: "${segmentDescription}"
+  return `As an expert educator, create educational content for a segment of a lecture.
+${languageInstruction}
 
-LECTURE CONTENT (SOURCE MATERIAL):
-${lectureContent}
+Lecture Content: ${lectureContent}
 
-CRITICAL REQUIREMENTS:
+For the segment titled "${segmentTitle}" with description "${segmentDescription}", create:
 
-1. WORD COUNT ENFORCEMENT:
-   - Each theory slide MUST be EXACTLY 400-500 words
-   - Break content into logical paragraphs of 3-4 sentences each
-   - Format text with proper headers and sections
+1. Two theory slides that explain the key concepts
+2. Two quizzes to test understanding
 
-2. FORMATTING REQUIREMENTS:
-   - Start with a clear ## Introduction header
-   - Use ### subheaders to break up content
-   - Include precisely 2-3 paragraphs per section
-   - Add bullet points for key concepts
-   - Use blockquotes for important definitions
-   - Bold all key terms from the lecture
-   - Use proper spacing between sections
+Custom Instructions: ${aiConfig.custom_instructions}
 
-3. CONTENT STRUCTURE:
-   - Slide 1: Overview and basic concepts (400-500 words)
-   - Slide 2: Detailed explanation and examples (400-500 words)
-   - Each slide must be self-contained
-   - Include clear section breaks
+Adjust output based on these parameters:
+- Creativity Level: ${aiConfig.creativity_level} (higher means more creative examples and analogies)
+- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 
-4. STRICT SOURCE ADHERENCE:
-   - Use ONLY information from the lecture content
-   - Match the lecture's language exactly
-   - Use the same terminology as the source
-
-FORMAT EXAMPLE:
-
-## Introduction
-Clear opening paragraph explaining the main concept.
-
-### Key Concepts
-- **Term 1**: Definition from lecture
-- **Term 2**: Definition from lecture
-
-### Detailed Explanation
-Main explanation paragraph (3-4 sentences).
-
-> Important definition or quote from lecture
-
-Concluding paragraph with key points.
-
-Required JSON Structure:
+Return a JSON object with this exact structure:
 {
-  "theory_slide_1": "formatted content following structure above (400-500 words)",
-  "theory_slide_2": "formatted content following structure above (400-500 words)",
-  "quiz_question_1": {
-    "type": "multiple_choice",
-    "question": "question based on explicit content",
-    "options": ["4 options from lecture"],
-    "correctAnswer": "correct option",
-    "explanation": "explanation using lecture content"
-  },
-  "quiz_question_2": {
-    "type": "true_false",
-    "question": "statement from lecture content",
-    "correctAnswer": boolean,
-    "explanation": "explanation using lecture content"
-  }
+  "theory_slide_1": "First slide content with main concepts",
+  "theory_slide_2": "Second slide content with examples and applications",
+  "quiz_1_type": "multiple_choice",
+  "quiz_1_question": "Question text",
+  "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+  "quiz_1_correct_answer": "Correct option",
+  "quiz_1_explanation": "Why this is correct",
+  "quiz_2_type": "true_false",
+  "quiz_2_question": "Question text",
+  "quiz_2_correct_answer": true/false,
+  "quiz_2_explanation": "Why this is correct"
 }`;
-
-  return basePrompt;
 };
 
-export const generateContent = async (prompt: string): Promise<string> => {
-  console.log('Generating content with prompt length:', prompt.length);
-  
-  const maxRetries = 3;
-  const baseDelay = 1000; // 1 second
+export const generateContent = async (prompt: string) => {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'You are an expert educator that creates engaging educational content.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+    }),
+  });
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert educator that generates educational content. You MUST return a valid JSON object following the exact structure provided in the prompt.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 3000,
-          response_format: { type: "json_object" }
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`OpenAI API error (attempt ${attempt}/${maxRetries}):`, response.status, errorText);
-        
-        if (response.status === 429) {
-          // Rate limit hit - wait and retry
-          const retryDelay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
-          console.log(`Rate limit hit. Waiting ${retryDelay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          continue;
-        }
-        
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('Raw OpenAI response received');
-      
-      // Extract the generated content from OpenAI's response
-      if (!data.choices?.[0]?.message?.content) {
-        console.error('Invalid response structure:', JSON.stringify(data, null, 2));
-        throw new Error('Invalid response structure from OpenAI');
-      }
-
-      const generatedContent = data.choices[0].message.content;
-      
-      // Validate that the response is valid JSON
-      try {
-        const parsed = JSON.parse(generatedContent);
-        console.log('Successfully parsed response as JSON');
-        
-        // Basic structure validation
-        if (!parsed.theory_slide_1 || !parsed.theory_slide_2 || 
-            !parsed.quiz_question_1 || !parsed.quiz_question_2) {
-          throw new Error('Missing required fields in generated content');
-        }
-      } catch (error) {
-        console.error('Failed to parse or validate OpenAI response:', error);
-        if (attempt < maxRetries) {
-          console.log('Retrying with attempt', attempt + 1);
-          continue;
-        }
-        throw new Error('Failed to generate valid JSON content');
-      }
-      
-      return generatedContent;
-
-    } catch (error) {
-      if (attempt === maxRetries) {
-        console.error('All retry attempts failed:', error);
-        throw error;
-      }
-      console.error(`Attempt ${attempt} failed:`, error);
-      await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)));
-    }
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status}`);
   }
 
-  throw new Error('Failed to generate content after all retry attempts');
+  const data = await response.json();
+  return data.choices[0].message.content;
 };
