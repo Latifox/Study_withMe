@@ -1,7 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { initSupabaseClient, getStoryStructure, getExistingContent, getLectureContent, getAIConfig, saveSegmentContent } from "./db.ts";
+import { initSupabaseClient, getExistingContent, getLectureContent, getAIConfig, saveSegmentContent } from "./db.ts";
 import { validateContent } from "./validator.ts";
 import { generatePrompt, generateContent } from "./generator.ts";
 import { GeneratedContent, SegmentRequest } from "./types.ts";
@@ -45,8 +45,7 @@ serve(async (req) => {
     console.log('Generating content for segment:', segment.title);
 
     // Check for existing content first
-    const storyStructure = await getStoryStructure(supabaseClient, lectureId);
-    const existingContent = await getExistingContent(supabaseClient, storyStructure.id, segmentNumber);
+    const existingContent = await getExistingContent(supabaseClient, lectureId, segmentNumber);
 
     if (existingContent) {
       console.log('Content already exists, returning existing content');
@@ -75,7 +74,7 @@ serve(async (req) => {
       
       const segmentContent = await saveSegmentContent(
         supabaseClient,
-        storyStructure.id,
+        lectureId,
         segmentNumber,
         content
       );

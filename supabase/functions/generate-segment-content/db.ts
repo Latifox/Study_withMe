@@ -9,32 +9,6 @@ export const initSupabaseClient = () => {
   );
 };
 
-export const getStoryStructure = async (supabaseClient: any, lectureId: number) => {
-  const { data: storyStructure, error: structureError } = await supabaseClient
-    .from('story_structures')
-    .select('id')
-    .eq('lecture_id', lectureId)
-    .single();
-
-  if (structureError) {
-    console.error('Failed to fetch story structure:', structureError);
-    throw new Error(`Failed to fetch story structure: ${structureError.message}`);
-  }
-
-  return storyStructure;
-};
-
-export const getExistingContent = async (supabaseClient: any, storyStructureId: number, segmentNumber: number) => {
-  const { data: existingContent } = await supabaseClient
-    .from('segment_contents')
-    .select('*')
-    .eq('story_structure_id', storyStructureId)
-    .eq('segment_number', segmentNumber)
-    .single();
-
-  return existingContent;
-};
-
 export const getLectureContent = async (supabaseClient: any, lectureId: number) => {
   const { data: lecture, error } = await supabaseClient
     .from('lectures')
@@ -54,6 +28,17 @@ export const getLectureContent = async (supabaseClient: any, lectureId: number) 
   return lecture.content;
 };
 
+export const getExistingContent = async (supabaseClient: any, lectureId: number, segmentNumber: number) => {
+  const { data: existingContent } = await supabaseClient
+    .from('segments_content')
+    .select('*')
+    .eq('lecture_id', lectureId)
+    .eq('sequence_number', segmentNumber)
+    .single();
+
+  return existingContent;
+};
+
 export const getAIConfig = async (supabaseClient: any, lectureId: number) => {
   const { data: aiConfig } = await supabaseClient
     .from('lecture_ai_configs')
@@ -71,19 +56,26 @@ export const getAIConfig = async (supabaseClient: any, lectureId: number) => {
 
 export const saveSegmentContent = async (
   supabaseClient: any,
-  storyStructureId: number,
+  lectureId: number,
   segmentNumber: number,
   content: GeneratedContent
 ) => {
   const { data: segmentContent, error: insertError } = await supabaseClient
-    .from('segment_contents')
+    .from('segments_content')
     .insert({
-      story_structure_id: storyStructureId,
-      segment_number: segmentNumber,
+      lecture_id: lectureId,
+      sequence_number: segmentNumber,
       theory_slide_1: content.theory_slide_1,
       theory_slide_2: content.theory_slide_2,
-      quiz_question_1: content.quiz_question_1,
-      quiz_question_2: content.quiz_question_2
+      quiz_1_type: content.quiz_question_1.type,
+      quiz_1_question: content.quiz_question_1.question,
+      quiz_1_options: content.quiz_question_1.options,
+      quiz_1_correct_answer: content.quiz_question_1.correctAnswer,
+      quiz_1_explanation: content.quiz_question_1.explanation,
+      quiz_2_type: content.quiz_question_2.type,
+      quiz_2_question: content.quiz_question_2.question,
+      quiz_2_correct_answer: content.quiz_question_2.correctAnswer,
+      quiz_2_explanation: content.quiz_question_2.explanation
     })
     .select()
     .single();

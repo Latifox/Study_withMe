@@ -17,5 +17,4 @@ export interface GeneratedContent {
 export interface SegmentRequest {
   lectureId: number;
   segmentNumber: number;
-  segmentTitle: string;
 }
