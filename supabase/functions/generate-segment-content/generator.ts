@@ -7,68 +7,78 @@ export const generatePrompt = (
   lectureContent: string,
   aiConfig: any
 ) => {
-  const basePrompt = `You are tasked with generating educational content based STRICTLY and EXCLUSIVELY on the following lecture content. DO NOT add any information from external sources or general knowledge.
+  const basePrompt = `You are tasked with generating educational content for a SPECIFIC SET OF CONCEPTS from the lecture content.
 
-LECTURE CONTENT TO USE AS SOLE SOURCE:
+SEGMENT SCOPE:
+Title: "${segmentTitle}"
+Concepts to Cover: "${segmentDescription}"
+
+LECTURE CONTENT (SOURCE MATERIAL):
 ${lectureContent}
 
-TASK:
-Generate detailed educational content for a segment titled "${segmentTitle}" with the following description: "${segmentDescription}".
-
 CRITICAL REQUIREMENTS:
-1. LANGUAGE: Analyze the lecture content's language and generate ALL content in EXACTLY THE SAME LANGUAGE as the lecture content.
-2. SOURCE RESTRICTION: Use ONLY information present in the provided lecture content. DO NOT add any external information, examples, or explanations not explicitly found in the lecture content.
-3. ACCURACY: Ensure all generated content directly corresponds to specific parts of the lecture content.
+
+1. STRICT CONCEPT ADHERENCE:
+   - Generate content ONLY for the concepts listed in the segment description
+   - DO NOT include information about concepts from other segments
+   - If a concept isn't explicitly listed in the segment description, DO NOT include it
+
+2. CONTENT BOUNDARIES:
+   - Stay STRICTLY within the scope defined by the segment description
+   - If you find related concepts in the lecture, but they're not listed in the description, DO NOT include them
+   - Focus deeply on the listed concepts rather than trying to cover additional material
+
+3. SOURCE RESTRICTION:
+   - Use ONLY information present in the provided lecture content
+   - DO NOT add external information or examples
+   - All content must be directly verifiable from the lecture content
+
+4. LANGUAGE MATCHING:
+   - Use EXACTLY the same language as the lecture content
+   - Maintain consistent terminology with the source material
 
 AI Configuration Settings:
-- Temperature: ${aiConfig.temperature} (affects explanation variety)
-- Creativity Level: ${aiConfig.creativity_level} (affects presentation style)
-- Detail Level: ${aiConfig.detail_level} (affects depth of content extraction)
+- Temperature: ${aiConfig.temperature}
+- Creativity Level: ${aiConfig.creativity_level}
+- Detail Level: ${aiConfig.detail_level}
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
-CONTENT GENERATION REQUIREMENTS:
-Each theory slide should be 400-500 words and provide clear explanations using ONLY information from the lecture content.
+CONTENT REQUIREMENTS:
 
-Theory Slides Requirements:
-1. Use ONLY information and examples from the lecture content
-2. Maintain the same language as the lecture content
-3. Logical flow following the lecture's structure
-4. NO external examples or additional context
-5. NO emojis or informal language
+Theory Slides:
+1. Focus exclusively on the concepts listed in the segment description
+2. Each slide should be 400-500 words
+3. Use only examples from the lecture that relate to the listed concepts
+4. Maintain clear boundaries - don't drift into other concepts
 
-Use the following markdown formatting:
-- Headers (##, ###) for major sections
-- Bullet points for lists
-- **Bold** for key terms found in the lecture
+Formatting:
+- Headers (##, ###) for concept sections
+- **Bold** for key terms from the lecture
 - *Italic* for emphasis
-- > Blockquotes for direct quotes from the lecture content
-
-For mathematical content:
-- Use LaTeX notation: $equation$ (ONLY if present in the lecture content)
-- Explain variables using ONLY the definitions provided in the lecture
-- Use ONLY examples from the lecture content
+- > Blockquotes for direct quotes
+- LaTeX notation: $equation$ (only if present in lecture)
 
 Quiz Requirements:
-- ALL questions must be based on explicit information from the lecture content
-- Answers must be verifiable from the lecture content
-- No questions about general knowledge or external context
+- Questions MUST test ONLY the concepts listed in the segment description
+- All answers must come directly from the lecture content
+- Focus on the specific concepts, not general knowledge
 
 Required JSON Structure:
 {
-  "theory_slide_1": "markdown content (400-500 words, strictly from lecture)",
-  "theory_slide_2": "markdown content (400-500 words, strictly from lecture)",
+  "theory_slide_1": "focused content on listed concepts only",
+  "theory_slide_2": "deeper exploration of listed concepts only",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "question based on explicit lecture content",
-    "options": ["4 options from lecture content"],
-    "correctAnswer": "correct option from above",
-    "explanation": "explanation using only lecture content"
+    "question": "question about listed concepts only",
+    "options": ["4 options from lecture"],
+    "correctAnswer": "correct option",
+    "explanation": "explanation using lecture content"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "statement based on lecture content",
+    "question": "statement about listed concepts",
     "correctAnswer": boolean,
-    "explanation": "explanation using only lecture content"
+    "explanation": "explanation from lecture"
   }
 }`;
 

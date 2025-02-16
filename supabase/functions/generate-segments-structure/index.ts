@@ -41,28 +41,26 @@ serve(async (req) => {
             role: 'system',
             content: `You are an expert educational content organizer. Your task is to:
 1. Analyze the provided lecture content
-2. Break it down into 4-6 logical segments
+2. Break it down into 4-6 logical segments, ensuring NO CONCEPT OVERLAP between segments
 3. For each segment:
    - Create a clear, descriptive title
-   - Write a concise description (max 50 words) of the main concepts
+   - Write a HIGHLY SPECIFIC description (max 50 words) that explicitly lists WHICH concepts will be covered
    
-IMPORTANT GUIDELINES:
-- Ensure concepts don't overlap between segments
-- Each segment should cover distinct topics
-- Each description should clearly outline what concepts will be covered
-- Maintain a logical progression of topics
-- Keep descriptions focused and specific
+CRITICAL GUIDELINES:
+- Each concept must appear in EXACTLY ONE segment
+- Ensure zero concept overlap between segments
+- Each description must explicitly list the concepts to be covered
+- Maintain a clear progression of topics
+- Make descriptions extremely specific about what concepts will be covered
 - NO emojis or special characters
-- YOU MUST RETURN A VALID JSON ARRAY
+- Return a valid JSON array
 
-Your response must be a valid JSON array of objects, each with 'title' and 'description' fields.
-Example:
-[
-  {
-    "title": "Introduction to Newton's Laws",
-    "description": "Fundamental principles of Newton's First Law of Motion, covering inertia, rest, and uniform motion. Includes basic force concepts and real-world applications."
-  }
-]`
+Example of good descriptions:
+"Covers: 1) Definition of inertia 2) Objects at rest 3) Newton's First Law formula F=ma. Does NOT include motion or energy concepts."
+
+"Focuses on: 1) Gravitational potential energy 2) Energy conservation in gravity 3) Gravitational field equations. Excludes other energy types."
+
+Your response must be a valid JSON array of objects with 'title' and 'description' fields.`
           },
           {
             role: 'user',
@@ -90,13 +88,23 @@ Example:
     let segments: SegmentStructure[];
     try {
       const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
-      
-      // Check if the response is wrapped in a 'segments' property
       segments = Array.isArray(parsedContent) ? parsedContent : parsedContent.segments;
       
       if (!Array.isArray(segments)) {
         throw new Error('Response is not an array');
       }
+
+      // Validate segment descriptions for uniqueness and specificity
+      const concepts = new Set();
+      segments.forEach((segment, index) => {
+        const segmentConcepts = extractConcepts(segment.description);
+        segmentConcepts.forEach(concept => {
+          if (concepts.has(concept)) {
+            throw new Error(`Concept "${concept}" appears in multiple segments`);
+          }
+          concepts.add(concept);
+        });
+      });
 
       console.log('Parsed segments:', JSON.stringify(segments, null, 2));
     } catch (error) {
@@ -154,10 +162,14 @@ Example:
     console.error('Error in generate-segments-structure:', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
+
+// Helper function to extract concepts from a segment description
+function extractConcepts(description: string): string[] {
+  // Look for numbered lists in the description
+  const concepts = description.match(/\d+\)\s*([^.;,\d)]+)/g) || [];
+  return concepts.map(c => c.replace(/^\d+\)\s*/, '').trim().toLowerCase());
+}
