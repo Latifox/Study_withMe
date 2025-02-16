@@ -1,3 +1,4 @@
+
 import { AIConfig } from "./types.ts";
 
 const wordCount = (text: string): number => {
@@ -21,21 +22,28 @@ export const generatePrompt = (
   const detailLevel = aiConfig.detail_level || 0.6;
 
   const styleInstructions = `
-CRITICAL REQUIREMENTS:
-1. Each theory slide MUST contain between ${MIN_WORDS} and ${MAX_WORDS} words. This is MANDATORY.
-2. Use a comprehensive structure with multiple sections, examples, and detailed explanations.
-3. Include practical applications and real-world examples when relevant.
-4. CRITICAL: ALL mathematical expressions MUST use LaTeX formatting:
-   - Wrap inline math in single $ (e.g., $x + y = z$)
-   - Wrap display math in double $$ (e.g., $$\\frac{d}{dx}x^2 = 2x$$)
-   - Basic operators: $+$, $-$, $\\times$, $\\div$, $=$, $<$, $>$
-   - Fractions: $\\frac{numerator}{denominator}$
-   - Powers: $x^2$, $e^x$
-   - Greek letters: $\\alpha$, $\\beta$, $\\theta$
-   - Functions: $f(x)$, $\\sin(x)$, $\\cos(x)$
-   - Integrals: $\\int f(x) dx$
-   - Derivatives: $\\frac{d}{dx}$
-   - Special symbols: $\\infty$, $\\pm$, $\\partial$
+CRITICAL WORD COUNT REQUIREMENTS:
+Each theory slide MUST contain AT LEAST ${MIN_WORDS} words and NO MORE than ${MAX_WORDS} words. Current content is too short.
+Follow this precise word distribution:
+1. Introduction: 75-100 words
+2. Main Concepts: 200-250 words
+3. Examples and Applications: 100-150 words
+4. Practical Implications: 50-75 words
+5. Summary: 25-50 words
+Total required: At least ${MIN_WORDS} words per slide.
+
+CRITICAL LaTeX REQUIREMENTS:
+ALL mathematical expressions MUST use LaTeX formatting:
+- Wrap inline math in single $ (e.g., $x + y = z$)
+- Wrap display math in double $$ (e.g., $$\\frac{d}{dx}x^2 = 2x$$)
+- Basic operators: $+$, $-$, $\\times$, $\\div$, $=$, $<$, $>$
+- Fractions: $\\frac{numerator}{denominator}$
+- Powers: $x^2$, $e^x$
+- Greek letters: $\\alpha$, $\\beta$, $\\theta$
+- Functions: $f(x)$, $\\sin(x)$, $\\cos(x)$
+- Integrals: $\\int f(x) dx$
+- Derivatives: $\\frac{d}{dx}$
+- Special symbols: $\\infty$, $\\pm$, $\\partial$
 
 Format the content using these guidelines:
 1. Break down complex topics into digestible sections using ## headers
@@ -47,12 +55,32 @@ Format the content using these guidelines:
 5. Include code blocks with proper syntax highlighting if relevant
 6. Add block quotes for important definitions or key points
 
-Each theory slide should follow this structure:
-1. Introduction (50-75 words)
-2. Main Concepts (200-250 words)
-3. Examples and Applications (100-150 words)
-4. Practical Implications (50-75 words)
-5. Summary or Key Takeaways (50 words)
+REQUIRED SECTION STRUCTURE (you must include ALL sections with minimum word counts):
+## Introduction (75-100 words)
+- Overview of the topic
+- Context and importance
+- Connection to broader concepts
+
+## Main Concepts (200-250 words)
+- Detailed explanation of core principles
+- Key definitions and terminology
+- Theoretical framework
+- Mathematical foundations (with LaTeX)
+
+## Examples and Applications (100-150 words)
+- Real-world examples
+- Practical applications
+- Case studies or scenarios
+- Step-by-step demonstrations
+
+## Practical Implications (50-75 words)
+- Industry relevance
+- Future applications
+- Societal impact
+
+## Summary (25-50 words)
+- Key takeaways
+- Connection to next topics
 
 Creativity level ${creativityLevel} settings:
 ${creativityLevel > 0.7 ? 
@@ -80,7 +108,7 @@ Source Material: ${lectureContent}
 
 ${styleInstructions}
 
-IMPORTANT: Ensure EACH theory slide has between ${MIN_WORDS} and ${MAX_WORDS} words. Content that doesn't meet this requirement will be rejected.
+IMPORTANT: Each theory slide MUST have AT LEAST ${MIN_WORDS} words. Current content is too short. DO NOT submit content with fewer words.
 
 Return a JSON object with no markdown block markers in this exact format:
 {
@@ -117,6 +145,12 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
         const waitTime = delay(attempt - 1);
         console.log(`Retry attempt ${attempt}, waiting ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
+        
+        // For word count failures, add emphasis in the retry
+        if (attempt === 1) {
+          prompt = prompt.replace('CRITICAL WORD COUNT REQUIREMENTS', 
+            'ABSOLUTELY CRITICAL: PREVIOUS ATTEMPT HAD TOO FEW WORDS. WORD COUNT REQUIREMENTS');
+        }
       }
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -132,6 +166,7 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
               role: 'system', 
               content: `You are an expert educator creating comprehensive educational content.
 Your primary task is to generate detailed theory slides between ${MIN_WORDS} and ${MAX_WORDS} words each.
+You MUST ensure each slide has AT LEAST ${MIN_WORDS} words.
 Use proper markdown formatting and LaTeX where appropriate.
 Always return valid JSON without any markdown block markers around it.`
             },
