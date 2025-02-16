@@ -44,7 +44,14 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       return '$' + match.slice(1, -1) + '$';
     });
 
-  console.log('Content being rendered:', processedContent);
+  const handleContinue = () => {
+    // Scroll to top before triggering the continue action
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Wait for the scroll to complete before continuing
+    setTimeout(() => {
+      onContinue();
+    }, 300); // Adjust timeout if needed to match scroll duration
+  };
 
   return (
     <motion.div 
@@ -137,7 +144,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
         className="sticky bottom-4"
       >
         <Button
-          onClick={onContinue}
+          onClick={handleContinue}
           className="w-full bg-blue-600/90 hover:bg-blue-700/95 text-white backdrop-blur-sm border-2 border-blue-500/40 shadow-lg hover:shadow-xl transition-all duration-300 py-6 text-lg font-medium"
         >
           Continue
