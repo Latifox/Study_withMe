@@ -7,10 +7,18 @@ export const generatePrompt = (
   lectureContent: string,
   aiConfig: any
 ) => {
-  const basePrompt = `Generate detailed educational content for a segment titled "${segmentTitle}" with the following description: "${segmentDescription}".
+  const basePrompt = `You are tasked with generating educational content based STRICTLY and EXCLUSIVELY on the following lecture content. DO NOT add any information from external sources or general knowledge.
 
-Use this lecture content as reference:
+LECTURE CONTENT TO USE AS SOLE SOURCE:
 ${lectureContent}
+
+TASK:
+Generate detailed educational content for a segment titled "${segmentTitle}" with the following description: "${segmentDescription}".
+
+CRITICAL REQUIREMENTS:
+1. LANGUAGE: Analyze the lecture content's language and generate ALL content in EXACTLY THE SAME LANGUAGE as the lecture content.
+2. SOURCE RESTRICTION: Use ONLY information present in the provided lecture content. DO NOT add any external information, examples, or explanations not explicitly found in the lecture content.
+3. ACCURACY: Ensure all generated content directly corresponds to specific parts of the lecture content.
 
 AI Configuration Settings:
 - Temperature: ${aiConfig.temperature} (affects explanation variety)
@@ -19,45 +27,48 @@ AI Configuration Settings:
 ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
 
 CONTENT GENERATION REQUIREMENTS:
-
-Each theory slide should be between 400-500 words and provide engaging, clear explanations.
-Focus ONLY on the concepts outlined in the segment description - DO NOT overlap with other segments.
+Each theory slide should be 400-500 words and provide clear explanations using ONLY information from the lecture content.
 
 Theory Slides Requirements:
-1. Clear, engaging writing style
-2. Logical flow of ideas
-3. Concrete examples and applications
-4. Step-by-step explanations where needed
+1. Use ONLY information and examples from the lecture content
+2. Maintain the same language as the lecture content
+3. Logical flow following the lecture's structure
+4. NO external examples or additional context
 5. NO emojis or informal language
 
 Use the following markdown formatting:
 - Headers (##, ###) for major sections
 - Bullet points for lists
-- **Bold** for key terms
+- **Bold** for key terms found in the lecture
 - *Italic* for emphasis
-- > Blockquotes for important concepts
+- > Blockquotes for direct quotes from the lecture content
 
 For mathematical content:
-- Use LaTeX notation: $equation$
-- Explain each variable
-- Include practical examples
+- Use LaTeX notation: $equation$ (ONLY if present in the lecture content)
+- Explain variables using ONLY the definitions provided in the lecture
+- Use ONLY examples from the lecture content
+
+Quiz Requirements:
+- ALL questions must be based on explicit information from the lecture content
+- Answers must be verifiable from the lecture content
+- No questions about general knowledge or external context
 
 Required JSON Structure:
 {
-  "theory_slide_1": "markdown content (400-500 words)",
-  "theory_slide_2": "markdown content (400-500 words)",
+  "theory_slide_1": "markdown content (400-500 words, strictly from lecture)",
+  "theory_slide_2": "markdown content (400-500 words, strictly from lecture)",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "clear, focused question",
-    "options": ["4 distinct options"],
-    "correctAnswer": "exact match to one option",
-    "explanation": "why this is correct"
+    "question": "question based on explicit lecture content",
+    "options": ["4 options from lecture content"],
+    "correctAnswer": "correct option from above",
+    "explanation": "explanation using only lecture content"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "clear statement to evaluate",
+    "question": "statement based on lecture content",
     "correctAnswer": boolean,
-    "explanation": "detailed explanation"
+    "explanation": "explanation using only lecture content"
   }
 }`;
 
