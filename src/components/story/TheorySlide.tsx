@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { TypeAnimation } from 'react-type-animation';
 
 interface TheorySlideProps {
   content: string;
@@ -21,7 +22,10 @@ interface CodeProps {
 }
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
-  const processedContent = content
+  // Remove "Did you know?" sections from the content
+  const cleanContent = content.replace(/Did you know\?.*?(?=\n\n|\n$|$)/gs, '');
+  
+  const processedContent = cleanContent
     .replace(/\[ /g, '$$')
     .replace(/ \]/g, '$$')
     .replace(/\(\\omega\)/g, '$\\omega$')
@@ -46,36 +50,86 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       <Card className="relative overflow-hidden bg-white/95 backdrop-blur-md border-white/20 shadow-lg">
         <div className="relative p-8">
           <div className="prose prose-lg max-w-none">
+            <TypeAnimation
+              sequence={[processedContent]}
+              wrapper="div"
+              speed={90}
+              cursor={false}
+              className="content-wrapper"
+              style={{ whiteSpace: 'pre-line' }}
+            />
             <ReactMarkdown
               remarkPlugins={[remarkMath]}
               rehypePlugins={[rehypeKatex]}
               components={{
                 h1: ({ node, ...props }) => (
-                  <h1 className="text-2xl font-bold mb-4 text-gray-900" {...props} />
+                  <motion.h1 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2"
+                    {...props}
+                  />
                 ),
                 h2: ({ node, ...props }) => (
-                  <h2 className="text-xl font-semibold mb-3 text-gray-800 mt-6" {...props} />
+                  <motion.h2
+                    initial={{ opacity: 0, x: -15 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-2xl font-semibold mb-4 text-gray-800 mt-8" 
+                    {...props}
+                  />
                 ),
                 h3: ({ node, ...props }) => (
-                  <h3 className="text-lg font-medium mb-2 text-gray-800 mt-4" {...props} />
+                  <motion.h3
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-xl font-medium mb-3 text-gray-800 mt-6" 
+                    {...props}
+                  />
                 ),
                 p: ({ node, ...props }) => (
-                  <p className="mb-3 text-gray-700 leading-relaxed" {...props} />
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-4 text-gray-700 leading-relaxed text-lg" 
+                    {...props}
+                  />
                 ),
                 ul: ({ node, ...props }) => (
-                  <ul className="my-3 space-y-1 list-disc pl-6 marker:text-blue-500" {...props} />
+                  <motion.ul
+                    initial={{ opacity: 0, x: -5 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500" 
+                    {...props}
+                  />
                 ),
                 ol: ({ node, ...props }) => (
-                  <ol className="my-3 space-y-1 list-decimal pl-6 marker:text-blue-500" {...props} />
+                  <motion.ol
+                    initial={{ opacity: 0, x: -5 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500" 
+                    {...props}
+                  />
                 ),
                 li: ({ node, ...props }) => (
-                  <li className="text-gray-700 leading-relaxed" {...props} />
+                  <motion.li
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-gray-700 leading-relaxed text-lg pl-2" 
+                    {...props}
+                  />
                 ),
                 strong: ({ node, ...props }) => (
-                  <strong className="font-semibold text-gray-900" {...props} />
+                  <strong className="font-semibold text-gray-900 bg-yellow-50 px-1 rounded" {...props} />
                 ),
                 em: ({ node, ...props }) => (
-                  <em className="text-gray-800" {...props} />
+                  <em className="text-gray-800 italic" {...props} />
                 ),
                 code: ({ inline, className, children }: CodeProps) => {
                   if (inline) {
@@ -97,7 +151,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 },
                 blockquote: ({ node, ...props }) => (
                   <blockquote 
-                    className="border-l-4 border-gray-200 pl-4 my-3 italic text-gray-700 bg-gray-50 p-3 rounded-r"
+                    className="border-l-4 border-blue-200 pl-4 my-4 italic text-gray-700 bg-blue-50 p-4 rounded-r"
                     {...props}
                   />
                 )
