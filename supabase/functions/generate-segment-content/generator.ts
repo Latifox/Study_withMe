@@ -1,19 +1,17 @@
-
 import { GeneratedContent } from "./types.ts";
 
 export const generatePrompt = (
   segmentTitle: string,
-  segmentContent: string,
+  segmentDescription: string,
+  lectureContent: string,
   aiConfig: any
 ) => {
-  const basePrompt = `Generate EXTENSIVE and HIGHLY DETAILED educational content in the same language as the provided lecture. Your mission is to create comprehensive content that thoroughly explains every concept. Each theory slide should contain AT LEAST 500 words of rich, detailed content.
+  const basePrompt = `Generate detailed educational content for a segment titled "${segmentTitle}" with the following description: "${segmentDescription}".
 
-For this segment titled "${segmentTitle}", use the following content:
+Use this lecture content as reference:
+${lectureContent}
 
-LECTURE CONTENT:
-${segmentContent}
-
-AI Configuration Settings (Use these to adjust presentation style only, not content):
+AI Configuration Settings:
 - Temperature: ${aiConfig.temperature} (affects explanation variety)
 - Creativity Level: ${aiConfig.creativity_level} (affects presentation style)
 - Detail Level: ${aiConfig.detail_level} (affects depth of content extraction)
@@ -21,132 +19,46 @@ ${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_inst
 
 CONTENT GENERATION REQUIREMENTS:
 
-1. Theory Slide 1 (MINIMUM 500 words):
-   - Extract and expand EVERY concept from the first half of the content
-   - Create a comprehensive learning experience with:
-     * Detailed explanations of each concept
-     * Multiple examples for each topic
-     * Real-world applications
-     * Step-by-step breakdowns of complex ideas
-     * Connections between different concepts
-   - Include ALL of these sections:
-     * Main concept introduction
-     * Detailed theoretical background
-     * Step-by-step explanations
-     * Multiple examples with variations
-     * Common misconceptions and clarifications
-     * Practical applications
-     * Key takeaways
-   - Use extensive formatting:
-     * Headers (##, ###) for EACH major section
-     * Nested bullet points for detailed breakdowns
-     * **Bold** for ALL key terms
-     * *Italic* for definitions and emphasis
-     * > Blockquotes for important theorems/principles
-   - For mathematical content:
-     * Include detailed step-by-step derivations
-     * Explain each variable and symbol
-     * Provide multiple examples with different values
-     * Show alternative approaches when applicable
+Each theory slide should be between 400-500 words and provide engaging, clear explanations.
+Focus ONLY on the concepts outlined in the segment description - DO NOT overlap with other segments.
 
-2. Theory Slide 2 (MINIMUM 500 words):
-   - Focus on the second half of the content
-   - Follow the same comprehensive structure
-   - Focus heavily on practical applications
-   - Include numerous examples
-   - Connect concepts to real-world scenarios
-   - Provide extensive explanations of each topic
+Theory Slides Requirements:
+1. Clear, engaging writing style
+2. Logical flow of ideas
+3. Concrete examples and applications
+4. Step-by-step explanations where needed
+5. NO emojis or informal language
 
-LATEX FORMATTING REQUIREMENTS:
-1. Use these LaTeX commands and environments:
-   - \\text{} for text inside math mode
-   - Math environments: align*, equation*, array
-   - Greek letters: \\alpha, \\beta, \\theta, etc.
-   - Vectors: \\vec{v}, \\vec{r}
-   - Unit vectors: \\hat{i}, \\hat{j}, \\hat{k}
-   - Fractions: \\frac{num}{den}
-   - Subscripts: v_x, a_y
-   - Superscripts: x^2, v^n
-   - Special symbols: \\partial, \\nabla, \\infty
-   - Spacing: \\quad, \\;
+Use the following markdown formatting:
+- Headers (##, ###) for major sections
+- Bullet points for lists
+- **Bold** for key terms
+- *Italic* for emphasis
+- > Blockquotes for important concepts
 
-2. Block Math Format:
-   $$
-   \\begin{align*}
-   x &= v_0t + x_0 \\\\
-   y &= h - \\frac{1}{2}gt^2
-   \\end{align*}
-   $$
-
-3. Inline Math Format:
-   $\\vec{v} = \\frac{d\\vec{r}}{dt}$
-
-MARKDOWN STRUCTURE REQUIREMENTS:
-Each theory slide must follow this extensive structure:
-
-## Main Topic (Comprehensive Overview)
-
-### 1. Theoretical Background
-* Fundamental principles
-* Core concepts
-  * Detailed explanation of each concept
-  * Historical context
-  * Theoretical foundations
-* Key relationships between concepts
-
-### 2. Detailed Explanations
-* Step-by-step breakdowns
-* Process explanations
-* Component analysis
-* Interconnections between ideas
-
-### 3. Practical Examples
-1. Basic example with full explanation
-2. Intermediate example with variations
-3. Advanced application example
-4. Real-world case studies
-
-### 4. Common Misconceptions
-* Typical misunderstandings
-* Clarifications
-* Correct interpretations
-* Prevention tips
-
-### 5. Applications and Implications
-* Real-world uses
-* Practical implementations
-* Industry applications
-* Future developments
-
-> Important theorems, principles, and key takeaways
+For mathematical content:
+- Use LaTeX notation: $equation$
+- Explain each variable
+- Include practical examples
 
 Required JSON Structure:
 {
-  "theory_slide_1": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on first half",
-  "theory_slide_2": "EXTENSIVE markdown and LaTeX content (>500 words) - Based on second half",
+  "theory_slide_1": "markdown content (400-500 words)",
+  "theory_slide_2": "markdown content (400-500 words)",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "string based on first half",
-    "options": ["array of 4 distinct options"],
-    "correctAnswer": "string matching one option",
-    "explanation": "string explaining the correct answer"
+    "question": "clear, focused question",
+    "options": ["4 distinct options"],
+    "correctAnswer": "exact match to one option",
+    "explanation": "why this is correct"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "string based on second half",
+    "question": "clear statement to evaluate",
     "correctAnswer": boolean,
-    "explanation": "string explaining why true or false"
+    "explanation": "detailed explanation"
   }
-}
-
-IMPORTANT NOTES:
-1. Each theory slide MUST contain at least 500 words of content
-2. Include MULTIPLE examples for each concept
-3. Provide DETAILED explanations for every topic
-4. Use ALL the specified markdown formatting elements
-5. Break down complex ideas into digestible parts
-6. Include practical applications and real-world examples
-7. Ensure comprehensive coverage of ALL concepts from the content`;
+}`;
 
   return basePrompt;
 };
@@ -213,4 +125,3 @@ export const generateContent = async (prompt: string): Promise<string> => {
 
   throw new Error('Failed to generate content after all retry attempts');
 };
-

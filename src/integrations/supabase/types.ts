@@ -79,6 +79,7 @@ export type Database = {
           created_at: string
           id: number
           lecture_id: number | null
+          segment_description: string
           sequence_number: number
           title: string
         }
@@ -86,6 +87,7 @@ export type Database = {
           created_at?: string
           id?: number
           lecture_id?: number | null
+          segment_description?: string
           sequence_number: number
           title: string
         }
@@ -93,6 +95,7 @@ export type Database = {
           created_at?: string
           id?: number
           lecture_id?: number | null
+          segment_description?: string
           sequence_number?: number
           title?: string
         }
