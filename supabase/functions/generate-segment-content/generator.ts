@@ -6,7 +6,14 @@ export const generatePrompt = (
   lectureContent: string,
   aiConfig: any
 ) => {
+  // Language configuration
+  const languageInstruction = aiConfig.content_language 
+    ? `IMPORTANT: Generate ALL content in ${getLanguageName(aiConfig.content_language)} language.`
+    : "IMPORTANT: Generate ALL content in the same language as the lecture content.";
+
   const basePrompt = `You are tasked with generating educational content for a SPECIFIC SET OF CONCEPTS from the lecture content.
+
+${languageInstruction}
 
 SEGMENT SCOPE:
 Title: "${segmentTitle}"
@@ -17,12 +24,17 @@ ${lectureContent}
 
 CRITICAL REQUIREMENTS:
 
-1. WORD COUNT ENFORCEMENT:
+1. LANGUAGE CONSISTENCY:
+   - ALL content (headers, text, examples, questions) must be in the specified language
+   - Maintain consistent terminology throughout
+   - Use appropriate language-specific formatting and punctuation
+
+2. WORD COUNT ENFORCEMENT:
    - Each theory slide MUST be EXACTLY 400-500 words
    - Break content into logical paragraphs of 3-4 sentences each
    - Format text with proper headers and sections
 
-2. FORMATTING REQUIREMENTS:
+3. FORMATTING REQUIREMENTS:
    - Start with a clear ## Introduction header
    - Use ### subheaders to break up content
    - Include precisely 2-3 paragraphs per section
@@ -31,15 +43,15 @@ CRITICAL REQUIREMENTS:
    - Bold all key terms from the lecture
    - Use proper spacing between sections
 
-3. CONTENT STRUCTURE:
+4. CONTENT STRUCTURE:
    - Slide 1: Overview and basic concepts (400-500 words)
    - Slide 2: Detailed explanation and examples (400-500 words)
    - Each slide must be self-contained
    - Include clear section breaks
 
-4. STRICT SOURCE ADHERENCE:
+5. STRICT SOURCE ADHERENCE:
    - Use ONLY information from the lecture content
-   - Match the lecture's language exactly
+   - Match the lecture's language style
    - Use the same terminology as the source
 
 FORMAT EXAMPLE:
@@ -79,6 +91,23 @@ Required JSON Structure:
 
   return basePrompt;
 };
+
+// Helper function to get full language name from code
+function getLanguageName(code: string): string {
+  const languages: { [key: string]: string } = {
+    'en': 'English',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German',
+    'it': 'Italian',
+    'pt': 'Portuguese',
+    'ru': 'Russian',
+    'zh': 'Chinese',
+    'ja': 'Japanese',
+    'ko': 'Korean'
+  };
+  return languages[code] || code;
+}
 
 export const generateContent = async (prompt: string): Promise<string> => {
   console.log('Generating content with prompt length:', prompt.length);
