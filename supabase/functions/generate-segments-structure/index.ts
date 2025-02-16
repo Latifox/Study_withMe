@@ -16,12 +16,12 @@ serve(async (req) => {
   try {
     const { lectureId, lectureContent } = await req.json();
     
-    if (!lectureId) {
-      throw new Error('Missing required parameters');
+    if (!lectureId || !lectureContent) {
+      throw new Error('Missing required parameters: lectureId or lectureContent');
     }
 
     console.log('Generating segments structure for lecture:', lectureId);
-    console.log('Content length:', lectureContent?.length);
+    console.log('Content length:', lectureContent.length);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -30,7 +30,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -44,20 +44,22 @@ serve(async (req) => {
    - Create a clear, descriptive title IN THE SAME LANGUAGE AS THE CONTENT
    - Write a HIGHLY SPECIFIC description (max 50 words) IN THE SAME LANGUAGE that explicitly lists WHICH concepts will be covered
 
-CRITICAL: DO NOT MIX LANGUAGES - use ONLY the language detected in the source content.
-If the content is in Spanish, write everything in Spanish.
-If the content is in German, write everything in German.
-etc.
-
-Return a valid JSON array of objects with 'title' and 'description' fields.`
+Return a valid JSON array with this exact format:
+{
+  "segments": [
+    {
+      "title": "Title in same language as content",
+      "description": "Description in same language as content"
+    }
+  ]
+}`
           },
           {
             role: 'user',
             content: lectureContent
           }
         ],
-        temperature: 0.3,
-        response_format: { type: "json_object" }
+        temperature: 0.3
       }),
     });
 
@@ -77,23 +79,11 @@ Return a valid JSON array of objects with 'title' and 'description' fields.`
     let segments;
     try {
       const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
-      segments = Array.isArray(parsedContent) ? parsedContent : parsedContent.segments;
+      segments = parsedContent.segments;
       
       if (!Array.isArray(segments)) {
-        throw new Error('Response is not an array');
+        throw new Error('Response segments is not an array');
       }
-
-      // Validate segment descriptions for uniqueness and specificity
-      const concepts = new Set();
-      segments.forEach((segment, index) => {
-        const segmentConcepts = extractConcepts(segment.description);
-        segmentConcepts.forEach(concept => {
-          if (concepts.has(concept)) {
-            throw new Error(`Concept "${concept}" appears in multiple segments`);
-          }
-          concepts.add(concept);
-        });
-      });
 
       console.log('Parsed segments:', JSON.stringify(segments, null, 2));
     } catch (error) {
@@ -150,15 +140,11 @@ Return a valid JSON array of objects with 'title' and 'description' fields.`
   } catch (error) {
     console.error('Error in generate-segments-structure:', error);
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-// Helper function to extract concepts from a segment description
-function extractConcepts(description: string): string[] {
-  // Look for numbered lists in the description
-  const concepts = description.match(/\d+\)\s*([^.;,\d)]+)/g) || [];
-  return concepts.map(c => c.replace(/^\d+\)\s*/, '').trim().toLowerCase());
-}

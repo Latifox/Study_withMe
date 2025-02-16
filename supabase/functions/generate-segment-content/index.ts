@@ -4,12 +4,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { initSupabaseClient, getExistingContent, getLectureContent, getAIConfig, saveSegmentContent } from "./db.ts";
 import { validateContent } from "./validator.ts";
 import { generatePrompt, generateContent } from "./generator.ts";
-import { GeneratedContent, SegmentRequest } from "./types.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
@@ -18,11 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    if (req.method !== 'POST') {
-      throw new Error('Method not allowed');
-    }
-
-    const { lectureId, segmentNumber }: SegmentRequest = await req.json();
+    const { lectureId, segmentNumber } = await req.json();
     
     if (!lectureId || typeof segmentNumber !== 'number') {
       throw new Error('Invalid request parameters');
@@ -33,8 +27,8 @@ serve(async (req) => {
     const supabaseClient = initSupabaseClient();
 
     // Get lecture content and segment info
-    const lectureContent = await getLectureContent(supabaseClient, lectureId);
-    console.log('Lecture content length:', lectureContent.length);
+    const { content: lectureContent, language } = await getLectureContent(supabaseClient, lectureId);
+    console.log('Lecture content length:', lectureContent.length, 'Language:', language);
     
     // Get segment information including description
     const { data: segment, error: segmentError } = await supabaseClient
@@ -70,10 +64,6 @@ serve(async (req) => {
     const aiConfig = await getAIConfig(supabaseClient, lectureId);
     console.log('Using AI config:', JSON.stringify(aiConfig, null, 2));
 
-    // Set up timeout handling
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
-
     try {
       const prompt = generatePrompt(segment.title, segment.segment_description, lectureContent, aiConfig);
       console.log('Generated prompt length:', prompt.length);
@@ -81,7 +71,7 @@ serve(async (req) => {
       const responseContent = await generateContent(prompt);
       console.log('Received response from OpenAI');
       
-      const content = JSON.parse(responseContent) as GeneratedContent;
+      const content = JSON.parse(responseContent);
       console.log('Successfully parsed content');
       
       validateContent(content);
@@ -95,23 +85,44 @@ serve(async (req) => {
       );
       console.log('Successfully saved segment content');
 
-      clearTimeout(timeoutId);
-
       return new Response(
         JSON.stringify({ segmentContent }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timed out while generating content');
+      if (error.message.includes('Theory slide')) {
+        // Retry once with a more explicit prompt for word count
+        console.log('Retrying content generation with emphasis on word count...');
+        const retryPrompt = generatePrompt(segment.title, segment.segment_description, lectureContent, {
+          ...aiConfig,
+          custom_instructions: `${aiConfig.custom_instructions}\nCRITICAL: Each theory slide MUST contain AT LEAST 400 words and NO MORE than 600 words. This is a strict requirement.`
+        });
+        
+        const retryContent = await generateContent(retryPrompt);
+        const content = JSON.parse(retryContent);
+        validateContent(content);
+        
+        const segmentContent = await saveSegmentContent(
+          supabaseClient,
+          lectureId,
+          segmentNumber,
+          content
+        );
+        
+        return new Response(
+          JSON.stringify({ segmentContent }), 
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       throw error;
     }
   } catch (error) {
     console.error('Error in generate-segment-content:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
