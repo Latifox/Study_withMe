@@ -1,11 +1,12 @@
+
 import { AIConfig } from "./types.ts";
 
 const wordCount = (text: string): number => {
   return text.trim().split(/\s+/).length;
 };
 
-const MIN_WORDS = 400;
-const MAX_WORDS = 600;
+const MIN_WORDS = 300;
+const MAX_WORDS = 400;
 
 export const generatePrompt = (
   segmentTitle: string,
@@ -29,29 +30,29 @@ CRITICAL REQUIREMENTS:
 2. Both slides must follow this exact structure:
 
 For EACH slide (both slide 1 AND slide 2):
-## Introduction (75-100 words)
+## Introduction (50-75 words)
 - Overview of the topic
 - Context and importance
 - Connection to broader concepts
 
-## Main Concepts (200-250 words)
+## Main Concepts (150-175 words)
 - Detailed explanation of core principles
 - Key definitions and terminology
 - Theoretical framework
 - Mathematical foundations (with LaTeX)
 
-## Examples and Applications (100-150 words)
+## Examples and Applications (50-75 words)
 - Real-world examples
 - Practical applications
 - Case studies or scenarios
 - Step-by-step demonstrations
 
-## Practical Implications (50-75 words)
+## Practical Implications (25-50 words)
 - Industry relevance
 - Future applications
 - Societal impact
 
-## Summary (25-50 words)
+## Summary (25 words)
 - Key takeaways
 - Connection to next topics
 

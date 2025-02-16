@@ -1,8 +1,7 @@
-
 import { GeneratedContent } from "./types.ts";
 
-const MIN_WORDS = 400;
-const MAX_WORDS = 600;
+const MIN_WORDS = 300;
+const MAX_WORDS = 400;
 
 const wordCount = (text: string): number => {
   return text.trim().split(/\s+/).length;
