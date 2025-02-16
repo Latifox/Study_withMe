@@ -56,26 +56,55 @@ const validateMarkdownAndLatex = (text: string, fieldName: string): void => {
 
 const validateQuizQuestion = (content: GeneratedContent, quizNumber: number): void => {
   const prefix = `quiz_${quizNumber}_`;
+  const requiredFields = ['type', 'question', 'explanation', 'correct_answer'];
+  
+  // Check for missing required fields
+  const missingFields = requiredFields.filter(field => {
+    const value = content[`${prefix}${field}` as keyof GeneratedContent];
+    return value === undefined || value === null || value === '';
+  });
+
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Quiz ${quizNumber} is missing required fields: ${missingFields.join(', ')}. ` +
+      `All quizzes must include: type, question, explanation, and correct_answer.`
+    );
+  }
+
   const type = content[`${prefix}type` as keyof GeneratedContent] as string;
   const question = content[`${prefix}question` as keyof GeneratedContent] as string;
   const explanation = content[`${prefix}explanation` as keyof GeneratedContent] as string;
   const correctAnswer = content[`${prefix}correct_answer` as keyof GeneratedContent];
   const options = content[`${prefix}options` as keyof GeneratedContent];
 
-  if (!type || !question || !explanation) {
-    throw new Error(`Invalid quiz ${quizNumber} structure: missing required fields`);
+  // Validate quiz type
+  if (type !== 'multiple_choice' && type !== 'true_false') {
+    throw new Error(`Quiz ${quizNumber} type must be either 'multiple_choice' or 'true_false', got: ${type}`);
+  }
+  
+  // Validate question format
+  if (typeof question !== 'string' || question.length < 10) {
+    throw new Error(`Quiz ${quizNumber} question must be a string of at least 10 characters`);
+  }
+
+  // Validate explanation format
+  if (typeof explanation !== 'string' || explanation.length < 20) {
+    throw new Error(`Quiz ${quizNumber} explanation must be a string of at least 20 characters`);
   }
   
   if (type === 'multiple_choice') {
     if (!Array.isArray(options) || options.length < 2) {
-      throw new Error(`Quiz ${quizNumber} must have at least 2 options`);
+      throw new Error(`Quiz ${quizNumber} must have at least 2 options for multiple choice type`);
     }
-    if (!options.includes(correctAnswer as string)) {
+    if (typeof correctAnswer !== 'string') {
+      throw new Error(`Quiz ${quizNumber} correct answer must be a string for multiple choice type`);
+    }
+    if (!options.includes(correctAnswer)) {
       throw new Error(`Quiz ${quizNumber} correct answer must be one of the options`);
     }
   } else if (type === 'true_false') {
     if (typeof correctAnswer !== 'boolean') {
-      throw new Error(`Quiz ${quizNumber} must have a boolean correct answer`);
+      throw new Error(`Quiz ${quizNumber} must have a boolean correct answer for true/false type`);
     }
   }
 

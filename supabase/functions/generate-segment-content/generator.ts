@@ -108,6 +108,19 @@ Source Material: ${lectureContent}
 
 ${styleInstructions}
 
+CRITICAL QUIZ REQUIREMENTS:
+1. Each quiz MUST have ALL required fields:
+   - type (either "multiple_choice" or "true_false")
+   - question (clear, thought-provoking, at least 10 characters)
+   - explanation (detailed, at least 20 characters)
+   - correct_answer (matching the type's format)
+2. For multiple_choice type:
+   - options must be an array with at least 2 choices
+   - correct_answer must be one of the options
+3. For true_false type:
+   - correct_answer must be a boolean (true or false)
+4. Quiz explanations must use proper markdown and LaTeX formatting
+
 IMPORTANT: Each theory slide MUST have AT LEAST ${MIN_WORDS} words. Current content is too short. DO NOT submit content with fewer words.
 
 Return a JSON object with no markdown block markers in this exact format:
@@ -115,14 +128,14 @@ Return a JSON object with no markdown block markers in this exact format:
   "theory_slide_1": "Comprehensive slide 1 (${MIN_WORDS}-${MAX_WORDS} words, following structure above)",
   "theory_slide_2": "Comprehensive slide 2 (${MIN_WORDS}-${MAX_WORDS} words, following structure above)",
   "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "Clear, thought-provoking question",
-  "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-  "quiz_1_correct_answer": "Correct option (must match exactly one of the options)",
-  "quiz_1_explanation": "Detailed explanation with markdown formatting",
+  "quiz_1_question": "Clear, thought-provoking question (at least 10 characters)",
+  "quiz_1_options": ["Detailed option 1", "Detailed option 2", "Detailed option 3", "Detailed option 4"],
+  "quiz_1_correct_answer": "Detailed option 2",
+  "quiz_1_explanation": "Detailed explanation with markdown and LaTeX (at least 20 characters)",
   "quiz_2_type": "true_false",
-  "quiz_2_question": "Clear true/false question",
+  "quiz_2_question": "Clear true/false question (at least 10 characters)",
   "quiz_2_correct_answer": true,
-  "quiz_2_explanation": "Detailed explanation with markdown formatting"
+  "quiz_2_explanation": "Detailed explanation with markdown and LaTeX (at least 20 characters)"
 }`;
 };
 
