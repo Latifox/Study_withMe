@@ -56,6 +56,35 @@ const Course = () => {
     refetchInterval: 1000, // Refetch every second while the component is mounted
   });
 
+  // Fetch AI config for the selected lecture
+  const { data: aiConfig } = useQuery({
+    queryKey: ['lecture_ai_config', showAIConfig],
+    queryFn: async () => {
+      if (!showAIConfig) return null;
+      
+      const { data, error } = await supabase
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', showAIConfig)
+        .single();
+      
+      if (error && error.code === 'PGRST116') {
+        // If no config exists, return default values
+        return {
+          temperature: 0.7,
+          creativity_level: 0.5,
+          detail_level: 0.5,
+          custom_instructions: null,
+          content_language: null
+        };
+      }
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!showAIConfig // Only run query when showAIConfig has a value
+  });
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Bold animated background */}
@@ -182,11 +211,20 @@ const Course = () => {
             lectureId={selectedLectureId!}
           />
 
-          <LectureAIConfigDialog
-            isOpen={!!showAIConfig}
-            onClose={() => setShowAIConfig(null)}
-            lectureId={showAIConfig!}
-          />
+          {showAIConfig !== null && (
+            <LectureAIConfigDialog
+              isOpen={!!showAIConfig}
+              onClose={() => setShowAIConfig(null)}
+              lectureId={showAIConfig}
+              currentConfig={{
+                temperature: aiConfig?.temperature ?? 0.7,
+                creativity_level: aiConfig?.creativity_level ?? 0.5,
+                detail_level: aiConfig?.detail_level ?? 0.5,
+                custom_instructions: aiConfig?.custom_instructions,
+                content_language: aiConfig?.content_language
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
