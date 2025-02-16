@@ -22,25 +22,44 @@ export const generatePrompt = (
   const detailLevel = aiConfig.detail_level || 0.6;
 
   const styleInstructions = `
+CRITICAL REQUIREMENTS:
+1. Each theory slide MUST contain between ${MIN_WORDS} and ${MAX_WORDS} words. This is MANDATORY.
+2. Use a comprehensive structure with multiple sections, examples, and detailed explanations.
+3. Include practical applications and real-world examples when relevant.
+
 Format the content using these guidelines:
-1. Use markdown formatting for better readability
-2. Each theory slide should be between ${MIN_WORDS}-${MAX_WORDS} words
-3. Use LaTeX for mathematical formulas (wrap in $$ for display math or $ for inline)
-4. Break content into sections using ## headings
-5. Use bullet points and numbered lists where appropriate
-6. Add examples and code blocks when relevant
-7. Highlight important concepts using **bold** and *italic*
-8. Create tables using markdown when presenting structured information
+1. Break down complex topics into digestible sections using ## headers
+2. Use **bold** for key terms and *italic* for emphasis
+3. Create lists for step-by-step explanations:
+   - Use bullet points for related items
+   - Use numbered lists for sequences
+4. Use LaTeX for all mathematical formulas:
+   - Inline formulas with single $ (e.g., $E=mc^2$)
+   - Display formulas with double $$ (e.g., $$\\frac{dx}{dt}$$)
+5. Use markdown tables for comparing concepts
+6. Include code blocks with proper syntax highlighting if relevant
+7. Add block quotes for important definitions or key points
 
-Creativity level ${creativityLevel} means:
-${creativityLevel > 0.7 ? '- Use engaging metaphors and analogies\n- Include interactive examples\n- Add real-world applications' :
-  creativityLevel > 0.4 ? '- Balance formal concepts with practical examples\n- Use moderate analogies' :
-  '- Stay formal and direct\n- Focus on core concepts'}
+Each theory slide should follow this structure:
+1. Introduction (50-75 words)
+2. Main Concepts (200-250 words)
+3. Examples and Applications (100-150 words)
+4. Practical Implications (50-75 words)
+5. Summary or Key Takeaways (50 words)
 
-Detail level ${detailLevel} means:
-${detailLevel > 0.7 ? '- Provide comprehensive explanations\n- Include edge cases\n- Add advanced concepts' :
-  detailLevel > 0.4 ? '- Balance basic and advanced concepts\n- Cover main scenarios' :
-  '- Focus on fundamental concepts\n- Keep explanations concise'}`;
+Creativity level ${creativityLevel} settings:
+${creativityLevel > 0.7 ? 
+  '- Use engaging metaphors and analogies\n- Include interactive examples\n- Add compelling real-world applications\n- Use storytelling elements\n- Incorporate relevant case studies' :
+  creativityLevel > 0.4 ? 
+  '- Balance formal concepts with practical examples\n- Use moderate analogies\n- Include industry applications\n- Add relevant examples' :
+  '- Stay formal and direct\n- Focus on core concepts\n- Use straightforward examples\n- Maintain academic tone'}
+
+Detail level ${detailLevel} requirements:
+${detailLevel > 0.7 ? 
+  '- Provide comprehensive explanations\n- Include edge cases and exceptions\n- Add advanced concepts\n- Explain underlying principles\n- Connect to broader context' :
+  detailLevel > 0.4 ? 
+  '- Balance basic and advanced concepts\n- Cover main scenarios\n- Include moderate detail\n- Explain key mechanisms' :
+  '- Focus on fundamental concepts\n- Keep explanations concise\n- Cover essential elements\n- Maintain clarity'}`;
 
   return `You are an expert educator creating high-quality educational content.
 ${languageInstruction}
@@ -54,19 +73,21 @@ Source Material: ${lectureContent}
 
 ${styleInstructions}
 
-Return the output in this exact JSON format (no markdown block markers around the JSON itself):
+IMPORTANT: Ensure EACH theory slide has between ${MIN_WORDS} and ${MAX_WORDS} words. Content that doesn't meet this requirement will be rejected.
+
+Return a JSON object with no markdown block markers in this exact format:
 {
-  "theory_slide_1": "First slide content with main concepts (${MIN_WORDS}-${MAX_WORDS} words)",
-  "theory_slide_2": "Second slide content with examples and applications (${MIN_WORDS}-${MAX_WORDS} words)",
+  "theory_slide_1": "Comprehensive slide 1 (${MIN_WORDS}-${MAX_WORDS} words, following structure above)",
+  "theory_slide_2": "Comprehensive slide 2 (${MIN_WORDS}-${MAX_WORDS} words, following structure above)",
   "quiz_1_type": "multiple_choice",
   "quiz_1_question": "Clear, thought-provoking question",
   "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
   "quiz_1_correct_answer": "Correct option (must match exactly one of the options)",
-  "quiz_1_explanation": "Detailed explanation of why this answer is correct",
+  "quiz_1_explanation": "Detailed explanation with markdown formatting",
   "quiz_2_type": "true_false",
   "quiz_2_question": "Clear true/false question",
   "quiz_2_correct_answer": true,
-  "quiz_2_explanation": "Detailed explanation of why this is true/false"
+  "quiz_2_explanation": "Detailed explanation with markdown formatting"
 }`;
 };
 
@@ -84,7 +105,10 @@ export const generateContent = async (prompt: string) => {
       messages: [
         { 
           role: 'system', 
-          content: 'You are an expert educator that creates engaging, well-structured educational content. Always return valid JSON without any markdown formatting or code blocks around the JSON itself. The content inside the JSON should use markdown and LaTeX formatting where appropriate.' 
+          content: `You are an expert educator creating comprehensive educational content.
+Your primary task is to generate detailed theory slides between ${MIN_WORDS} and ${MAX_WORDS} words each.
+Use proper markdown formatting and LaTeX where appropriate.
+Always return valid JSON without any markdown block markers around it.`
         },
         { role: 'user', content: prompt }
       ],
