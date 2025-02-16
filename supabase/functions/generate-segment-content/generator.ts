@@ -17,36 +17,43 @@ export const generatePrompt = (
   return `You are an expert educator creating high-quality educational content.
 ${languageInstruction}
 
-Your task is to create TWO comprehensive theory slides and TWO challenging quiz questions based STRICTLY on this lecture content:
+Your task is to create TWO comprehensive theory slides and TWO challenging quiz questions focusing on these specific concepts:
+${segmentDescription}
 
 Content Type: ${segmentTitle}
-Description: ${segmentDescription}
 Source Material: ${lectureContent}
 
 CRITICAL REQUIREMENTS:
-1. Word Count:
+
+1. Content Organization:
+   - Each theory slide should focus on DIFFERENT concepts from the list above
+   - Do not mix concepts between slides
+   - Present complete, in-depth explanations of each concept
+   - Use clear headings and structured content
+
+2. Word Count:
    - EACH theory slide MUST contain BETWEEN 300 AND 400 WORDS
-   - This is a STRICT requirement and responses will be rejected if not met
+   - This is a target requirement (acceptable range: 225-550 words)
 
-2. Content Source:
+3. Content Source:
    - Use ONLY information from the provided lecture content
-   - Do not add external information or examples
-   - Stay focused on the specific topic from the lecture
+   - Focus on explaining the listed concepts thoroughly
+   - Stay focused on the specific topics assigned to this segment
 
-3. LaTeX Formatting:
+4. LaTeX Formatting:
    - Format ALL mathematical expressions using LaTeX
    - Use $\\text{word}$ for text within math
    - Use $\\rightarrow$ for arrows
    - Use proper LaTeX syntax for all mathematical notation
 
-4. Quizzes:
+5. Quizzes:
    - Quiz 1 (Multiple Choice):
-     * Create a conceptually challenging question
+     * Create a challenging conceptual question about the concepts
      * All 4 options should seem plausible
      * Test deep understanding, not memorization
    
    - Quiz 2 (True/False):
-     * Create a nuanced, thought-provoking statement
+     * Create a subtle, nuanced statement about the concepts
      * The answer should require careful analysis
      * Avoid obvious true/false statements
 
@@ -54,8 +61,8 @@ ${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_ins
 
 Return a JSON object with:
 {
-  "theory_slide_1": "300-400 word slide",
-  "theory_slide_2": "300-400 word slide",
+  "theory_slide_1": "First comprehensive slide",
+  "theory_slide_2": "Second comprehensive slide",
   "quiz_1_type": "multiple_choice",
   "quiz_1_question": "challenging question",
   "quiz_1_options": ["four", "plausible", "answer", "options"],

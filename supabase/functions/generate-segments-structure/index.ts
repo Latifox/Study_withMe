@@ -34,27 +34,29 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert educational content organizer. Your task is to break down educational content into logical segments.
+            content: `You are an expert in organizing educational content. Your task is to break down the lecture content into logical segments, each focusing on distinct concepts.
 
-CRITICAL: You MUST return a JSON object with EXACTLY this structure:
+CRITICAL REQUIREMENTS:
+1. For each segment:
+   - Create a clear, descriptive title
+   - List 3-5 KEY CONCEPTS that this segment should explore in depth
+   - Each concept should be specific and focused
+   - NO CONCEPT should appear in more than one segment
+   - Format as "Key concepts to explore: [concept1], [concept2], [concept3]"
+
+2. Generate 4-6 segments total
+3. Use the SAME LANGUAGE as the input content
+4. Each segment must cover DISTINCT topics (no overlap)
+
+IMPORTANT: Return ONLY a JSON object with this structure:
 {
   "segments": [
     {
-      "title": "string",
-      "description": "string"
+      "title": "Clear topic title",
+      "description": "Key concepts to explore: [concept1], [concept2], [concept3]"
     }
   ]
-}
-
-Requirements:
-1. Generate 4-6 segments
-2. Use the SAME LANGUAGE as the input content
-3. Each segment must cover distinct concepts (no overlap)
-4. For each segment provide:
-   - A clear, descriptive title (in the content's language)
-   - A specific description (in the content's language, max 50 words)
-   
-Remember: ONLY return the JSON object, no other text or explanation.`
+}`
           },
           {
             role: 'user',
