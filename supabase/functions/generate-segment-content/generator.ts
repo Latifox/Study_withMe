@@ -1,4 +1,3 @@
-
 import { AIConfig } from "./types.ts";
 
 const wordCount = (text: string): number => {
@@ -22,40 +21,14 @@ export const generatePrompt = (
   const detailLevel = aiConfig.detail_level || 0.6;
 
   const styleInstructions = `
-CRITICAL WORD COUNT REQUIREMENTS:
-Each theory slide MUST contain AT LEAST ${MIN_WORDS} words and NO MORE than ${MAX_WORDS} words. Current content is too short.
-Follow this precise word distribution:
-1. Introduction: 75-100 words
-2. Main Concepts: 200-250 words
-3. Examples and Applications: 100-150 words
-4. Practical Implications: 50-75 words
-5. Summary: 25-50 words
-Total required: At least ${MIN_WORDS} words per slide.
+CRITICAL REQUIREMENTS:
+1. You MUST generate TWO complete theory slides, each containing:
+   - Between ${MIN_WORDS} and ${MAX_WORDS} words
+   - Full markdown formatting
+   - Proper LaTeX for all mathematical expressions
+2. Both slides must follow this exact structure:
 
-CRITICAL LaTeX REQUIREMENTS:
-ALL mathematical expressions MUST use LaTeX formatting:
-- Wrap inline math in single $ (e.g., $x + y = z$)
-- Wrap display math in double $$ (e.g., $$\\frac{d}{dx}x^2 = 2x$$)
-- Basic operators: $+$, $-$, $\\times$, $\\div$, $=$, $<$, $>$
-- Fractions: $\\frac{numerator}{denominator}$
-- Powers: $x^2$, $e^x$
-- Greek letters: $\\alpha$, $\\beta$, $\\theta$
-- Functions: $f(x)$, $\\sin(x)$, $\\cos(x)$
-- Integrals: $\\int f(x) dx$
-- Derivatives: $\\frac{d}{dx}$
-- Special symbols: $\\infty$, $\\pm$, $\\partial$
-
-Format the content using these guidelines:
-1. Break down complex topics into digestible sections using ## headers
-2. Use **bold** for key terms and *italic* for emphasis
-3. Create lists for step-by-step explanations:
-   - Use bullet points for related items
-   - Use numbered lists for sequences
-4. Use markdown tables for comparing concepts
-5. Include code blocks with proper syntax highlighting if relevant
-6. Add block quotes for important definitions or key points
-
-REQUIRED SECTION STRUCTURE (you must include ALL sections with minimum word counts):
+For EACH slide (both slide 1 AND slide 2):
 ## Introduction (75-100 words)
 - Overview of the topic
 - Context and importance
@@ -81,6 +54,28 @@ REQUIRED SECTION STRUCTURE (you must include ALL sections with minimum word coun
 ## Summary (25-50 words)
 - Key takeaways
 - Connection to next topics
+
+LATEX FORMATTING REQUIREMENTS:
+ALL mathematical expressions MUST use LaTeX:
+- Inline math: $x + y = z$
+- Display math: $$\\frac{d}{dx}x^2 = 2x$$
+- Basic operators: $+$, $-$, $\\times$, $\\div$
+- Fractions: $\\frac{a}{b}$
+- Powers: $x^2$, $e^x$
+- Greek letters: $\\alpha$, $\\beta$
+- Functions: $f(x)$, $\\sin(x)$
+
+QUIZ REQUIREMENTS:
+1. Each quiz MUST include:
+   - type: "multiple_choice" or "true_false"
+   - question: clear, >10 characters
+   - explanation: detailed, >20 characters
+   - correct_answer: matching type format
+2. For multiple_choice:
+   - At least 4 options
+   - correct_answer must match an option
+3. For true_false:
+   - correct_answer must be boolean
 
 Creativity level ${creativityLevel} settings:
 ${creativityLevel > 0.7 ? 
@@ -108,34 +103,21 @@ Source Material: ${lectureContent}
 
 ${styleInstructions}
 
-CRITICAL QUIZ REQUIREMENTS:
-1. Each quiz MUST have ALL required fields:
-   - type (either "multiple_choice" or "true_false")
-   - question (clear, thought-provoking, at least 10 characters)
-   - explanation (detailed, at least 20 characters)
-   - correct_answer (matching the type's format)
-2. For multiple_choice type:
-   - options must be an array with at least 2 choices
-   - correct_answer must be one of the options
-3. For true_false type:
-   - correct_answer must be a boolean (true or false)
-4. Quiz explanations must use proper markdown and LaTeX formatting
+CRITICAL: You MUST generate BOTH theory_slide_1 AND theory_slide_2. Partial responses are not acceptable.
 
-IMPORTANT: Each theory slide MUST have AT LEAST ${MIN_WORDS} words. Current content is too short. DO NOT submit content with fewer words.
-
-Return a JSON object with no markdown block markers in this exact format:
+Return a complete JSON object with all required fields:
 {
-  "theory_slide_1": "Comprehensive slide 1 (${MIN_WORDS}-${MAX_WORDS} words, following structure above)",
-  "theory_slide_2": "Comprehensive slide 2 (${MIN_WORDS}-${MAX_WORDS} words, following structure above)",
+  "theory_slide_1": "First comprehensive slide (${MIN_WORDS}-${MAX_WORDS} words)",
+  "theory_slide_2": "Second comprehensive slide (${MIN_WORDS}-${MAX_WORDS} words)",
   "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "Clear, thought-provoking question (at least 10 characters)",
-  "quiz_1_options": ["Detailed option 1", "Detailed option 2", "Detailed option 3", "Detailed option 4"],
-  "quiz_1_correct_answer": "Detailed option 2",
-  "quiz_1_explanation": "Detailed explanation with markdown and LaTeX (at least 20 characters)",
+  "quiz_1_question": "Clear question (>10 chars)",
+  "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+  "quiz_1_correct_answer": "Option that exactly matches one of the options",
+  "quiz_1_explanation": "Detailed explanation (>20 chars)",
   "quiz_2_type": "true_false",
-  "quiz_2_question": "Clear true/false question (at least 10 characters)",
+  "quiz_2_question": "Clear question (>10 chars)",
   "quiz_2_correct_answer": true,
-  "quiz_2_explanation": "Detailed explanation with markdown and LaTeX (at least 20 characters)"
+  "quiz_2_explanation": "Detailed explanation (>20 chars)"
 }`;
 };
 
@@ -154,16 +136,9 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
-        // Wait before retrying with exponential backoff
         const waitTime = delay(attempt - 1);
         console.log(`Retry attempt ${attempt}, waiting ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
-        
-        // For word count failures, add emphasis in the retry
-        if (attempt === 1) {
-          prompt = prompt.replace('CRITICAL WORD COUNT REQUIREMENTS', 
-            'ABSOLUTELY CRITICAL: PREVIOUS ATTEMPT HAD TOO FEW WORDS. WORD COUNT REQUIREMENTS');
-        }
       }
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -177,11 +152,14 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
           messages: [
             { 
               role: 'system', 
-              content: `You are an expert educator creating comprehensive educational content.
-Your primary task is to generate detailed theory slides between ${MIN_WORDS} and ${MAX_WORDS} words each.
-You MUST ensure each slide has AT LEAST ${MIN_WORDS} words.
-Use proper markdown formatting and LaTeX where appropriate.
-Always return valid JSON without any markdown block markers around it.`
+              content: `You are an expert educator generating comprehensive educational content.
+CRITICAL REQUIREMENTS:
+1. You MUST generate TWO complete theory slides
+2. Each slide must have ${MIN_WORDS}-${MAX_WORDS} words
+3. Both slides must follow the provided structure
+4. All mathematical content must use LaTeX
+5. Return complete, valid JSON with ALL required fields
+6. Never return partial responses`
             },
             { role: 'user', content: prompt }
           ],
@@ -205,17 +183,27 @@ Always return valid JSON without any markdown block markers around it.`
       const data = await response.json();
       const content = data.choices[0].message.content;
 
-      // Additional safety check to ensure we have valid JSON
       try {
         const parsed = JSON.parse(content);
-        console.log('Successfully generated and parsed content');
+        
+        // Validate the minimal structure before returning
+        if (!parsed.theory_slide_1 || !parsed.theory_slide_2) {
+          console.error('Missing required slides in response:', parsed);
+          if (attempt < maxRetries) {
+            console.log('Will retry due to missing slides...');
+            continue;
+          }
+          throw new Error('Response missing required theory slides');
+        }
+
+        console.log('Successfully generated and validated content');
         return JSON.stringify(parsed);
       } catch (error) {
         if (attempt === maxRetries) {
-          console.error('Failed to parse OpenAI response as JSON:', content);
-          throw new Error('Invalid JSON response from OpenAI');
+          console.error('Failed to parse or validate response:', content);
+          throw new Error('Invalid or incomplete response from OpenAI');
         }
-        console.log('Invalid JSON response, will retry...');
+        console.log('Invalid or incomplete response, will retry...');
         continue;
       }
     } catch (error) {
@@ -227,5 +215,5 @@ Always return valid JSON without any markdown block markers around it.`
     }
   }
 
-  throw new Error('Failed to generate content after all retries');
+  throw new Error('Failed to generate complete content after all retries');
 };
