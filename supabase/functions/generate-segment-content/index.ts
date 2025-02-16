@@ -24,10 +24,17 @@ serve(async (req) => {
 
     const { lectureId, segmentNumber }: SegmentRequest = await req.json();
     
+    if (!lectureId || typeof segmentNumber !== 'number') {
+      throw new Error('Invalid request parameters');
+    }
+
+    console.log('Processing request for lecture:', lectureId, 'segment:', segmentNumber);
+    
     const supabaseClient = initSupabaseClient();
 
     // Get lecture content and segment info
     const lectureContent = await getLectureContent(supabaseClient, lectureId);
+    console.log('Lecture content length:', lectureContent.length);
     
     // Get segment information including description
     const { data: segment, error: segmentError } = await supabaseClient
@@ -35,11 +42,15 @@ serve(async (req) => {
       .select('title, segment_description')
       .eq('lecture_id', lectureId)
       .eq('sequence_number', segmentNumber)
-      .single();
+      .maybeSingle();
 
-    if (segmentError || !segment) {
+    if (segmentError) {
       console.error('Error fetching segment:', segmentError);
       throw new Error('Failed to fetch segment information');
+    }
+
+    if (!segment) {
+      throw new Error(`No segment found for lecture ${lectureId} number ${segmentNumber}`);
     }
 
     console.log('Generating content for segment:', segment.title);
@@ -57,20 +68,24 @@ serve(async (req) => {
 
     // Get AI config
     const aiConfig = await getAIConfig(supabaseClient, lectureId);
+    console.log('Using AI config:', JSON.stringify(aiConfig, null, 2));
 
-    console.log('Calling GPT for content generation...');
+    // Set up timeout handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     try {
       const prompt = generatePrompt(segment.title, segment.segment_description, lectureContent, aiConfig);
-      const responseContent = await generateContent(prompt);
+      console.log('Generated prompt length:', prompt.length);
       
-      console.log('Successfully received GPT response');
+      const responseContent = await generateContent(prompt);
+      console.log('Received response from OpenAI');
       
       const content = JSON.parse(responseContent) as GeneratedContent;
+      console.log('Successfully parsed content');
       
       validateContent(content);
+      console.log('Content validation passed');
       
       const segmentContent = await saveSegmentContent(
         supabaseClient,
@@ -78,6 +93,7 @@ serve(async (req) => {
         segmentNumber,
         content
       );
+      console.log('Successfully saved segment content');
 
       clearTimeout(timeoutId);
 

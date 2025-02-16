@@ -65,7 +65,7 @@ Required JSON Structure:
 };
 
 export const generateContent = async (prompt: string): Promise<string> => {
-  console.log('Generating content with prompt:', prompt);
+  console.log('Generating content with prompt length:', prompt.length);
   
   const maxRetries = 3;
   const baseDelay = 1000; // 1 second
@@ -87,7 +87,7 @@ export const generateContent = async (prompt: string): Promise<string> => {
             },
             {
               role: 'user',
-              parts: [{ text: prompt }]
+              content: prompt
             }
           ],
           temperature: 0.7,
@@ -112,17 +112,33 @@ export const generateContent = async (prompt: string): Promise<string> => {
       }
 
       const data = await response.json();
-      console.log('Raw OpenAI response:', JSON.stringify(data, null, 2));
+      console.log('Raw OpenAI response received');
       
       // Extract the generated content from OpenAI's response
+      if (!data.choices?.[0]?.message?.content) {
+        console.error('Invalid response structure:', JSON.stringify(data, null, 2));
+        throw new Error('Invalid response structure from OpenAI');
+      }
+
       const generatedContent = data.choices[0].message.content;
       
-      // Validate that the response can be parsed as JSON
+      // Validate that the response is valid JSON
       try {
-        JSON.parse(generatedContent);
+        const parsed = JSON.parse(generatedContent);
+        console.log('Successfully parsed response as JSON');
+        
+        // Basic structure validation
+        if (!parsed.theory_slide_1 || !parsed.theory_slide_2 || 
+            !parsed.quiz_question_1 || !parsed.quiz_question_2) {
+          throw new Error('Missing required fields in generated content');
+        }
       } catch (error) {
-        console.error('Failed to parse OpenAI response as JSON:', error);
-        throw new Error('OpenAI response is not valid JSON');
+        console.error('Failed to parse or validate OpenAI response:', error);
+        if (attempt < maxRetries) {
+          console.log('Retrying with attempt', attempt + 1);
+          continue;
+        }
+        throw new Error('Failed to generate valid JSON content');
       }
       
       return generatedContent;
