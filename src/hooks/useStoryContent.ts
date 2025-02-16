@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export interface StoryContent {
   segments: StorySegment[];
@@ -20,6 +21,8 @@ export interface StorySegment {
 }
 
 export const useStoryContent = (lectureId: string | undefined) => {
+  const { toast } = useToast();
+
   return useQuery({
     queryKey: ['story-content', lectureId],
     queryFn: async () => {
@@ -28,6 +31,29 @@ export const useStoryContent = (lectureId: string | undefined) => {
       if (isNaN(numericLectureId)) throw new Error('Invalid lecture ID');
 
       console.log('Fetching story content for lecture:', numericLectureId);
+
+      // Check if user is authenticated
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw new Error('Authentication error');
+      }
+
+      // First check if lecture exists and user has access
+      const { data: lecture, error: lectureError } = await supabase
+        .from('lectures')
+        .select('id, title')
+        .eq('id', numericLectureId)
+        .single();
+
+      if (lectureError) {
+        console.error('Error fetching lecture:', lectureError);
+        throw new Error('Failed to fetch lecture');
+      }
+
+      if (!lecture) {
+        throw new Error('Lecture not found');
+      }
 
       // Fetch segments with titles
       const { data: segments, error: segmentsError } = await supabase
@@ -42,8 +68,38 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       if (!segments || segments.length === 0) {
-        console.log('No segments found for lecture:', numericLectureId);
-        return { segments: [] };
+        // Trigger content generation if no segments exist
+        console.log('No segments found, triggering generation...');
+        try {
+          const { error: generationError } = await supabase.functions.invoke('generate-segments-structure', {
+            body: { lectureId: numericLectureId }
+          });
+
+          if (generationError) throw generationError;
+          
+          // Refetch segments after generation
+          const { data: newSegments, error: refetchError } = await supabase
+            .from('lecture_segments')
+            .select('id, title, sequence_number')
+            .eq('lecture_id', numericLectureId)
+            .order('sequence_number', { ascending: true });
+
+          if (refetchError) throw refetchError;
+          
+          if (!newSegments || newSegments.length === 0) {
+            throw new Error('Failed to generate segments');
+          }
+
+          segments = newSegments;
+        } catch (error) {
+          console.error('Error generating segments:', error);
+          toast({
+            title: "Error",
+            description: "Failed to generate content. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
       }
 
       // Fetch content for all segments
@@ -72,6 +128,54 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       console.log('Raw segment contents:', segmentContents);
+
+      // If no content exists, generate it
+      if (!segmentContents || segmentContents.length === 0) {
+        console.log('No content found, generating for each segment...');
+        try {
+          const contentPromises = segments.map(segment =>
+            supabase.functions.invoke('generate-segment-content', {
+              body: {
+                lectureId: numericLectureId,
+                segmentNumber: segment.sequence_number
+              }
+            })
+          );
+
+          await Promise.all(contentPromises);
+
+          // Refetch content after generation
+          const { data: newContents, error: refetchError } = await supabase
+            .from('segments_content')
+            .select(`
+              sequence_number,
+              theory_slide_1,
+              theory_slide_2,
+              quiz_1_type,
+              quiz_1_question,
+              quiz_1_options,
+              quiz_1_correct_answer,
+              quiz_1_explanation,
+              quiz_2_type,
+              quiz_2_question,
+              quiz_2_correct_answer,
+              quiz_2_explanation
+            `)
+            .eq('lecture_id', numericLectureId)
+            .order('sequence_number', { ascending: true });
+
+          if (refetchError) throw refetchError;
+          segmentContents = newContents;
+        } catch (error) {
+          console.error('Error generating content:', error);
+          toast({
+            title: "Error",
+            description: "Failed to generate segment content. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
+      }
 
       // Map segments to their content
       const formattedSegments = segments.map((segment) => {
