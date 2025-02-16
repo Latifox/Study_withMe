@@ -31,7 +31,7 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
   });
 
   // Check if content is ready
-  const { data: segmentContent } = useQuery({
+  const { data: segmentContent, isLoading: isContentLoading } = useQuery({
     queryKey: ['segments-content', lectureId],
     queryFn: async () => {
       if (!segments) return null;
@@ -44,18 +44,30 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
       if (error) throw error;
       return data;
     },
-    enabled: !!segments
+    enabled: !!segments,
+    refetchInterval: 2000 // Poll every 2 seconds to check if content is ready
   });
 
-  // Redirect when content is ready
+  // Only redirect when content generation is complete
   useEffect(() => {
-    if (segmentContent && segments && segmentContent.length === segments.length) {
-      const timer = setTimeout(() => {
-        navigate(`/course/${lectureId}/story/nodes`);
-      }, 1500);
-      return () => clearTimeout(timer);
+    if (!isContentLoading && segmentContent && segments) {
+      // Check if all segments have their content generated
+      const allContentGenerated = segments.every(segment => 
+        segmentContent.some(content => 
+          content.sequence_number === segment.sequence_number &&
+          content.theory_slide_1 && 
+          content.theory_slide_2
+        )
+      );
+
+      if (allContentGenerated) {
+        const timer = setTimeout(() => {
+          navigate(`/course/${lectureId}/story/nodes`);
+        }, 3000); // Give more time to see the completed mindmap
+        return () => clearTimeout(timer);
+      }
     }
-  }, [segmentContent, segments, lectureId, navigate]);
+  }, [segmentContent, segments, isContentLoading, lectureId, navigate]);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-violet-600/90 via-purple-500/90 to-indigo-600/90">
@@ -74,14 +86,34 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
         <Card className="w-full max-w-5xl min-h-[600px] p-8 bg-white/20 backdrop-blur-md border-white/20">
           {segments && segments.length > 0 ? (
             <div className="relative h-full">
-              {/* Main title at the top */}
+              {/* Title with loading indicator */}
               <motion.div
                 className="text-center mb-12"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <h2 className="text-2xl font-bold text-white">Learning Journey Map</h2>
+                <h2 className="text-2xl font-bold text-white mb-2">Learning Journey Map</h2>
+                <div className="flex justify-center items-center gap-2">
+                  <span className="text-white/80 text-sm">Generating content</span>
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ 
+                          scale: [1, 1.2, 1],
+                          opacity: [1, 0.5, 1]
+                        }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          delay: i * 0.2
+                        }}
+                        className="w-1.5 h-1.5 bg-white rounded-full"
+                      />
+                    ))}
+                  </div>
+                </div>
               </motion.div>
 
               <div className="flex flex-col gap-16">
@@ -89,6 +121,12 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                   const concepts = segment.segment_description
                     .replace(/Key concepts to explore: /g, '')
                     .split(', ');
+
+                  const isContentReady = segmentContent?.some(content => 
+                    content.sequence_number === segment.sequence_number &&
+                    content.theory_slide_1 && 
+                    content.theory_slide_2
+                  );
 
                   return (
                     <motion.div
@@ -98,43 +136,64 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: index * 0.2 }}
                     >
-                      {/* Connection line to next segment */}
+                      {/* Connection line with animation */}
                       {index < segments.length - 1 && (
                         <motion.div
-                          className="absolute h-16 w-1 bg-gradient-to-b from-white/50 to-transparent"
+                          className="absolute h-16 w-1"
                           style={{
                             left: '2rem',
                             top: '100%',
+                            background: 'linear-gradient(to bottom, rgba(255,255,255,0.5), transparent)'
                           }}
-                          initial={{ scaleY: 0 }}
-                          animate={{ scaleY: 1 }}
-                          transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
+                          initial={{ scaleY: 0, opacity: 0 }}
+                          animate={{ 
+                            scaleY: 1, 
+                            opacity: 1,
+                          }}
+                          transition={{ 
+                            duration: 1,
+                            delay: index * 0.3,
+                            repeat: Infinity,
+                            repeatType: "reverse"
+                          }}
                         />
                       )}
 
-                      {/* Segment title with glowing effect */}
+                      {/* Segment title with processing indicator */}
                       <motion.div
                         className="relative group"
-                        whileHover={{ scale: 1.02 }}
+                        animate={{ 
+                          boxShadow: isContentReady 
+                            ? ["0 0 0 rgba(255,255,255,0.2)", "0 0 20px rgba(255,255,255,0.4)", "0 0 0 rgba(255,255,255,0.2)"]
+                            : ["0 0 0 rgba(255,255,255,0.2)"]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity }}
                       >
                         <div className="absolute inset-0 bg-white/20 rounded-xl blur-lg group-hover:bg-white/30 transition-all" />
-                        <div className="relative bg-white/30 backdrop-blur-md p-4 rounded-xl border border-white/40 shadow-lg">
+                        <div className={`relative backdrop-blur-md p-4 rounded-xl border shadow-lg
+                          ${isContentReady ? 'bg-white/40 border-white/50' : 'bg-white/20 border-white/30'}`}>
                           <h3 className="text-xl font-bold text-white">
                             {segment.title}
                           </h3>
                         </div>
                       </motion.div>
 
-                      {/* Concepts cloud */}
+                      {/* Animated concepts */}
                       <div className="mt-4 flex flex-wrap gap-3 ml-8">
                         {concepts.map((concept, conceptIndex) => (
                           <motion.div
                             key={conceptIndex}
                             initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            animate={{ 
+                              opacity: 1, 
+                              scale: 1,
+                              y: [0, -5, 0]
+                            }}
                             transition={{
-                              duration: 0.3,
-                              delay: index * 0.2 + conceptIndex * 0.1
+                              duration: 2,
+                              delay: index * 0.2 + conceptIndex * 0.1,
+                              repeat: Infinity,
+                              repeatDelay: Math.random() * 2
                             }}
                           >
                             <div className="relative group">
