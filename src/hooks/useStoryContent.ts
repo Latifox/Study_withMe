@@ -32,17 +32,17 @@ export const useStoryContent = (lectureId: string | undefined) => {
 
       console.log('Fetching story content for lecture:', numericLectureId);
 
-      // Check if user is authenticated
+      // First check if user is authenticated
       const { data: { session }, error: authError } = await supabase.auth.getSession();
       if (authError) {
         console.error('Auth error:', authError);
         throw new Error('Authentication error');
       }
 
-      // First check if lecture exists and user has access
+      // First check if lecture exists and get its content
       const { data: lecture, error: lectureError } = await supabase
         .from('lectures')
-        .select('id, title')
+        .select('id, title, content')
         .eq('id', numericLectureId)
         .single();
 
@@ -72,7 +72,10 @@ export const useStoryContent = (lectureId: string | undefined) => {
         console.log('No segments found, triggering generation...');
         try {
           const { error: generationError } = await supabase.functions.invoke('generate-segments-structure', {
-            body: { lectureId: numericLectureId }
+            body: { 
+              lectureId: numericLectureId,
+              lectureContent: lecture.content
+            }
           });
 
           if (generationError) throw generationError;
@@ -126,8 +129,6 @@ export const useStoryContent = (lectureId: string | undefined) => {
         console.error('Error fetching segment contents:', segmentContents.error);
         throw segmentContents.error;
       }
-
-      console.log('Raw segment contents:', segmentContents.data);
 
       // If no content exists, generate it
       if (!segmentContents.data || segmentContents.data.length === 0) {
