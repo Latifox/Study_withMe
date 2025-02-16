@@ -34,7 +34,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
@@ -67,8 +67,7 @@ Example:
             content: lectureContent
           }
         ],
-        temperature: 0.5,
-        response_format: { type: "json_object" }
+        temperature: 0.5
       }),
     });
 
@@ -78,8 +77,25 @@ Example:
       throw new Error(`Failed to generate segments: ${error}`);
     }
 
-    const data = await response.json();
-    const segments: SegmentStructure[] = JSON.parse(data.choices[0].message.content);
+    const openAIResponse = await response.json();
+    console.log('OpenAI response:', openAIResponse);
+
+    if (!openAIResponse.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI');
+    }
+
+    let segments: SegmentStructure[];
+    try {
+      segments = JSON.parse(openAIResponse.choices[0].message.content);
+      console.log('Parsed segments:', segments);
+      
+      if (!Array.isArray(segments)) {
+        throw new Error('Response is not an array');
+      }
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Failed to parse segments structure from OpenAI response');
+    }
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -98,23 +114,28 @@ Example:
       throw deleteError;
     }
 
+    // Prepare segments for insertion with proper mapping
+    const segmentsToInsert = segments.map((segment, index) => ({
+      lecture_id: lectureId,
+      sequence_number: index + 1,
+      title: segment.title,
+      segment_description: segment.description // This was missing proper mapping
+    }));
+
+    console.log('Inserting segments:', segmentsToInsert);
+
     // Insert new segments
     const { data: insertedSegments, error: insertError } = await supabaseClient
       .from('lecture_segments')
-      .insert(
-        segments.map((segment, index) => ({
-          lecture_id: lectureId,
-          sequence_number: index + 1,
-          title: segment.title,
-          segment_description: segment.description
-        }))
-      )
+      .insert(segmentsToInsert)
       .select();
 
     if (insertError) {
       console.error('Error inserting segments:', insertError);
       throw insertError;
     }
+
+    console.log('Successfully inserted segments:', insertedSegments);
 
     return new Response(
       JSON.stringify({ segments: insertedSegments }), 
