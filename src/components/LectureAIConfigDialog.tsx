@@ -61,6 +61,53 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     }
   }, [config]);
 
+  const regenerateContent = async () => {
+    try {
+      // First, get the lecture content
+      const { data: lecture, error: lectureError } = await supabase
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureId)
+        .single();
+
+      if (lectureError) throw lectureError;
+
+      // Generate new segments structure
+      const { error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
+        body: {
+          lectureId: lectureId,
+          lectureContent: lecture.content
+        }
+      });
+
+      if (segmentError) throw segmentError;
+
+      // Get the newly created segments
+      const { data: segments, error: fetchError } = await supabase
+        .from('lecture_segments')
+        .select('sequence_number')
+        .eq('lecture_id', lectureId);
+
+      if (fetchError) throw fetchError;
+
+      // Generate content for each segment
+      const contentPromises = segments.map(segment =>
+        supabase.functions.invoke('generate-segment-content', {
+          body: {
+            lectureId: lectureId,
+            segmentNumber: segment.sequence_number
+          }
+        })
+      );
+
+      await Promise.all(contentPromises);
+
+    } catch (error) {
+      console.error('Error regenerating content:', error);
+      throw error;
+    }
+  };
+
   const handleSave = async () => {
     if (!lectureId) {
       toast({
@@ -93,18 +140,25 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (configError) throw configError;
 
+      // Regenerate content with new settings
+      await regenerateContent();
+
+      // Invalidate all relevant queries
+      await queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
+      await queryClient.invalidateQueries({ queryKey: ["segment-content", lectureId] });
+      await queryClient.invalidateQueries({ queryKey: ["story-content", lectureId] });
+
       toast({
         title: "Success",
-        description: "AI configuration saved successfully",
+        description: "AI configuration saved and content regenerated successfully",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       onClose();
     } catch (error) {
       console.error("Error saving configuration:", error);
       toast({
         title: "Error",
-        description: "Failed to save configuration",
+        description: "Failed to save configuration and regenerate content",
         variant: "destructive",
       });
     } finally {
@@ -196,7 +250,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           </div>
 
           <Button onClick={handleSave} disabled={isSaving} className="w-full">
-            {isSaving ? "Saving..." : "Save Configuration"}
+            {isSaving ? "Regenerating Content..." : "Save Configuration"}
           </Button>
         </div>
       </DialogContent>
