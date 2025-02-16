@@ -1,6 +1,10 @@
 
 import { GeneratedContent } from "./types.ts";
 
+const countWords = (text: string): number => {
+  return text.trim().split(/\s+/).length;
+};
+
 const validateContent = (content: GeneratedContent): void => {
   // First validate that we have a valid content object
   if (!content || typeof content !== 'object') {
@@ -8,6 +12,21 @@ const validateContent = (content: GeneratedContent): void => {
   }
 
   console.log('Validating content:', JSON.stringify(content, null, 2));
+
+  // Validate word count for both slides
+  const slide1Words = countWords(content.theory_slide_1);
+  const slide2Words = countWords(content.theory_slide_2);
+  
+  console.log(`Slide 1 word count: ${slide1Words}`);
+  console.log(`Slide 2 word count: ${slide2Words}`);
+
+  if (slide1Words < 300 || slide1Words > 400) {
+    throw new Error(`Theory slide 1 has ${slide1Words} words, must be between 300-400 words`);
+  }
+
+  if (slide2Words < 300 || slide2Words > 400) {
+    throw new Error(`Theory slide 2 has ${slide2Words} words, must be between 300-400 words`);
+  }
 
   const requiredFields = [
     'theory_slide_1',
@@ -27,7 +46,6 @@ const validateContent = (content: GeneratedContent): void => {
     if (field === 'quiz_1_options') {
       return content.quiz_1_type === 'multiple_choice' && (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length < 4);
     }
-    // Handle special case for boolean values which might be false
     if (field === 'quiz_2_correct_answer') {
       return typeof content[field] !== 'boolean';
     }

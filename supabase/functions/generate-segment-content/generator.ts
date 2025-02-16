@@ -23,43 +23,48 @@ Content Type: ${segmentTitle}
 Description: ${segmentDescription}
 Source Material: ${lectureContent}
 
-Requirements:
+CRITICAL REQUIREMENTS:
+1. Word Count:
+   - EACH theory slide MUST contain BETWEEN 300 AND 400 WORDS
+   - This is a STRICT requirement and responses will be rejected if not met
 
-THEORY SLIDES:
-- Generate TWO theory slides based ONLY on the provided lecture content
-- Organize the content naturally based on the material's flow
-- Use clear headers and bullet points where appropriate
-- Format all mathematical expressions using proper LaTeX syntax:
-  * Inline math: $\\text{text}$, $\\rightarrow$
-  * Display math: $$\\text{long expression}$$
-  * Greek letters: $\\alpha$, $\\beta$
-  * Proper text in math: $\\text{word}$ not $word$
+2. Content Source:
+   - Use ONLY information from the provided lecture content
+   - Do not add external information or examples
+   - Stay focused on the specific topic from the lecture
 
-QUIZZES:
-1. Quiz 1 (Multiple Choice):
-   - Create a challenging conceptual question that tests deep understanding
-   - Provide 4 well-thought-out options that appear plausible
-   - Correct answer should not be obvious
+3. LaTeX Formatting:
+   - Format ALL mathematical expressions using LaTeX
+   - Use $\\text{word}$ for text within math
+   - Use $\\rightarrow$ for arrows
+   - Use proper LaTeX syntax for all mathematical notation
 
-2. Quiz 2 (True/False):
-   - Create a subtle, nuanced statement that requires careful analysis
-   - The answer should not be immediately apparent
+4. Quizzes:
+   - Quiz 1 (Multiple Choice):
+     * Create a conceptually challenging question
+     * All 4 options should seem plausible
+     * Test deep understanding, not memorization
+   
+   - Quiz 2 (True/False):
+     * Create a nuanced, thought-provoking statement
+     * The answer should require careful analysis
+     * Avoid obvious true/false statements
 
 ${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
 
 Return a JSON object with:
 {
-  "theory_slide_1": "First comprehensive slide",
-  "theory_slide_2": "Second comprehensive slide",
+  "theory_slide_1": "300-400 word slide",
+  "theory_slide_2": "300-400 word slide",
   "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "Challenging conceptual question",
+  "quiz_1_question": "challenging question",
   "quiz_1_options": ["four", "plausible", "answer", "options"],
   "quiz_1_correct_answer": "must match one option",
-  "quiz_1_explanation": "Detailed explanation",
+  "quiz_1_explanation": "detailed explanation",
   "quiz_2_type": "true_false",
-  "quiz_2_question": "Subtle, nuanced statement",
+  "quiz_2_question": "nuanced statement",
   "quiz_2_correct_answer": boolean,
-  "quiz_2_explanation": "Detailed explanation"
+  "quiz_2_explanation": "detailed explanation"
 }`;
 };
 
