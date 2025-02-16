@@ -68,16 +68,42 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       }
 
       console.log('Extracting PDF content...');
-      const { data, error } = await supabase.functions.invoke('extract-pdf-text', {
+      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
         body: {
           filePath,
           lectureId: lectureData.id.toString()
         }
       });
 
-      if (error) throw error;
-      
-      console.log('PDF content extraction response:', data);
+      if (extractionError) throw extractionError;
+      console.log('PDF content extracted successfully');
+
+      // Generate segment structure (titles and descriptions)
+      console.log('Generating segment structure...');
+      const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
+        body: {
+          lectureId: lectureData.id,
+          lectureContent: extractionData.content
+        }
+      });
+
+      if (segmentError) throw segmentError;
+      console.log('Segment structure generated successfully');
+
+      // Generate content for each segment in parallel
+      console.log('Generating content for all segments...');
+      const segmentPromises = segmentData.segments.map((segment: any) => 
+        supabase.functions.invoke('generate-segment-content', {
+          body: {
+            lectureId: lectureData.id,
+            segmentNumber: segment.sequence_number
+          }
+        })
+      );
+
+      // Wait for all segment content to be generated
+      await Promise.all(segmentPromises);
+      console.log('All segment content generated successfully');
 
       // Invalidate queries and wait a moment to ensure the UI updates
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
@@ -87,7 +113,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
       toast({
         title: "Success",
-        description: "Lecture uploaded successfully!",
+        description: "Lecture uploaded and processed successfully!",
       });
       onClose();
     } catch (error: any) {
