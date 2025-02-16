@@ -1,6 +1,34 @@
 
 import { GeneratedContent } from "./types.ts";
 
+const MIN_WORDS = 400;
+const MAX_WORDS = 600;
+
+const wordCount = (text: string): number => {
+  return text.trim().split(/\s+/).length;
+};
+
+const validateWordCount = (text: string, fieldName: string): void => {
+  const words = wordCount(text);
+  if (words < MIN_WORDS || words > MAX_WORDS) {
+    throw new Error(`${fieldName} must be between ${MIN_WORDS} and ${MAX_WORDS} words. Current: ${words} words`);
+  }
+};
+
+const validateMarkdownAndLatex = (text: string, fieldName: string): void => {
+  // Check for basic markdown elements
+  const hasMarkdown = /[#*_`]/.test(text) || /\n[-*+]/.test(text);
+  if (!hasMarkdown) {
+    console.warn(`Warning: ${fieldName} might be missing markdown formatting`);
+  }
+
+  // Check for proper LaTeX delimiters if math is present
+  const mathPattern = /[+\-*/=<>√∑∏∫]/;
+  if (mathPattern.test(text) && !(/\$.*\$/.test(text))) {
+    throw new Error(`${fieldName} contains mathematical symbols but lacks LaTeX formatting`);
+  }
+};
+
 export const validateQuizQuestion = (content: GeneratedContent, quizNumber: number): void => {
   const prefix = `quiz_${quizNumber}_`;
   const type = content[`${prefix}type` as keyof GeneratedContent] as string;
@@ -25,6 +53,9 @@ export const validateQuizQuestion = (content: GeneratedContent, quizNumber: numb
       throw new Error(`Quiz ${quizNumber} must have a boolean correct answer`);
     }
   }
+
+  // Validate explanation formatting
+  validateMarkdownAndLatex(explanation, `Quiz ${quizNumber} explanation`);
 };
 
 export const validateContent = (content: GeneratedContent): void => {
@@ -37,11 +68,18 @@ export const validateContent = (content: GeneratedContent): void => {
   }
 
   // Validate theory slides
-  if (typeof content.theory_slide_1 !== 'string' || content.theory_slide_1.length < 10) {
-    throw new Error('Theory slide 1 content is invalid or too short');
-  }
-  if (typeof content.theory_slide_2 !== 'string' || content.theory_slide_2.length < 10) {
-    throw new Error('Theory slide 2 content is invalid or too short');
+  for (const slideNumber of [1, 2]) {
+    const slideContent = content[`theory_slide_${slideNumber}` as keyof GeneratedContent] as string;
+    
+    if (typeof slideContent !== 'string') {
+      throw new Error(`Theory slide ${slideNumber} content must be a string`);
+    }
+
+    // Validate word count
+    validateWordCount(slideContent, `Theory slide ${slideNumber}`);
+
+    // Validate formatting
+    validateMarkdownAndLatex(slideContent, `Theory slide ${slideNumber}`);
   }
 
   // Validate both quizzes
