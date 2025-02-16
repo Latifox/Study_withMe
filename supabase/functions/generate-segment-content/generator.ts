@@ -1,4 +1,3 @@
-
 import { GeneratedContent } from "./types.ts";
 
 export const generatePrompt = (
@@ -18,67 +17,63 @@ ${lectureContent}
 
 CRITICAL REQUIREMENTS:
 
-1. STRICT CONCEPT ADHERENCE:
-   - Generate content ONLY for the concepts listed in the segment description
-   - DO NOT include information about concepts from other segments
-   - If a concept isn't explicitly listed in the segment description, DO NOT include it
+1. WORD COUNT ENFORCEMENT:
+   - Each theory slide MUST be EXACTLY 400-500 words
+   - Break content into logical paragraphs of 3-4 sentences each
+   - Format text with proper headers and sections
 
-2. CONTENT BOUNDARIES:
-   - Stay STRICTLY within the scope defined by the segment description
-   - If you find related concepts in the lecture, but they're not listed in the description, DO NOT include them
-   - Focus deeply on the listed concepts rather than trying to cover additional material
+2. FORMATTING REQUIREMENTS:
+   - Start with a clear ## Introduction header
+   - Use ### subheaders to break up content
+   - Include precisely 2-3 paragraphs per section
+   - Add bullet points for key concepts
+   - Use blockquotes for important definitions
+   - Bold all key terms from the lecture
+   - Use proper spacing between sections
 
-3. SOURCE RESTRICTION:
-   - Use ONLY information present in the provided lecture content
-   - DO NOT add external information or examples
-   - All content must be directly verifiable from the lecture content
+3. CONTENT STRUCTURE:
+   - Slide 1: Overview and basic concepts (400-500 words)
+   - Slide 2: Detailed explanation and examples (400-500 words)
+   - Each slide must be self-contained
+   - Include clear section breaks
 
-4. LANGUAGE MATCHING:
-   - Use EXACTLY the same language as the lecture content
-   - Maintain consistent terminology with the source material
+4. STRICT SOURCE ADHERENCE:
+   - Use ONLY information from the lecture content
+   - Match the lecture's language exactly
+   - Use the same terminology as the source
 
-AI Configuration Settings:
-- Temperature: ${aiConfig.temperature}
-- Creativity Level: ${aiConfig.creativity_level}
-- Detail Level: ${aiConfig.detail_level}
-${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}
+FORMAT EXAMPLE:
 
-CONTENT REQUIREMENTS:
+## Introduction
+Clear opening paragraph explaining the main concept.
 
-Theory Slides:
-1. Focus exclusively on the concepts listed in the segment description
-2. Each slide should be 400-500 words
-3. Use only examples from the lecture that relate to the listed concepts
-4. Maintain clear boundaries - don't drift into other concepts
+### Key Concepts
+- **Term 1**: Definition from lecture
+- **Term 2**: Definition from lecture
 
-Formatting:
-- Headers (##, ###) for concept sections
-- **Bold** for key terms from the lecture
-- *Italic* for emphasis
-- > Blockquotes for direct quotes
-- LaTeX notation: $equation$ (only if present in lecture)
+### Detailed Explanation
+Main explanation paragraph (3-4 sentences).
 
-Quiz Requirements:
-- Questions MUST test ONLY the concepts listed in the segment description
-- All answers must come directly from the lecture content
-- Focus on the specific concepts, not general knowledge
+> Important definition or quote from lecture
+
+Concluding paragraph with key points.
 
 Required JSON Structure:
 {
-  "theory_slide_1": "focused content on listed concepts only",
-  "theory_slide_2": "deeper exploration of listed concepts only",
+  "theory_slide_1": "formatted content following structure above (400-500 words)",
+  "theory_slide_2": "formatted content following structure above (400-500 words)",
   "quiz_question_1": {
     "type": "multiple_choice",
-    "question": "question about listed concepts only",
+    "question": "question based on explicit content",
     "options": ["4 options from lecture"],
     "correctAnswer": "correct option",
     "explanation": "explanation using lecture content"
   },
   "quiz_question_2": {
     "type": "true_false",
-    "question": "statement about listed concepts",
+    "question": "statement from lecture content",
     "correctAnswer": boolean,
-    "explanation": "explanation from lecture"
+    "explanation": "explanation using lecture content"
   }
 }`;
 
