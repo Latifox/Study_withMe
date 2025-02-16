@@ -56,10 +56,7 @@ export const saveSegmentContent = async (
   segmentNumber: number,
   content: GeneratedContent
 ) => {
-  console.log('Saving content for lecture:', lectureId, 'segment:', segmentNumber);
-  console.log('Content to save:', JSON.stringify(content, null, 2));
-
-  const { data, error } = await supabaseClient
+  const { error } = await supabaseClient
     .from('segments_content')
     .upsert({
       lecture_id: lectureId,
@@ -75,15 +72,9 @@ export const saveSegmentContent = async (
       quiz_2_question: content.quiz_2_question,
       quiz_2_correct_answer: content.quiz_2_correct_answer,
       quiz_2_explanation: content.quiz_2_explanation
-    })
-    .select()
-    .single();
+    }, {
+      onConflict: 'lecture_id,sequence_number'
+    });
 
-  if (error) {
-    console.error('Error saving content:', error);
-    throw error;
-  }
-
-  console.log('Content saved successfully:', data);
-  return data;
+  if (error) throw error;
 };
