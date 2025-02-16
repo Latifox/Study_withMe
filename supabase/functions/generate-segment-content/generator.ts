@@ -7,6 +7,7 @@ const wordCount = (text: string): number => {
 
 const MIN_WORDS = 300;
 const MAX_WORDS = 400;
+const TARGET_WORDS = 350;
 
 export const generatePrompt = (
   segmentTitle: string,
@@ -24,35 +25,35 @@ export const generatePrompt = (
   const styleInstructions = `
 CRITICAL REQUIREMENTS:
 1. You MUST generate TWO complete theory slides, each containing:
-   - Between ${MIN_WORDS} and ${MAX_WORDS} words
+   - Aim for ${TARGET_WORDS} words (allowed range: ${MIN_WORDS}-${MAX_WORDS} words)
    - Full markdown formatting
    - Proper LaTeX for all mathematical expressions
 2. Both slides must follow this exact structure:
 
 For EACH slide (both slide 1 AND slide 2):
-## Introduction (50-75 words)
+## Introduction (60-70 words)
 - Overview of the topic
 - Context and importance
 - Connection to broader concepts
 
-## Main Concepts (150-175 words)
+## Main Concepts (160-170 words)
 - Detailed explanation of core principles
 - Key definitions and terminology
 - Theoretical framework
 - Mathematical foundations (with LaTeX)
 
-## Examples and Applications (50-75 words)
+## Examples and Applications (60-70 words)
 - Real-world examples
 - Practical applications
 - Case studies or scenarios
 - Step-by-step demonstrations
 
-## Practical Implications (25-50 words)
+## Practical Implications (35-40 words)
 - Industry relevance
 - Future applications
 - Societal impact
 
-## Summary (25 words)
+## Summary (35 words)
 - Key takeaways
 - Connection to next topics
 
@@ -104,12 +105,12 @@ Source Material: ${lectureContent}
 
 ${styleInstructions}
 
-CRITICAL: You MUST generate BOTH theory_slide_1 AND theory_slide_2. Partial responses are not acceptable.
+CRITICAL: You MUST generate BOTH theory_slide_1 AND theory_slide_2. Aim for exactly ${TARGET_WORDS} words per slide while staying within the allowed range of ${MIN_WORDS}-${MAX_WORDS} words. Partial responses are not acceptable.
 
 Return a complete JSON object with all required fields:
 {
-  "theory_slide_1": "First comprehensive slide (${MIN_WORDS}-${MAX_WORDS} words)",
-  "theory_slide_2": "Second comprehensive slide (${MIN_WORDS}-${MAX_WORDS} words)",
+  "theory_slide_1": "First comprehensive slide (aim for ${TARGET_WORDS} words)",
+  "theory_slide_2": "Second comprehensive slide (aim for ${TARGET_WORDS} words)",
   "quiz_1_type": "multiple_choice",
   "quiz_1_question": "Clear question (>10 chars)",
   "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
