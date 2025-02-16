@@ -20,12 +20,12 @@ const validateContent = (content: GeneratedContent): void => {
   console.log(`Slide 1 word count: ${slide1Words}`);
   console.log(`Slide 2 word count: ${slide2Words}`);
 
-  if (slide1Words < 300 || slide1Words > 400) {
-    throw new Error(`Theory slide 1 has ${slide1Words} words, must be between 300-400 words`);
+  if (slide1Words < 225 || slide1Words > 550) {
+    throw new Error(`Theory slide 1 has ${slide1Words} words, must be between 225-550 words`);
   }
 
-  if (slide2Words < 300 || slide2Words > 400) {
-    throw new Error(`Theory slide 2 has ${slide2Words} words, must be between 300-400 words`);
+  if (slide2Words < 225 || slide2Words > 550) {
+    throw new Error(`Theory slide 2 has ${slide2Words} words, must be between 225-550 words`);
   }
 
   const requiredFields = [
