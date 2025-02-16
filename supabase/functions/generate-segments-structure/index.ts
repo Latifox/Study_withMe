@@ -34,32 +34,35 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert educational content organizer. Your task is to:
-1. First identify the primary language of the provided lecture content
-2. Then, using ONLY THAT SAME LANGUAGE:
-   - Break down the content into 4-6 logical segments
-   - Create descriptive titles and descriptions for each segment
-3. Ensure NO CONCEPT OVERLAP between segments
-4. For each segment:
-   - Create a clear, descriptive title IN THE SAME LANGUAGE AS THE CONTENT
-   - Write a HIGHLY SPECIFIC description (max 50 words) IN THE SAME LANGUAGE that explicitly lists WHICH concepts will be covered
+            content: `You are an expert educational content organizer. Your task is to break down educational content into logical segments.
 
-Return a valid JSON array with this exact format:
+CRITICAL: You MUST return a JSON object with EXACTLY this structure:
 {
   "segments": [
     {
-      "title": "Title in same language as content",
-      "description": "Description in same language as content"
+      "title": "string",
+      "description": "string"
     }
   ]
-}`
+}
+
+Requirements:
+1. Generate 4-6 segments
+2. Use the SAME LANGUAGE as the input content
+3. Each segment must cover distinct concepts (no overlap)
+4. For each segment provide:
+   - A clear, descriptive title (in the content's language)
+   - A specific description (in the content's language, max 50 words)
+   
+Remember: ONLY return the JSON object, no other text or explanation.`
           },
           {
             role: 'user',
             content: lectureContent
           }
         ],
-        temperature: 0.3
+        temperature: 0.3,
+        response_format: { type: "json_object" }
       }),
     });
 
@@ -78,18 +81,81 @@ Return a valid JSON array with this exact format:
 
     let segments;
     try {
-      const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
-      segments = parsedContent.segments;
+      // First try to parse the response
+      const rawContent = openAIResponse.choices[0].message.content;
+      console.log('Raw OpenAI content:', rawContent);
       
-      if (!Array.isArray(segments)) {
-        throw new Error('Response segments is not an array');
+      const parsedContent = JSON.parse(rawContent);
+      console.log('Parsed content:', JSON.stringify(parsedContent, null, 2));
+
+      // Check if we have a segments array
+      if (!parsedContent.segments || !Array.isArray(parsedContent.segments)) {
+        throw new Error('Response missing segments array');
       }
 
-      console.log('Parsed segments:', JSON.stringify(segments, null, 2));
+      // Validate each segment
+      parsedContent.segments.forEach((segment, index) => {
+        if (!segment.title || typeof segment.title !== 'string') {
+          throw new Error(`Segment ${index + 1} missing valid title`);
+        }
+        if (!segment.description || typeof segment.description !== 'string') {
+          throw new Error(`Segment ${index + 1} missing valid description`);
+        }
+      });
+
+      segments = parsedContent.segments;
+      console.log('Valid segments found:', segments.length);
+
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.error('Raw content:', openAIResponse.choices[0].message.content);
-      throw new Error('Failed to parse segments structure from OpenAI response');
+      
+      // Try to recover if possible
+      const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `Fix this JSON to match the required format exactly:
+{
+  "segments": [
+    {
+      "title": "string",
+      "description": "string"
+    }
+  ]
+}
+Do not add any additional fields or text.`
+            },
+            {
+              role: 'user',
+              content: openAIResponse.choices[0].message.content
+            }
+          ],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        }),
+      });
+
+      if (!retryResponse.ok) {
+        throw new Error('Failed to recover malformed JSON');
+      }
+
+      const retryData = await retryResponse.json();
+      const retryContent = JSON.parse(retryData.choices[0].message.content);
+      
+      if (!retryContent.segments || !Array.isArray(retryContent.segments)) {
+        throw new Error('Recovery attempt failed to produce valid segments');
+      }
+
+      segments = retryContent.segments;
+      console.log('Recovered segments through retry');
     }
 
     // Initialize Supabase client
