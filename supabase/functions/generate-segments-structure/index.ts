@@ -26,6 +26,7 @@ serve(async (req) => {
     }
 
     console.log('Generating segments structure for lecture:', lectureId);
+    console.log('Content length:', lectureContent.length);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -34,7 +35,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -52,8 +53,9 @@ IMPORTANT GUIDELINES:
 - Maintain a logical progression of topics
 - Keep descriptions focused and specific
 - NO emojis or special characters
-            
-Format your response as a JSON array of objects with 'title' and 'description' fields.
+- YOU MUST RETURN A VALID JSON ARRAY
+
+Your response must be a valid JSON array of objects, each with 'title' and 'description' fields.
 Example:
 [
   {
@@ -67,7 +69,8 @@ Example:
             content: lectureContent
           }
         ],
-        temperature: 0.5
+        temperature: 0.3,
+        response_format: { type: "json_object" }
       }),
     });
 
@@ -78,7 +81,7 @@ Example:
     }
 
     const openAIResponse = await response.json();
-    console.log('OpenAI response:', openAIResponse);
+    console.log('OpenAI response:', JSON.stringify(openAIResponse, null, 2));
 
     if (!openAIResponse.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI');
@@ -86,14 +89,19 @@ Example:
 
     let segments: SegmentStructure[];
     try {
-      segments = JSON.parse(openAIResponse.choices[0].message.content);
-      console.log('Parsed segments:', segments);
+      const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
+      
+      // Check if the response is wrapped in a 'segments' property
+      segments = Array.isArray(parsedContent) ? parsedContent : parsedContent.segments;
       
       if (!Array.isArray(segments)) {
         throw new Error('Response is not an array');
       }
+
+      console.log('Parsed segments:', JSON.stringify(segments, null, 2));
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
+      console.error('Raw content:', openAIResponse.choices[0].message.content);
       throw new Error('Failed to parse segments structure from OpenAI response');
     }
 
@@ -119,10 +127,10 @@ Example:
       lecture_id: lectureId,
       sequence_number: index + 1,
       title: segment.title,
-      segment_description: segment.description // This was missing proper mapping
+      segment_description: segment.description
     }));
 
-    console.log('Inserting segments:', segmentsToInsert);
+    console.log('Inserting segments:', JSON.stringify(segmentsToInsert, null, 2));
 
     // Insert new segments
     const { data: insertedSegments, error: insertError } = await supabaseClient
@@ -135,7 +143,7 @@ Example:
       throw insertError;
     }
 
-    console.log('Successfully inserted segments:', insertedSegments);
+    console.log('Successfully inserted segments:', JSON.stringify(insertedSegments, null, 2));
 
     return new Response(
       JSON.stringify({ segments: insertedSegments }), 
