@@ -5,7 +5,6 @@ import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import pdfParse from "npm:pdf-parse@1.1.1";
 import { normalizeText } from './textProcessor.ts';
-import { analyzeTextWithGPT } from './gptAnalyzer.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,90 +61,18 @@ serve(async (req) => {
       throw lectureError;
     }
 
-    try {
-      // Get segments with titles and content from GPT
-      console.log('Starting GPT analysis...');
-      const { segments } = await analyzeTextWithGPT(normalizedText);
-      console.log('GPT Analysis complete, segments:', segments.length);
-      
-      // Delete existing segments and content for this lecture (to handle re-uploads)
-      const { error: deleteError } = await supabaseClient
-        .from('lecture_segments')
-        .delete()
-        .eq('lecture_id', parseInt(lectureId));
-
-      if (deleteError) {
-        console.error('Error deleting existing segments:', deleteError);
-        throw deleteError;
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        content: normalizedText
+      }),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
-
-      // Store segments
-      for (let i = 0; i < segments.length; i++) {
-        const segmentNumber = i + 1;
-        const segment = segments[i];
-        
-        console.log(`Processing segment ${segmentNumber}:`, segment.title);
-
-        // Store in lecture_segments table
-        const { error: segmentError } = await supabaseClient
-          .from('lecture_segments')
-          .insert({
-            lecture_id: parseInt(lectureId),
-            sequence_number: segmentNumber,
-            title: segment.title
-          });
-
-        if (segmentError) {
-          console.error(`Error storing lecture segment ${segmentNumber}:`, segmentError);
-          throw segmentError;
-        }
-
-        // Store in segments_content table
-        const { error: contentError } = await supabaseClient
-          .from('segments_content')
-          .insert({
-            lecture_id: parseInt(lectureId),
-            sequence_number: segmentNumber,
-            theory_slide_1: segment.content.theory_slide_1,
-            theory_slide_2: segment.content.theory_slide_2,
-            quiz_1_type: segment.content.quiz_question_1.type,
-            quiz_1_question: segment.content.quiz_question_1.question,
-            quiz_1_options: segment.content.quiz_question_1.options,
-            quiz_1_correct_answer: segment.content.quiz_question_1.correctAnswer,
-            quiz_1_explanation: segment.content.quiz_question_1.explanation,
-            quiz_2_type: 'true_false',
-            quiz_2_question: segment.content.quiz_question_2.question,
-            quiz_2_correct_answer: segment.content.quiz_question_2.correctAnswer,
-            quiz_2_explanation: segment.content.quiz_question_2.explanation
-          });
-
-        if (contentError) {
-          console.error(`Error storing segment content ${segmentNumber}:`, contentError);
-          throw contentError;
-        }
-
-        console.log(`Successfully stored segment ${segmentNumber}`);
-      }
-
-      console.log('Successfully stored all segments and content');
-
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          segmentCount: segments.length
-        }),
-        { 
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-    } catch (error) {
-      console.error('Error processing content:', error);
-      throw error;
-    }
+    );
 
   } catch (error) {
     console.error('Error processing PDF:', error);
