@@ -27,7 +27,7 @@ Adjust output based on these parameters:
 - Creativity Level: ${aiConfig.creativity_level} (higher means more creative examples and analogies)
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive explanations)
 
-Return a JSON object with this exact structure:
+Return the output in this exact JSON format without any markdown or code blocks:
 {
   "theory_slide_1": "First slide content with main concepts",
   "theory_slide_2": "Second slide content with examples and applications",
@@ -38,7 +38,7 @@ Return a JSON object with this exact structure:
   "quiz_1_explanation": "Why this is correct",
   "quiz_2_type": "true_false",
   "quiz_2_question": "Question text",
-  "quiz_2_correct_answer": true/false,
+  "quiz_2_correct_answer": true,
   "quiz_2_explanation": "Why this is correct"
 }`;
 };
@@ -53,7 +53,10 @@ export const generateContent = async (prompt: string) => {
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'You are an expert educator that creates engaging educational content.' },
+        { 
+          role: 'system', 
+          content: 'You are an expert educator that creates engaging educational content. Always return valid JSON without any markdown formatting or code blocks.' 
+        },
         { role: 'user', content: prompt }
       ],
       temperature: 0.7,
@@ -65,5 +68,14 @@ export const generateContent = async (prompt: string) => {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices[0].message.content;
+
+  // Additional safety check to ensure we have valid JSON
+  try {
+    const parsed = JSON.parse(content);
+    return JSON.stringify(parsed); // Re-stringify to ensure clean JSON
+  } catch (error) {
+    console.error('Failed to parse OpenAI response as JSON:', content);
+    throw new Error('Invalid JSON response from OpenAI');
+  }
 };

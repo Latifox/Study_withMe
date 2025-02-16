@@ -56,18 +56,18 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       // Fetch segments with titles
-      const { data: segments, error: segmentsError } = await supabase
+      let segments = await supabase
         .from('lecture_segments')
         .select('id, title, sequence_number')
         .eq('lecture_id', numericLectureId)
         .order('sequence_number', { ascending: true });
 
-      if (segmentsError) {
-        console.error('Error fetching segments:', segmentsError);
-        throw segmentsError;
+      if (segments.error) {
+        console.error('Error fetching segments:', segments.error);
+        throw segments.error;
       }
 
-      if (!segments || segments.length === 0) {
+      if (!segments.data || segments.data.length === 0) {
         // Trigger content generation if no segments exist
         console.log('No segments found, triggering generation...');
         try {
@@ -78,15 +78,15 @@ export const useStoryContent = (lectureId: string | undefined) => {
           if (generationError) throw generationError;
           
           // Refetch segments after generation
-          const { data: newSegments, error: refetchError } = await supabase
+          const newSegments = await supabase
             .from('lecture_segments')
             .select('id, title, sequence_number')
             .eq('lecture_id', numericLectureId)
             .order('sequence_number', { ascending: true });
 
-          if (refetchError) throw refetchError;
+          if (newSegments.error) throw newSegments.error;
           
-          if (!newSegments || newSegments.length === 0) {
+          if (!newSegments.data || newSegments.data.length === 0) {
             throw new Error('Failed to generate segments');
           }
 
@@ -103,7 +103,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       // Fetch content for all segments
-      const { data: segmentContents, error: contentsError } = await supabase
+      let segmentContents = await supabase
         .from('segments_content')
         .select(`
           sequence_number,
@@ -122,18 +122,18 @@ export const useStoryContent = (lectureId: string | undefined) => {
         .eq('lecture_id', numericLectureId)
         .order('sequence_number', { ascending: true });
 
-      if (contentsError) {
-        console.error('Error fetching segment contents:', contentsError);
-        throw contentsError;
+      if (segmentContents.error) {
+        console.error('Error fetching segment contents:', segmentContents.error);
+        throw segmentContents.error;
       }
 
-      console.log('Raw segment contents:', segmentContents);
+      console.log('Raw segment contents:', segmentContents.data);
 
       // If no content exists, generate it
-      if (!segmentContents || segmentContents.length === 0) {
+      if (!segmentContents.data || segmentContents.data.length === 0) {
         console.log('No content found, generating for each segment...');
         try {
-          const contentPromises = segments.map(segment =>
+          const contentPromises = segments.data.map(segment =>
             supabase.functions.invoke('generate-segment-content', {
               body: {
                 lectureId: numericLectureId,
@@ -145,7 +145,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
           await Promise.all(contentPromises);
 
           // Refetch content after generation
-          const { data: newContents, error: refetchError } = await supabase
+          const newContents = await supabase
             .from('segments_content')
             .select(`
               sequence_number,
@@ -164,7 +164,7 @@ export const useStoryContent = (lectureId: string | undefined) => {
             .eq('lecture_id', numericLectureId)
             .order('sequence_number', { ascending: true });
 
-          if (refetchError) throw refetchError;
+          if (newContents.error) throw newContents.error;
           segmentContents = newContents;
         } catch (error) {
           console.error('Error generating content:', error);
@@ -178,8 +178,8 @@ export const useStoryContent = (lectureId: string | undefined) => {
       }
 
       // Map segments to their content
-      const formattedSegments = segments.map((segment) => {
-        const content = segmentContents?.find(
+      const formattedSegments = segments.data.map((segment) => {
+        const content = segmentContents.data?.find(
           (content) => content.sequence_number === segment.sequence_number
         );
 
