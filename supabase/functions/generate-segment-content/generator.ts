@@ -1,3 +1,4 @@
+
 import { AIConfig } from "./types.ts";
 
 export const generatePrompt = (
@@ -147,11 +148,10 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
               content: `You are an expert educator generating comprehensive educational content.
 CRITICAL REQUIREMENTS:
 1. You MUST generate TWO complete theory slides
-2. Each slide must have ${MIN_WORDS}-${MAX_WORDS} words
-3. Both slides must follow the provided structure
-4. All mathematical content must use LaTeX
-5. Return complete, valid JSON with ALL required fields
-6. Never return partial responses`
+2. Both slides must follow the provided structure
+3. All mathematical content must use LaTeX
+4. Return complete, valid JSON with ALL required fields
+5. Never return partial responses`
             },
             { role: 'user', content: prompt }
           ],
