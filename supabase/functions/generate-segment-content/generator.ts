@@ -60,30 +60,18 @@ ALL mathematical expressions MUST use LaTeX:
 - Functions: $f(x)$, $\\sin(x)$
 
 QUIZ REQUIREMENTS:
-1. Each quiz MUST include:
-   - type: "multiple_choice" or "true_false"
+1. Quiz 1 MUST be multiple choice with:
+   - type: "multiple_choice"
    - question: clear, >10 characters
+   - options: exactly 4 options as array
+   - correct_answer: must match one option exactly
    - explanation: detailed, >20 characters
-   - correct_answer: matching type format
-2. For multiple_choice:
-   - At least 4 options
-   - correct_answer must match an option
-3. For true_false:
-   - correct_answer must be boolean
 
-Creativity level ${creativityLevel} settings:
-${creativityLevel > 0.7 ? 
-  '- Use engaging metaphors and analogies\n- Include interactive examples\n- Add compelling real-world applications\n- Use storytelling elements\n- Incorporate relevant case studies' :
-  creativityLevel > 0.4 ? 
-  '- Balance formal concepts with practical examples\n- Use moderate analogies\n- Include industry applications\n- Add relevant examples' :
-  '- Stay formal and direct\n- Focus on core concepts\n- Use straightforward examples\n- Maintain academic tone'}
-
-Detail level ${detailLevel} requirements:
-${detailLevel > 0.7 ? 
-  '- Provide comprehensive explanations\n- Include edge cases and exceptions\n- Add advanced concepts\n- Explain underlying principles\n- Connect to broader context' :
-  detailLevel > 0.4 ? 
-  '- Balance basic and advanced concepts\n- Cover main scenarios\n- Include moderate detail\n- Explain key mechanisms' :
-  '- Focus on fundamental concepts\n- Keep explanations concise\n- Cover essential elements\n- Maintain clarity'}`;
+2. Quiz 2 MUST be true/false with:
+   - type: "true_false"
+   - question: clear, >10 characters
+   - correct_answer: must be boolean (true or false)
+   - explanation: detailed, >20 characters`;
 
   return `You are an expert educator creating high-quality educational content.
 ${languageInstruction}
@@ -141,7 +129,7 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4',
           messages: [
             { 
               role: 'system', 
@@ -150,7 +138,7 @@ CRITICAL REQUIREMENTS:
 1. You MUST generate TWO complete theory slides
 2. Both slides must follow the provided structure
 3. All mathematical content must use LaTeX
-4. Return complete, valid JSON with ALL required fields
+4. Return complete, valid JSON with ALL required fields including quiz_2_correct_answer as boolean
 5. Never return partial responses`
             },
             { role: 'user', content: prompt }
@@ -177,6 +165,7 @@ CRITICAL REQUIREMENTS:
 
       try {
         const parsed = JSON.parse(content);
+        console.log('Parsed response:', JSON.stringify(parsed, null, 2));
         
         // Validate the minimal structure before returning
         if (!parsed.theory_slide_1 || !parsed.theory_slide_2) {
@@ -186,6 +175,15 @@ CRITICAL REQUIREMENTS:
             continue;
           }
           throw new Error('Response missing required theory slides');
+        }
+
+        if (typeof parsed.quiz_2_correct_answer !== 'boolean') {
+          console.error('Invalid quiz_2_correct_answer type:', typeof parsed.quiz_2_correct_answer);
+          if (attempt < maxRetries) {
+            console.log('Will retry due to invalid quiz_2_correct_answer...');
+            continue;
+          }
+          throw new Error('Invalid quiz_2_correct_answer type');
         }
 
         console.log('Successfully generated and validated content');

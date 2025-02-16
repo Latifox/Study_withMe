@@ -2,6 +2,13 @@
 import { GeneratedContent } from "./types.ts";
 
 const validateContent = (content: GeneratedContent): void => {
+  // First validate that we have a valid content object
+  if (!content || typeof content !== 'object') {
+    throw new Error('Invalid content: must be a valid object');
+  }
+
+  console.log('Validating content:', JSON.stringify(content, null, 2));
+
   const requiredFields = [
     'theory_slide_1',
     'theory_slide_2',
@@ -18,12 +25,18 @@ const validateContent = (content: GeneratedContent): void => {
 
   const missingFields = requiredFields.filter(field => {
     if (field === 'quiz_1_options') {
-      return content.quiz_1_type === 'multiple_choice' && (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length < 2);
+      return content.quiz_1_type === 'multiple_choice' && (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length < 4);
     }
-    return !content[field];
+    // Handle special case for boolean values which might be false
+    if (field === 'quiz_2_correct_answer') {
+      return typeof content[field] !== 'boolean';
+    }
+    return content[field] === undefined || content[field] === null || content[field] === '';
   });
 
   if (missingFields.length > 0) {
+    console.error('Content validation failed. Missing fields:', missingFields);
+    console.error('Content received:', JSON.stringify(content, null, 2));
     throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
   }
 
