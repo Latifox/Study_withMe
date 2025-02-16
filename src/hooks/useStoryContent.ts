@@ -134,16 +134,23 @@ export const useStoryContent = (lectureId: string | undefined) => {
       if (!segmentContents.data || segmentContents.data.length === 0) {
         console.log('No content found, generating for each segment...');
         try {
-          const contentPromises = segments.data.map(segment =>
-            supabase.functions.invoke('generate-segment-content', {
+          // Generate content for each segment sequentially to avoid rate limits
+          const generatedContents = [];
+          for (const segment of segments.data) {
+            console.log(`Generating content for segment ${segment.sequence_number}...`);
+            const { data, error } = await supabase.functions.invoke('generate-segment-content', {
               body: {
                 lectureId: numericLectureId,
                 segmentNumber: segment.sequence_number
               }
-            })
-          );
+            });
 
-          await Promise.all(contentPromises);
+            if (error) throw error;
+            generatedContents.push(data);
+
+            // Add a small delay between generations
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
 
           // Refetch content after generation
           const newContents = await supabase

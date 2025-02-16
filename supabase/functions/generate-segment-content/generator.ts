@@ -91,46 +91,86 @@ Return a JSON object with no markdown block markers in this exact format:
 }`;
 };
 
-export const generateContent = async (prompt: string) => {
+// Delay function with exponential backoff
+const delay = (attempts: number) => {
+  const baseDelay = 2000; // Start with 2 seconds
+  const maxDelay = 32000; // Max delay of 32 seconds
+  const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempts), maxDelay);
+  const jitter = Math.random() * 1000; // Add up to 1 second of random jitter
+  return exponentialDelay + jitter;
+};
+
+export const generateContent = async (prompt: string, maxRetries = 3) => {
   console.log('Generating content with prompt:', prompt);
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',  // Using the more powerful model for better content
-      messages: [
-        { 
-          role: 'system', 
-          content: `You are an expert educator creating comprehensive educational content.
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        // Wait before retrying with exponential backoff
+        const waitTime = delay(attempt - 1);
+        console.log(`Retry attempt ${attempt}, waiting ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { 
+              role: 'system', 
+              content: `You are an expert educator creating comprehensive educational content.
 Your primary task is to generate detailed theory slides between ${MIN_WORDS} and ${MAX_WORDS} words each.
 Use proper markdown formatting and LaTeX where appropriate.
 Always return valid JSON without any markdown block markers around it.`
-        },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-    }),
-  });
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          response_format: { type: "json_object" }
+        }),
+      });
 
-  if (!response.ok) {
-    console.error('OpenAI API error response:', await response.text());
-    throw new Error(`OpenAI API error: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 429) {
+          if (attempt === maxRetries) {
+            throw new Error(`OpenAI rate limit exceeded after ${maxRetries} retries`);
+          }
+          console.log('Rate limit hit, will retry...');
+          continue;
+        }
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+
+      // Additional safety check to ensure we have valid JSON
+      try {
+        const parsed = JSON.parse(content);
+        console.log('Successfully generated and parsed content');
+        return JSON.stringify(parsed);
+      } catch (error) {
+        if (attempt === maxRetries) {
+          console.error('Failed to parse OpenAI response as JSON:', content);
+          throw new Error('Invalid JSON response from OpenAI');
+        }
+        console.log('Invalid JSON response, will retry...');
+        continue;
+      }
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.error(`Attempt ${attempt + 1} failed:`, error);
+      continue;
+    }
   }
 
-  const data = await response.json();
-  const content = data.choices[0].message.content;
-
-  // Additional safety check to ensure we have valid JSON
-  try {
-    const parsed = JSON.parse(content);
-    console.log('Successfully generated and parsed content');
-    return JSON.stringify(parsed);
-  } catch (error) {
-    console.error('Failed to parse OpenAI response as JSON:', content);
-    throw new Error('Invalid JSON response from OpenAI');
-  }
+  throw new Error('Failed to generate content after all retries');
 };
