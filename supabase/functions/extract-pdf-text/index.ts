@@ -50,10 +50,45 @@ serve(async (req) => {
     
     console.log('Successfully extracted and normalized text, length:', normalizedText.length);
 
-    // Update lecture content
+    // Detect language
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a language detection expert. Return ONLY the ISO language code (e.g., "en", "es", "de") for the primary language of the provided text. Reply with ONLY the language code, nothing else.'
+          },
+          {
+            role: 'user',
+            content: normalizedText.substring(0, 1000) // First 1000 characters should be enough
+          }
+        ],
+        temperature: 0.1
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to detect language');
+    }
+
+    const langData = await response.json();
+    const detectedLanguage = langData.choices[0].message.content.trim().toLowerCase();
+    
+    console.log('Detected language:', detectedLanguage);
+
+    // Update lecture content and language
     const { error: lectureError } = await supabaseClient
       .from('lectures')
-      .update({ content: normalizedText })
+      .update({ 
+        content: normalizedText,
+        original_language: detectedLanguage
+      })
       .eq('id', parseInt(lectureId));
 
     if (lectureError) {
@@ -64,7 +99,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        content: normalizedText
+        content: normalizedText,
+        language: detectedLanguage
       }),
       { 
         headers: { 

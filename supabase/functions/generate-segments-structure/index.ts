@@ -8,11 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface SegmentStructure {
-  title: string;
-  description: string;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -21,12 +16,12 @@ serve(async (req) => {
   try {
     const { lectureId, lectureContent } = await req.json();
     
-    if (!lectureId || !lectureContent) {
+    if (!lectureId) {
       throw new Error('Missing required parameters');
     }
 
     console.log('Generating segments structure for lecture:', lectureId);
-    console.log('Content length:', lectureContent.length);
+    console.log('Content length:', lectureContent?.length);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -35,32 +30,26 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
             content: `You are an expert educational content organizer. Your task is to:
-1. Analyze the provided lecture content
-2. Break it down into 4-6 logical segments, ensuring NO CONCEPT OVERLAP between segments
-3. For each segment:
-   - Create a clear, descriptive title
-   - Write a HIGHLY SPECIFIC description (max 50 words) that explicitly lists WHICH concepts will be covered
-   
-CRITICAL GUIDELINES:
-- Each concept must appear in EXACTLY ONE segment
-- Ensure zero concept overlap between segments
-- Each description must explicitly list the concepts to be covered
-- Maintain a clear progression of topics
-- Make descriptions extremely specific about what concepts will be covered
-- NO emojis or special characters
-- Return a valid JSON array
+1. First identify the primary language of the provided lecture content
+2. Then, using ONLY THAT SAME LANGUAGE:
+   - Break down the content into 4-6 logical segments
+   - Create descriptive titles and descriptions for each segment
+3. Ensure NO CONCEPT OVERLAP between segments
+4. For each segment:
+   - Create a clear, descriptive title IN THE SAME LANGUAGE AS THE CONTENT
+   - Write a HIGHLY SPECIFIC description (max 50 words) IN THE SAME LANGUAGE that explicitly lists WHICH concepts will be covered
 
-Example of good descriptions:
-"Covers: 1) Definition of inertia 2) Objects at rest 3) Newton's First Law formula F=ma. Does NOT include motion or energy concepts."
+CRITICAL: DO NOT MIX LANGUAGES - use ONLY the language detected in the source content.
+If the content is in Spanish, write everything in Spanish.
+If the content is in German, write everything in German.
+etc.
 
-"Focuses on: 1) Gravitational potential energy 2) Energy conservation in gravity 3) Gravitational field equations. Excludes other energy types."
-
-Your response must be a valid JSON array of objects with 'title' and 'description' fields.`
+Return a valid JSON array of objects with 'title' and 'description' fields.`
           },
           {
             role: 'user',
@@ -85,7 +74,7 @@ Your response must be a valid JSON array of objects with 'title' and 'descriptio
       throw new Error('Invalid response from OpenAI');
     }
 
-    let segments: SegmentStructure[];
+    let segments;
     try {
       const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
       segments = Array.isArray(parsedContent) ? parsedContent : parsedContent.segments;

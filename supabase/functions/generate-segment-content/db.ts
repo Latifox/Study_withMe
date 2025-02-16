@@ -12,12 +12,15 @@ export const initSupabaseClient = () => {
 export const getLectureContent = async (supabaseClient: any, lectureId: number) => {
   const { data, error } = await supabaseClient
     .from('lectures')
-    .select('content')
+    .select('content, original_language')
     .eq('id', lectureId)
     .single();
 
   if (error) throw error;
-  return data.content;
+  return {
+    content: data.content,
+    language: data.original_language
+  };
 };
 
 export const getAIConfig = async (supabaseClient: any, lectureId: number): Promise<AIConfig> => {
@@ -29,12 +32,19 @@ export const getAIConfig = async (supabaseClient: any, lectureId: number): Promi
 
   if (error) throw error;
 
+  // If no custom language is set in AI config, we'll use the lecture's original language
+  const { data: lecture } = await supabaseClient
+    .from('lectures')
+    .select('original_language')
+    .eq('id', lectureId)
+    .single();
+
   return {
     temperature: data?.temperature ?? 0.7,
     creativity_level: data?.creativity_level ?? 0.5,
     detail_level: data?.detail_level ?? 0.6,
     custom_instructions: data?.custom_instructions ?? '',
-    content_language: data?.content_language ?? ''
+    content_language: data?.content_language ?? lecture?.original_language ?? ''
   };
 };
 
@@ -77,4 +87,5 @@ export const saveSegmentContent = async (
     });
 
   if (error) throw error;
+  return content;
 };
