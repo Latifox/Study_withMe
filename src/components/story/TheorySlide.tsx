@@ -55,8 +55,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
               wrapper="div"
               speed={90}
               cursor={false}
-              className="content-wrapper"
-              style={{ whiteSpace: 'pre-line' }}
+              className="hidden"
             />
             <ReactMarkdown
               remarkPlugins={[remarkMath]}
