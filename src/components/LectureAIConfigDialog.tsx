@@ -1,155 +1,270 @@
 
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Plus, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+interface Subject {
+  title: string;
+  details: string;
+}
 
 interface LectureAIConfigDialogProps {
   isOpen: boolean;
   onClose: () => void;
   lectureId: number;
-  currentConfig: {
-    temperature: number;
-    creativity_level: number;
-    detail_level: number;
-    custom_instructions?: string;
-    content_language?: string;
-  };
 }
 
-const languages = [
-  { code: "en", name: "English" },
-  { code: "es", name: "Spanish" },
-  { code: "fr", name: "French" },
-  { code: "de", name: "German" },
-  { code: "it", name: "Italian" },
-  { code: "pt", name: "Portuguese" },
-  { code: "ru", name: "Russian" },
-  { code: "zh", name: "Chinese" },
-  { code: "ja", name: "Japanese" },
-  { code: "ko", name: "Korean" }
-];
-
-const LectureAIConfigDialog = ({ 
-  isOpen, 
-  onClose, 
-  lectureId, 
-  currentConfig 
-}: LectureAIConfigDialogProps) => {
-  const [temperature, setTemperature] = useState(currentConfig.temperature);
-  const [creativityLevel, setCreativityLevel] = useState(currentConfig.creativity_level);
-  const [detailLevel, setDetailLevel] = useState(currentConfig.detail_level);
-  const [customInstructions, setCustomInstructions] = useState(currentConfig.custom_instructions || "");
-  const [language, setLanguage] = useState(currentConfig.content_language || "");
+const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDialogProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [temperature, setTemperature] = useState([0.7]);
+  const [creativity, setCreativity] = useState([0.5]);
+  const [detailLevel, setDetailLevel] = useState([0.6]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch existing configuration
+  const { data: config } = useQuery({
+    queryKey: ["lecture-ai-config", lectureId],
+    queryFn: async () => {
+      if (!lectureId) return null;
+      
+      const { data: configData, error: configError } = await supabase
+        .from("lecture_ai_configs")
+        .select("*")
+        .eq("lecture_id", lectureId)
+        .maybeSingle();
+
+      if (configError) throw configError;
+
+      return { config: configData };
+    },
+    enabled: !!lectureId && isOpen,
+  });
+
+  // Update local state when config is fetched
+  useEffect(() => {
+    if (config?.config) {
+      setTemperature([config.config.temperature]);
+      setCreativity([config.config.creativity_level]);
+      setDetailLevel([config.config.detail_level]);
+    }
+  }, [config]);
+
+  const handleAddSubject = () => {
+    setSubjects([...subjects, { title: "", details: "" }]);
+  };
+
+  const handleRemoveSubject = (index: number) => {
+    setSubjects(subjects.filter((_, i) => i !== index));
+  };
+
+  const handleSubjectChange = (index: number, field: keyof Subject, value: string) => {
+    const newSubjects = [...subjects];
+    newSubjects[index][field] = value;
+    setSubjects(newSubjects);
+  };
 
   const handleSave = async () => {
-    try {
-      const { error } = await supabase
-        .from('lecture_ai_configs')
-        .upsert({
-          lecture_id: lectureId,
-          temperature,
-          creativity_level: creativityLevel,
-          detail_level: detailLevel,
-          custom_instructions: customInstructions || null,
-          content_language: language || null
-        });
+    if (!lectureId) {
+      toast({
+        title: "Error",
+        description: "Invalid lecture ID",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      if (error) throw error;
+    try {
+      setIsSaving(true);
+
+      // Save AI config
+      const { error: configError } = await supabase
+        .from("lecture_ai_configs")
+        .upsert(
+          {
+            lecture_id: lectureId,
+            temperature: temperature[0],
+            creativity_level: creativity[0],
+            detail_level: detailLevel[0],
+          },
+          {
+            onConflict: 'lecture_id'
+          }
+        );
+
+      if (configError) throw configError;
+
+      // Handle the subjects separately through content
+      const { error: contentError } = await supabase
+        .from("segments_content")
+        .insert(
+          subjects.map((subject, index) => ({
+            lecture_id: lectureId,
+            sequence_number: index + 1,
+            content: {
+              theory_slide_1: subject.title,
+              theory_slide_2: subject.details,
+              quiz_question_1: {
+                type: "multiple_choice",
+                question: "",
+                options: [],
+                correctAnswer: "",
+                explanation: ""
+              },
+              quiz_question_2: {
+                type: "true_false",
+                question: "",
+                correctAnswer: false,
+                explanation: ""
+              }
+            }
+          }))
+        );
+
+      if (contentError) throw contentError;
 
       toast({
         title: "Success",
-        description: "AI configuration updated successfully",
+        description: "AI configuration saved successfully",
       });
 
+      queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       onClose();
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Error saving configuration:", error);
       toast({
         title: "Error",
-        description: "Failed to update AI configuration: " + error.message,
+        description: "Failed to save configuration",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configure AI Settings</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label>Temperature ({temperature})</Label>
+        <div className="grid gap-6 py-4">
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label>Temperature</Label>
+              <span className="text-sm text-muted-foreground">{temperature[0]}</span>
+            </div>
             <Slider
-              value={[temperature]}
-              onValueChange={(value) => setTemperature(value[0])}
-              min={0}
+              value={temperature}
+              onValueChange={setTemperature}
               max={1}
               step={0.1}
+              className="w-full"
             />
+            <p className="text-sm text-muted-foreground">
+              Controls randomness in responses. Higher values make output more creative but less focused.
+            </p>
           </div>
-          <div className="grid gap-2">
-            <Label>Creativity Level ({creativityLevel})</Label>
+
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label>Creativity Level</Label>
+              <span className="text-sm text-muted-foreground">{creativity[0]}</span>
+            </div>
             <Slider
-              value={[creativityLevel]}
-              onValueChange={(value) => setCreativityLevel(value[0])}
-              min={0}
+              value={creativity}
+              onValueChange={setCreativity}
               max={1}
               step={0.1}
+              className="w-full"
             />
+            <p className="text-sm text-muted-foreground">
+              Balances between creative and analytical responses.
+            </p>
           </div>
-          <div className="grid gap-2">
-            <Label>Detail Level ({detailLevel})</Label>
+
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label>Detail Level</Label>
+              <span className="text-sm text-muted-foreground">{detailLevel[0]}</span>
+            </div>
             <Slider
-              value={[detailLevel]}
-              onValueChange={(value) => setDetailLevel(value[0])}
-              min={0}
+              value={detailLevel}
+              onValueChange={setDetailLevel}
               max={1}
               step={0.1}
+              className="w-full"
             />
+            <p className="text-sm text-muted-foreground">
+              Controls the depth and length of AI responses.
+            </p>
           </div>
-          <div className="grid gap-2">
-            <Label>Content Language</Label>
-            <Select 
-              value={language} 
-              onValueChange={setLanguage}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select language (or auto-detect)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Auto-detect from content</SelectItem>
-                {languages.map(lang => (
-                  <SelectItem key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label>Chronological Order of Subjects</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={handleAddSubject}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Subject
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {subjects.map((subject, index) => (
+                <div key={index} className="space-y-2 p-4 border rounded-lg relative">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveSubject(index)}
+                    className="absolute right-2 top-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                  
+                  <div className="space-y-2">
+                    <Label>Subject {index + 1}</Label>
+                    <Input
+                      placeholder="Enter subject name"
+                      value={subject.title}
+                      onChange={(e) => handleSubjectChange(index, "title", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Details</Label>
+                    <Input
+                      placeholder="Add details about this subject"
+                      value={subject.details}
+                      onChange={(e) => handleSubjectChange(index, "details", e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label>Custom Instructions (Optional)</Label>
-            <Textarea
-              value={customInstructions}
-              onChange={(e) => setCustomInstructions(e.target.value)}
-              placeholder="Add any custom instructions for the AI..."
-              className="h-24"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            Save Changes
+
+          <Button onClick={handleSave} disabled={isSaving} className="w-full">
+            {isSaving ? "Saving..." : "Save Configuration"}
           </Button>
         </div>
       </DialogContent>
