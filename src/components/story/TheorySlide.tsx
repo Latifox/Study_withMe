@@ -13,6 +13,13 @@ interface TheorySlideProps {
   onContinue: () => void;
 }
 
+// Define interface for code component props
+interface CodeProps {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   const processedContent = content
     .replace(/\[ /g, '$$')
@@ -70,21 +77,24 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 em: ({ node, ...props }) => (
                   <em className="text-gray-800" {...props} />
                 ),
-                code: ({ node, inline, className, children, ...props }) => (
-                  inline ? (
-                    <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800" {...props}>
-                      {children}
-                    </code>
-                  ) : (
+                code: ({ inline, className, children }: CodeProps) => {
+                  if (inline) {
+                    return (
+                      <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800">
+                        {children}
+                      </code>
+                    );
+                  }
+                  return (
                     <div className="relative">
                       <pre className="overflow-x-auto p-4 rounded-lg bg-gray-100 border border-gray-200">
-                        <code className="text-sm font-mono text-gray-800" {...props}>
+                        <code className="text-sm font-mono text-gray-800">
                           {children}
                         </code>
                       </pre>
                     </div>
-                  )
-                ),
+                  );
+                },
                 blockquote: ({ node, ...props }) => (
                   <blockquote 
                     className="border-l-4 border-gray-200 pl-4 my-3 italic text-gray-700 bg-gray-50 p-3 rounded-r"
