@@ -35,6 +35,7 @@ export type Database = {
       }
       lecture_ai_configs: {
         Row: {
+          content_language: string | null
           created_at: string
           creativity_level: number
           custom_instructions: string | null
@@ -45,6 +46,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          content_language?: string | null
           created_at?: string
           creativity_level?: number
           custom_instructions?: string | null
@@ -55,6 +57,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          content_language?: string | null
           created_at?: string
           creativity_level?: number
           custom_instructions?: string | null
@@ -115,6 +118,7 @@ export type Database = {
           course_id: number | null
           created_at: string
           id: number
+          original_language: string | null
           pdf_path: string | null
           title: string
           updated_at: string
@@ -124,6 +128,7 @@ export type Database = {
           course_id?: number | null
           created_at?: string
           id?: number
+          original_language?: string | null
           pdf_path?: string | null
           title: string
           updated_at?: string
@@ -133,6 +138,7 @@ export type Database = {
           course_id?: number | null
           created_at?: string
           id?: number
+          original_language?: string | null
           pdf_path?: string | null
           title?: string
           updated_at?: string

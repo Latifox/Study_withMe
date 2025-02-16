@@ -9,16 +9,11 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-
-interface Subject {
-  title: string;
-  details: string;
-}
 
 interface LectureAIConfigDialogProps {
   isOpen: boolean;
@@ -32,7 +27,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [temperature, setTemperature] = useState([0.7]);
   const [creativity, setCreativity] = useState([0.5]);
   const [detailLevel, setDetailLevel] = useState([0.6]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [contentLanguage, setContentLanguage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch existing configuration
@@ -60,22 +56,10 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       setTemperature([config.config.temperature]);
       setCreativity([config.config.creativity_level]);
       setDetailLevel([config.config.detail_level]);
+      setCustomInstructions(config.config.custom_instructions || "");
+      setContentLanguage(config.config.content_language || "");
     }
   }, [config]);
-
-  const handleAddSubject = () => {
-    setSubjects([...subjects, { title: "", details: "" }]);
-  };
-
-  const handleRemoveSubject = (index: number) => {
-    setSubjects(subjects.filter((_, i) => i !== index));
-  };
-
-  const handleSubjectChange = (index: number, field: keyof Subject, value: string) => {
-    const newSubjects = [...subjects];
-    newSubjects[index][field] = value;
-    setSubjects(newSubjects);
-  };
 
   const handleSave = async () => {
     if (!lectureId) {
@@ -99,6 +83,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             temperature: temperature[0],
             creativity_level: creativity[0],
             detail_level: detailLevel[0],
+            custom_instructions: customInstructions,
+            content_language: contentLanguage,
           },
           {
             onConflict: 'lecture_id'
@@ -106,35 +92,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         );
 
       if (configError) throw configError;
-
-      // Handle the subjects separately through content
-      const { error: contentError } = await supabase
-        .from("segments_content")
-        .insert(
-          subjects.map((subject, index) => ({
-            lecture_id: lectureId,
-            sequence_number: index + 1,
-            content: {
-              theory_slide_1: subject.title,
-              theory_slide_2: subject.details,
-              quiz_question_1: {
-                type: "multiple_choice",
-                question: "",
-                options: [],
-                correctAnswer: "",
-                explanation: ""
-              },
-              quiz_question_2: {
-                type: "true_false",
-                question: "",
-                correctAnswer: false,
-                explanation: ""
-              }
-            }
-          }))
-        );
-
-      if (contentError) throw contentError;
 
       toast({
         title: "Success",
@@ -213,54 +170,29 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Label>Chronological Order of Subjects</Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm"
-                onClick={handleAddSubject}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Subject
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              {subjects.map((subject, index) => (
-                <div key={index} className="space-y-2 p-4 border rounded-lg relative">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveSubject(index)}
-                    className="absolute right-2 top-2"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                  
-                  <div className="space-y-2">
-                    <Label>Subject {index + 1}</Label>
-                    <Input
-                      placeholder="Enter subject name"
-                      value={subject.title}
-                      onChange={(e) => handleSubjectChange(index, "title", e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Details</Label>
-                    <Input
-                      placeholder="Add details about this subject"
-                      value={subject.details}
-                      onChange={(e) => handleSubjectChange(index, "details", e.target.value)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-2">
+            <Label>Custom Instructions</Label>
+            <Textarea
+              placeholder="Enter any specific instructions or requirements for content generation"
+              value={customInstructions}
+              onChange={(e) => setCustomInstructions(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <p className="text-sm text-muted-foreground">
+              Specify any particular focus areas or special requirements for the content generation.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Content Language (Optional)</Label>
+            <Input
+              placeholder="Enter target language (e.g., English, Spanish, French)"
+              value={contentLanguage}
+              onChange={(e) => setContentLanguage(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Leave empty to use the original lecture language.
+            </p>
           </div>
 
           <Button onClick={handleSave} disabled={isSaving} className="w-full">
