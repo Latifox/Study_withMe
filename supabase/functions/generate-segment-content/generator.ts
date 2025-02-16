@@ -14,100 +14,60 @@ export const generatePrompt = (
   const creativityLevel = aiConfig.creativity_level || 0.5;
   const detailLevel = aiConfig.detail_level || 0.6;
 
-  const styleInstructions = `
-CRITICAL REQUIREMENTS:
-1. You MUST generate TWO complete theory slides, each containing:
-   - Between 300 and 400 words
-   - Full markdown formatting
-   - Proper LaTeX for all mathematical expressions
-2. Both slides must follow this exact structure:
-
-For EACH slide (both slide 1 AND slide 2):
-## Introduction
-- Overview of the topic
-- Context and importance
-- Connection to broader concepts
-
-## Main Concepts
-- Detailed explanation of core principles
-- Key definitions and terminology
-- Theoretical framework
-- Mathematical foundations (with LaTeX)
-
-## Examples and Applications
-- Real-world examples
-- Practical applications
-- Case studies or scenarios
-- Step-by-step demonstrations
-
-## Practical Implications
-- Industry relevance
-- Future applications
-- Societal impact
-
-## Summary
-- Key takeaways
-- Connection to next topics
-
-LATEX FORMATTING REQUIREMENTS:
-ALL mathematical expressions MUST use LaTeX:
-- Inline math: $x + y = z$
-- Display math: $$\\frac{d}{dx}x^2 = 2x$$
-- Basic operators: $+$, $-$, $\\times$, $\\div$
-- Fractions: $\\frac{a}{b}$
-- Powers: $x^2$, $e^x$
-- Greek letters: $\\alpha$, $\\beta$
-- Functions: $f(x)$, $\\sin(x)$
-
-QUIZ REQUIREMENTS:
-1. Quiz 1 MUST be multiple choice with:
-   - type: "multiple_choice"
-   - question: clear, >10 characters
-   - options: exactly 4 options as array
-   - correct_answer: must match one option exactly
-   - explanation: detailed, >20 characters
-
-2. Quiz 2 MUST be true/false with:
-   - type: "true_false"
-   - question: clear, >10 characters
-   - correct_answer: must be boolean (true or false)
-   - explanation: detailed, >20 characters`;
-
   return `You are an expert educator creating high-quality educational content.
 ${languageInstruction}
 
-Custom Instructions: ${aiConfig.custom_instructions || 'Focus on clarity and engagement'}
+Your task is to create TWO comprehensive theory slides and TWO challenging quiz questions based STRICTLY on this lecture content:
 
 Content Type: ${segmentTitle}
 Description: ${segmentDescription}
-
 Source Material: ${lectureContent}
 
-${styleInstructions}
+Requirements:
 
-CRITICAL: You MUST generate BOTH theory_slide_1 AND theory_slide_2. Each slide should be between 300 and 400 words. Partial responses are not acceptable.
+THEORY SLIDES:
+- Generate TWO theory slides based ONLY on the provided lecture content
+- Organize the content naturally based on the material's flow
+- Use clear headers and bullet points where appropriate
+- Format all mathematical expressions using proper LaTeX syntax:
+  * Inline math: $\\text{text}$, $\\rightarrow$
+  * Display math: $$\\text{long expression}$$
+  * Greek letters: $\\alpha$, $\\beta$
+  * Proper text in math: $\\text{word}$ not $word$
 
-Return a complete JSON object with all required fields:
+QUIZZES:
+1. Quiz 1 (Multiple Choice):
+   - Create a challenging conceptual question that tests deep understanding
+   - Provide 4 well-thought-out options that appear plausible
+   - Correct answer should not be obvious
+
+2. Quiz 2 (True/False):
+   - Create a subtle, nuanced statement that requires careful analysis
+   - The answer should not be immediately apparent
+
+${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
+
+Return a JSON object with:
 {
-  "theory_slide_1": "First comprehensive slide (300-400 words)",
-  "theory_slide_2": "Second comprehensive slide (300-400 words)",
+  "theory_slide_1": "First comprehensive slide",
+  "theory_slide_2": "Second comprehensive slide",
   "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "Clear question (>10 chars)",
-  "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-  "quiz_1_correct_answer": "Option that exactly matches one of the options",
-  "quiz_1_explanation": "Detailed explanation (>20 chars)",
+  "quiz_1_question": "Challenging conceptual question",
+  "quiz_1_options": ["four", "plausible", "answer", "options"],
+  "quiz_1_correct_answer": "must match one option",
+  "quiz_1_explanation": "Detailed explanation",
   "quiz_2_type": "true_false",
-  "quiz_2_question": "Clear question (>10 chars)",
-  "quiz_2_correct_answer": true,
-  "quiz_2_explanation": "Detailed explanation (>20 chars)"
+  "quiz_2_question": "Subtle, nuanced statement",
+  "quiz_2_correct_answer": boolean,
+  "quiz_2_explanation": "Detailed explanation"
 }`;
 };
 
 const delay = (attempts: number) => {
-  const baseDelay = 2000; // Start with 2 seconds
-  const maxDelay = 32000; // Max delay of 32 seconds
+  const baseDelay = 2000;
+  const maxDelay = 32000;
   const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempts), maxDelay);
-  const jitter = Math.random() * 1000; // Add up to 1 second of random jitter
+  const jitter = Math.random() * 1000;
   return exponentialDelay + jitter;
 };
 
@@ -133,13 +93,12 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
           messages: [
             { 
               role: 'system', 
-              content: `You are an expert educator generating comprehensive educational content.
-CRITICAL REQUIREMENTS:
-1. You MUST generate TWO complete theory slides
-2. Both slides must follow the provided structure
-3. All mathematical content must use LaTeX
-4. Return complete, valid JSON with ALL required fields including quiz_2_correct_answer as boolean
-5. Never return partial responses`
+              content: `You are an expert educator generating educational content.
+Key requirements:
+1. Use ONLY information from the provided lecture content
+2. Format all LaTeX properly (\\text{}, \\rightarrow, etc.)
+3. Create challenging, nuanced quiz questions
+4. Return complete JSON with all required fields`
             },
             { role: 'user', content: prompt }
           ],
