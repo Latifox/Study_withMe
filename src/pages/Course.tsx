@@ -57,7 +57,7 @@ const Course = () => {
   });
 
   // Fetch AI config for the selected lecture
-  const { data: aiConfig } = useQuery({
+  const { data: aiConfig, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['lecture_ai_config', showAIConfig],
     queryFn: async () => {
       if (!showAIConfig) return null;
@@ -84,6 +84,15 @@ const Course = () => {
     },
     enabled: !!showAIConfig // Only run query when showAIConfig has a value
   });
+
+  // Default configuration that will be used if no config exists
+  const defaultConfig = {
+    temperature: 0.7,
+    creativity_level: 0.5,
+    detail_level: 0.5,
+    custom_instructions: null,
+    content_language: null
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -211,18 +220,12 @@ const Course = () => {
             lectureId={selectedLectureId!}
           />
 
-          {showAIConfig !== null && (
+          {showAIConfig !== null && !isLoadingConfig && (
             <LectureAIConfigDialog
               isOpen={!!showAIConfig}
               onClose={() => setShowAIConfig(null)}
               lectureId={showAIConfig}
-              currentConfig={{
-                temperature: aiConfig?.temperature ?? 0.7,
-                creativity_level: aiConfig?.creativity_level ?? 0.5,
-                detail_level: aiConfig?.detail_level ?? 0.5,
-                custom_instructions: aiConfig?.custom_instructions,
-                content_language: aiConfig?.content_language
-              }}
+              currentConfig={aiConfig || defaultConfig}
             />
           )}
         </div>
