@@ -45,29 +45,6 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
     }
   });
 
-  // Animation variants for the mindmap
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.3
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-violet-600/90 via-purple-500/90 to-indigo-600/90">
       {/* Animated mesh pattern */}
@@ -90,49 +67,19 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
       <div className="min-h-screen relative z-10 flex flex-col items-center justify-center p-4">
         <Card className="w-full max-w-4xl p-8 bg-white/95 backdrop-blur-md border-white/20">
           <motion.div 
-            className="flex flex-col items-center justify-center gap-6"
+            className="flex flex-col items-center justify-center space-y-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="relative">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="relative"
-              >
-                <GraduationCap className="h-16 w-16 text-primary" />
-              </motion.div>
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute -top-2 -right-2"
-              >
-                <Sparkles className="h-6 w-6 text-yellow-500" />
-              </motion.div>
-              <motion.div
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                className="absolute -bottom-2 -left-2"
-              >
-                <Brain className="h-6 w-6 text-purple-500" />
-              </motion.div>
-              <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                className="absolute -bottom-2 -right-2"
-              >
-                <BookOpen className="h-6 w-6 text-blue-500" />
-              </motion.div>
-            </div>
-            
+            {/* Title */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-center space-y-2 mb-8"
+              className="text-center space-y-2"
             >
-              <h2 className="text-2xl font-semibold text-primary">
+              <h2 className="text-3xl font-bold text-gray-800">
                 Generating Learning Content
               </h2>
               <motion.p
@@ -140,41 +87,76 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="text-muted-foreground"
+                className="text-gray-600"
               >
                 {loadingMessages[messageIndex]}
               </motion.p>
             </motion.div>
 
+            {/* Mindmap */}
             {segments && segments.length > 0 && (
-              <motion.div
-                variants={containerVariants}
+              <motion.div 
+                className="w-full pt-8"
                 initial="hidden"
                 animate="visible"
-                className="w-full mt-8"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.2 }
+                  }
+                }}
               >
-                <div className="relative flex flex-wrap justify-center gap-4">
+                <div className="relative flex flex-wrap justify-center gap-6">
                   {segments.map((segment, index) => (
                     <motion.div
                       key={segment.sequence_number}
-                      variants={itemVariants}
-                      className="relative"
-                      style={{
-                        zIndex: segments.length - index
+                      variants={{
+                        hidden: { scale: 0.8, opacity: 0 },
+                        visible: {
+                          scale: 1,
+                          opacity: 1,
+                          transition: {
+                            type: "spring",
+                            damping: 15,
+                            stiffness: 100
+                          }
+                        }
                       }}
+                      className="relative"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-xl blur-xl" />
-                      <div className="relative bg-white/90 backdrop-blur-sm p-4 rounded-xl border border-purple-200 shadow-xl hover:shadow-2xl transition-shadow duration-300 max-w-xs">
-                        <h3 className="font-semibold text-lg text-gray-800 mb-2">
-                          {segment.title}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {segment.segment_description.replace(/Key concepts to explore: /g, '').split(', ').map((concept, i) => (
-                            <span key={i} className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs m-1">
-                              {concept}
-                            </span>
-                          ))}
-                        </p>
+                      {/* Connection lines */}
+                      {index < segments.length - 1 && (
+                        <div 
+                          className="absolute top-1/2 -right-6 w-6 h-0.5 bg-gradient-to-r from-purple-300 to-transparent"
+                          style={{ transform: 'translateY(-50%)' }}
+                        />
+                      )}
+                      
+                      {/* Segment bubble */}
+                      <div className="group relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-2xl blur-xl transition-all duration-300 group-hover:blur-2xl" />
+                        <div className="relative bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition-all duration-300 max-w-xs">
+                          <div className="absolute -top-3 -right-3 bg-purple-100 rounded-full p-2">
+                            <span className="font-semibold text-purple-600">{index + 1}</span>
+                          </div>
+                          <h3 className="font-semibold text-xl text-gray-800 mb-3">
+                            {segment.title}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {segment.segment_description
+                              .replace(/Key concepts to explore: /g, '')
+                              .split(', ')
+                              .map((concept, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium animate-fade-in"
+                                >
+                                  {concept}
+                                </span>
+                              ))}
+                          </div>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -182,21 +164,22 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
               </motion.div>
             )}
 
-            <div className="flex gap-2 mt-8">
+            {/* Loading dots */}
+            <div className="flex gap-2">
               <motion.div
                 animate={{ scale: [1, 0.9, 1] }}
                 transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.3 }}
-                className="w-2 h-2 bg-primary rounded-full"
+                className="w-2 h-2 bg-purple-600 rounded-full"
               />
               <motion.div
                 animate={{ scale: [1, 0.9, 1] }}
                 transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.3, delay: 0.2 }}
-                className="w-2 h-2 bg-primary rounded-full"
+                className="w-2 h-2 bg-purple-600 rounded-full"
               />
               <motion.div
                 animate={{ scale: [1, 0.9, 1] }}
                 transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 0.3, delay: 0.4 }}
-                className="w-2 h-2 bg-primary rounded-full"
+                className="w-2 h-2 bg-purple-600 rounded-full"
               />
             </div>
           </motion.div>
