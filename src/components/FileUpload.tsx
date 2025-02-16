@@ -33,7 +33,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     try {
-      setShowAIProfessor(true); // Show AI Professor immediately when clicking upload
+      setShowAIProfessor(true);
 
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
@@ -76,7 +76,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       });
 
       if (extractionError) throw extractionError;
-      console.log('PDF content extracted successfully');
+      if (!extractionData || !extractionData.content) {
+        throw new Error('No content returned from PDF extraction');
+      }
+      
+      console.log('PDF content extracted:', extractionData);
+      console.log('Content length:', extractionData.content.length);
 
       // Generate segment structure (titles and descriptions)
       console.log('Generating segment structure...');
@@ -87,8 +92,16 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         }
       });
 
-      if (segmentError) throw segmentError;
-      console.log('Segment structure generated successfully');
+      if (segmentError) {
+        console.error('Segment generation error:', segmentError);
+        throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
+      }
+      
+      if (!segmentData || !segmentData.segments) {
+        throw new Error('No segments returned from generation');
+      }
+      
+      console.log('Segment structure generated:', segmentData);
 
       // Generate content for each segment in parallel
       console.log('Generating content for all segments...');
