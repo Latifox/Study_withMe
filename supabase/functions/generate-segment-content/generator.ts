@@ -1,4 +1,3 @@
-
 import { AIConfig } from "./types.ts";
 
 const wordCount = (text: string): number => {
@@ -26,6 +25,17 @@ CRITICAL REQUIREMENTS:
 1. Each theory slide MUST contain between ${MIN_WORDS} and ${MAX_WORDS} words. This is MANDATORY.
 2. Use a comprehensive structure with multiple sections, examples, and detailed explanations.
 3. Include practical applications and real-world examples when relevant.
+4. CRITICAL: ALL mathematical expressions MUST use LaTeX formatting:
+   - Wrap inline math in single $ (e.g., $x + y = z$)
+   - Wrap display math in double $$ (e.g., $$\\frac{d}{dx}x^2 = 2x$$)
+   - Basic operators: $+$, $-$, $\\times$, $\\div$, $=$, $<$, $>$
+   - Fractions: $\\frac{numerator}{denominator}$
+   - Powers: $x^2$, $e^x$
+   - Greek letters: $\\alpha$, $\\beta$, $\\theta$
+   - Functions: $f(x)$, $\\sin(x)$, $\\cos(x)$
+   - Integrals: $\\int f(x) dx$
+   - Derivatives: $\\frac{d}{dx}$
+   - Special symbols: $\\infty$, $\\pm$, $\\partial$
 
 Format the content using these guidelines:
 1. Break down complex topics into digestible sections using ## headers
@@ -33,12 +43,9 @@ Format the content using these guidelines:
 3. Create lists for step-by-step explanations:
    - Use bullet points for related items
    - Use numbered lists for sequences
-4. Use LaTeX for all mathematical formulas:
-   - Inline formulas with single $ (e.g., $E=mc^2$)
-   - Display formulas with double $$ (e.g., $$\\frac{dx}{dt}$$)
-5. Use markdown tables for comparing concepts
-6. Include code blocks with proper syntax highlighting if relevant
-7. Add block quotes for important definitions or key points
+4. Use markdown tables for comparing concepts
+5. Include code blocks with proper syntax highlighting if relevant
+6. Add block quotes for important definitions or key points
 
 Each theory slide should follow this structure:
 1. Introduction (50-75 words)

@@ -22,14 +22,39 @@ const validateMarkdownAndLatex = (text: string, fieldName: string): void => {
     console.warn(`Warning: ${fieldName} might be missing markdown formatting`);
   }
 
-  // Check for proper LaTeX delimiters if math is present
-  const mathPattern = /[+\-*/=<>√∑∏∫]/;
-  if (mathPattern.test(text) && !(/\$.*\$/.test(text))) {
-    throw new Error(`${fieldName} contains mathematical symbols but lacks LaTeX formatting`);
+  // Define mathematical symbols and patterns that should be in LaTeX
+  const mathPatterns = [
+    /[+\-*/=<>≤≥≠∑∏∫√]/,  // Basic operators and symbols
+    /[α-ωΑ-Ω]/,           // Greek letters
+    /\b\d+\/\d+\b/,       // Fractions like 1/2
+    /\b[a-z]\^[0-9]/i,    // Basic exponents like x^2
+    /\b[a-z]\([a-z]\)/i,  // Function notation like f(x)
+    /\bdx\b|\bdy\b/,      // Differential notation
+    /∞|±|×|÷|∂|∇|∆/      // Special math symbols
+  ];
+
+  // Check if the text contains any mathematical patterns
+  const hasMathPatterns = mathPatterns.some(pattern => pattern.test(text));
+
+  if (hasMathPatterns) {
+    // Look for proper LaTeX delimiters
+    const hasInlineLaTeX = /\$[^$]+\$/.test(text);
+    const hasDisplayLaTeX = /\$\$[^$]+\$\$/.test(text);
+
+    if (!hasInlineLaTeX && !hasDisplayLaTeX) {
+      console.error(`Mathematical content found in ${fieldName} without LaTeX formatting`);
+      console.error('Mathematical patterns detected:', 
+        mathPatterns
+          .filter(pattern => pattern.test(text))
+          .map(pattern => text.match(pattern)?.[0])
+          .filter(Boolean)
+      );
+      throw new Error(`${fieldName} contains mathematical symbols but lacks LaTeX formatting`);
+    }
   }
 };
 
-export const validateQuizQuestion = (content: GeneratedContent, quizNumber: number): void => {
+const validateQuizQuestion = (content: GeneratedContent, quizNumber: number): void => {
   const prefix = `quiz_${quizNumber}_`;
   const type = content[`${prefix}type` as keyof GeneratedContent] as string;
   const question = content[`${prefix}question` as keyof GeneratedContent] as string;
