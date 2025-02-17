@@ -1,5 +1,6 @@
-import { useQuery, Query } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 interface Segment {
   title: string;
@@ -165,7 +166,9 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         </svg>
       </div>
       
-      <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 relative z-10">
+        <Loader2 className="w-8 h-8 text-white animate-spin mb-8" />
+        
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
