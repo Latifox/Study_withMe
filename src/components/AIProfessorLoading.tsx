@@ -1,4 +1,3 @@
-
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -39,7 +38,19 @@ const getDescriptionPath = (start: Position, end: Position) => {
   const endX = parseInt(end.left);
   const endY = parseInt(end.top);
   
-  return `M ${startX} ${startY} L ${endX} ${endY}`;
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const angle = Math.atan2(dy, dx);
+  
+  const titleBoxWidth = 8;  // Percentage of viewport width
+  const descBoxWidth = 12;  // Percentage of viewport width
+  
+  const startPointX = startX + (titleBoxWidth * Math.cos(angle));
+  const startPointY = startY + (titleBoxWidth * Math.sin(angle));
+  const endPointX = endX - (descBoxWidth * Math.cos(angle));
+  const endPointY = endY - (descBoxWidth * Math.sin(angle));
+  
+  return `M ${startPointX} ${startPointY} L ${endPointX} ${endPointY}`;
 };
 
 const getConnectionPath = (start: Position, end: Position) => {
@@ -162,7 +173,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               d={getDescriptionPath(titlePositions[index], descriptionPositions[index])}
               className="opacity-0 animate-fade-in"
               style={{ animationDelay: `${index * 200 + 100}ms` }}
-              stroke="#D946EF"
+              stroke="#ea384c"
               strokeOpacity="0.8"
               strokeWidth="0.5"
               fill="none"
@@ -196,7 +207,9 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               animationDelay: `${index * 200 + 100}ms`
             }}
           >
-            <div className="bg-rose-500/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+            <div 
+              className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors"
+            >
               {segment.segment_description}
             </div>
           </div>
