@@ -26,10 +26,7 @@ const titlePositions = [
 ];
 
 // Updated connection paths to create curved lines between consecutive segments
-const getConnectionPath = (index: number) => {
-  const start = titlePositions[index];
-  const end = titlePositions[index + 1];
-  
+const getConnectionPath = (start: Position, end: Position) => {
   // Extract positions without the % sign for SVG calculations
   const startX = parseInt(start.left);
   const startY = parseInt(start.top);
@@ -52,7 +49,16 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         .eq('lecture_id', lectureId)
         .order('sequence_number');
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log("No segments found for lecture:", lectureId);
+        return [];
+      }
+
       return data as Segment[];
     },
     refetchInterval: (query) => {
@@ -61,7 +67,19 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       }
       return false;
     },
+    retry: 3, // Retry failed requests up to 3 times
   });
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-rose-600 to-red-500 flex items-center justify-center">
+        <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-white max-w-md mx-auto">
+          <h3 className="text-xl font-semibold mb-2">Error Loading Content</h3>
+          <p className="opacity-90">Unable to load lecture segments. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !data || data.length === 0) {
     return (
@@ -82,6 +100,9 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       </div>
     );
   }
+
+  // Limit the number of segments to display to available positions
+  const displayedSegments = data.slice(0, titlePositions.length);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
@@ -104,10 +125,10 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
           {/* Connection paths */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
-            {data.slice(0, -1).map((_, index) => (
+            {displayedSegments.slice(0, -1).map((_, index) => (
               <path
                 key={`connection-${index}`}
-                d={getConnectionPath(index)}
+                d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
                 className="opacity-0 animate-fade-in"
                 style={{ animationDelay: `${index * 200}ms` }}
                 stroke="white"
@@ -120,26 +141,21 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           </svg>
           
           {/* Content boxes */}
-          {data.map((segment, index) => {
-            if (index >= titlePositions.length) return null;
-            const position = titlePositions[index];
-
-            return (
-              <div
-                key={segment.sequence_number}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
-                style={{
-                  left: position.left,
-                  top: position.top,
-                  animationDelay: `${index * 200}ms`
-                }}
-              >
-                <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
-                  {segment.title}
-                </div>
+          {displayedSegments.map((segment, index) => (
+            <div
+              key={segment.sequence_number}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
+              style={{
+                left: titlePositions[index].left,
+                top: titlePositions[index].top,
+                animationDelay: `${index * 200}ms`
+              }}
+            >
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+                {segment.title}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
     </div>
