@@ -1,3 +1,4 @@
+
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -161,10 +162,9 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               d={getDescriptionPath(titlePositions[index], descriptionPositions[index])}
               className="opacity-0 animate-fade-in"
               style={{ animationDelay: `${index * 200 + 100}ms` }}
-              stroke="#0F172A"
+              stroke="#D946EF"
               strokeOpacity="0.8"
               strokeWidth="0.5"
-              strokeDasharray="2 2"
               fill="none"
             />
           ))}
