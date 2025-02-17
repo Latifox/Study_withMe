@@ -1,7 +1,8 @@
 
 import { GeneratedContent } from "./types.ts";
 
-const countWords = (text: string): number => {
+const countWords = (text: string | null | undefined): number => {
+  if (!text || typeof text !== 'string') return 0;
   return text.trim().split(/\s+/).length;
 };
 
@@ -49,7 +50,7 @@ const validateContent = (content: GeneratedContent): void => {
     if (field === 'quiz_2_correct_answer') {
       return typeof content[field] !== 'boolean';
     }
-    return content[field] === undefined || content[field] === null || content[field] === '';
+    return !content[field] || (typeof content[field] === 'string' && content[field].trim() === '');
   });
 
   if (missingFields.length > 0) {
