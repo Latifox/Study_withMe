@@ -131,41 +131,39 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       </div>
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-        <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
-          {/* Connection paths */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {displayedSegments.slice(0, -1).map((_, index) => (
-              <path
-                key={`connection-${index}`}
-                d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
-                className="opacity-0 animate-fade-in"
-                style={{ animationDelay: `${index * 200}ms` }}
-                stroke="white"
-                strokeOpacity="0.2"
-                strokeWidth="0.5"
-                strokeDasharray="2 2"
-                fill="none"
-              />
-            ))}
-          </svg>
-          
-          {/* Content boxes */}
-          {displayedSegments.map((segment, index) => (
-            <div
-              key={segment.sequence_number}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
-              style={{
-                left: titlePositions[index].left,
-                top: titlePositions[index].top,
-                animationDelay: `${index * 200}ms`
-              }}
-            >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
-                {segment.title}
-              </div>
-            </div>
+        {/* Connection paths */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {displayedSegments.slice(0, -1).map((_, index) => (
+            <path
+              key={`connection-${index}`}
+              d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
+              className="opacity-0 animate-fade-in"
+              style={{ animationDelay: `${index * 200}ms` }}
+              stroke="white"
+              strokeOpacity="0.2"
+              strokeWidth="0.5"
+              strokeDasharray="2 2"
+              fill="none"
+            />
           ))}
-        </div>
+        </svg>
+        
+        {/* Content boxes */}
+        {displayedSegments.map((segment, index) => (
+          <div
+            key={segment.sequence_number}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
+            style={{
+              left: titlePositions[index].left,
+              top: titlePositions[index].top,
+              animationDelay: `${index * 200}ms`
+            }}
+          >
+            <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+              {segment.title}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
