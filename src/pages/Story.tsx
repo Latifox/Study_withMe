@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -6,7 +7,9 @@ const Story = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
+    if (courseId && lectureId) {
+      navigate(`/course/${courseId}/lecture/${lectureId}/story/loading`);
+    }
   }, [courseId, lectureId, navigate]);
 
   return null;
