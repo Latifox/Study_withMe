@@ -35,7 +35,7 @@ const connectionPaths = [
 ];
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
-  const { data: segments, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {      
       const { data, error } = await supabase
@@ -48,11 +48,11 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       return data as Segment[];
     },
     refetchInterval: (data) => {
-      return !data || (data as Segment[]).length === 0 ? 2000 : false;
+      return !data || data.length === 0 ? 2000 : false;
     },
   });
 
-  if (isLoading || (!segments || segments.length === 0)) {
+  if (isLoading || !data || data.length === 0) {
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
         <div className="absolute inset-0">
@@ -109,7 +109,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           </svg>
           
           {/* Content boxes */}
-          {segments && segments.map((segment, index) => {
+          {data.map((segment, index) => {
             if (index >= titlePositions.length) return null;
             const position = titlePositions[index];
 
