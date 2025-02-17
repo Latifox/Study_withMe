@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { TypeAnimation } from 'react-type-animation';
 
 interface Segment {
   title: string;
@@ -117,13 +118,13 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     );
   }
 
-  const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: 'Loading...', sequence_number: 0, segment_description: 'Generating content...' });
+  const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: '', sequence_number: 0, segment_description: '' });
 
-  const baseDelay = 300; // Base delay in milliseconds
+  const baseDelay = 600; // Increased base delay in milliseconds
   const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
   const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
-  const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay);
-  const getDescriptionDelay = (index: number) => (titlePositions.length * (baseDelay * 3)) + (index * baseDelay);
+  const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay * 3);
+  const getDescriptionDelay = (index: number) => (titlePositions.length * (baseDelay * 4)) + (index * baseDelay * 2);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
@@ -207,7 +208,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             </div>
           ))}
 
-          {/* Titles */}
+          {/* Titles with typing animation */}
           {displayedSegments.map((segment, index) => (
             <div
               key={`title-${index}`}
@@ -219,7 +220,12 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               }}
             >
               <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
-                {segment.title}
+                <TypeAnimation
+                  sequence={[segment.title]}
+                  wrapper="div"
+                  speed={50}
+                  cursor={false}
+                />
               </div>
             </div>
           ))}
@@ -238,7 +244,12 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               <div 
                 className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors"
               >
-                {segment.segment_description}
+                <TypeAnimation
+                  sequence={[segment.segment_description]}
+                  wrapper="div"
+                  speed={50}
+                  cursor={false}
+                />
               </div>
             </div>
           ))}
