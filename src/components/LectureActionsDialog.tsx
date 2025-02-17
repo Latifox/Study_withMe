@@ -50,7 +50,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
   };
 
   const handleStoryModeAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/story`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
     onClose();
   };
 
