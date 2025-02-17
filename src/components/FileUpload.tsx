@@ -64,9 +64,9 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         throw new Error('No lecture ID returned from database');
       }
 
-      // Immediately navigate to the map display (Story component)
+      // Immediately navigate to the story/nodes page
       onClose();
-      navigate(`/course/${courseId}/lecture/${lectureData.id}/story`);
+      navigate(`/course/${courseId}/lecture/${lectureData.id}/story/nodes`);
 
       // Start content generation in the background
       console.log('Starting background content generation...');
