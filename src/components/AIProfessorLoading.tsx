@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -80,7 +81,7 @@ const getConnectionPath = (start: Position, end: Position) => {
 
 const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) => {
   const navigate = useNavigate();
-  const baseDelay = 897; // Increased by 15% from 780
+  const baseDelay = 897;
 
   const { data, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
@@ -112,7 +113,6 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
     retry: 3,
   });
 
-  // Effect to handle navigation after content generation
   useEffect(() => {
     if (data && data.length > 0) {
       const totalDelay = getDescriptionDelay(data.length - 1) + baseDelay;
@@ -230,7 +230,7 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
                   className="opacity-0 animate-fade-in"
                   style={{ animationDelay: `${boxDelay}ms` }}
                 >
-                  <div className="min-w-[160px] h-[48px] bg-slate-900/10 backdrop-blur-md rounded-lg border border-white/20 hover:border-white/30 transition-colors shadow-xl flex items-center justify-center px-6 py-3">
+                  <div className="min-w-[160px] h-[48px] bg-slate-900 backdrop-blur-md rounded-lg border border-white/20 hover:border-white/30 transition-colors shadow-xl flex items-center justify-center px-6 py-3">
                     <div 
                       className="opacity-0 animate-fade-in text-white text-sm font-medium"
                       style={{ animationDelay: `${textDelay}ms` }}
@@ -272,3 +272,4 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
 };
 
 export default AIProfessorLoading;
+
