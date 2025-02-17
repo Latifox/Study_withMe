@@ -1,9 +1,15 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Segment {
   title: string;
   sequence_number: number;
+}
+
+interface Position {
+  left: string;
+  top: string;
 }
 
 interface AIProfessorLoadingProps {
@@ -18,6 +24,11 @@ const titlePositions = [
   { left: '70%', top: '50%' },
   { left: '25%', top: '70%' },
 ];
+
+// Helper function to convert percentage string to number
+const percentToNumber = (percent: string): number => {
+  return parseFloat(percent.replace('%', ''));
+};
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   console.log('Loading screen for lecture:', lectureId);
@@ -88,6 +99,45 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900 rounded-lg overflow-hidden">
           {/* Background gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20" />
+          
+          {/* Connection lines */}
+          <svg className="absolute inset-0 w-full h-full">
+            {segments.map((segment, index) => {
+              if (index >= titlePositions.length - 1) return null;
+              
+              const currentPos = titlePositions[index];
+              const nextPos = titlePositions[index + 1];
+              
+              const x1 = percentToNumber(currentPos.left);
+              const y1 = percentToNumber(currentPos.top);
+              const x2 = percentToNumber(nextPos.left);
+              const y2 = percentToNumber(nextPos.top);
+
+              return (
+                <g key={`connection-${index}`}>
+                  {/* Background line (glow effect) */}
+                  <line
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
+                    className="stroke-white/10"
+                    strokeWidth="4"
+                  />
+                  {/* Foreground line */}
+                  <line
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
+                    className="stroke-white/40"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                  />
+                </g>
+              );
+            })}
+          </svg>
           
           {/* Title boxes */}
           {segments.map((segment, index) => {
