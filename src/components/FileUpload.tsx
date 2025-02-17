@@ -19,6 +19,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [showAIProfessor, setShowAIProfessor] = useState(false);
+  const [currentLectureId, setCurrentLectureId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -66,6 +67,8 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (!lectureData?.id) {
         throw new Error('No lecture ID returned from database');
       }
+
+      setCurrentLectureId(lectureData.id);
 
       console.log('Extracting PDF content...');
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
@@ -138,11 +141,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       });
     } finally {
       setShowAIProfessor(false);
+      setCurrentLectureId(null);
     }
   };
 
-  if (showAIProfessor) {
-    return <AIProfessorLoading />;
+  if (showAIProfessor && currentLectureId) {
+    return <AIProfessorLoading lectureId={currentLectureId} />;
   }
 
   return (
