@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -208,28 +207,21 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 animationDelay: `${getEmptyBoxDelay(index)}ms`
               }}
             >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px] flex items-center justify-center" />
-            </div>
-          ))}
-
-          {/* Titles with typing animation */}
-          {displayedSegments.map((segment, index) => (
-            <div
-              key={`title-${index}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
-              style={{
-                left: titlePositions[index].left,
-                top: titlePositions[index].top,
-                animationDelay: `${getTitleDelay(index)}ms`
-              }}
-            >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] flex items-center justify-center">
-                <TypeAnimation
-                  sequence={[segment.title]}
-                  wrapper="div"
-                  speed={50}
-                  cursor={false}
-                />
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px] flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center opacity-0">
+                  <TypeAnimation
+                    sequence={[
+                      {
+                        delay: getTitleDelay(index),
+                        content: displayedSegments[index].title
+                      }
+                    ]}
+                    wrapper="span"
+                    speed={50}
+                    cursor={false}
+                    className="opacity-100"
+                  />
+                </div>
               </div>
             </div>
           ))}
