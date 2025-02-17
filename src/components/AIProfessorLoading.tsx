@@ -16,13 +16,13 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
-// Updated positions with more vertical spacing between segments
+// Updated positions with even vertical spacing between segments
 const titlePositions = [
   { left: '20%', top: '15%' },     // Segment 1
   { left: '80%', top: '35%' },     // Segment 2
   { left: '20%', top: '55%' },     // Segment 3
   { left: '80%', top: '75%' },     // Segment 4
-  { left: '20%', top: '85%' },     // Segment 5
+  { left: '20%', top: '95%' },     // Segment 5
 ];
 
 // Updated connection paths to create even more pronounced curved paths between boxes
