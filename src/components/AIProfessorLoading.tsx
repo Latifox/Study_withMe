@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -130,17 +131,24 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               const nextPos = titlePositions[index + 1];
               
               const x1 = percentToNumber(currentPos.left);
-              const y1 = percentToNumber(currentPos.top) + 6;
+              const y1 = percentToNumber(currentPos.top);
               const x2 = percentToNumber(nextPos.left);
-              const y2 = percentToNumber(nextPos.top) - 6;
+              const y2 = percentToNumber(nextPos.top);
+              
+              // Calculate control points for natural curve
+              const dx = x2 - x1;
+              const midX = (x1 + x2) / 2;
+              const midY = (y1 + y2) / 2;
+              const cp1x = midX - dx / 4;
+              const cp1y = midY;
+              const cp2x = midX + dx / 4;
+              const cp2y = midY;
 
               return (
                 <g key={`connection-${index}`} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                  <line
-                    x1={`${x1}%`}
-                    y1={`${y1}%`}
-                    x2={`${x2}%`}
-                    y2={`${y2}%`}
+                  <path
+                    d={`M ${x1}% ${y1}% C ${cp1x}% ${cp1y}%, ${cp2x}% ${cp2y}%, ${x2}% ${y2}%`}
+                    fill="none"
                     stroke="white"
                     strokeOpacity="0.2"
                     strokeWidth="2"
