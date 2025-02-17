@@ -47,8 +47,8 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       if (error) throw error;
       return data as Segment[];
     },
-    refetchInterval: (data) => {
-      return !data || data.length === 0 ? 2000 : false;
+    refetchInterval: (currentData: Segment[] | undefined) => {
+      return !currentData || currentData.length === 0 ? 2000 : false;
     },
   });
 
