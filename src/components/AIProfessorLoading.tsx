@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -119,13 +120,13 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: '', sequence_number: 0, segment_description: '' });
 
-  const baseDelay = 600; // Increased base delay in milliseconds
+  const baseDelay = 600;
   const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
   const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
   const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay * 3);
   const getDescriptionDelay = (index: number) => {
     const lastTitleDelay = getTitleDelay(titlePositions.length - 1);
-    const titleTypingDuration = baseDelay * 2; // Estimated time for typing animation
+    const titleTypingDuration = baseDelay * 2;
     return lastTitleDelay + titleTypingDuration + (index * baseDelay * 2);
   };
 
@@ -196,56 +197,65 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             })}
           </svg>
           
-          {/* Empty boxes */}
-          {displayedSegments.map((_, index) => (
+          {/* Empty boxes with titles */}
+          {displayedSegments.map((segment, index) => (
             <div
-              key={`empty-box-${index}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
+              key={`box-${index}`}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2"
               style={{
                 left: titlePositions[index].left,
                 top: titlePositions[index].top,
-                animationDelay: `${getEmptyBoxDelay(index)}ms`
               }}
             >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px] flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center justify-center opacity-0">
-                  <TypeAnimation
-                    sequence={[
-                      {
-                        delay: getTitleDelay(index),
-                        content: displayedSegments[index].title
-                      }
-                    ]}
-                    wrapper="span"
-                    speed={50}
-                    cursor={false}
-                    className="opacity-100"
-                  />
+              {/* Empty box with animation */}
+              <div
+                className="opacity-0 animate-fade-in"
+                style={{
+                  animationDelay: `${getEmptyBoxDelay(index)}ms`,
+                }}
+              >
+                <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px] flex items-center justify-center">
+                  {/* Title text with animation */}
+                  <div
+                    className="opacity-0 animate-fade-in"
+                    style={{
+                      animationDelay: `${getTitleDelay(index)}ms`,
+                    }}
+                  >
+                    <TypeAnimation
+                      sequence={[segment.title || '']}
+                      speed={50}
+                      cursor={false}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Description boxes with their connectors */}
+          {/* Description boxes */}
           {displayedSegments.map((segment, index) => (
             <div
               key={`description-${index}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-xs"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2"
               style={{
                 left: descriptionPositions[index].left,
                 top: descriptionPositions[index].top,
-                animationDelay: `${getDescriptionDelay(index)}ms`
               }}
             >
-              <div 
-                className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors"
+              <div
+                className="opacity-0 animate-fade-in max-w-xs"
+                style={{
+                  animationDelay: `${getDescriptionDelay(index)}ms`,
+                }}
               >
-                <TypeAnimation
-                  sequence={[segment.segment_description]}
-                  wrapper="div"
-                  speed={50}
-                  cursor={false}
-                />
+                <div className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+                  <TypeAnimation
+                    sequence={[segment.segment_description || '']}
+                    speed={50}
+                    cursor={false}
+                  />
+                </div>
               </div>
             </div>
           ))}
