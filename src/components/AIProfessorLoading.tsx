@@ -1,3 +1,4 @@
+
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,16 +16,16 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
-// Updated positions to create a zigzag pattern
+// Updated positions with more vertical spacing between segments
 const titlePositions = [
-  { left: '20%', top: '20%' },     // Segment 1
-  { left: '80%', top: '30%' },     // Segment 2
-  { left: '20%', top: '45%' },     // Segment 3
-  { left: '80%', top: '60%' },     // Segment 4
-  { left: '20%', top: '75%' },     // Segment 5
+  { left: '20%', top: '15%' },     // Segment 1
+  { left: '80%', top: '35%' },     // Segment 2
+  { left: '20%', top: '55%' },     // Segment 3
+  { left: '80%', top: '75%' },     // Segment 4
+  { left: '20%', top: '85%' },     // Segment 5
 ];
 
-// Updated connection paths to create more pronounced curved paths between boxes
+// Updated connection paths to create even more pronounced curved paths between boxes
 const getConnectionPath = (start: Position, end: Position) => {
   // Extract positions without the % sign for SVG calculations
   const startX = parseInt(start.left);
@@ -36,12 +37,12 @@ const getConnectionPath = (start: Position, end: Position) => {
   const dx = endX - startX;
   const dy = endY - startY;
   
-  // Create more pronounced S-curve with adjusted control points
-  // Move control points further out horizontally and adjust vertical positioning
-  const cp1x = startX + dx * 0.1; // Moved closer to start point horizontally
-  const cp1y = startY + dy * 0.6; // Moved down for more curve
-  const cp2x = startX + dx * 0.9; // Moved closer to end point horizontally
-  const cp2y = startY + dy * 0.4; // Moved up for more curve
+  // Create even more pronounced S-curve with adjusted control points
+  // Move control points further out vertically for more dramatic curves
+  const cp1x = startX + dx * 0.1; // Keep horizontal position close to start
+  const cp1y = startY + dy * 0.8; // Move down further for more dramatic curve
+  const cp2x = startX + dx * 0.9; // Keep horizontal position close to end
+  const cp2y = startY + dy * 0.2; // Move up further for more dramatic curve
   
   // Use cubic Bezier curve for smoother path
   return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
