@@ -22,7 +22,7 @@ const titlePositions = [
   { left: '80%', top: '35%' },     // Segment 2
   { left: '20%', top: '55%' },     // Segment 3
   { left: '80%', top: '75%' },     // Segment 4
-  { left: '20%', top: '95%' },     // Segment 5
+  { left: '20%', top: '85%' },     // Segment 5 - moved up from 95%
 ];
 
 const descriptionPositions = [
@@ -30,7 +30,7 @@ const descriptionPositions = [
   { left: '45%', top: '35%' },     // Description 2 - always to the left of right titles
   { left: '55%', top: '55%' },     // Description 3 - always to the right of left titles
   { left: '45%', top: '75%' },     // Description 4 - always to the left of right titles
-  { left: '55%', top: '95%' },     // Description 5 - always to the right of left titles
+  { left: '55%', top: '85%' },     // Description 5 - always to the right of left titles, moved up from 95%
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
