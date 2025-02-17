@@ -128,29 +128,26 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
           {/* Connection lines */}
           <svg className="absolute inset-0 w-full h-full">
-            {segments.map((segment, index) => {
+            {segments?.map((segment, index) => {
               if (index >= titlePositions.length - 1) return null;
               
               const currentPos = titlePositions[index];
               const nextPos = titlePositions[index + 1];
               
               const x1 = percentToNumber(currentPos.left);
-              const y1 = percentToNumber(currentPos.top) + 3; // Offset to bottom of box
+              const y1 = percentToNumber(currentPos.top) + 6; // Bottom of current box
               const x2 = percentToNumber(nextPos.left);
-              const y2 = percentToNumber(nextPos.top) - 3; // Offset to top of box
+              const y2 = percentToNumber(nextPos.top) - 6; // Top of next box
               
-              // Calculate control points for the curve
+              // Calculate control points for a smooth S-curve
               const dx = x2 - x1;
               const dy = y2 - y1;
-              const controlPoint1X = x1;
-              const controlPoint1Y = y1 + Math.abs(dy) * 0.5;
-              const controlPoint2X = x2;
-              const controlPoint2Y = y2 - Math.abs(dy) * 0.5;
-
+              const midY = (y1 + y2) / 2;
+              
               const path = `
                 M ${x1}% ${y1}%
-                C ${controlPoint1X}% ${controlPoint1Y}%,
-                  ${controlPoint2X}% ${controlPoint2Y}%,
+                C ${x1}% ${midY}%,
+                  ${x2}% ${midY}%,
                   ${x2}% ${y2}%
               `;
 
@@ -177,7 +174,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           </svg>
           
           {/* Title boxes */}
-          {segments.map((segment, index) => {
+          {segments?.map((segment, index) => {
             if (index >= titlePositions.length) return null;
             const position = titlePositions[index];
 
