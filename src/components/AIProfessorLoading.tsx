@@ -166,75 +166,79 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         </svg>
       </div>
       
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 relative z-10">
-        <Loader2 className="w-8 h-8 text-white animate-spin mb-8" />
+      <div className="relative z-10 min-h-screen">
+        <div className="w-full flex justify-center pt-8">
+          <Loader2 className="w-8 h-8 text-white animate-spin" />
+        </div>
         
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {displayedSegments.slice(0, -1).map((_, index) => (
-            <path
-              key={`connection-${index}`}
-              d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
-              className="opacity-0 animate-fade-in"
-              style={{ animationDelay: `${index * 200}ms` }}
-              stroke="#0F172A"
-              strokeOpacity="0.8"
-              strokeWidth="0.5"
-              strokeDasharray="2 2"
-              fill="none"
-            />
-          ))}
-          
-          {displayedSegments.map((_, index) => {
-            const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
-            return (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {displayedSegments.slice(0, -1).map((_, index) => (
               <path
-                key={`description-connection-${index}`}
-                d={path}
+                key={`connection-${index}`}
+                d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
                 className="opacity-0 animate-fade-in"
-                style={{ animationDelay: `${index * 200 + 100}ms` }}
-                stroke="#ea384c"
+                style={{ animationDelay: `${index * 200}ms` }}
+                stroke="#0F172A"
                 strokeOpacity="0.8"
                 strokeWidth="0.5"
+                strokeDasharray="2 2"
                 fill="none"
-                markerEnd="url(#arrowhead)"
               />
-            );
-          })}
-        </svg>
-        
-        {displayedSegments.map((segment, index) => (
-          <div
-            key={segment.sequence_number}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
-            style={{
-              left: titlePositions[index].left,
-              top: titlePositions[index].top,
-              animationDelay: `${index * 200}ms`
-            }}
-          >
-            <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
-              {segment.title}
-            </div>
-          </div>
-        ))}
-
-        {displayedSegments.map((segment, index) => (
-          <div
-            key={`description-${segment.sequence_number}`}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-xs"
-            style={{
-              left: descriptionPositions[index].left,
-              top: descriptionPositions[index].top,
-              animationDelay: `${index * 200 + 100}ms`
-            }}
-          >
-            <div 
-              className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors"
+            ))}
+            
+            {displayedSegments.map((_, index) => {
+              const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
+              return (
+                <path
+                  key={`description-connection-${index}`}
+                  d={path}
+                  className="opacity-0 animate-fade-in"
+                  style={{ animationDelay: `${index * 200 + 100}ms` }}
+                  stroke="#ea384c"
+                  strokeOpacity="0.8"
+                  strokeWidth="0.5"
+                  fill="none"
+                  markerEnd="url(#arrowhead)"
+                />
+              );
+            })}
+          </svg>
+          
+          {displayedSegments.map((segment, index) => (
+            <div
+              key={segment.sequence_number}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
+              style={{
+                left: titlePositions[index].left,
+                top: titlePositions[index].top,
+                animationDelay: `${index * 200}ms`
+              }}
             >
-              {segment.segment_description}
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+                {segment.title}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+
+          {displayedSegments.map((segment, index) => (
+            <div
+              key={`description-${segment.sequence_number}`}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-xs"
+              style={{
+                left: descriptionPositions[index].left,
+                top: descriptionPositions[index].top,
+                animationDelay: `${index * 200 + 100}ms`
+              }}
+            >
+              <div 
+                className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors"
+              >
+                {segment.segment_description}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
