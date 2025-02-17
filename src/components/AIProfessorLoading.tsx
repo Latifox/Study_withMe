@@ -20,10 +20,12 @@ const titlePositions = [
 const AIProfessorLoading = () => {
   const { lectureId } = useParams();
 
-  const { data: segments } = useQuery({
+  const { data: segments, isLoading, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {
       if (!lectureId) throw new Error('Lecture ID is required');
+      
+      console.log('Fetching segments for lecture:', lectureId);
       
       const { data, error } = await supabase
         .from('lecture_segments')
@@ -31,10 +33,48 @@ const AIProfessorLoading = () => {
         .eq('lecture_id', parseInt(lectureId))
         .order('sequence_number');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching segments:', error);
+        throw error;
+      }
+
+      console.log('Fetched segments:', data);
       return data as Segment[];
-    }
+    },
+    enabled: !!lectureId // Only run query if we have a lectureId
   });
+
+  console.log('Current render state:', { isLoading, error, segmentsCount: segments?.length });
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-white">Loading segments...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-red-500">Error loading segments: {error.message}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!segments || segments.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-white">No segments found for this lecture</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
@@ -44,7 +84,7 @@ const AIProfessorLoading = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20" />
           
           {/* Title boxes */}
-          {segments?.map((segment, index) => {
+          {segments.map((segment, index) => {
             if (index >= titlePositions.length) return null;
             const position = titlePositions[index];
 
