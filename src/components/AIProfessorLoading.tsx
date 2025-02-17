@@ -19,18 +19,18 @@ interface AIProfessorLoadingProps {
 
 const titlePositions = [
   { left: '20%', top: '15%' },     // Segment 1
-  { left: '80%', top: '35%' },     // Segment 2
-  { left: '20%', top: '55%' },     // Segment 3
-  { left: '80%', top: '75%' },     // Segment 4
-  { left: '20%', top: '85%' },     // Segment 5 - moved up from 95%
+  { left: '80%', top: '30%' },     // Segment 2 - moved up from 35%
+  { left: '20%', top: '45%' },     // Segment 3 - moved up from 55%
+  { left: '80%', top: '60%' },     // Segment 4 - moved up from 75%
+  { left: '20%', top: '75%' },     // Segment 5 - moved up and adjusted spacing
 ];
 
 const descriptionPositions = [
   { left: '55%', top: '15%' },     // Description 1 - always to the right of left titles
-  { left: '45%', top: '35%' },     // Description 2 - always to the left of right titles
-  { left: '55%', top: '55%' },     // Description 3 - always to the right of left titles
-  { left: '45%', top: '75%' },     // Description 4 - always to the left of right titles
-  { left: '55%', top: '85%' },     // Description 5 - always to the right of left titles, moved up from 95%
+  { left: '45%', top: '30%' },     // Description 2 - always to the left of right titles
+  { left: '55%', top: '45%' },     // Description 3 - always to the right of left titles
+  { left: '45%', top: '60%' },     // Description 4 - always to the left of right titles
+  { left: '55%', top: '75%' },     // Description 5 - always to the right of left titles
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
