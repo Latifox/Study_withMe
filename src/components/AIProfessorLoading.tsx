@@ -67,8 +67,13 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   if (isLoading || (!segments || segments.length === 0)) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="min-h-screen flex items-center justify-center">
+      <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+          <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+          <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        </div>
+        <div className="min-h-screen flex items-center justify-center relative z-10">
           <div className="text-white/80 flex flex-col items-center space-y-4">
             <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             <div className="text-lg font-medium">
@@ -85,8 +90,13 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="min-h-screen flex items-center justify-center">
+      <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+          <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+          <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        </div>
+        <div className="min-h-screen flex items-center justify-center relative z-10">
           <div className="text-red-400 bg-red-500/10 px-6 py-4 rounded-lg border border-red-500/20">
             Error loading segments: {error.message}
           </div>
@@ -96,18 +106,16 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent" />
+      </div>
+      
+      <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
-          {/* Background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5" />
-          
-          {/* Animated background shapes */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full filter blur-3xl animate-pulse-slow" />
-            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/10 rounded-full filter blur-3xl animate-pulse-slow animation-delay-2000" />
-          </div>
-          
           {/* Connection lines */}
           <svg className="absolute inset-0 w-full h-full">
             {segments.map((segment, index) => {
