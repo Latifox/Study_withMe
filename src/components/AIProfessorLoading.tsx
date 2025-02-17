@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { TypeAnimation } from 'react-type-animation';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 interface Segment {
   title: string;
@@ -76,6 +78,9 @@ const getConnectionPath = (start: Position, end: Position) => {
 };
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
+  const navigate = useNavigate();
+  const baseDelay = 897; // Increased by 15% from 780
+
   const { data, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {      
@@ -106,6 +111,18 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     retry: 3,
   });
 
+  // Effect to handle navigation after content generation
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const totalDelay = getDescriptionDelay(data.length - 1) + baseDelay;
+      const timer = setTimeout(() => {
+        navigate(`story/nodes`);
+      }, totalDelay);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [data, navigate]);
+
   if (error) {
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-rose-600 to-red-500 flex items-center justify-center">
@@ -119,7 +136,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: '', sequence_number: 0, segment_description: '' });
 
-  const baseDelay = 780;
   const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
   const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
   const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay * 3);
@@ -143,9 +159,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           viewBox="0 0 100 100"
         >
           <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.1" />
-            </pattern>
             <marker
               id="arrowhead"
               markerWidth="6"
@@ -158,7 +171,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               <path d="M 0 0 L 6 3 L 0 6 z" />
             </marker>
           </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
           
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
