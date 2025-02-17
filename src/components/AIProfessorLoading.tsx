@@ -42,7 +42,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       return data as Segment[];
     },
     // Poll every 2 seconds until we get segments
-    refetchInterval: (data) => !data || data.length === 0 ? 2000 : false,
+    refetchInterval: (segments) => !segments || segments.length === 0 ? 2000 : false,
     // Keep polling even if the window is not focused
     refetchIntervalInBackground: true,
     // Retry failed requests
@@ -50,6 +50,8 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     retryDelay: 1000,
     // Keep retrying until we get data
     retryOnMount: true,
+    // Enable suspense to handle loading state
+    enabled: !!lectureId
   });
 
   console.log('Current render state:', { isLoading, error, segmentsCount: segments?.length });
