@@ -25,11 +25,11 @@ const titlePositions = [
 ];
 
 const descriptionPositions = [
-  { left: '50%', top: '15%' },     // Description 1
-  { left: '60%', top: '35%' },     // Description 2
-  { left: '50%', top: '55%' },     // Description 3
-  { left: '60%', top: '75%' },     // Description 4
-  { left: '50%', top: '95%' },     // Description 5
+  { left: '40%', top: '15%' },     // Description 1 - always to the right of left titles
+  { left: '60%', top: '35%' },     // Description 2 - always to the left of right titles
+  { left: '40%', top: '55%' },     // Description 3 - always to the right of left titles
+  { left: '60%', top: '75%' },     // Description 4 - always to the left of right titles
+  { left: '40%', top: '95%' },     // Description 5 - always to the right of left titles
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
@@ -151,14 +151,14 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             </pattern>
             <marker
               id="arrowhead"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              refX="5.5"
+              refY="3"
               orient="auto"
               fill="#ea384c"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" />
+              <path d="M 0 0 L 6 3 L 0 6 z" />
             </marker>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
