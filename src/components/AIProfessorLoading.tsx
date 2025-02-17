@@ -34,37 +34,45 @@ const descriptionPositions = [
   { left: '55%', top: '83%' },
 ];
 
-const getConnectionPath = (start: Position, end: Position) => {
-  const startX = parseFloat(start.left);
-  const startY = parseFloat(start.top);
-  const endX = parseFloat(end.left);
-  const endY = parseFloat(end.top);
-  
-  const midY = (startY + endY) / 2;
-  const cp1x = startX + (endX - startX) * 0.2;
-  const cp2x = startX + (endX - startX) * 0.8;
-  
-  return `M ${startX} ${startY} C ${cp1x} ${midY}, ${cp2x} ${midY}, ${endX} ${endY}`;
-};
-
 const getDescriptionPath = (start: Position, end: Position) => {
-  const startX = parseFloat(start.left);
-  const startY = parseFloat(start.top);
-  const endX = parseFloat(end.left);
-  const endY = parseFloat(end.top);
+  const startX = parseInt(start.left);
+  const startY = parseInt(start.top);
+  const endX = parseInt(end.left);
+  const endY = parseInt(end.top);
   
-  const angle = Math.atan2(endY - startY, endX - startX);
-  const boxPadding = 8;
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const angle = Math.atan2(dy, dx);
   
-  const adjustedStartX = startX + (boxPadding * Math.cos(angle));
-  const adjustedStartY = startY + (boxPadding * Math.sin(angle));
-  const adjustedEndX = endX - (boxPadding * Math.cos(angle));
-  const adjustedEndY = endY - (boxPadding * Math.sin(angle));
+  const titleBoxWidth = 8;  // Percentage of viewport width
+  const descBoxWidth = 12;  // Percentage of viewport width
+  
+  const startPointX = startX + (titleBoxWidth * Math.cos(angle));
+  const startPointY = startY + (titleBoxWidth * Math.sin(angle));
+  const endPointX = endX - (descBoxWidth * Math.cos(angle));
+  const endPointY = endY - (descBoxWidth * Math.sin(angle));
   
   return {
-    path: `M ${adjustedStartX} ${adjustedStartY} L ${adjustedEndX} ${adjustedEndY}`,
-    angle: (angle * 180) / Math.PI
+    path: `M ${startPointX} ${startPointY} L ${endPointX} ${endPointY}`,
+    angle: Math.atan2(endPointY - startPointY, endPointX - startPointX) * 180 / Math.PI
   };
+};
+
+const getConnectionPath = (start: Position, end: Position) => {
+  const startX = parseInt(start.left);
+  const startY = parseInt(start.top) + 4;
+  const endX = parseInt(end.left);
+  const endY = parseInt(end.top) - 4;
+  
+  const dx = endX - startX;
+  const dy = endY - startY;
+  
+  const cp1x = startX + dx * 0.1;
+  const cp1y = startY + dy * 0.8;
+  const cp2x = startX + dx * 0.9;
+  const cp2y = startY + dy * 0.2;
+  
+  return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 };
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
@@ -128,11 +136,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         
-        <svg 
-          className="w-full h-full absolute inset-0" 
-          viewBox="0 0 100 100" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
@@ -149,7 +153,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               <path d="M 0 0 L 6 3 L 0 6 z" />
             </marker>
           </defs>
-          <rect width="100" height="100" fill="url(#grid)" />
+          <rect width="100%" height="100%" fill="url(#grid)" />
           
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
