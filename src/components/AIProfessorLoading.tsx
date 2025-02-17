@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ const AIProfessorLoading = () => {
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const { lectureId } = useParams();
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const { data: segments } = useQuery({
     queryKey: ['lecture-segments', lectureId],
@@ -62,11 +63,15 @@ const AIProfessorLoading = () => {
 
     // Add atmosphere and fog effects
     map.current.on('style.load', () => {
-      map.current?.setFog({
+      if (!map.current) return;
+      
+      map.current.setFog({
         color: 'rgb(255, 255, 255)',
         'high-color': 'rgb(200, 200, 225)',
         'horizon-blend': 0.2,
       });
+      
+      setMapLoaded(true); // Mark map as loaded after style is loaded
     });
 
     // Rotation animation
@@ -88,10 +93,12 @@ const AIProfessorLoading = () => {
     };
   }, []);
 
-  // Add markers when segments data is loaded
+  // Add markers when segments data is loaded and map is ready
   useEffect(() => {
-    if (!map.current || !segments) return;
+    if (!map.current || !segments || !mapLoaded) return;
 
+    console.log('Adding markers to map');
+    
     // Remove existing markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
@@ -112,6 +119,7 @@ const AIProfessorLoading = () => {
       titleEl.style.fontSize = '14px';
       titleEl.style.maxWidth = '150px';
       titleEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      titleEl.style.zIndex = '1000';
       titleEl.innerHTML = segment.title;
 
       // Create description marker
@@ -124,6 +132,7 @@ const AIProfessorLoading = () => {
       descEl.style.fontSize = '12px';
       descEl.style.maxWidth = '200px';
       descEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      descEl.style.zIndex = '1000';
       descEl.innerHTML = segment.segment_description.slice(0, 100) + '...';
 
       // Add markers to map
@@ -137,7 +146,7 @@ const AIProfessorLoading = () => {
 
       markersRef.current.push(titleMarker, descMarker);
     });
-  }, [segments]);
+  }, [segments, mapLoaded]);
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
