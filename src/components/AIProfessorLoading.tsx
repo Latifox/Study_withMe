@@ -124,7 +124,11 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
   const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
   const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay * 3);
-  const getDescriptionDelay = (index: number) => (titlePositions.length * (baseDelay * 4)) + (index * baseDelay * 2);
+  const getDescriptionDelay = (index: number) => {
+    const lastTitleDelay = getTitleDelay(titlePositions.length - 1);
+    const titleTypingDuration = baseDelay * 2; // Estimated time for typing animation
+    return lastTitleDelay + titleTypingDuration + (index * baseDelay * 2);
+  };
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
@@ -204,7 +208,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 animationDelay: `${getEmptyBoxDelay(index)}ms`
               }}
             >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px]" />
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px] flex items-center justify-center" />
             </div>
           ))}
 
@@ -219,7 +223,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 animationDelay: `${getTitleDelay(index)}ms`
               }}
             >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] flex items-center justify-center">
                 <TypeAnimation
                   sequence={[segment.title]}
                   wrapper="div"
