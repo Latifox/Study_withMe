@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -119,10 +120,10 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: 'Loading...', sequence_number: 0, segment_description: 'Generating content...' });
 
   const baseDelay = 300; // Base delay in milliseconds
-  const getEmptyBoxDelay = (index: number) => index * baseDelay;
-  const getConnectorDelay = (index: number) => (index * baseDelay) + (baseDelay * 5);
-  const getTitleDelay = (index: number) => (index * baseDelay) + (baseDelay * 10);
-  const getDescriptionDelay = (index: number) => (index * baseDelay) + (baseDelay * 15);
+  const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
+  const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
+  const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay);
+  const getDescriptionDelay = (index: number) => (titlePositions.length * (baseDelay * 3)) + (index * baseDelay);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
@@ -191,6 +192,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             })}
           </svg>
           
+          {/* Empty boxes */}
           {displayedSegments.map((_, index) => (
             <div
               key={`empty-box-${index}`}
@@ -205,6 +207,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             </div>
           ))}
 
+          {/* Titles */}
           {displayedSegments.map((segment, index) => (
             <div
               key={`title-${index}`}
@@ -221,6 +224,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             </div>
           ))}
 
+          {/* Description boxes with their connectors */}
           {displayedSegments.map((segment, index) => (
             <div
               key={`description-${index}`}
