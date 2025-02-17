@@ -52,19 +52,14 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       console.log('Fetched segments:', data);
       return data as Segment[];
     },
-    // Poll every 2 seconds until we get segments
     refetchInterval: (data: { state: { data: Segment[] | undefined } }) => {
       const segments = data?.state?.data;
       return !segments || segments.length === 0 ? 2000 : false;
     },
-    // Keep polling even if the window is not focused
     refetchIntervalInBackground: true,
-    // Retry failed requests
     retry: true,
     retryDelay: 1000,
-    // Keep retrying until we get data
     retryOnMount: true,
-    // Enable suspense to handle loading state
     enabled: !!lectureId
   });
 
@@ -72,11 +67,16 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   if (isLoading || (!segments || segments.length === 0)) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-white">
-            Generating content for lecture {lectureId}...
-            {isLoading ? " (Checking for segments...)" : " (Waiting for segments to be generated...)"}
+          <div className="text-white/80 flex flex-col items-center space-y-4">
+            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <div className="text-lg font-medium">
+              Generating content for lecture {lectureId}...
+            </div>
+            <div className="text-sm text-white/60">
+              {isLoading ? "Checking for segments..." : "Waiting for segments to be generated..."}
+            </div>
           </div>
         </div>
       </div>
@@ -85,20 +85,28 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-red-500">Error loading segments: {error.message}</div>
+          <div className="text-red-400 bg-red-500/10 px-6 py-4 rounded-lg border border-red-500/20">
+            Error loading segments: {error.message}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900 rounded-lg overflow-hidden">
+        <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
           {/* Background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5" />
+          
+          {/* Animated background shapes */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full filter blur-3xl animate-pulse-slow" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/10 rounded-full filter blur-3xl animate-pulse-slow animation-delay-2000" />
+          </div>
           
           {/* Connection lines */}
           <svg className="absolute inset-0 w-full h-full">
@@ -114,15 +122,15 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               const y2 = percentToNumber(nextPos.top);
 
               return (
-                <g key={`connection-${index}`}>
+                <g key={`connection-${index}`} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
                   {/* Background line (glow effect) */}
                   <line
                     x1={`${x1}%`}
                     y1={`${y1}%`}
                     x2={`${x2}%`}
                     y2={`${y2}%`}
-                    className="stroke-white/10"
-                    strokeWidth="4"
+                    className="stroke-white/5"
+                    strokeWidth="6"
                   />
                   {/* Foreground line */}
                   <line
@@ -130,9 +138,9 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                     y1={`${y1}%`}
                     x2={`${x2}%`}
                     y2={`${y2}%`}
-                    className="stroke-white/40"
+                    className="stroke-white/20"
                     strokeWidth="2"
-                    strokeDasharray="4 4"
+                    strokeDasharray="6 4"
                   />
                 </g>
               );
@@ -147,13 +155,14 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             return (
               <div
                 key={segment.sequence_number}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
                 style={{
                   left: position.left,
                   top: position.top,
+                  animationDelay: `${index * 200}ms`
                 }}
               >
-                <div className="bg-black/90 text-white px-6 py-3 rounded-md text-sm font-medium shadow-lg border border-white/10">
+                <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
                   {segment.title}
                 </div>
               </div>
