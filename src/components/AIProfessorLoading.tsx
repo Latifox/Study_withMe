@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -117,27 +116,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     );
   }
 
-  if (isLoading || !data || data.length === 0) {
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-          <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-          <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-        </div>
-        <div className="min-h-screen flex items-center justify-center relative z-10">
-          <div className="text-white/80 flex flex-col items-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <div className="text-lg font-medium">
-              Generating content for lecture {lectureId}...
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const displayedSegments = data.slice(0, titlePositions.length);
+  const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: 'Loading...', sequence_number: 0, segment_description: 'Generating content...' });
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
@@ -208,7 +187,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           
           {displayedSegments.map((segment, index) => (
             <div
-              key={segment.sequence_number}
+              key={`title-${index}`}
               className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
               style={{
                 left: titlePositions[index].left,
@@ -224,7 +203,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
           {displayedSegments.map((segment, index) => (
             <div
-              key={`description-${segment.sequence_number}`}
+              key={`description-${index}`}
               className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-xs"
               style={{
                 left: descriptionPositions[index].left,
