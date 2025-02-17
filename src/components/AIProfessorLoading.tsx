@@ -135,29 +135,40 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               const nextPos = titlePositions[index + 1];
               
               const x1 = percentToNumber(currentPos.left);
-              const y1 = percentToNumber(currentPos.top);
+              const y1 = percentToNumber(currentPos.top) + 3; // Offset to bottom of box
               const x2 = percentToNumber(nextPos.left);
-              const y2 = percentToNumber(nextPos.top);
+              const y2 = percentToNumber(nextPos.top) - 3; // Offset to top of box
+              
+              // Calculate control points for the curve
+              const dx = x2 - x1;
+              const dy = y2 - y1;
+              const controlPoint1X = x1;
+              const controlPoint1Y = y1 + Math.abs(dy) * 0.5;
+              const controlPoint2X = x2;
+              const controlPoint2Y = y2 - Math.abs(dy) * 0.5;
+
+              const path = `
+                M ${x1}% ${y1}%
+                C ${controlPoint1X}% ${controlPoint1Y}%,
+                  ${controlPoint2X}% ${controlPoint2Y}%,
+                  ${x2}% ${y2}%
+              `;
 
               return (
                 <g key={`connection-${index}`} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                  {/* Background line (glow effect) */}
-                  <line
-                    x1={`${x1}%`}
-                    y1={`${y1}%`}
-                    x2={`${x2}%`}
-                    y2={`${y2}%`}
+                  {/* Background path (glow effect) */}
+                  <path
+                    d={path}
                     className="stroke-white/5"
                     strokeWidth="6"
+                    fill="none"
                   />
-                  {/* Foreground line */}
-                  <line
-                    x1={`${x1}%`}
-                    y1={`${y1}%`}
-                    x2={`${x2}%`}
-                    y2={`${y2}%`}
+                  {/* Foreground path */}
+                  <path
+                    d={path}
                     className="stroke-white/20"
                     strokeWidth="2"
+                    fill="none"
                     strokeDasharray="6 4"
                   />
                 </g>
