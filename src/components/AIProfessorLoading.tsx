@@ -1,11 +1,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useParams } from "react-router-dom";
 
 interface Segment {
   title: string;
   sequence_number: number;
+}
+
+interface AIProfessorLoadingProps {
+  lectureId: number;
 }
 
 // Predefined positions for title boxes (in percentages)
@@ -17,25 +20,18 @@ const titlePositions = [
   { left: '25%', top: '70%' },
 ];
 
-const AIProfessorLoading = () => {
-  const { lectureId } = useParams();
-
-  console.log('Current route params:', { lectureId });
+const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
+  console.log('Loading screen for lecture:', lectureId);
 
   const { data: segments, isLoading, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
-    queryFn: async () => {
-      if (!lectureId) {
-        console.error('No lecture ID found in route params');
-        throw new Error('Lecture ID is required');
-      }
-      
+    queryFn: async () => {      
       console.log('Fetching segments for lecture:', lectureId);
       
       const { data, error } = await supabase
         .from('lecture_segments')
         .select('title, sequence_number')
-        .eq('lecture_id', parseInt(lectureId))
+        .eq('lecture_id', lectureId)
         .order('sequence_number');
 
       if (error) {
@@ -46,20 +42,9 @@ const AIProfessorLoading = () => {
       console.log('Fetched segments:', data);
       return data as Segment[];
     },
-    enabled: !!lectureId // Only run query if we have a lectureId
   });
 
   console.log('Current render state:', { isLoading, error, segmentsCount: segments?.length });
-
-  if (!lectureId) {
-    return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-red-500">No lecture ID found in URL</div>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
