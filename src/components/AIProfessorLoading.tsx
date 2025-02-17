@@ -16,22 +16,22 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
-// Fixed positions for the mind map template
+// Updated positions for the mind map template to match the new layout
 const titlePositions = [
-  { left: '25%', top: '15%' },    // Top left
-  { left: '75%', top: '15%' },    // Top right
-  { left: '50%', top: '40%' },    // Middle
-  { left: '75%', top: '65%' },    // Bottom right
-  { left: '25%', top: '65%' },    // Bottom left
+  { left: '20%', top: '20%' },    // Top left
+  { left: '80%', top: '20%' },    // Top right
+  { left: '50%', top: '50%' },    // Center
+  { left: '80%', top: '80%' },    // Bottom right
+  { left: '20%', top: '80%' },    // Bottom left
 ];
 
-// Connection paths for the template
+// Updated connection paths for the new layout
 const connectionPaths = [
-  'M 25 15 Q 50 15, 75 15',       // Top connection
-  'M 75 15 Q 75 40, 50 40',       // Right top to middle
-  'M 25 15 Q 25 40, 50 40',       // Left top to middle
-  'M 50 40 Q 75 40, 75 65',       // Middle to bottom right
-  'M 50 40 Q 25 40, 25 65',       // Middle to bottom left
+  'M 20 20 L 80 20',             // Top horizontal line
+  'M 20 20 Q 35 35, 50 50',      // Top left to center
+  'M 80 20 Q 65 35, 50 50',      // Top right to center
+  'M 50 50 Q 65 65, 80 80',      // Center to bottom right
+  'M 50 50 Q 35 65, 20 80',      // Center to bottom left
 ];
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
@@ -94,7 +94,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
-          {/* Fixed template connections */}
+          {/* Connection paths */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
             {connectionPaths.map((path, index) => (
               <path
