@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Segment {
@@ -47,8 +47,11 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       if (error) throw error;
       return data as Segment[];
     },
-    refetchInterval: (currentData: Segment[] | undefined) => {
-      return !currentData || currentData.length === 0 ? 2000 : false;
+    refetchInterval: (query) => {
+      if (!query.state.data || query.state.data.length === 0) {
+        return 2000;
+      }
+      return false;
     },
   });
 
