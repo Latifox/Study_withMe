@@ -34,8 +34,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     try {
-      setShowAIProfessor(true);
-
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
@@ -69,6 +67,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       }
 
       setCurrentLectureId(lectureData.id);
+      setShowAIProfessor(true);
 
       console.log('Extracting PDF content...');
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {

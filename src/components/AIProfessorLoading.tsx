@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -126,7 +127,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         </div>
         <div className="min-h-screen flex items-center justify-center relative z-10">
           <div className="text-white/80 flex flex-col items-center space-y-4">
-            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <Loader2 className="w-8 h-8 animate-spin" />
             <div className="text-lg font-medium">
               Generating content for lecture {lectureId}...
             </div>
