@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Upload } from "lucide-react";
 import AIProfessorLoading from "./AIProfessorLoading";
 
 interface FileUploadProps {
@@ -17,6 +18,7 @@ interface FileUploadProps {
 const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [showAIProfessor, setShowAIProfessor] = useState(false);
   const [currentLectureId, setCurrentLectureId] = useState<number | null>(null);
   const { toast } = useToast();
@@ -31,6 +33,9 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       });
       return;
     }
+
+    // Set uploading state to disable the button
+    setIsUploading(true);
 
     try {
       // Upload PDF to storage first
@@ -60,7 +65,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (dbError) throw dbError;
       console.log('Lecture saved successfully');
 
-      // Extract PDF content with the new lecture ID
       if (!lectureData?.id) {
         throw new Error('No lecture ID returned from database');
       }
@@ -115,14 +119,11 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         })
       );
 
-      // Wait for all segment content to be generated
       await Promise.all(segmentPromises);
       console.log('All segment content generated successfully');
 
-      // Invalidate queries and wait a moment to ensure the UI updates
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
       
-      // Small delay to ensure the UI has time to process the update
       await new Promise(resolve => setTimeout(resolve, 500));
 
       toast({
@@ -132,14 +133,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
+      setIsUploading(false); // Re-enable the button on error
       toast({
         title: "Error",
         description: error.message || "Failed to upload lecture",
         variant: "destructive",
       });
-    } finally {
-      setShowAIProfessor(false);
-      setCurrentLectureId(null);
     }
   };
 
@@ -152,17 +151,17 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-slate-900/95 backdrop-blur-md border-slate-800">
         <DialogHeader>
-          <DialogTitle>Upload New Lecture</DialogTitle>
+          <DialogTitle className="text-white">Upload New Lecture</DialogTitle>
         </DialogHeader>
         
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        <div className="bg-amber-900/20 border border-amber-500/20 rounded-lg p-4 mb-4">
           <div className="flex items-start space-x-2">
             <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
             <div>
-              <h4 className="font-medium text-amber-800 mb-2">File Requirements:</h4>
-              <ul className="text-sm text-amber-700 space-y-1 list-disc pl-4">
+              <h4 className="font-medium text-amber-400 mb-2">File Requirements:</h4>
+              <ul className="text-sm text-amber-300/90 space-y-1 list-disc pl-4">
                 <li>PDF files only</li>
                 <li>Text must be searchable (not scanned documents)</li>
                 <li>Maximum file size: 10MB</li>
@@ -175,30 +174,50 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="title">Lecture Title</Label>
+            <Label htmlFor="title" className="text-white">Lecture Title</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter lecture title"
+              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="file">PDF File</Label>
+            <Label htmlFor="file" className="text-white">PDF File</Label>
             <Input
               id="file"
               type="file"
               accept=".pdf"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="bg-slate-800 border-slate-700 text-white file:bg-slate-700 file:text-white file:border-0"
             />
           </div>
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            className="bg-transparent text-white border-slate-700 hover:bg-slate-800"
+          >
             Cancel
           </Button>
-          <Button onClick={handleUpload}>
-            Upload
+          <Button
+            onClick={handleUpload}
+            disabled={isUploading}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            {isUploading ? (
+              <>
+                <Upload className="animate-spin mr-2" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2" />
+                Upload
+              </>
+            )}
           </Button>
         </div>
       </DialogContent>
@@ -207,3 +226,4 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 };
 
 export default FileUpload;
+
