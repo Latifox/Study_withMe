@@ -143,8 +143,8 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           viewBox="0 0 100 100"
         >
           <defs>
-            <pattern id="grid" width="2" height="2" patternUnits="userSpaceOnUse">
-              <path d="M 2 0 L 0 0 0 2" fill="none" stroke="white" strokeWidth="0.1" opacity="0.15" />
+            <pattern id="grid" width="4" height="4" patternUnits="userSpaceOnUse">
+              <path d="M 4 0 L 0 0 0 4" fill="none" stroke="white" strokeWidth="0.2" opacity="0.1" />
             </pattern>
             <marker
               id="arrowhead"
