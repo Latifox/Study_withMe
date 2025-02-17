@@ -25,11 +25,11 @@ const titlePositions = [
 ];
 
 const descriptionPositions = [
-  { left: '40%', top: '15%' },     // Description 1 - always to the right of left titles
-  { left: '60%', top: '35%' },     // Description 2 - always to the left of right titles
-  { left: '40%', top: '55%' },     // Description 3 - always to the right of left titles
-  { left: '60%', top: '75%' },     // Description 4 - always to the left of right titles
-  { left: '40%', top: '95%' },     // Description 5 - always to the right of left titles
+  { left: '55%', top: '15%' },     // Description 1 - always to the right of left titles
+  { left: '45%', top: '35%' },     // Description 2 - always to the left of right titles
+  { left: '55%', top: '55%' },     // Description 3 - always to the right of left titles
+  { left: '45%', top: '75%' },     // Description 4 - always to the left of right titles
+  { left: '55%', top: '95%' },     // Description 5 - always to the right of left titles
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
