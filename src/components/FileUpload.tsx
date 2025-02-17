@@ -86,8 +86,8 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
       onClose();
       
-      // Navigate to the story nodes page immediately
-      navigate(`/course/${courseId}/lecture/${lectureData.id}/story/nodes`);
+      // Navigate directly to the story route (which shows the map loading screen)
+      navigate(`/course/${courseId}/lecture/${lectureData.id}/story`);
 
     } catch (error: any) {
       console.error('Upload error:', error);
