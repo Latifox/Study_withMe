@@ -1,7 +1,4 @@
 
-import { useEffect, useRef, useState } from "react";
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
@@ -12,22 +9,24 @@ interface Segment {
   sequence_number: number;
 }
 
-// Predefined locations around the globe for markers
-const markerLocations = [
-  { titlePos: { lng: -100, lat: 40 }, descPos: { lng: -85, lat: 40 } },  // North America
-  { titlePos: { lng: -60, lat: -20 }, descPos: { lng: -45, lat: -20 } }, // South America
-  { titlePos: { lng: 0, lat: 50 }, descPos: { lng: 15, lat: 50 } },      // Europe
-  { titlePos: { lng: 20, lat: 0 }, descPos: { lng: 35, lat: 0 } },       // Africa
-  { titlePos: { lng: 100, lat: 30 }, descPos: { lng: 115, lat: 30 } },   // Asia
-  { titlePos: { lng: 135, lat: -25 }, descPos: { lng: 150, lat: -25 } }, // Australia
+// Predefined positions for the content boxes (in percentages)
+const contentLocations = [
+  // North America region
+  { title: { left: '15%', top: '25%' }, description: { left: '25%', top: '25%' } },
+  // South America region
+  { title: { left: '25%', top: '60%' }, description: { left: '35%', top: '60%' } },
+  // Europe region
+  { title: { left: '45%', top: '20%' }, description: { left: '55%', top: '20%' } },
+  // Africa region
+  { title: { left: '45%', top: '45%' }, description: { left: '55%', top: '45%' } },
+  // Asia region
+  { title: { left: '65%', top: '30%' }, description: { left: '75%', top: '30%' } },
+  // Australia region
+  { title: { left: '75%', top: '65%' }, description: { left: '85%', top: '65%' } },
 ];
 
 const AIProfessorLoading = () => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const { lectureId } = useParams();
-  const [mapLoaded, setMapLoaded] = useState(false);
 
   const { data: segments } = useQuery({
     queryKey: ['lecture-segments', lectureId],
@@ -45,114 +44,50 @@ const AIProfessorLoading = () => {
     }
   });
 
-  useEffect(() => {
-    if (!mapContainer.current) return;
-
-    mapboxgl.accessToken = 'pk.eyJ1IjoiZGV2bG92YWJsZSIsImEiOiJjbHNzOWdzYnMwMWNqMmpxdDlucGNiYmh0In0.YkZvvk8M5fNuv0hO55PGlw';
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      projection: 'globe',
-      zoom: 1.5,
-      center: [30, 15],
-      pitch: 45,
-      attributionControl: false,
-      interactive: false // Disable interaction
-    });
-
-    // Add atmosphere and fog effects
-    map.current.on('style.load', () => {
-      if (!map.current) return;
-      
-      map.current.setFog({
-        color: 'rgb(255, 255, 255)',
-        'high-color': 'rgb(200, 200, 225)',
-        'horizon-blend': 0.2,
-      });
-      
-      setMapLoaded(true); // Mark map as loaded after style is loaded
-    });
-
-    // Rotation animation
-    const secondsPerRevolution = 240;
-    function spinGlobe() {
-      if (!map.current) return;
-      const center = map.current.getCenter();
-      center.lng -= 360 / secondsPerRevolution;
-      map.current.easeTo({ center, duration: 1000, easing: (n) => n });
-      requestAnimationFrame(spinGlobe);
-    }
-
-    // Start the globe spinning
-    spinGlobe();
-
-    return () => {
-      markersRef.current.forEach(marker => marker.remove());
-      map.current?.remove();
-    };
-  }, []);
-
-  // Add markers when segments data is loaded and map is ready
-  useEffect(() => {
-    if (!map.current || !segments || !mapLoaded) return;
-
-    console.log('Adding markers to map');
-    
-    // Remove existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
-
-    // Add new markers
-    segments.forEach((segment, index) => {
-      if (index >= markerLocations.length) return;
-
-      const location = markerLocations[index];
-      
-      // Create title marker
-      const titleEl = document.createElement('div');
-      titleEl.className = 'marker';
-      titleEl.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-      titleEl.style.borderRadius = '4px';
-      titleEl.style.color = '#ffffff';
-      titleEl.style.padding = '8px';
-      titleEl.style.fontSize = '14px';
-      titleEl.style.maxWidth = '150px';
-      titleEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-      titleEl.style.zIndex = '1000';
-      titleEl.innerHTML = segment.title;
-
-      // Create description marker
-      const descEl = document.createElement('div');
-      descEl.className = 'marker';
-      descEl.style.backgroundColor = 'rgba(255, 68, 68, 0.8)';
-      descEl.style.borderRadius = '4px';
-      descEl.style.color = '#ffffff';
-      descEl.style.padding = '8px';
-      descEl.style.fontSize = '12px';
-      descEl.style.maxWidth = '200px';
-      descEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-      descEl.style.zIndex = '1000';
-      descEl.innerHTML = segment.segment_description.slice(0, 100) + '...';
-
-      // Add markers to map
-      const titleMarker = new mapboxgl.Marker({ element: titleEl })
-        .setLngLat([location.titlePos.lng, location.titlePos.lat])
-        .addTo(map.current!);
-
-      const descMarker = new mapboxgl.Marker({ element: descEl })
-        .setLngLat([location.descPos.lng, location.descPos.lat])
-        .addTo(map.current!);
-
-      markersRef.current.push(titleMarker, descMarker);
-    });
-  }, [segments, mapLoaded]);
-
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl rounded-lg overflow-hidden aspect-[16/9] relative">
-          <div ref={mapContainer} className="absolute inset-0" />
+        <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900 rounded-lg overflow-hidden">
+          {/* Background gradient effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10" />
+          
+          {/* Content boxes */}
+          {segments?.map((segment, index) => {
+            if (index >= contentLocations.length) return null;
+            const location = contentLocations[index];
+
+            return (
+              <div key={segment.sequence_number} className="absolute">
+                {/* Title box */}
+                <div 
+                  className="absolute whitespace-nowrap"
+                  style={{
+                    left: location.title.left,
+                    top: location.title.top,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <div className="bg-black/80 text-white px-4 py-2 rounded text-sm font-medium shadow-lg">
+                    {segment.title}
+                  </div>
+                </div>
+
+                {/* Description box */}
+                <div 
+                  className="absolute"
+                  style={{
+                    left: location.description.left,
+                    top: location.description.top,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <div className="bg-red-500/80 text-white px-4 py-2 rounded text-xs max-w-[200px] shadow-lg">
+                    {segment.segment_description.slice(0, 100)}...
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
