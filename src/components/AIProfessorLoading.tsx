@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -155,6 +154,37 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             </marker>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
+          
+          {displayedSegments.slice(0, -1).map((_, index) => (
+            <path
+              key={`connection-${index}`}
+              d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
+              className="opacity-0 animate-fade-in"
+              style={{ animationDelay: `${getConnectorDelay(index)}ms` }}
+              stroke="#0F172A"
+              strokeOpacity="0.8"
+              strokeWidth="0.5"
+              strokeDasharray="2 2"
+              fill="none"
+            />
+          ))}
+          
+          {displayedSegments.map((_, index) => {
+            const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
+            return (
+              <path
+                key={`description-connection-${index}`}
+                d={path}
+                className="opacity-0 animate-fade-in"
+                style={{ animationDelay: `${getDescriptionDelay(index)}ms` }}
+                stroke="#ea384c"
+                strokeOpacity="0.8"
+                strokeWidth="0.5"
+                fill="none"
+                markerEnd="url(#arrowhead)"
+              />
+            );
+          })}
         </svg>
       </div>
       
@@ -163,98 +193,56 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           <Loader2 className="w-8 h-8 text-white animate-spin" />
         </div>
         
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {displayedSegments.slice(0, -1).map((_, index) => (
-              <path
-                key={`connection-${index}`}
-                d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
-                className="opacity-0 animate-fade-in"
-                style={{ animationDelay: `${getConnectorDelay(index)}ms` }}
-                stroke="#0F172A"
-                strokeOpacity="0.8"
-                strokeWidth="0.5"
-                strokeDasharray="2 2"
-                fill="none"
-              />
-            ))}
+        <div className="absolute inset-0">
+          {displayedSegments.map((segment, index) => {
+            const boxDelay = getEmptyBoxDelay(index);
+            const textDelay = getTitleDelay(index);
             
-            {displayedSegments.map((_, index) => {
-              const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
-              return (
-                <path
-                  key={`description-connection-${index}`}
-                  d={path}
-                  className="opacity-0 animate-fade-in"
-                  style={{ animationDelay: `${getDescriptionDelay(index)}ms` }}
-                  stroke="#ea384c"
-                  strokeOpacity="0.8"
-                  strokeWidth="0.5"
-                  fill="none"
-                  markerEnd="url(#arrowhead)"
-                />
-              );
-            })}
-          </svg>
-          
-          {/* Empty boxes with titles */}
-          {displayedSegments.map((segment, index) => (
-            <div
-              key={`box-${index}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                left: titlePositions[index].left,
-                top: titlePositions[index].top,
-              }}
-            >
-              {/* Empty box with animation */}
+            return (
               <div
-                className="opacity-0 animate-fade-in"
+                key={`title-box-${index}`}
                 style={{
-                  animationDelay: `${getEmptyBoxDelay(index)}ms`,
+                  position: 'absolute',
+                  left: titlePositions[index].left,
+                  top: titlePositions[index].top,
+                  transform: 'translate(-50%, -50%)',
                 }}
               >
-                <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px] flex items-center justify-center">
-                  {/* Title text with animation */}
-                  <div
-                    className="opacity-0 animate-fade-in"
-                    style={{
-                      animationDelay: `${getTitleDelay(index)}ms`,
-                    }}
-                  >
-                    <TypeAnimation
-                      sequence={[segment.title || '']}
-                      speed={50}
-                      cursor={false}
-                    />
+                <div
+                  className="opacity-0 animate-fade-in"
+                  style={{ animationDelay: `${boxDelay}ms` }}
+                >
+                  <div className="min-w-[160px] h-[48px] bg-slate-900/80 backdrop-blur-md rounded-lg border border-white/10 hover:border-white/20 transition-colors shadow-xl flex items-center justify-center px-6 py-3">
+                    <div 
+                      className="opacity-0 animate-fade-in text-white text-sm font-medium"
+                      style={{ animationDelay: `${textDelay}ms` }}
+                    >
+                      {segment.title}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
-          {/* Description boxes */}
           {displayedSegments.map((segment, index) => (
             <div
-              key={`description-${index}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+              key={`description-box-${index}`}
               style={{
+                position: 'absolute',
                 left: descriptionPositions[index].left,
                 top: descriptionPositions[index].top,
+                transform: 'translate(-50%, -50%)',
               }}
             >
               <div
-                className="opacity-0 animate-fade-in max-w-xs"
-                style={{
-                  animationDelay: `${getDescriptionDelay(index)}ms`,
-                }}
+                className="opacity-0 animate-fade-in"
+                style={{ animationDelay: `${getDescriptionDelay(index)}ms` }}
               >
-                <div className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors">
-                  <TypeAnimation
-                    sequence={[segment.segment_description || '']}
-                    speed={50}
-                    cursor={false}
-                  />
+                <div className="max-w-xs bg-[#ea384c]/80 backdrop-blur-md rounded-lg border border-white/10 hover:border-white/20 transition-colors shadow-xl p-4">
+                  <div className="text-white text-xs">
+                    {segment.segment_description}
+                  </div>
                 </div>
               </div>
             </div>
