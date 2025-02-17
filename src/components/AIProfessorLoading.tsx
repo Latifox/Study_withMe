@@ -34,45 +34,37 @@ const descriptionPositions = [
   { left: '55%', top: '83%' },
 ];
 
-const getDescriptionPath = (start: Position, end: Position) => {
-  const startX = parseInt(start.left);
-  const startY = parseInt(start.top);
-  const endX = parseInt(end.left);
-  const endY = parseInt(end.top);
+const getConnectionPath = (start: Position, end: Position) => {
+  const startX = parseFloat(start.left);
+  const startY = parseFloat(start.top);
+  const endX = parseFloat(end.left);
+  const endY = parseFloat(end.top);
   
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const angle = Math.atan2(dy, dx);
+  const midY = (startY + endY) / 2;
+  const cp1x = startX + (endX - startX) * 0.2;
+  const cp2x = startX + (endX - startX) * 0.8;
   
-  const titleBoxWidth = 8;  // Percentage of viewport width
-  const descBoxWidth = 12;  // Percentage of viewport width
-  
-  const startPointX = startX + (titleBoxWidth * Math.cos(angle));
-  const startPointY = startY + (titleBoxWidth * Math.sin(angle));
-  const endPointX = endX - (descBoxWidth * Math.cos(angle));
-  const endPointY = endY - (descBoxWidth * Math.sin(angle));
-  
-  return {
-    path: `M ${startPointX} ${startPointY} L ${endPointX} ${endPointY}`,
-    angle: Math.atan2(endPointY - startPointY, endPointX - startPointX) * 180 / Math.PI
-  };
+  return `M ${startX} ${startY} C ${cp1x} ${midY}, ${cp2x} ${midY}, ${endX} ${endY}`;
 };
 
-const getConnectionPath = (start: Position, end: Position) => {
-  const startX = parseInt(start.left);
-  const startY = parseInt(start.top) + 4;
-  const endX = parseInt(end.left);
-  const endY = parseInt(end.top) - 4;
+const getDescriptionPath = (start: Position, end: Position) => {
+  const startX = parseFloat(start.left);
+  const startY = parseFloat(start.top);
+  const endX = parseFloat(end.left);
+  const endY = parseFloat(end.top);
   
-  const dx = endX - startX;
-  const dy = endY - startY;
+  const angle = Math.atan2(endY - startY, endX - startX);
+  const boxPadding = 8;
   
-  const cp1x = startX + dx * 0.1;
-  const cp1y = startY + dy * 0.8;
-  const cp2x = startX + dx * 0.9;
-  const cp2y = startY + dy * 0.2;
+  const adjustedStartX = startX + (boxPadding * Math.cos(angle));
+  const adjustedStartY = startY + (boxPadding * Math.sin(angle));
+  const adjustedEndX = endX - (boxPadding * Math.cos(angle));
+  const adjustedEndY = endY - (boxPadding * Math.sin(angle));
   
-  return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
+  return {
+    path: `M ${adjustedStartX} ${adjustedStartY} L ${adjustedEndX} ${adjustedEndY}`,
+    angle: (angle * 180) / Math.PI
+  };
 };
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
@@ -136,7 +128,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         
-        <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg">
+        <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
@@ -158,7 +150,10 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
               key={`connection-${index}`}
-              d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
+              d={getConnectionPath(
+                { left: `${parseFloat(titlePositions[index].left)}`, top: `${parseFloat(titlePositions[index].top)}` },
+                { left: `${parseFloat(titlePositions[index + 1].left)}`, top: `${parseFloat(titlePositions[index + 1].top)}` }
+              )}
               className="opacity-0 animate-fade-in"
               style={{ animationDelay: `${getConnectorDelay(index)}ms` }}
               stroke="#0F172A"
@@ -166,11 +161,15 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               strokeWidth="0.5"
               strokeDasharray="2 2"
               fill="none"
+              vectorEffect="non-scaling-stroke"
             />
           ))}
           
           {displayedSegments.map((_, index) => {
-            const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
+            const { path } = getDescriptionPath(
+              { left: `${parseFloat(titlePositions[index].left)}`, top: `${parseFloat(titlePositions[index].top)}` },
+              { left: `${parseFloat(descriptionPositions[index].left)}`, top: `${parseFloat(descriptionPositions[index].top)}` }
+            );
             return (
               <path
                 key={`description-connection-${index}`}
@@ -182,6 +181,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 strokeWidth="0.5"
                 fill="none"
                 markerEnd="url(#arrowhead)"
+                vectorEffect="non-scaling-stroke"
               />
             );
           })}
