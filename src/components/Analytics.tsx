@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,55 +185,58 @@ const Analytics = () => {
 
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-green-500/80 to-emerald-400/80 hover:from-green-500/90 hover:to-emerald-400/90 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-emerald-500/90 to-teal-400/90 hover:from-emerald-500 hover:to-teal-400 transition-colors relative group">
+                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
                     <BookOpen 
-                      className="w-6 h-6 text-white fill-blue-500" 
-                      strokeWidth={1.5}
-                      style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
+                      className="w-6 h-6 text-white" 
+                      strokeWidth={2}
+                      style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }}
                     />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total Lectures</p>
-                    <p className="text-3xl font-bold text-white">{totalLectures}</p>
+                    <p className="text-3xl font-bold text-white drop-shadow-md">{totalLectures}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-red-500/80 to-orange-400/80 hover:from-red-500/90 hover:to-orange-400/90 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-red-500/90 to-rose-400/90 hover:from-red-500 hover:to-rose-400 transition-colors relative group">
+                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
                     <Flame 
-                      className="w-6 h-6 text-white fill-red-500" 
-                      strokeWidth={1.5}
-                      style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
+                      className="w-6 h-6 text-white" 
+                      strokeWidth={2}
+                      style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }}
                     />
                   </div>
                   <div>
-                    <p className="font-semibold text-lg text-white/90">Current Streak</p>
-                    <p className="text-3xl font-bold text-white">{currentStreak} days</p>
+                    <p className="text-lg font-semibold text-white/90">Current Streak</p>
+                    <p className="text-3xl font-bold text-white drop-shadow-md">{currentStreak} days</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-blue-500/80 to-cyan-400/80 hover:from-blue-500/90 hover:to-cyan-400/90 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-amber-500/90 to-yellow-400/90 hover:from-amber-500 hover:to-yellow-400 transition-colors relative group">
+                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
                     <Star 
-                      className="w-6 h-6 text-white fill-yellow-400" 
-                      strokeWidth={1.5}
-                      style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.7))' }}
+                      className="w-6 h-6 text-white" 
+                      strokeWidth={2}
+                      style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }}
                     />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-white/90">Total XP</p>
-                    <p className="text-3xl font-bold text-white">{totalXP}</p>
+                    <p className="text-3xl font-bold text-white drop-shadow-md">{totalXP}</p>
                   </div>
                 </div>
               </CardContent>
