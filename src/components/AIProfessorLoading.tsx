@@ -49,51 +49,47 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
+    <div className="fixed inset-0 bg-emerald-500">
+      {/* Grid background */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-        <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-        <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-        
-        <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" opacity="0.2" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
       </div>
-      
+
+      {/* Modules and connections */}
       <div className="relative z-10 min-h-screen">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {Array.from({ length: 5 }).map((_, i) => (
+        <div className="absolute inset-0">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {Array.from({ length: 4 }).map((_, i) => (
               <path
-                key={`connection-${i}`}
-                d={`M ${20 + (i % 2) * 60} ${15 + i * 17} L ${80 - (i % 2) * 60} ${32 + i * 17}`}
+                key={`path-${i}`}
+                d={`M ${15 + i * 20} ${20 + i * 15} L ${35 + i * 20} ${35 + i * 15}`}
+                stroke="#1a3c34"
+                strokeWidth="2"
+                strokeDasharray="4"
                 className="opacity-0 animate-fade-in"
-                style={{ animationDelay: `${i * 200}ms` }}
-                stroke="#0F172A"
-                strokeOpacity="0.8"
-                strokeWidth="0.5"
-                strokeDasharray="2 2"
-                fill="none"
+                style={{ animationDelay: `${i * 300}ms` }}
               />
             ))}
           </svg>
-          
+
           {Array.from({ length: 5 }).map((_, i) => (
             <div
-              key={`node-${i}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
+              key={`module-${i}`}
+              className="absolute opacity-0 animate-fade-in"
               style={{
-                left: `${20 + (i % 2) * 60}%`,
-                top: `${15 + i * 17}%`,
-                animationDelay: `${i * 200}ms`
+                left: `${15 + (i % 5) * 20}%`,
+                top: `${20 + i * 15}%`,
+                animationDelay: `${i * 300}ms`
               }}
             >
-              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+              <div className="bg-slate-800/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium shadow-xl border border-white/20 hover:border-white/40 transition-colors">
                 Module {i + 1}
               </div>
             </div>
