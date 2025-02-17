@@ -50,7 +50,10 @@ const getDescriptionPath = (start: Position, end: Position) => {
   const endPointX = endX - (descBoxWidth * Math.cos(angle));
   const endPointY = endY - (descBoxWidth * Math.sin(angle));
   
-  return `M ${startPointX} ${startPointY} L ${endPointX} ${endPointY}`;
+  return {
+    path: `M ${startPointX} ${startPointY} L ${endPointX} ${endPointY}`,
+    angle: Math.atan2(endPointY - startPointY, endPointX - startPointX) * 180 / Math.PI
+  };
 };
 
 const getConnectionPath = (start: Position, end: Position) => {
@@ -146,6 +149,17 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
             </pattern>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="10"
+              refX="9"
+              refY="5"
+              orient="auto"
+              fill="#ea384c"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" />
+            </marker>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
@@ -167,18 +181,22 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             />
           ))}
           
-          {displayedSegments.map((_, index) => (
-            <path
-              key={`description-connection-${index}`}
-              d={getDescriptionPath(titlePositions[index], descriptionPositions[index])}
-              className="opacity-0 animate-fade-in"
-              style={{ animationDelay: `${index * 200 + 100}ms` }}
-              stroke="#ea384c"
-              strokeOpacity="0.8"
-              strokeWidth="0.5"
-              fill="none"
-            />
-          ))}
+          {displayedSegments.map((_, index) => {
+            const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
+            return (
+              <path
+                key={`description-connection-${index}`}
+                d={path}
+                className="opacity-0 animate-fade-in"
+                style={{ animationDelay: `${index * 200 + 100}ms` }}
+                stroke="#ea384c"
+                strokeOpacity="0.8"
+                strokeWidth="0.5"
+                fill="none"
+                markerEnd="url(#arrowhead)"
+              />
+            );
+          })}
         </svg>
         
         {displayedSegments.map((segment, index) => (
