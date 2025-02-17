@@ -20,10 +20,15 @@ const titlePositions = [
 const AIProfessorLoading = () => {
   const { lectureId } = useParams();
 
+  console.log('Current route params:', { lectureId });
+
   const { data: segments, isLoading, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {
-      if (!lectureId) throw new Error('Lecture ID is required');
+      if (!lectureId) {
+        console.error('No lecture ID found in route params');
+        throw new Error('Lecture ID is required');
+      }
       
       console.log('Fetching segments for lecture:', lectureId);
       
@@ -46,11 +51,21 @@ const AIProfessorLoading = () => {
 
   console.log('Current render state:', { isLoading, error, segmentsCount: segments?.length });
 
+  if (!lectureId) {
+    return (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-red-500">No lecture ID found in URL</div>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-white">Loading segments...</div>
+          <div className="text-white">Loading segments for lecture {lectureId}...</div>
         </div>
       </div>
     );
@@ -70,7 +85,7 @@ const AIProfessorLoading = () => {
     return (
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-white">No segments found for this lecture</div>
+          <div className="text-white">No segments found for lecture {lectureId}</div>
         </div>
       </div>
     );
