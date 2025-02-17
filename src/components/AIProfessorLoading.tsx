@@ -16,23 +16,31 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
-// Updated positions for the mind map template to match the new layout
+// Updated positions to create a zigzag pattern
 const titlePositions = [
-  { left: '20%', top: '20%' },    // Top left
-  { left: '80%', top: '20%' },    // Top right
-  { left: '50%', top: '50%' },    // Center
-  { left: '80%', top: '80%' },    // Bottom right
-  { left: '20%', top: '80%' },    // Bottom left
+  { left: '20%', top: '20%' },     // Segment 1
+  { left: '80%', top: '30%' },     // Segment 2
+  { left: '20%', top: '45%' },     // Segment 3
+  { left: '80%', top: '60%' },     // Segment 4
+  { left: '20%', top: '75%' },     // Segment 5
 ];
 
-// Updated connection paths for the new layout
-const connectionPaths = [
-  'M 20 20 L 80 20',             // Top horizontal line
-  'M 20 20 Q 35 35, 50 50',      // Top left to center
-  'M 80 20 Q 65 35, 50 50',      // Top right to center
-  'M 50 50 Q 65 65, 80 80',      // Center to bottom right
-  'M 50 50 Q 35 65, 20 80',      // Center to bottom left
-];
+// Updated connection paths to create curved lines between consecutive segments
+const getConnectionPath = (index: number) => {
+  const start = titlePositions[index];
+  const end = titlePositions[index + 1];
+  
+  // Extract positions without the % sign for SVG calculations
+  const startX = parseInt(start.left);
+  const startY = parseInt(start.top);
+  const endX = parseInt(end.left);
+  const endY = parseInt(end.top);
+  
+  // Calculate control points for the curve
+  const controlX = (startX + endX) / 2;
+  
+  return `M ${startX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${endX} ${endY}`;
+};
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   const { data, isLoading, error } = useQuery({
@@ -96,10 +104,10 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
           {/* Connection paths */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
-            {connectionPaths.map((path, index) => (
+            {data.slice(0, -1).map((_, index) => (
               <path
                 key={`connection-${index}`}
-                d={path}
+                d={getConnectionPath(index)}
                 className="opacity-0 animate-fade-in"
                 style={{ animationDelay: `${index * 200}ms` }}
                 stroke="white"
