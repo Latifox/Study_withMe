@@ -1,4 +1,3 @@
-
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +16,6 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
-// Updated positions with even vertical spacing between segments
 const titlePositions = [
   { left: '20%', top: '15%' },     // Segment 1
   { left: '80%', top: '35%' },     // Segment 2
@@ -26,7 +24,6 @@ const titlePositions = [
   { left: '20%', top: '95%' },     // Segment 5
 ];
 
-// Description box positions, placed to the right of odd-numbered segments and left of even-numbered segments
 const descriptionPositions = [
   { left: '45%', top: '15%' },     // Description 1
   { left: '55%', top: '35%' },     // Description 2
@@ -35,7 +32,6 @@ const descriptionPositions = [
   { left: '45%', top: '95%' },     // Description 5
 ];
 
-// Helper function to get path between title and description boxes
 const getDescriptionPath = (start: Position, end: Position) => {
   const startX = parseInt(start.left);
   const startY = parseInt(start.top);
@@ -45,7 +41,6 @@ const getDescriptionPath = (start: Position, end: Position) => {
   return `M ${startX} ${startY} L ${endX} ${endY}`;
 };
 
-// Original connection path function for main segments
 const getConnectionPath = (start: Position, end: Position) => {
   const startX = parseInt(start.left);
   const startY = parseInt(start.top) + 4;
@@ -125,7 +120,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     );
   }
 
-  // Limit the number of segments to display to available positions
   const displayedSegments = data.slice(0, titlePositions.length);
 
   return (
@@ -146,7 +140,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       </div>
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-        {/* Connection paths between segments */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
@@ -162,7 +155,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             />
           ))}
           
-          {/* Paths connecting titles to descriptions */}
           {displayedSegments.map((_, index) => (
             <path
               key={`description-connection-${index}`}
@@ -178,7 +170,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           ))}
         </svg>
         
-        {/* Content boxes */}
         {displayedSegments.map((segment, index) => (
           <div
             key={segment.sequence_number}
@@ -195,18 +186,17 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           </div>
         ))}
 
-        {/* Description boxes */}
         {displayedSegments.map((segment, index) => (
           <div
             key={`description-${segment.sequence_number}`}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-md"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-xs"
             style={{
               left: descriptionPositions[index].left,
               top: descriptionPositions[index].top,
               animationDelay: `${index * 200 + 100}ms`
             }}
           >
-            <div className="bg-slate-900/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+            <div className="bg-rose-500/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors">
               {segment.segment_description}
             </div>
           </div>
