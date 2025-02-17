@@ -42,7 +42,10 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       return data as Segment[];
     },
     // Poll every 2 seconds until we get segments
-    refetchInterval: (segments) => !segments || segments.length === 0 ? 2000 : false,
+    refetchInterval: (data: { state: { data: Segment[] | undefined } }) => {
+      const segments = data?.state?.data;
+      return !segments || segments.length === 0 ? 2000 : false;
+    },
     // Keep polling even if the window is not focused
     refetchIntervalInBackground: true,
     // Retry failed requests
