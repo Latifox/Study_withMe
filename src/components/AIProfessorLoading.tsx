@@ -143,9 +143,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           viewBox="0 0 100 100"
         >
           <defs>
-            <pattern id="grid" width="4" height="4" patternUnits="userSpaceOnUse">
-              <path d="M 4 0 L 0 0 0 4" fill="none" stroke="white" strokeWidth="0.2" opacity="0.1" />
-            </pattern>
             <marker
               id="arrowhead"
               markerWidth="6"
@@ -158,7 +155,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               <path d="M 0 0 L 6 3 L 0 6 z" />
             </marker>
           </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
           
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
