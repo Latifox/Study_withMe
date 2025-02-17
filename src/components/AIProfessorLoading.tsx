@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,7 +15,6 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
-// Predefined positions for title boxes (in percentages)
 const titlePositions = [
   { left: '20%', top: '20%' },
   { left: '60%', top: '25%' },
@@ -25,7 +23,6 @@ const titlePositions = [
   { left: '25%', top: '70%' },
 ];
 
-// Helper function to convert percentage string to number
 const percentToNumber = (percent: string): number => {
   return parseFloat(percent.replace('%', ''));
 };
@@ -113,7 +110,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent" />
         
-        {/* Mesh grid overlay */}
         <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -126,9 +122,8 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
-          {/* Connection lines */}
-          <svg className="absolute inset-0 w-full h-full">
-            {segments?.map((segment, index) => {
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {segments && segments.length > 0 && segments.slice(0, -1).map((segment, index) => {
               if (index >= titlePositions.length - 1) return null;
               
               const currentPos = titlePositions[index];
@@ -139,28 +134,23 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               const x2 = percentToNumber(nextPos.left);
               const y2 = percentToNumber(nextPos.top) - 6; // Top of next box
               
-              // Calculate control points for a smooth S-curve
-              const dx = x2 - x1;
-              const dy = y2 - y1;
               const midY = (y1 + y2) / 2;
               
               const path = `
-                M ${x1}% ${y1}%
-                C ${x1}% ${midY}%,
-                  ${x2}% ${midY}%,
-                  ${x2}% ${y2}%
+                M ${x1} ${y1}
+                C ${x1} ${midY},
+                  ${x2} ${midY},
+                  ${x2} ${y2}
               `;
 
               return (
                 <g key={`connection-${index}`} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                  {/* Background path (glow effect) */}
                   <path
                     d={path}
                     className="stroke-white/5"
                     strokeWidth="6"
                     fill="none"
                   />
-                  {/* Foreground path */}
                   <path
                     d={path}
                     className="stroke-white/20"
@@ -173,8 +163,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             })}
           </svg>
           
-          {/* Title boxes */}
-          {segments?.map((segment, index) => {
+          {segments && segments.length > 0 && segments.map((segment, index) => {
             if (index >= titlePositions.length) return null;
             const position = titlePositions[index];
 
