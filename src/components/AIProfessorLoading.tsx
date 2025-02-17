@@ -35,10 +35,10 @@ const descriptionPositions = [
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
-  const startX = parseFloat(start.left);
-  const startY = parseFloat(start.top);
-  const endX = parseFloat(end.left);
-  const endY = parseFloat(end.top);
+  const startX = parseFloat(start.left.replace('%', ''));
+  const startY = parseFloat(start.top.replace('%', ''));
+  const endX = parseFloat(end.left.replace('%', ''));
+  const endY = parseFloat(end.top.replace('%', ''));
   
   const dx = endX - startX;
   const dy = endY - startY;
@@ -59,10 +59,10 @@ const getDescriptionPath = (start: Position, end: Position) => {
 };
 
 const getConnectionPath = (start: Position, end: Position) => {
-  const startX = parseFloat(start.left);
-  const startY = parseFloat(start.top) + 4;
-  const endX = parseFloat(end.left);
-  const endY = parseFloat(end.top) - 4;
+  const startX = parseFloat(start.left.replace('%', ''));
+  const startY = parseFloat(start.top.replace('%', '')) + 4;
+  const endX = parseFloat(end.left.replace('%', ''));
+  const endY = parseFloat(end.top.replace('%', '')) - 4;
   
   const dx = endX - startX;
   const dy = endY - startY;
@@ -136,7 +136,12 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         
-        <svg className="w-full h-full fixed inset-0" xmlns="http://www.w3.org/2000/svg">
+        <svg 
+          className="w-full h-full absolute inset-0" 
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+          viewBox="0 0 100 100"
+        >
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
