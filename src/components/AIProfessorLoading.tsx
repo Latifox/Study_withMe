@@ -119,7 +119,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: '', sequence_number: 0, segment_description: '' });
 
-  const baseDelay = 600;
+  const baseDelay = 780;
   const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
   const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
   const getTitleDelay = (index: number) => (titlePositions.length * (baseDelay * 2)) + (index * baseDelay * 3);
@@ -143,8 +143,8 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           viewBox="0 0 100 100"
         >
           <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
+            <pattern id="grid" width="2" height="2" patternUnits="userSpaceOnUse">
+              <path d="M 2 0 L 0 0 0 2" fill="none" stroke="white" strokeWidth="0.1" opacity="0.15" />
             </pattern>
             <marker
               id="arrowhead"
