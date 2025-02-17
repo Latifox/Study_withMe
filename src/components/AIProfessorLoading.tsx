@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -50,7 +49,7 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
     retryDelay: 1000
   });
 
-  // Only redirect when content generation is complete AND content exists
+  // Monitor content generation status without redirecting
   useEffect(() => {
     if (!isContentLoading && segmentContent && segments) {
       // Check if all segments have their content fully generated
@@ -69,13 +68,8 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
         contentCount: segmentContent.length,
         allContentGenerated
       });
-
-      if (allContentGenerated) {
-        console.log('All content generated, redirecting...');
-        navigate(`/course/${lectureId}/story/nodes`);
-      }
     }
-  }, [segmentContent, segments, isContentLoading, lectureId, navigate]);
+  }, [segmentContent, segments, isContentLoading]);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-violet-600/90 via-purple-500/90 to-indigo-600/90">
