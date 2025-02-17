@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -144,8 +143,11 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
   };
 
-  if (showAIProfessor && currentLectureId) {
-    return <AIProfessorLoading lectureId={currentLectureId} />;
+  if (showAIProfessor && currentLectureId && courseId) {
+    return <AIProfessorLoading 
+      lectureId={currentLectureId} 
+      courseId={parseInt(courseId)} 
+    />;
   }
 
   return (

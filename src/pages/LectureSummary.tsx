@@ -129,8 +129,11 @@ const LectureSummary = () => {
     }
   });
 
-  if (isLoading && lectureId) {
-    return <AIProfessorLoading lectureId={parseInt(lectureId)} />;
+  if (isLoading && lectureId && courseId) {
+    return <AIProfessorLoading 
+      lectureId={parseInt(lectureId)} 
+      courseId={parseInt(courseId)} 
+    />;
   }
 
   if (error) {
