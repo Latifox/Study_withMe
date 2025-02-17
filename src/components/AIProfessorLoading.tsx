@@ -18,6 +18,7 @@ interface Position {
 
 interface AIProfessorLoadingProps {
   lectureId: number;
+  courseId: number;
 }
 
 const titlePositions = [
@@ -77,7 +78,7 @@ const getConnectionPath = (start: Position, end: Position) => {
   return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 };
 
-const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
+const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) => {
   const navigate = useNavigate();
   const baseDelay = 897; // Increased by 15% from 780
 
@@ -116,12 +117,12 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     if (data && data.length > 0) {
       const totalDelay = getDescriptionDelay(data.length - 1) + baseDelay;
       const timer = setTimeout(() => {
-        navigate(`story/nodes`);
+        navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
       }, totalDelay);
       
       return () => clearTimeout(timer);
     }
-  }, [data, navigate]);
+  }, [data, navigate, courseId, lectureId]);
 
   if (error) {
     return (
@@ -229,7 +230,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                   className="opacity-0 animate-fade-in"
                   style={{ animationDelay: `${boxDelay}ms` }}
                 >
-                  <div className="min-w-[160px] h-[48px] bg-slate-900/80 backdrop-blur-md rounded-lg border border-white/10 hover:border-white/20 transition-colors shadow-xl flex items-center justify-center px-6 py-3">
+                  <div className="min-w-[160px] h-[48px] bg-slate-900/10 backdrop-blur-md rounded-lg border border-white/20 hover:border-white/30 transition-colors shadow-xl flex items-center justify-center px-6 py-3">
                     <div 
                       className="opacity-0 animate-fade-in text-white text-sm font-medium"
                       style={{ animationDelay: `${textDelay}ms` }}
@@ -256,7 +257,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 className="opacity-0 animate-fade-in"
                 style={{ animationDelay: `${getDescriptionDelay(index)}ms` }}
               >
-                <div className="max-w-xs bg-[#ea384c]/80 backdrop-blur-md rounded-lg border border-white/10 hover:border-white/20 transition-colors shadow-xl p-4">
+                <div className="max-w-xs bg-transparent backdrop-blur-md rounded-lg border border-[#ea384c] hover:border-[#ea384c]/80 transition-colors shadow-xl p-4">
                   <div className="text-white text-xs">
                     {segment.segment_description}
                   </div>
