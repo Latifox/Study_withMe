@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -45,25 +44,37 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
       return data;
     },
     enabled: !!segments,
-    refetchInterval: 2000 // Poll every 2 seconds to check if content is ready
+    refetchInterval: 2000,
+    retry: true,
+    retryDelay: 1000
   });
 
-  // Only redirect when content generation is complete
+  // Only redirect when content generation is complete AND content exists
   useEffect(() => {
     if (!isContentLoading && segmentContent && segments) {
-      // Check if all segments have their content generated
+      // Check if all segments have their content fully generated
       const allContentGenerated = segments.every(segment => 
         segmentContent.some(content => 
           content.sequence_number === segment.sequence_number &&
           content.theory_slide_1 && 
-          content.theory_slide_2
+          content.theory_slide_2 &&
+          content.quiz_1_question &&
+          content.quiz_2_question
         )
       );
 
+      console.log('Content generation status:', {
+        segmentsCount: segments.length,
+        contentCount: segmentContent.length,
+        allContentGenerated
+      });
+
       if (allContentGenerated) {
+        // Give more time to see the completed mindmap
         const timer = setTimeout(() => {
+          console.log('All content generated, redirecting...');
           navigate(`/course/${lectureId}/story/nodes`);
-        }, 3000); // Give more time to see the completed mindmap
+        }, 5000);
         return () => clearTimeout(timer);
       }
     }

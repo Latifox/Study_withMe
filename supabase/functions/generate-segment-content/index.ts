@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { initSupabaseClient, getExistingContent, getLectureContent, getAIConfig, saveSegmentContent } from "./db.ts";
@@ -7,35 +6,53 @@ import { generatePrompt, generateContent } from "./generator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Request-Headers': '*',
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
+    return new Response(null, {
       status: 204,
-      headers: corsHeaders 
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Max-Age': '86400',
+      }
     });
   }
 
   try {
+    if (req.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ error: 'Method not allowed' }), 
+        { 
+          status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     const { lectureId, segmentNumber } = await req.json();
+    console.log('Received request:', { lectureId, segmentNumber });
     
     if (!lectureId || typeof segmentNumber !== 'number') {
-      throw new Error('Invalid request parameters');
+      return new Response(
+        JSON.stringify({ error: 'Invalid parameters' }), 
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     console.log('Processing request for lecture:', lectureId, 'segment:', segmentNumber);
     
     const supabaseClient = initSupabaseClient();
 
-    // Get lecture content and segment info
     const { content: lectureContent, language } = await getLectureContent(supabaseClient, lectureId);
     console.log('Lecture content length:', lectureContent.length, 'Language:', language);
     
-    // Get segment information including description
     const { data: segment, error: segmentError } = await supabaseClient
       .from('lecture_segments')
       .select('title, segment_description')
@@ -54,7 +71,6 @@ serve(async (req) => {
 
     console.log('Generating content for segment:', segment.title);
 
-    // Check for existing content first
     const existingContent = await getExistingContent(supabaseClient, lectureId, segmentNumber);
 
     if (existingContent) {
@@ -65,7 +81,6 @@ serve(async (req) => {
       );
     }
 
-    // Get AI config
     const aiConfig = await getAIConfig(supabaseClient, lectureId);
     console.log('Using AI config:', JSON.stringify(aiConfig, null, 2));
 
@@ -96,7 +111,6 @@ serve(async (req) => {
       );
     } catch (error) {
       if (error.message.includes('Theory slide')) {
-        // Retry once with a more explicit prompt for word count
         console.log('Retrying content generation with emphasis on word count...');
         const retryPrompt = generatePrompt(segment.title, segment.segment_description, lectureContent, {
           ...aiConfig,
@@ -123,14 +137,19 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error('Error in generate-segment-content:', error);
+    
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message,
-        details: error.stack
+        stack: error.stack,
+        time: new Date().toISOString()
       }), 
       { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: 500,
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   }
