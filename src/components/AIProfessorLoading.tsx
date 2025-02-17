@@ -1,10 +1,78 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+
+interface Segment {
+  title: string;
+  sequence_number: number;
+  segment_description: string;
+}
+
+interface Position {
+  left: string;
+  top: string;
+}
 
 interface AIProfessorLoadingProps {
   lectureId: number;
 }
+
+const titlePositions = [
+  { left: '20%', top: '15%' },     // Segment 1 - start position unchanged
+  { left: '80%', top: '32%' },     // Segment 2 - slightly lower
+  { left: '20%', top: '49%' },     // Segment 3 - adjusted for better spacing
+  { left: '80%', top: '66%' },     // Segment 4 - adjusted for better spacing
+  { left: '20%', top: '83%' },     // Segment 5 - higher position for bottom margin
+];
+
+const descriptionPositions = [
+  { left: '55%', top: '15%' },     // Description 1 - always to the right of left titles
+  { left: '45%', top: '32%' },     // Description 2 - always to the left of right titles
+  { left: '55%', top: '49%' },     // Description 3 - always to the right of left titles
+  { left: '45%', top: '66%' },     // Description 4 - always to the left of right titles
+  { left: '55%', top: '83%' },     // Description 5 - always to the right of left titles
+];
+
+const getDescriptionPath = (start: Position, end: Position) => {
+  const startX = parseInt(start.left);
+  const startY = parseInt(start.top);
+  const endX = parseInt(end.left);
+  const endY = parseInt(end.top);
+  
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const angle = Math.atan2(dy, dx);
+  
+  const titleBoxWidth = 8;  // Percentage of viewport width
+  const descBoxWidth = 12;  // Percentage of viewport width
+  
+  const startPointX = startX + (titleBoxWidth * Math.cos(angle));
+  const startPointY = startY + (titleBoxWidth * Math.sin(angle));
+  const endPointX = endX - (descBoxWidth * Math.cos(angle));
+  const endPointY = endY - (descBoxWidth * Math.sin(angle));
+  
+  return {
+    path: `M ${startPointX} ${startPointY} L ${endPointX} ${endPointY}`,
+    angle: Math.atan2(endPointY - startPointY, endPointX - startPointX) * 180 / Math.PI
+  };
+};
+
+const getConnectionPath = (start: Position, end: Position) => {
+  const startX = parseInt(start.left);
+  const startY = parseInt(start.top) + 4;
+  const endX = parseInt(end.left);
+  const endY = parseInt(end.top) - 4;
+  
+  const dx = endX - startX;
+  const dy = endY - startY;
+  
+  const cp1x = startX + dx * 0.1;
+  const cp1y = startY + dy * 0.8;
+  const cp2x = startX + dx * 0.9;
+  const cp2y = startY + dy * 0.2;
+  
+  return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
+};
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
   const { data, isLoading, error } = useQuery({
@@ -26,7 +94,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         return [];
       }
 
-      return data;
+      return data as Segment[];
     },
     refetchInterval: (query) => {
       if (!query.state.data || query.state.data.length === 0) {
@@ -48,49 +116,125 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     );
   }
 
+  if (isLoading || !data || data.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+          <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+          <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        </div>
+        <div className="min-h-screen flex items-center justify-center relative z-10">
+          <div className="text-white/80 flex flex-col items-center space-y-4">
+            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <div className="text-lg font-medium">
+              Generating content for lecture {lectureId}...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const displayedSegments = data.slice(0, titlePositions.length);
+
   return (
-    <div className="fixed inset-0 bg-emerald-500">
-      {/* Grid background */}
+    <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
       <div className="absolute inset-0">
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
+        
+        <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" opacity="0.2" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
             </pattern>
+            <marker
+              id="arrowhead"
+              markerWidth="6"
+              markerHeight="6"
+              refX="5.5"
+              refY="3"
+              orient="auto"
+              fill="#ea384c"
+            >
+              <path d="M 0 0 L 6 3 L 0 6 z" />
+            </marker>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
       </div>
-
-      {/* Modules and connections */}
+      
       <div className="relative z-10 min-h-screen">
-        <div className="absolute inset-0">
-          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {Array.from({ length: 4 }).map((_, i) => (
+        <div className="w-full flex justify-center pt-8">
+          <Loader2 className="w-8 h-8 text-white animate-spin" />
+        </div>
+        
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {displayedSegments.slice(0, -1).map((_, index) => (
               <path
-                key={`path-${i}`}
-                d={`M ${15 + i * 20} ${20 + i * 15} L ${35 + i * 20} ${35 + i * 15}`}
-                stroke="#1a3c34"
-                strokeWidth="2"
-                strokeDasharray="4"
+                key={`connection-${index}`}
+                d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
                 className="opacity-0 animate-fade-in"
-                style={{ animationDelay: `${i * 300}ms` }}
+                style={{ animationDelay: `${index * 200}ms` }}
+                stroke="#0F172A"
+                strokeOpacity="0.8"
+                strokeWidth="0.5"
+                strokeDasharray="2 2"
+                fill="none"
               />
             ))}
+            
+            {displayedSegments.map((_, index) => {
+              const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
+              return (
+                <path
+                  key={`description-connection-${index}`}
+                  d={path}
+                  className="opacity-0 animate-fade-in"
+                  style={{ animationDelay: `${index * 200 + 100}ms` }}
+                  stroke="#ea384c"
+                  strokeOpacity="0.8"
+                  strokeWidth="0.5"
+                  fill="none"
+                  markerEnd="url(#arrowhead)"
+                />
+              );
+            })}
           </svg>
-
-          {Array.from({ length: 5 }).map((_, i) => (
+          
+          {displayedSegments.map((segment, index) => (
             <div
-              key={`module-${i}`}
-              className="absolute opacity-0 animate-fade-in"
+              key={segment.sequence_number}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
               style={{
-                left: `${15 + (i % 5) * 20}%`,
-                top: `${20 + i * 15}%`,
-                animationDelay: `${i * 300}ms`
+                left: titlePositions[index].left,
+                top: titlePositions[index].top,
+                animationDelay: `${index * 200}ms`
               }}
             >
-              <div className="bg-slate-800/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium shadow-xl border border-white/20 hover:border-white/40 transition-colors">
-                Module {i + 1}
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+                {segment.title}
+              </div>
+            </div>
+          ))}
+
+          {displayedSegments.map((segment, index) => (
+            <div
+              key={`description-${segment.sequence_number}`}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-xs"
+              style={{
+                left: descriptionPositions[index].left,
+                top: descriptionPositions[index].top,
+                animationDelay: `${index * 200 + 100}ms`
+              }}
+            >
+              <div 
+                className="bg-[#ea384c]/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors"
+              >
+                {segment.segment_description}
               </div>
             </div>
           ))}
