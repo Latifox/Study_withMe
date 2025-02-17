@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -257,7 +256,7 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
                 className="opacity-0 animate-fade-in"
                 style={{ animationDelay: `${getDescriptionDelay(index)}ms` }}
               >
-                <div className="max-w-xs bg-transparent backdrop-blur-md rounded-lg border border-[#ea384c] hover:border-[#ea384c]/80 transition-colors shadow-xl p-4">
+                <div className="max-w-xs bg-[#ea384c] backdrop-blur-md rounded-lg border border-[#ea384c] hover:border-[#ea384c]/80 transition-colors shadow-xl p-4">
                   <div className="text-white text-xs">
                     {segment.segment_description}
                   </div>
@@ -272,4 +271,3 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
 };
 
 export default AIProfessorLoading;
-
