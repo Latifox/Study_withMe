@@ -18,19 +18,19 @@ interface AIProfessorLoadingProps {
 }
 
 const titlePositions = [
-  { left: '20%', top: '15%' },     // Segment 1 - start position unchanged
-  { left: '80%', top: '32%' },     // Segment 2 - slightly lower
-  { left: '20%', top: '49%' },     // Segment 3 - adjusted for better spacing
-  { left: '80%', top: '66%' },     // Segment 4 - adjusted for better spacing
-  { left: '20%', top: '83%' },     // Segment 5 - higher position for bottom margin
+  { left: '20%', top: '15%' },
+  { left: '80%', top: '32%' },
+  { left: '20%', top: '49%' },
+  { left: '80%', top: '66%' },
+  { left: '20%', top: '83%' },
 ];
 
 const descriptionPositions = [
-  { left: '55%', top: '15%' },     // Description 1 - always to the right of left titles
-  { left: '45%', top: '32%' },     // Description 2 - always to the left of right titles
-  { left: '55%', top: '49%' },     // Description 3 - always to the right of left titles
-  { left: '45%', top: '66%' },     // Description 4 - always to the left of right titles
-  { left: '55%', top: '83%' },     // Description 5 - always to the right of left titles
+  { left: '55%', top: '15%' },
+  { left: '45%', top: '32%' },
+  { left: '55%', top: '49%' },
+  { left: '45%', top: '66%' },
+  { left: '55%', top: '83%' },
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
@@ -75,7 +75,7 @@ const getConnectionPath = (start: Position, end: Position) => {
 };
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
-  const { data, isLoading, error } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {      
       const { data, error } = await supabase
@@ -118,6 +118,12 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
 
   const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: 'Loading...', sequence_number: 0, segment_description: 'Generating content...' });
 
+  const baseDelay = 300; // Base delay in milliseconds
+  const getEmptyBoxDelay = (index: number) => index * baseDelay;
+  const getConnectorDelay = (index: number) => (index * baseDelay) + (baseDelay * 5);
+  const getTitleDelay = (index: number) => (index * baseDelay) + (baseDelay * 10);
+  const getDescriptionDelay = (index: number) => (index * baseDelay) + (baseDelay * 15);
+
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
       <div className="absolute inset-0">
@@ -158,7 +164,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 key={`connection-${index}`}
                 d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
                 className="opacity-0 animate-fade-in"
-                style={{ animationDelay: `${index * 200}ms` }}
+                style={{ animationDelay: `${getConnectorDelay(index)}ms` }}
                 stroke="#0F172A"
                 strokeOpacity="0.8"
                 strokeWidth="0.5"
@@ -174,7 +180,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                   key={`description-connection-${index}`}
                   d={path}
                   className="opacity-0 animate-fade-in"
-                  style={{ animationDelay: `${index * 200 + 100}ms` }}
+                  style={{ animationDelay: `${getDescriptionDelay(index)}ms` }}
                   stroke="#ea384c"
                   strokeOpacity="0.8"
                   strokeWidth="0.5"
@@ -185,6 +191,20 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             })}
           </svg>
           
+          {displayedSegments.map((_, index) => (
+            <div
+              key={`empty-box-${index}`}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in"
+              style={{
+                left: titlePositions[index].left,
+                top: titlePositions[index].top,
+                animationDelay: `${getEmptyBoxDelay(index)}ms`
+              }}
+            >
+              <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors min-w-[120px] min-h-[40px]" />
+            </div>
+          ))}
+
           {displayedSegments.map((segment, index) => (
             <div
               key={`title-${index}`}
@@ -192,7 +212,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               style={{
                 left: titlePositions[index].left,
                 top: titlePositions[index].top,
-                animationDelay: `${index * 200}ms`
+                animationDelay: `${getTitleDelay(index)}ms`
               }}
             >
               <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
@@ -208,7 +228,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               style={{
                 left: descriptionPositions[index].left,
                 top: descriptionPositions[index].top,
-                animationDelay: `${index * 200 + 100}ms`
+                animationDelay: `${getDescriptionDelay(index)}ms`
               }}
             >
               <div 
