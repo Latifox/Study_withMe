@@ -128,7 +128,11 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         
-        <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <svg 
+          className="w-full h-full absolute inset-0" 
+          viewBox="0 0 100 100" 
+          xmlns="http://www.w3.org/2000/svg"
+        >
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" opacity="0.15" />
@@ -145,15 +149,12 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               <path d="M 0 0 L 6 3 L 0 6 z" />
             </marker>
           </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
+          <rect width="100" height="100" fill="url(#grid)" />
           
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
               key={`connection-${index}`}
-              d={getConnectionPath(
-                { left: `${parseFloat(titlePositions[index].left)}`, top: `${parseFloat(titlePositions[index].top)}` },
-                { left: `${parseFloat(titlePositions[index + 1].left)}`, top: `${parseFloat(titlePositions[index + 1].top)}` }
-              )}
+              d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
               className="opacity-0 animate-fade-in"
               style={{ animationDelay: `${getConnectorDelay(index)}ms` }}
               stroke="#0F172A"
@@ -161,15 +162,11 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               strokeWidth="0.5"
               strokeDasharray="2 2"
               fill="none"
-              vectorEffect="non-scaling-stroke"
             />
           ))}
           
           {displayedSegments.map((_, index) => {
-            const { path } = getDescriptionPath(
-              { left: `${parseFloat(titlePositions[index].left)}`, top: `${parseFloat(titlePositions[index].top)}` },
-              { left: `${parseFloat(descriptionPositions[index].left)}`, top: `${parseFloat(descriptionPositions[index].top)}` }
-            );
+            const { path } = getDescriptionPath(titlePositions[index], descriptionPositions[index]);
             return (
               <path
                 key={`description-connection-${index}`}
@@ -181,7 +178,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
                 strokeWidth="0.5"
                 fill="none"
                 markerEnd="url(#arrowhead)"
-                vectorEffect="non-scaling-stroke"
               />
             );
           })}
