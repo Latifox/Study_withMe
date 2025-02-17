@@ -1,4 +1,3 @@
-
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,18 +24,21 @@ const titlePositions = [
   { left: '20%', top: '75%' },     // Segment 5
 ];
 
-// Updated connection paths to create curved lines between consecutive segments
+// Updated connection paths to connect from bottom center to top center of boxes
 const getConnectionPath = (start: Position, end: Position) => {
   // Extract positions without the % sign for SVG calculations
   const startX = parseInt(start.left);
-  const startY = parseInt(start.top);
+  const startY = parseInt(start.top) + 4; // Add offset to start from bottom of box
   const endX = parseInt(end.left);
-  const endY = parseInt(end.top);
+  const endY = parseInt(end.top) - 4; // Subtract offset to end at top of box
   
   // Calculate control points for the curve
   const controlX = (startX + endX) / 2;
+  const controlY1 = startY + (endY - startY) * 0.25; // First control point at 25% of the path
+  const controlY2 = startY + (endY - startY) * 0.75; // Second control point at 75% of the path
   
-  return `M ${startX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${endX} ${endY}`;
+  // Use cubic Bezier curve with adjusted control points
+  return `M ${startX} ${startY} C ${controlX} ${controlY1}, ${controlX} ${controlY2}, ${endX} ${endY}`;
 };
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
@@ -124,7 +126,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
           {/* Connection paths */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
             {displayedSegments.slice(0, -1).map((_, index) => (
               <path
                 key={`connection-${index}`}
