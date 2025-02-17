@@ -16,52 +16,41 @@ interface AIProfessorLoadingProps {
   lectureId: number;
 }
 
+// Fixed positions for the mind map template
 const titlePositions = [
-  { left: '20%', top: '20%' },
-  { left: '60%', top: '25%' },
-  { left: '30%', top: '45%' },
-  { left: '70%', top: '50%' },
-  { left: '25%', top: '70%' },
+  { left: '25%', top: '15%' },    // Top left
+  { left: '75%', top: '15%' },    // Top right
+  { left: '50%', top: '40%' },    // Middle
+  { left: '75%', top: '65%' },    // Bottom right
+  { left: '25%', top: '65%' },    // Bottom left
 ];
 
-const percentToNumber = (percent: string): number => {
-  return parseFloat(percent.replace('%', ''));
-};
+// Connection paths for the template
+const connectionPaths = [
+  'M 25 15 Q 50 15, 75 15',       // Top connection
+  'M 75 15 Q 75 40, 50 40',       // Right top to middle
+  'M 25 15 Q 25 40, 50 40',       // Left top to middle
+  'M 50 40 Q 75 40, 75 65',       // Middle to bottom right
+  'M 50 40 Q 25 40, 25 65',       // Middle to bottom left
+];
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
-  console.log('Loading screen for lecture:', lectureId);
-
   const { data: segments, isLoading, error } = useQuery({
     queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {      
-      console.log('Fetching segments for lecture:', lectureId);
-      
       const { data, error } = await supabase
         .from('lecture_segments')
         .select('title, sequence_number')
         .eq('lecture_id', lectureId)
         .order('sequence_number');
 
-      if (error) {
-        console.error('Error fetching segments:', error);
-        throw error;
-      }
-
-      console.log('Fetched segments:', data);
+      if (error) throw error;
       return data as Segment[];
     },
-    refetchInterval: (data: { state: { data: Segment[] | undefined } }) => {
-      const segments = data?.state?.data;
-      return !segments || segments.length === 0 ? 2000 : false;
+    refetchInterval: (data) => {
+      return !data || (data as Segment[]).length === 0 ? 2000 : false;
     },
-    refetchIntervalInBackground: true,
-    retry: true,
-    retryDelay: 1000,
-    retryOnMount: true,
-    enabled: !!lectureId
   });
-
-  console.log('Current render state:', { isLoading, error, segmentsCount: segments?.length });
 
   if (isLoading || (!segments || segments.length === 0)) {
     return (
@@ -77,26 +66,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
             <div className="text-lg font-medium">
               Generating content for lecture {lectureId}...
             </div>
-            <div className="text-sm text-white/60">
-              {isLoading ? "Checking for segments..." : "Waiting for segments to be generated..."}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 to-teal-500">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-          <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-          <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-        </div>
-        <div className="min-h-screen flex items-center justify-center relative z-10">
-          <div className="text-red-400 bg-red-500/10 px-6 py-4 rounded-lg border border-red-500/20">
-            Error loading segments: {error.message}
           </div>
         </div>
       </div>
@@ -109,7 +78,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
         <div className="absolute top-20 left-20 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute top-0 right-20 w-96 h-96 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
         <div className="absolute bottom-20 left-1/3 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse-slow" />
-        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent" />
         
         <svg className="w-full h-full absolute inset-0" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -123,43 +91,25 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {segments && segments.length > 0 && segments.slice(0, -1).map((segment, index) => {
-              if (index >= titlePositions.length - 1) return null;
-              
-              const currentPos = titlePositions[index];
-              const nextPos = titlePositions[index + 1];
-              
-              const x1 = percentToNumber(currentPos.left);
-              const y1 = percentToNumber(currentPos.top);
-              const x2 = percentToNumber(nextPos.left);
-              const y2 = percentToNumber(nextPos.top);
-              
-              // Calculate control points for natural curve
-              const dx = x2 - x1;
-              const midX = (x1 + x2) / 2;
-              const midY = (y1 + y2) / 2;
-              const cp1x = midX - dx / 4;
-              const cp1y = midY;
-              const cp2x = midX + dx / 4;
-              const cp2y = midY;
-
-              return (
-                <g key={`connection-${index}`} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                  <path
-                    d={`M ${x1}% ${y1}% C ${cp1x}% ${cp1y}%, ${cp2x}% ${cp2y}%, ${x2}% ${y2}%`}
-                    fill="none"
-                    stroke="white"
-                    strokeOpacity="0.2"
-                    strokeWidth="2"
-                    strokeDasharray="6 4"
-                  />
-                </g>
-              );
-            })}
+          {/* Fixed template connections */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+            {connectionPaths.map((path, index) => (
+              <path
+                key={`connection-${index}`}
+                d={path}
+                className="opacity-0 animate-fade-in"
+                style={{ animationDelay: `${index * 200}ms` }}
+                stroke="white"
+                strokeOpacity="0.2"
+                strokeWidth="0.5"
+                strokeDasharray="2 2"
+                fill="none"
+              />
+            ))}
           </svg>
           
-          {segments && segments.length > 0 && segments.map((segment, index) => {
+          {/* Content boxes */}
+          {segments && segments.map((segment, index) => {
             if (index >= titlePositions.length) return null;
             const position = titlePositions[index];
 
