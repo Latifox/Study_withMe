@@ -1,3 +1,4 @@
+
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,7 +25,7 @@ const titlePositions = [
   { left: '20%', top: '75%' },     // Segment 5
 ];
 
-// Updated connection paths to connect from bottom center to top center of boxes
+// Updated connection paths to create more natural curved paths between boxes
 const getConnectionPath = (start: Position, end: Position) => {
   // Extract positions without the % sign for SVG calculations
   const startX = parseInt(start.left);
@@ -32,13 +33,18 @@ const getConnectionPath = (start: Position, end: Position) => {
   const endX = parseInt(end.left);
   const endY = parseInt(end.top) - 4; // Subtract offset to end at top of box
   
-  // Calculate control points for the curve
-  const controlX = (startX + endX) / 2;
-  const controlY1 = startY + (endY - startY) * 0.25; // First control point at 25% of the path
-  const controlY2 = startY + (endY - startY) * 0.75; // Second control point at 75% of the path
+  // Calculate the distance between points
+  const dx = endX - startX;
+  const dy = endY - startY;
   
-  // Use cubic Bezier curve with adjusted control points
-  return `M ${startX} ${startY} C ${controlX} ${controlY1}, ${controlX} ${controlY2}, ${endX} ${endY}`;
+  // Create smoother S-curve with dynamic control points
+  const cp1x = startX + dx * 0.2;
+  const cp1y = startY + dy * 0.4;
+  const cp2x = startX + dx * 0.8;
+  const cp2y = startY + dy * 0.6;
+  
+  // Use cubic Bezier curve for smoother path
+  return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 };
 
 const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
