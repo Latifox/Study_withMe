@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,15 +41,27 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       console.log('Fetched segments:', data);
       return data as Segment[];
     },
+    // Poll every 2 seconds until we get segments
+    refetchInterval: (data) => !data || data.length === 0 ? 2000 : false,
+    // Keep polling even if the window is not focused
+    refetchIntervalInBackground: true,
+    // Retry failed requests
+    retry: true,
+    retryDelay: 1000,
+    // Keep retrying until we get data
+    retryOnMount: true,
   });
 
   console.log('Current render state:', { isLoading, error, segmentsCount: segments?.length });
 
-  if (isLoading) {
+  if (isLoading || (!segments || segments.length === 0)) {
     return (
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-white">Loading segments for lecture {lectureId}...</div>
+          <div className="text-white">
+            Generating content for lecture {lectureId}...
+            {isLoading ? " (Checking for segments...)" : " (Waiting for segments to be generated...)"}
+          </div>
         </div>
       </div>
     );
@@ -61,16 +72,6 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-red-500">Error loading segments: {error.message}</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!segments || segments.length === 0) {
-    return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-white">No segments found for lecture {lectureId}</div>
         </div>
       </div>
     );
