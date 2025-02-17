@@ -5,24 +5,16 @@ import { useParams } from "react-router-dom";
 
 interface Segment {
   title: string;
-  segment_description: string;
   sequence_number: number;
 }
 
-// Predefined positions for the content boxes (in percentages)
-const contentLocations = [
-  // North America region
-  { title: { left: '15%', top: '25%' }, description: { left: '25%', top: '25%' } },
-  // South America region
-  { title: { left: '25%', top: '60%' }, description: { left: '35%', top: '60%' } },
-  // Europe region
-  { title: { left: '45%', top: '20%' }, description: { left: '55%', top: '20%' } },
-  // Africa region
-  { title: { left: '45%', top: '45%' }, description: { left: '55%', top: '45%' } },
-  // Asia region
-  { title: { left: '65%', top: '30%' }, description: { left: '75%', top: '30%' } },
-  // Australia region
-  { title: { left: '75%', top: '65%' }, description: { left: '85%', top: '65%' } },
+// Predefined positions for title boxes (in percentages)
+const titlePositions = [
+  { left: '20%', top: '20%' },
+  { left: '60%', top: '25%' },
+  { left: '30%', top: '45%' },
+  { left: '70%', top: '50%' },
+  { left: '25%', top: '70%' },
 ];
 
 const AIProfessorLoading = () => {
@@ -35,7 +27,7 @@ const AIProfessorLoading = () => {
       
       const { data, error } = await supabase
         .from('lecture_segments')
-        .select('*')
+        .select('title, sequence_number')
         .eq('lecture_id', parseInt(lectureId))
         .order('sequence_number');
 
@@ -48,42 +40,25 @@ const AIProfessorLoading = () => {
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900 rounded-lg overflow-hidden">
-          {/* Background gradient effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10" />
+          {/* Background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20" />
           
-          {/* Content boxes */}
+          {/* Title boxes */}
           {segments?.map((segment, index) => {
-            if (index >= contentLocations.length) return null;
-            const location = contentLocations[index];
+            if (index >= titlePositions.length) return null;
+            const position = titlePositions[index];
 
             return (
-              <div key={segment.sequence_number} className="absolute">
-                {/* Title box */}
-                <div 
-                  className="absolute whitespace-nowrap"
-                  style={{
-                    left: location.title.left,
-                    top: location.title.top,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                >
-                  <div className="bg-black/80 text-white px-4 py-2 rounded text-sm font-medium shadow-lg">
-                    {segment.title}
-                  </div>
-                </div>
-
-                {/* Description box */}
-                <div 
-                  className="absolute"
-                  style={{
-                    left: location.description.left,
-                    top: location.description.top,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                >
-                  <div className="bg-red-500/80 text-white px-4 py-2 rounded text-xs max-w-[200px] shadow-lg">
-                    {segment.segment_description.slice(0, 100)}...
-                  </div>
+              <div
+                key={segment.sequence_number}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                style={{
+                  left: position.left,
+                  top: position.top,
+                }}
+              >
+                <div className="bg-black/90 text-white px-6 py-3 rounded-md text-sm font-medium shadow-lg border border-white/10">
+                  {segment.title}
                 </div>
               </div>
             );
