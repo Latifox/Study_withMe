@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -70,12 +71,8 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
       });
 
       if (allContentGenerated) {
-        // Give more time to see the completed mindmap
-        const timer = setTimeout(() => {
-          console.log('All content generated, redirecting...');
-          navigate(`/course/${lectureId}/story/nodes`);
-        }, 5000);
-        return () => clearTimeout(timer);
+        console.log('All content generated, redirecting...');
+        navigate(`/course/${lectureId}/story/nodes`);
       }
     }
   }, [segmentContent, segments, isContentLoading, lectureId, navigate]);
