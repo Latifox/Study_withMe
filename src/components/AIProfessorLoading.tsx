@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface Segment {
   title: string;
@@ -12,6 +13,8 @@ interface Segment {
 }
 
 const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
+  const navigate = useNavigate();
+
   // Fetch segments data
   const { data: segments } = useQuery({
     queryKey: ['lecture-segments', lectureId],
@@ -47,7 +50,7 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
     retryDelay: 1000
   });
 
-  // Monitor content generation status
+  // Monitor content generation status and redirect when complete
   useEffect(() => {
     if (!isContentLoading && segmentContent && segments) {
       // Check if all segments have their content fully generated
@@ -66,8 +69,12 @@ const AIProfessorLoading = ({ lectureId }: { lectureId: string }) => {
         contentCount: segmentContent.length,
         allContentGenerated
       });
+
+      if (allContentGenerated) {
+        navigate(`/course/${lectureId}/story/content`);
+      }
     }
-  }, [segmentContent, segments, isContentLoading]);
+  }, [segmentContent, segments, isContentLoading, lectureId, navigate]);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-violet-600/90 via-purple-500/90 to-indigo-600/90">
