@@ -1,9 +1,11 @@
+
 import { useQuery, Query } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Segment {
   title: string;
   sequence_number: number;
+  segment_description: string;
 }
 
 interface Position {
@@ -24,26 +26,40 @@ const titlePositions = [
   { left: '20%', top: '95%' },     // Segment 5
 ];
 
-// Updated connection paths to create even more pronounced curved paths between boxes
-const getConnectionPath = (start: Position, end: Position) => {
-  // Extract positions without the % sign for SVG calculations
+// Description box positions, placed to the right of odd-numbered segments and left of even-numbered segments
+const descriptionPositions = [
+  { left: '45%', top: '15%' },     // Description 1
+  { left: '55%', top: '35%' },     // Description 2
+  { left: '45%', top: '55%' },     // Description 3
+  { left: '55%', top: '75%' },     // Description 4
+  { left: '45%', top: '95%' },     // Description 5
+];
+
+// Helper function to get path between title and description boxes
+const getDescriptionPath = (start: Position, end: Position) => {
   const startX = parseInt(start.left);
-  const startY = parseInt(start.top) + 4; // Add offset to start from bottom of box
+  const startY = parseInt(start.top);
   const endX = parseInt(end.left);
-  const endY = parseInt(end.top) - 4; // Subtract offset to end at top of box
+  const endY = parseInt(end.top);
   
-  // Calculate the distance between points
+  return `M ${startX} ${startY} L ${endX} ${endY}`;
+};
+
+// Original connection path function for main segments
+const getConnectionPath = (start: Position, end: Position) => {
+  const startX = parseInt(start.left);
+  const startY = parseInt(start.top) + 4;
+  const endX = parseInt(end.left);
+  const endY = parseInt(end.top) - 4;
+  
   const dx = endX - startX;
   const dy = endY - startY;
   
-  // Create even more pronounced S-curve with adjusted control points
-  // Move control points further out vertically for more dramatic curves
-  const cp1x = startX + dx * 0.1; // Keep horizontal position close to start
-  const cp1y = startY + dy * 0.8; // Move down further for more dramatic curve
-  const cp2x = startX + dx * 0.9; // Keep horizontal position close to end
-  const cp2y = startY + dy * 0.2; // Move up further for more dramatic curve
+  const cp1x = startX + dx * 0.1;
+  const cp1y = startY + dy * 0.8;
+  const cp2x = startX + dx * 0.9;
+  const cp2y = startY + dy * 0.2;
   
-  // Use cubic Bezier curve for smoother path
   return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 };
 
@@ -53,7 +69,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
     queryFn: async () => {      
       const { data, error } = await supabase
         .from('lecture_segments')
-        .select('title, sequence_number')
+        .select('title, sequence_number, segment_description')
         .eq('lecture_id', lectureId)
         .order('sequence_number');
 
@@ -75,7 +91,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       }
       return false;
     },
-    retry: 3, // Retry failed requests up to 3 times
+    retry: 3,
   });
 
   if (error) {
@@ -130,7 +146,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       </div>
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-        {/* Connection paths */}
+        {/* Connection paths between segments */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
           {displayedSegments.slice(0, -1).map((_, index) => (
             <path
@@ -138,6 +154,21 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               d={getConnectionPath(titlePositions[index], titlePositions[index + 1])}
               className="opacity-0 animate-fade-in"
               style={{ animationDelay: `${index * 200}ms` }}
+              stroke="#0F172A"
+              strokeOpacity="0.8"
+              strokeWidth="0.5"
+              strokeDasharray="2 2"
+              fill="none"
+            />
+          ))}
+          
+          {/* Paths connecting titles to descriptions */}
+          {displayedSegments.map((_, index) => (
+            <path
+              key={`description-connection-${index}`}
+              d={getDescriptionPath(titlePositions[index], descriptionPositions[index])}
+              className="opacity-0 animate-fade-in"
+              style={{ animationDelay: `${index * 200 + 100}ms` }}
               stroke="#0F172A"
               strokeOpacity="0.8"
               strokeWidth="0.5"
@@ -160,6 +191,23 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
           >
             <div className="bg-slate-900/80 backdrop-blur-md text-white px-6 py-3 rounded-lg text-sm font-medium shadow-xl border border-white/10 hover:border-white/20 transition-colors">
               {segment.title}
+            </div>
+          </div>
+        ))}
+
+        {/* Description boxes */}
+        {displayedSegments.map((segment, index) => (
+          <div
+            key={`description-${segment.sequence_number}`}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 opacity-0 animate-fade-in max-w-md"
+            style={{
+              left: descriptionPositions[index].left,
+              top: descriptionPositions[index].top,
+              animationDelay: `${index * 200 + 100}ms`
+            }}
+          >
+            <div className="bg-slate-900/80 backdrop-blur-md text-white p-4 rounded-lg text-xs shadow-xl border border-white/10 hover:border-white/20 transition-colors">
+              {segment.segment_description}
             </div>
           </div>
         ))}
