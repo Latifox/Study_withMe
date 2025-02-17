@@ -80,10 +80,6 @@ const LectureSummary = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  if (!lectureId) {
-    return <div>Lecture ID is required</div>;
-  }
-
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
@@ -134,7 +130,7 @@ const LectureSummary = () => {
   });
 
   if (isLoading) {
-    return <AIProfessorLoading lectureId={lectureId} />;
+    return <AIProfessorLoading />;
   }
 
   if (error) {
