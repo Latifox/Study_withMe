@@ -14,14 +14,12 @@ interface Segment {
 
 // Predefined locations around the globe for markers
 const markerLocations = [
-  { lng: -100, lat: 40 },  // North America
-  { lng: -60, lat: -20 },  // South America
-  { lng: 0, lat: 50 },     // Europe
-  { lng: 20, lat: 0 },     // Africa
-  { lng: 100, lat: 30 },   // Asia
-  { lng: 135, lat: -25 },  // Australia
-  { lng: -150, lat: 60 },  // Alaska
-  { lng: 60, lat: 60 },    // Russia
+  { titlePos: { lng: -100, lat: 40 }, descPos: { lng: -85, lat: 40 } },  // North America
+  { titlePos: { lng: -60, lat: -20 }, descPos: { lng: -45, lat: -20 } }, // South America
+  { titlePos: { lng: 0, lat: 50 }, descPos: { lng: 15, lat: 50 } },      // Europe
+  { titlePos: { lng: 20, lat: 0 }, descPos: { lng: 35, lat: 0 } },       // Africa
+  { titlePos: { lng: 100, lat: 30 }, descPos: { lng: 115, lat: 30 } },   // Asia
+  { titlePos: { lng: 135, lat: -25 }, descPos: { lng: 150, lat: -25 } }, // Australia
 ];
 
 const AIProfessorLoading = () => {
@@ -104,27 +102,40 @@ const AIProfessorLoading = () => {
 
       const location = markerLocations[index];
       
-      // Create custom marker element
-      const el = document.createElement('div');
-      el.className = 'marker';
-      el.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-      el.style.borderRadius = '4px';
-      el.style.color = '#1a1a1a';
-      el.style.padding = '8px';
-      el.style.fontSize = '12px';
-      el.style.maxWidth = '200px';
-      el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-      el.innerHTML = `
-        <div class="font-medium">${segment.title}</div>
-        <div class="text-xs opacity-75 mt-1">${segment.segment_description.slice(0, 100)}...</div>
-      `;
+      // Create title marker
+      const titleEl = document.createElement('div');
+      titleEl.className = 'marker';
+      titleEl.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      titleEl.style.borderRadius = '4px';
+      titleEl.style.color = '#ffffff';
+      titleEl.style.padding = '8px';
+      titleEl.style.fontSize = '14px';
+      titleEl.style.maxWidth = '150px';
+      titleEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      titleEl.innerHTML = segment.title;
 
-      // Add marker to map
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([location.lng, location.lat])
+      // Create description marker
+      const descEl = document.createElement('div');
+      descEl.className = 'marker';
+      descEl.style.backgroundColor = 'rgba(255, 68, 68, 0.8)';
+      descEl.style.borderRadius = '4px';
+      descEl.style.color = '#ffffff';
+      descEl.style.padding = '8px';
+      descEl.style.fontSize = '12px';
+      descEl.style.maxWidth = '200px';
+      descEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      descEl.innerHTML = segment.segment_description.slice(0, 100) + '...';
+
+      // Add markers to map
+      const titleMarker = new mapboxgl.Marker({ element: titleEl })
+        .setLngLat([location.titlePos.lng, location.titlePos.lat])
         .addTo(map.current!);
 
-      markersRef.current.push(marker);
+      const descMarker = new mapboxgl.Marker({ element: descEl })
+        .setLngLat([location.descPos.lng, location.descPos.lat])
+        .addTo(map.current!);
+
+      markersRef.current.push(titleMarker, descMarker);
     });
   }, [segments]);
 
