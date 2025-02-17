@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
-import AIProfessorLoading from "./AIProfessorLoading";
+import { useNavigate } from "react-router-dom";
 
 interface FileUploadProps {
   courseId?: string;
@@ -18,10 +18,9 @@ interface FileUploadProps {
 const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [showAIProfessor, setShowAIProfessor] = useState(false);
-  const [currentLectureId, setCurrentLectureId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const handleUpload = async () => {
     if (!file || !title || !courseId) {
@@ -34,8 +33,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     }
 
     try {
-      setShowAIProfessor(true);
-
       // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
@@ -63,75 +60,35 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (dbError) throw dbError;
       console.log('Lecture saved successfully');
 
-      // Extract PDF content with the new lecture ID
       if (!lectureData?.id) {
         throw new Error('No lecture ID returned from database');
       }
 
-      setCurrentLectureId(lectureData.id);
-
-      console.log('Extracting PDF content...');
-      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
+      // Start content generation in the background
+      console.log('Starting background content generation...');
+      supabase.functions.invoke('extract-pdf-text', {
         body: {
           filePath,
           lectureId: lectureData.id.toString()
         }
-      });
-
-      if (extractionError) throw extractionError;
-      if (!extractionData || !extractionData.content) {
-        throw new Error('No content returned from PDF extraction');
-      }
-      
-      console.log('PDF content extracted:', extractionData);
-      console.log('Content length:', extractionData.content.length);
-
-      // Generate segment structure (titles and descriptions)
-      console.log('Generating segment structure...');
-      const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
-        body: {
-          lectureId: lectureData.id,
-          lectureContent: extractionData.content
+      }).then(({ error: extractionError }) => {
+        if (extractionError) {
+          console.error('PDF extraction error:', extractionError);
+          toast({
+            title: "Warning",
+            description: "Content generation started but encountered an error. Please try again later.",
+            variant: "destructive",
+          });
         }
       });
 
-      if (segmentError) {
-        console.error('Segment generation error:', segmentError);
-        throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
-      }
-      
-      if (!segmentData || !segmentData.segments) {
-        throw new Error('No segments returned from generation');
-      }
-      
-      console.log('Segment structure generated:', segmentData);
-
-      // Generate content for each segment in parallel
-      console.log('Generating content for all segments...');
-      const segmentPromises = segmentData.segments.map((segment: any) => 
-        supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId: lectureData.id,
-            segmentNumber: segment.sequence_number
-          }
-        })
-      );
-
-      // Wait for all segment content to be generated
-      await Promise.all(segmentPromises);
-      console.log('All segment content generated successfully');
-
-      // Invalidate queries and wait a moment to ensure the UI updates
+      // Invalidate queries and close dialog
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
-      
-      // Small delay to ensure the UI has time to process the update
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      toast({
-        title: "Success",
-        description: "Lecture uploaded and processed successfully!",
-      });
       onClose();
+      
+      // Navigate to the story nodes page immediately
+      navigate(`/course/${courseId}/lecture/${lectureData.id}/story/nodes`);
+
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -139,15 +96,8 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         description: error.message || "Failed to upload lecture",
         variant: "destructive",
       });
-    } finally {
-      setShowAIProfessor(false);
-      setCurrentLectureId(null);
     }
   };
-
-  if (showAIProfessor && currentLectureId) {
-    return <AIProfessorLoading lectureId={currentLectureId} />;
-  }
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
