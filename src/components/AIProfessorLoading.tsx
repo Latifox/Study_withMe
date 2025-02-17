@@ -122,7 +122,7 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
       
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-6xl aspect-[16/9] relative bg-slate-900/50 rounded-xl overflow-hidden backdrop-blur-sm border border-white/5">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none">
             {segments && segments.length > 0 && segments.slice(0, -1).map((segment, index) => {
               if (index >= titlePositions.length - 1) return null;
               
@@ -130,32 +130,20 @@ const AIProfessorLoading = ({ lectureId }: AIProfessorLoadingProps) => {
               const nextPos = titlePositions[index + 1];
               
               const x1 = percentToNumber(currentPos.left);
-              const y1 = percentToNumber(currentPos.top) + 6; // Bottom of current box
+              const y1 = percentToNumber(currentPos.top) + 6;
               const x2 = percentToNumber(nextPos.left);
-              const y2 = percentToNumber(nextPos.top) - 6; // Top of next box
-              
-              const midY = (y1 + y2) / 2;
-              
-              const path = `
-                M ${x1} ${y1}
-                C ${x1} ${midY},
-                  ${x2} ${midY},
-                  ${x2} ${y2}
-              `;
+              const y2 = percentToNumber(nextPos.top) - 6;
 
               return (
                 <g key={`connection-${index}`} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                  <path
-                    d={path}
-                    className="stroke-white/5"
-                    strokeWidth="6"
-                    fill="none"
-                  />
-                  <path
-                    d={path}
-                    className="stroke-white/20"
+                  <line
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
+                    stroke="white"
+                    strokeOpacity="0.2"
                     strokeWidth="2"
-                    fill="none"
                     strokeDasharray="6 4"
                   />
                 </g>
