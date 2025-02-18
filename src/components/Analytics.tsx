@@ -20,20 +20,16 @@ const Analytics = () => {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
-  // Generate date range for the heatmap - starting from January 1st of the previous year
   const endDate = startOfDay(new Date());
   const startDate = startOfDay(new Date(endDate.getFullYear() - 1, 0, 1)); // January 1st of previous year
   
-  // Generate weekdays array (0 = Sunday, 6 = Saturday to match standard calendar)
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
-  // Generate an array of weeks starting from Sunday
   const weeks = eachWeekOfInterval(
     { start: startDate, end: endDate },
     { weekStartsOn: 0 } // Start weeks on Sunday
   );
 
-  // Calculate month positions
   const monthPositions = Array.from({ length: 12 }, (_, i) => {
     const date = new Date(startDate.getFullYear(), i, 1); // First of each month
     return {
@@ -75,7 +71,6 @@ const Analytics = () => {
       
       if (quizError) throw quizError;
       
-      // Get user progress records for streak calculation
       const { data: progressData, error: progressError } = await supabase
         .from('user_progress')
         .select('completed_at')
@@ -155,14 +150,13 @@ const Analytics = () => {
 
   const getHeatmapColor = (score: number) => {
     if (score === 0) return 'bg-white/5 border border-white/10';
-    if (score < 10) return 'bg-gradient-to-br from-blue-500/20 to-cyan-400/20 border border-blue-500/20';
-    if (score < 20) return 'bg-gradient-to-br from-blue-500/40 to-cyan-400/40 border border-blue-500/30';
-    if (score < 30) return 'bg-gradient-to-br from-blue-500/60 to-cyan-400/60 border border-blue-500/40';
-    if (score < 40) return 'bg-gradient-to-br from-blue-500/80 to-cyan-400/80 border border-blue-500/50';
-    return 'bg-gradient-to-br from-blue-500 to-cyan-400 border border-blue-500';
+    if (score <= 5) return 'bg-blue-500/20 border border-blue-500/20';
+    if (score <= 10) return 'bg-blue-500/40 border border-blue-500/30';
+    if (score <= 15) return 'bg-blue-500/60 border border-blue-500/40';
+    if (score <= 20) return 'bg-blue-500/80 border border-blue-500/50';
+    return 'bg-blue-500 border border-blue-500';
   };
 
-  // Count unique lectures and total XP with proper null checks
   const totalLectures = userProgress?.quizProgress ? 
     new Set(userProgress.quizProgress.map(p => p.lecture_id)).size : 0;
 
@@ -328,17 +322,17 @@ const Analytics = () => {
               </div>
               
               <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <div className="flex gap-2">
+                <div className="flex gap-4">
                   {/* Day labels column */}
-                  <div className="w-8 grid grid-rows-7 gap-1 text-xs text-white/40">
+                  <div className="w-10 grid grid-rows-7 gap-1 text-xs text-white/40 mt-6">
                     {weekDays.map((day) => (
-                      <div key={day} className="h-3 leading-3">{day}</div>
+                      <div key={day} className="h-4 leading-4">{day}</div>
                     ))}
                   </div>
                   
                   {/* Main grid of squares */}
                   <div className="relative flex-1">
-                    <div className="grid grid-cols-[repeat(52,1fr)] gap-1">
+                    <div className="grid grid-cols-[repeat(52,1fr)] gap-1 pb-8">
                       {Array.from({ length: 52 }).map((_, weekIndex) => {
                         const currentWeek = addWeeks(startDate, weekIndex);
                         return (
@@ -354,8 +348,13 @@ const Analytics = () => {
                                     <TooltipTrigger>
                                       <div 
                                         className={cn(
-                                          "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
-                                          getHeatmapColor(score)
+                                          "w-4 h-4 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                          score === 0 ? 'bg-white/5 border border-white/10' : 
+                                          score <= 5 ? 'bg-blue-500/20 border border-blue-500/20' :
+                                          score <= 10 ? 'bg-blue-500/40 border border-blue-500/30' :
+                                          score <= 15 ? 'bg-blue-500/60 border border-blue-500/40' :
+                                          score <= 20 ? 'bg-blue-500/80 border border-blue-500/50' :
+                                          'bg-blue-500 border border-blue-500'
                                         )}
                                       />
                                     </TooltipTrigger>
@@ -377,8 +376,8 @@ const Analytics = () => {
                     </div>
 
                     {/* Month labels */}
-                    <div className="absolute left-0 right-0 -bottom-6">
-                      <div className="relative h-4">
+                    <div className="absolute left-0 right-0 bottom-0">
+                      <div className="relative h-6">
                         {monthPositions.map(({ month, position }) => (
                           <div
                             key={month}
