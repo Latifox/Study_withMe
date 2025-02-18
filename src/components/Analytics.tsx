@@ -137,12 +137,14 @@ const Analytics = () => {
   };
 
   const prepareHeatmapData = () => {
-    if (!userProgress?.quizProgress.length) return new Map();
+    if (!userProgress?.progressData.length) return new Map();
     
     const dateScores = new Map();
-    userProgress.quizProgress.forEach(progress => {
-      const dateKey = startOfDay(new Date(progress.completed_at)).toISOString();
-      dateScores.set(dateKey, (dateScores.get(dateKey) || 0) + (progress.quiz_score || 0));
+    userProgress.progressData.forEach(progress => {
+      if (progress.completed_at) {
+        const dateKey = startOfDay(new Date(progress.completed_at)).toISOString();
+        dateScores.set(dateKey, (dateScores.get(dateKey) || 0) + (progress.score || 0));
+      }
     });
     
     return dateScores;
@@ -307,7 +309,7 @@ const Analytics = () => {
                 <div className="flex items-center gap-2">
                   <div className="text-sm text-white/60">Less</div>
                   <div className="flex gap-1">
-                    {[0, 10, 20, 30, 40].map((score) => (
+                    {[0, 5, 10, 15, 20].map((score) => (
                       <div
                         key={score}
                         className={cn(
@@ -321,10 +323,10 @@ const Analytics = () => {
                 </div>
               </div>
               
-              <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <div className="flex gap-4">
+              <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
+                <div className="flex gap-2">
                   {/* Day labels column */}
-                  <div className="w-10 grid grid-rows-7 gap-1 text-xs text-white/40 mt-6">
+                  <div className="w-12 grid grid-rows-7 gap-1 text-xs text-white/40 mt-7">
                     {weekDays.map((day) => (
                       <div key={day} className="h-4 leading-4">{day}</div>
                     ))}
@@ -349,12 +351,7 @@ const Analytics = () => {
                                       <div 
                                         className={cn(
                                           "w-4 h-4 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
-                                          score === 0 ? 'bg-white/5 border border-white/10' : 
-                                          score <= 5 ? 'bg-blue-500/20 border border-blue-500/20' :
-                                          score <= 10 ? 'bg-blue-500/40 border border-blue-500/30' :
-                                          score <= 15 ? 'bg-blue-500/60 border border-blue-500/40' :
-                                          score <= 20 ? 'bg-blue-500/80 border border-blue-500/50' :
-                                          'bg-blue-500 border border-blue-500'
+                                          getHeatmapColor(score)
                                         )}
                                       />
                                     </TooltipTrigger>
