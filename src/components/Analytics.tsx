@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfWeek, eachWeekOfInterval } from "date-fns";
+import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfWeek, eachWeekOfInterval, addWeeks, addMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen, Star } from "lucide-react";
 import {
@@ -331,7 +331,7 @@ const Analytics = () => {
               <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
                 <div className="flex gap-2">
                   {/* Day labels column */}
-                  <div className="grid grid-rows-7 gap-1 text-xs text-white/40 pr-2">
+                  <div className="w-8 grid grid-rows-7 gap-1 text-xs text-white/40">
                     {weekDays.map((day) => (
                       <div key={day} className="h-3 leading-3">{day}</div>
                     ))}
@@ -340,59 +340,61 @@ const Analytics = () => {
                   {/* Main grid of squares */}
                   <div className="relative flex-1">
                     <div className="grid grid-cols-[repeat(52,1fr)] gap-1">
-                      {weeks.map((week) => (
-                        <div key={week.toISOString()} className="grid grid-rows-7 gap-1">
-                          {weekDays.map((_, dayIndex) => {
-                            const date = addDays(week, dayIndex);
-                            const dateStr = startOfDay(date).toISOString();
-                            const score = heatmapData.get(dateStr) || 0;
-                            
-                            // Only render squares for dates within our range
-                            if (date < startDate || date > endDate) {
-                              return <div key={dayIndex} className="h-3" />;
-                            }
-
-                            return (
-                              <TooltipProvider key={dateStr}>
-                                <TooltipUI>
-                                  <TooltipTrigger>
-                                    <div 
-                                      className={cn(
-                                        "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
-                                        getHeatmapColor(score)
-                                      )}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="font-medium">
-                                      {format(date, 'MMM dd, yyyy')}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {score} XP earned
-                                    </p>
-                                  </TooltipContent>
-                                </TooltipUI>
-                              </TooltipProvider>
-                            );
-                          })}
-                        </div>
-                      ))}
+                      {Array.from({ length: 52 }).map((_, weekIndex) => {
+                        const currentWeek = addWeeks(startDate, weekIndex);
+                        return (
+                          <div key={weekIndex} className="grid grid-rows-7 gap-1">
+                            {Array.from({ length: 7 }).map((_, dayIndex) => {
+                              const date = addDays(currentWeek, dayIndex);
+                              const dateStr = startOfDay(date).toISOString();
+                              const score = heatmapData.get(dateStr) || 0;
+                              
+                              return (
+                                <TooltipProvider key={`${weekIndex}-${dayIndex}`}>
+                                  <TooltipUI>
+                                    <TooltipTrigger>
+                                      <div 
+                                        className={cn(
+                                          "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                          getHeatmapColor(score)
+                                        )}
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="font-medium">
+                                        {format(date, 'MMM dd, yyyy')}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {score} XP earned
+                                      </p>
+                                    </TooltipContent>
+                                  </TooltipUI>
+                                </TooltipProvider>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Month labels */}
                     <div className="absolute left-0 right-0 -bottom-6">
                       <div className="relative h-4">
-                        {monthPositions.map(({ month, position }) => (
-                          <div
-                            key={month}
-                            className="absolute text-xs text-white/40 transform -translate-x-1/2"
-                            style={{
-                              left: `${(position / 52) * 100}%`
-                            }}
-                          >
-                            {month}
-                          </div>
-                        ))}
+                        {Array.from({ length: 12 }).map((_, monthIndex) => {
+                          const date = addMonths(startDate, monthIndex);
+                          const weekIndex = Math.floor((monthIndex * 52) / 12);
+                          return (
+                            <div
+                              key={monthIndex}
+                              className="absolute text-xs text-white/40 transform -translate-x-1/2"
+                              style={{
+                                left: `${(weekIndex / 52) * 100}%`
+                              }}
+                            >
+                              {format(date, 'MMM')}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
