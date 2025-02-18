@@ -17,9 +17,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+type QuizProgress = Database['public']['Tables']['quiz_progress']['Row'];
+type UserProgressRow = Database['public']['Tables']['user_progress']['Row'];
+
 type UserProgress = {
-  quizProgress: Database['public']['Tables']['quiz_progress']['Row'][];
-  progressData: Database['public']['Tables']['user_progress']['Row'][];
+  quizProgress: QuizProgress[];
+  progressData: UserProgressRow[];
 };
 
 const Analytics = () => {
@@ -65,12 +68,12 @@ const Analytics = () => {
     isLoading
   } = useQuery<UserProgress>({
     queryKey: ['user-progress', user?.id, timeRange],
-    queryFn: async () => {
+    queryFn: async (): Promise<UserProgress> => {
       const startDate = getDateRange();
       
       const { data: quizProgress, error: quizError } = await supabase
         .from('quiz_progress')
-        .select('completed_at, lecture_id, quiz_number, quiz_score')
+        .select('*')
         .eq('user_id', user?.id)
         .gte('completed_at', startDate.toISOString())
         .order('completed_at', { ascending: true });
@@ -100,7 +103,7 @@ const Analytics = () => {
     const today = startOfDay(new Date());
     const uniqueDates = new Set(
       userProgress.progressData.map(p => 
-        startOfDay(new Date(p.completed_at)).toISOString()
+        startOfDay(new Date(p.completed_at!)).toISOString()
       )
     );
 
