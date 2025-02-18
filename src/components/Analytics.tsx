@@ -21,18 +21,27 @@ const Analytics = () => {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
   // Generate date range for the heatmap - exactly one year
-  const endDate = new Date();
-  const startDate = subYears(endDate, 1);
-  startDate.setHours(0, 0, 0, 0);
+  const endDate = startOfDay(new Date());
+  const startDate = startOfDay(subYears(endDate, 1));
   
-  // Generate weekdays (0 = Monday, 6 = Sunday)
-  const weekDays = Array.from({ length: 7 }, (_, i) => i);
+  // Generate weekdays array (0 = Monday, 6 = Sunday)
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   
-  // Generate weeks starting from Monday
+  // Generate an array of weeks
   const weeks = eachWeekOfInterval(
     { start: startDate, end: endDate },
     { weekStartsOn: 1 }
   );
+
+  // Calculate month positions
+  const monthPositions = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date(startDate);
+    date.setMonth(startDate.getMonth() + i);
+    return {
+      month: format(date, 'MMM'),
+      position: Math.floor(i * (52 / 12)) // Distribute months evenly across 52 weeks
+    };
+  });
 
   const getDateRange = () => {
     const now = new Date();
@@ -321,62 +330,71 @@ const Analytics = () => {
               
               <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
                 <div className="flex gap-2">
+                  {/* Day labels column */}
                   <div className="grid grid-rows-7 gap-1 text-xs text-white/40 pr-2">
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
-                    <div>Sun</div>
+                    {weekDays.map((day) => (
+                      <div key={day} className="h-3 leading-3">{day}</div>
+                    ))}
                   </div>
                   
-                  <div className="grid grid-cols-[repeat(53,1fr)] gap-1 flex-1">
-                    {weeks.map((week) => (
-                      <div key={week.toISOString()} className="grid grid-rows-7 gap-1">
-                        {weekDays.map((dayOffset) => {
-                          const date = addDays(week, dayOffset);
-                          const dateStr = startOfDay(date).toISOString();
-                          const score = heatmapData.get(dateStr) || 0;
-                          
-                          return (
-                            <TooltipProvider key={dateStr}>
-                              <TooltipUI>
-                                <TooltipTrigger>
-                                  <div 
-                                    className={cn(
-                                      "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
-                                      getHeatmapColor(score)
-                                    )}
-                                  />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-medium">
-                                    {format(date, 'MMM dd, yyyy')}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {score} XP earned
-                                  </p>
-                                </TooltipContent>
-                              </TooltipUI>
-                            </TooltipProvider>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  {/* Main grid of squares */}
+                  <div className="relative flex-1">
+                    <div className="grid grid-cols-[repeat(52,1fr)] gap-1">
+                      {weeks.map((week) => (
+                        <div key={week.toISOString()} className="grid grid-rows-7 gap-1">
+                          {weekDays.map((_, dayIndex) => {
+                            const date = addDays(week, dayIndex);
+                            const dateStr = startOfDay(date).toISOString();
+                            const score = heatmapData.get(dateStr) || 0;
+                            
+                            // Only render squares for dates within our range
+                            if (date < startDate || date > endDate) {
+                              return <div key={dayIndex} className="h-3" />;
+                            }
 
-                <div className="mt-2 grid grid-cols-[auto,1fr] gap-2">
-                  <div className="w-8" /> {/* Spacer for day labels */}
-                  <div className="grid grid-cols-[repeat(53,1fr)] text-xs text-white/40">
-                    {weeks.map((week, index) => (
-                      index % 4 === 0 && (
-                        <div key={week.toISOString()} className="text-center">
-                          {format(week, 'MMM')}
+                            return (
+                              <TooltipProvider key={dateStr}>
+                                <TooltipUI>
+                                  <TooltipTrigger>
+                                    <div 
+                                      className={cn(
+                                        "w-3 h-3 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                        getHeatmapColor(score)
+                                      )}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="font-medium">
+                                      {format(date, 'MMM dd, yyyy')}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {score} XP earned
+                                    </p>
+                                  </TooltipContent>
+                                </TooltipUI>
+                              </TooltipProvider>
+                            );
+                          })}
                         </div>
-                      )
-                    ))}
+                      ))}
+                    </div>
+
+                    {/* Month labels */}
+                    <div className="absolute left-0 right-0 -bottom-6">
+                      <div className="relative h-4">
+                        {monthPositions.map(({ month, position }) => (
+                          <div
+                            key={month}
+                            className="absolute text-xs text-white/40 transform -translate-x-1/2"
+                            style={{
+                              left: `${(position / 52) * 100}%`
+                            }}
+                          >
+                            {month}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
