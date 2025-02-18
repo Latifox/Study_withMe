@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -15,6 +16,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+type UserProgress = {
+  quizProgress: Database['public']['Tables']['quiz_progress']['Row'][];
+  progressData: Database['public']['Tables']['user_progress']['Row'][];
+};
 
 const Analytics = () => {
   const { user } = useAuth();
@@ -57,7 +63,7 @@ const Analytics = () => {
   const {
     data: userProgress,
     isLoading
-  } = useQuery({
+  } = useQuery<UserProgress>({
     queryKey: ['user-progress', user?.id, timeRange],
     queryFn: async () => {
       const startDate = getDateRange();
@@ -73,7 +79,7 @@ const Analytics = () => {
       
       const { data: progressData, error: progressError } = await supabase
         .from('user_progress')
-        .select('completed_at')
+        .select('*')
         .eq('user_id', user?.id)
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
