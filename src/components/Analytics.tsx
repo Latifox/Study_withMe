@@ -154,15 +154,14 @@ const Analytics = () => {
   // Generate last year of weeks for heatmap
   const endDate = new Date();
   const startDate = subYears(endDate, 1);
+  startDate.setHours(0, 0, 0, 0);
   
-  // Generate weeks
+  // Generate weeks starting from Monday (1) to Sunday (7)
+  const weekDays = Array.from({ length: 7 }, (_, i) => i);
   const weeks = eachWeekOfInterval(
     { start: startDate, end: endDate },
     { weekStartsOn: 1 } // Week starts on Monday
   );
-
-  // Generate days of the week (Mon-Sun)
-  const weekDays = Array.from({ length: 7 }, (_, i) => i);
 
   if (isLoading) {
     return <div className="space-y-4">
