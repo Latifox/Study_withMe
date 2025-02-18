@@ -20,6 +20,20 @@ const Analytics = () => {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
+  // Generate date range for the heatmap - exactly one year
+  const endDate = new Date();
+  const startDate = subYears(endDate, 1);
+  startDate.setHours(0, 0, 0, 0);
+  
+  // Generate weekdays (0 = Monday, 6 = Sunday)
+  const weekDays = Array.from({ length: 7 }, (_, i) => i);
+  
+  // Generate weeks starting from Monday
+  const weeks = eachWeekOfInterval(
+    { start: startDate, end: endDate },
+    { weekStartsOn: 1 }
+  );
+
   const getDateRange = () => {
     const now = new Date();
     switch (timeRange) {
@@ -150,18 +164,6 @@ const Analytics = () => {
   const currentStreak = calculateStreak();
   const chartData = prepareChartData();
   const heatmapData = prepareHeatmapData();
-
-  // Generate last year of weeks for heatmap
-  const endDate = new Date();
-  const startDate = subYears(endDate, 1);
-  startDate.setHours(0, 0, 0, 0);
-  
-  // Generate weeks starting from Monday (1) to Sunday (7)
-  const weekDays = Array.from({ length: 7 }, (_, i) => i);
-  const weeks = eachWeekOfInterval(
-    { start: startDate, end: endDate },
-    { weekStartsOn: 1 } // Week starts on Monday
-  );
 
   if (isLoading) {
     return <div className="space-y-4">
