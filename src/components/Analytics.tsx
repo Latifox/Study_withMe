@@ -20,26 +20,25 @@ const Analytics = () => {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
-  // Generate date range for the heatmap - exactly one year
+  // Generate date range for the heatmap - starting from January 1st of the previous year
   const endDate = startOfDay(new Date());
-  const startDate = startOfDay(subYears(endDate, 1));
+  const startDate = startOfDay(new Date(endDate.getFullYear() - 1, 0, 1)); // January 1st of previous year
   
-  // Generate weekdays array (0 = Monday, 6 = Sunday)
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  // Generate weekdays array (0 = Sunday, 6 = Saturday to match standard calendar)
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
-  // Generate an array of weeks
+  // Generate an array of weeks starting from Sunday
   const weeks = eachWeekOfInterval(
     { start: startDate, end: endDate },
-    { weekStartsOn: 1 }
+    { weekStartsOn: 0 } // Start weeks on Sunday
   );
 
   // Calculate month positions
   const monthPositions = Array.from({ length: 12 }, (_, i) => {
-    const date = new Date(startDate);
-    date.setMonth(startDate.getMonth() + i);
+    const date = new Date(startDate.getFullYear(), i, 1); // First of each month
     return {
       month: format(date, 'MMM'),
-      position: Math.floor(i * (52 / 12)) // Distribute months evenly across 52 weeks
+      position: Math.floor(i * (52 / 12))
     };
   });
 
@@ -380,21 +379,17 @@ const Analytics = () => {
                     {/* Month labels */}
                     <div className="absolute left-0 right-0 -bottom-6">
                       <div className="relative h-4">
-                        {Array.from({ length: 12 }).map((_, monthIndex) => {
-                          const date = addMonths(startDate, monthIndex);
-                          const weekIndex = Math.floor((monthIndex * 52) / 12);
-                          return (
-                            <div
-                              key={monthIndex}
-                              className="absolute text-xs text-white/40 transform -translate-x-1/2"
-                              style={{
-                                left: `${(weekIndex / 52) * 100}%`
-                              }}
-                            >
-                              {format(date, 'MMM')}
-                            </div>
-                          );
-                        })}
+                        {monthPositions.map(({ month, position }) => (
+                          <div
+                            key={month}
+                            className="absolute text-xs text-white/40 transform -translate-x-1/2"
+                            style={{
+                              left: `${(position / 52) * 100}%`
+                            }}
+                          >
+                            {month}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
