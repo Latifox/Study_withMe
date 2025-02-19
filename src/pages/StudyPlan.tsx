@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,9 +101,7 @@ const StudyPlan = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Bold animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-        {/* Animated mesh pattern */}
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -116,16 +113,13 @@ const StudyPlan = () => {
           </svg>
         </div>
         
-        {/* Animated orbs */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
         
-        {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
       </div>
 
-      {/* Content */}
       <div className="relative p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
@@ -213,7 +207,7 @@ const StudyPlan = () => {
                               </div>
                               <Button
                                 onClick={() => handleActionClick(step.action)}
-                                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
+                                className="w-full sm:w-auto bg-white/20 hover:bg-white/30 text-white font-semibold border-2 border-white/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] shadow-[0_0_15px_rgba(255,255,255,0.2)] px-6 py-2"
                               >
                                 Start This Step
                               </Button>
