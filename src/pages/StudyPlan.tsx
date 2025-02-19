@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,10 +43,9 @@ const StudyPlan = () => {
         throw error;
       }
 
-      // Insert the Story Mode step after the first step
       if (data && data.learningSteps && data.learningSteps.length > 0) {
         const storyModeStep = {
-          step: 1.5, // This ensures it sorts between steps 1 and 2
+          step: 1.5,
           title: "Experience Story Mode",
           description: "Dive into an interactive story-based learning experience that makes complex concepts easier to understand and remember.",
           action: "story",
@@ -55,7 +53,6 @@ const StudyPlan = () => {
           benefits: ["Interactive Learning", "Engaging Narrative", "Better Retention"]
         };
 
-        // Ensure proper step numbering
         const updatedSteps = [...data.learningSteps];
         updatedSteps.splice(1, 0, storyModeStep);
         data.learningSteps = updatedSteps.map((step, index) => ({
@@ -71,9 +68,9 @@ const StudyPlan = () => {
   const getActionIcon = (action: string) => {
     switch (action) {
       case 'summary':
-        return <FileText className="w-6 h-6" />; // Changed from BookOpen to FileText
+        return <FileText className="w-6 h-6" />;
       case 'story':
-        return <BookOpen className="w-6 h-6" />; // Using BookOpen for story mode
+        return <BookOpen className="w-6 h-6" />;
       case 'chat':
         return <MessageSquare className="w-6 h-6" />;
       case 'flashcards':
@@ -155,7 +152,7 @@ const StudyPlan = () => {
               className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Course
+              Back to Lectures
             </Button>
           </div>
 
