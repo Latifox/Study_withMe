@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Key } from "lucide-react";
@@ -13,7 +14,11 @@ const InvitedCourses = () => {
             <h1 className="text-4xl font-bold text-gray-800">Invited Courses</h1>
             <p className="text-gray-600 mt-2">Join courses you've been invited to</p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/')}>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/')}
+            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+          >
             Back to Home
           </Button>
         </div>

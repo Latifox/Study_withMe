@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,7 +106,7 @@ const LectureSummaryFull = () => {
           <Button
             variant="outline"
             onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary`)}
-            className="gap-2"
+            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Summary

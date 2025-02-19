@@ -72,7 +72,7 @@ const Resources = () => {
             <Button
               variant="outline"
               onClick={() => navigate(`/course/${courseId}`)}
-              className="gap-2"
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Course

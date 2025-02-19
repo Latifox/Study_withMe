@@ -91,7 +91,7 @@ const LectureChat = () => {
         <Button 
           variant="outline" 
           onClick={() => navigate(`/course/${courseId}`)}
-          className="mb-4 gap-2"
+          className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Lectures
