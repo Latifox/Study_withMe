@@ -101,13 +101,13 @@ const StudyPlan = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Button
             variant="ghost"
             onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 hover:bg-primary/10"
+            className="gap-2 text-white/80 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Course
@@ -116,11 +116,11 @@ const StudyPlan = () => {
 
         {isLoading ? (
           <div className="space-y-4">
-            <div className="h-8 w-3/4 bg-muted animate-pulse rounded" />
-            <div className="h-32 bg-muted animate-pulse rounded" />
+            <div className="h-8 w-3/4 bg-white/10 animate-pulse rounded-lg" />
+            <div className="h-32 bg-white/10 animate-pulse rounded-lg" />
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-48 bg-muted animate-pulse rounded" />
+                <div key={i} className="h-48 bg-white/10 animate-pulse rounded-lg" />
               ))}
             </div>
           </div>
@@ -132,16 +132,16 @@ const StudyPlan = () => {
             className="space-y-8"
           >
             <motion.div variants={item}>
-              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 mb-4">
+              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80 mb-4">
                 {journey.title}
               </h1>
-              <Card className="p-6 backdrop-blur-xl bg-card/30 border-primary/20">
-                <h2 className="text-xl font-semibold mb-3 text-primary">Key Topics</h2>
+              <Card className="p-6 backdrop-blur-xl bg-white/10 border-white/20 shadow-lg">
+                <h2 className="text-xl font-semibold mb-3 text-white">Key Topics</h2>
                 <div className="flex flex-wrap gap-2">
                   {journey.keyTopics.map((topic, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm backdrop-blur-xl border border-primary/20"
+                      className="px-3 py-1 bg-white/10 text-white/90 rounded-full text-sm backdrop-blur-xl border border-white/20"
                     >
                       {topic}
                     </span>
@@ -158,26 +158,26 @@ const StudyPlan = () => {
                   className="relative"
                 >
                   {index !== journey.learningSteps.length - 1 && (
-                    <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-primary/20" />
+                    <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-white/20" />
                   )}
                   
-                  <Card className="relative backdrop-blur-xl bg-card/30 border-primary/20 p-6 hover:bg-card/40 transition-all duration-300">
+                  <Card className="relative backdrop-blur-xl bg-white/10 border-white/20 p-6 hover:bg-white/20 transition-all duration-300 shadow-lg">
                     <div className="flex items-start gap-6">
-                      <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+                      <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
                         {getActionIcon(step.action)}
                       </div>
                       <div className="flex-grow">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-xl font-semibold text-primary">{step.title}</h3>
-                          <span className="text-sm text-muted-foreground">{step.timeEstimate}</span>
+                          <h3 className="text-xl font-semibold text-white">{step.title}</h3>
+                          <span className="text-sm text-white/60">{step.timeEstimate}</span>
                         </div>
-                        <p className="text-foreground/80 mb-4">{step.description}</p>
+                        <p className="text-white/80 mb-4">{step.description}</p>
                         <div className="space-y-3">
                           <div className="flex flex-wrap gap-2">
                             {step.benefits.map((benefit, i) => (
                               <span
                                 key={i}
-                                className="text-sm text-foreground/60 bg-primary/5 px-2 py-1 rounded border border-primary/10"
+                                className="text-sm text-white/60 bg-white/5 px-2 py-1 rounded border border-white/10"
                               >
                                 {benefit}
                               </span>
@@ -185,7 +185,7 @@ const StudyPlan = () => {
                           </div>
                           <Button
                             onClick={() => handleActionClick(step.action)}
-                            className="w-full sm:w-auto bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-300"
+                            className="w-full sm:w-auto bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
                           >
                             Start This Step
                           </Button>
@@ -198,7 +198,7 @@ const StudyPlan = () => {
             </div>
           </motion.div>
         ) : (
-          <div className="text-center py-8 text-destructive">
+          <div className="text-center py-8 text-red-400">
             Failed to generate learning journey. Please try again.
           </div>
         )}
