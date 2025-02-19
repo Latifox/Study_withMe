@@ -1,6 +1,5 @@
-
 import { motion } from "framer-motion";
-import { Network, BookOpen, Activity } from "lucide-react";
+import { Network, Activity } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 const StudyPlanLoading = () => {
@@ -65,7 +64,7 @@ const StudyPlanLoading = () => {
               transition={{ delay: 0.2 }}
               className="flex items-center gap-4 text-white/80"
             >
-              <BookOpen className="w-6 h-6" />
+              <Activity className="w-6 h-6" />
               <div className="h-4 bg-white/20 rounded w-48 animate-pulse" />
             </motion.div>
 

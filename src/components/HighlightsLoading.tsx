@@ -1,7 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import BackgroundGradient from "./ui/BackgroundGradient";
+import { FileText } from "lucide-react";
 
 const HighlightsLoading = () => {
   return (
@@ -31,7 +31,27 @@ const HighlightsLoading = () => {
 
       {/* Content */}
       <div className="relative">
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 space-y-8">
+          {/* Animated Loading Message */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center space-y-4 mb-8"
+          >
+            <motion.div
+              animate={{ 
+                scale: [1, 1.1, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="inline-block"
+            >
+              <FileText className="w-12 h-12 text-white" />
+            </motion.div>
+            <h2 className="text-2xl font-bold text-white">Generating Lecture Highlights</h2>
+            <p className="text-white/80">Analyzing content and extracting key insights...</p>
+          </motion.div>
+
           <div className="flex flex-col md:flex-row gap-6">
             {/* Left Column */}
             <div className="w-full md:w-1/3 space-y-4">
