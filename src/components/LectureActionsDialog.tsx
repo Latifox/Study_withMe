@@ -8,9 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 interface LectureActionsDialogProps {
   isOpen: boolean;
@@ -21,30 +18,13 @@ interface LectureActionsDialogProps {
 const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDialogProps) => {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const [loadingAction, setLoadingAction] = useState<string | null>(null);
-
-  // Check if summary exists
-  const { data: summary } = useQuery({
-    queryKey: ["lecture-summary-exists", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, checkOnly: true }
-      });
-      if (error) return null;
-      return data?.summary;
-    },
-    enabled: isOpen, // Only run when dialog is open
-  });
 
   const handleChatAction = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
     onClose();
   };
 
-  const handleSummaryAction = async () => {
-    if (!summary) {
-      setLoadingAction('summary');
-    }
+  const handleSummaryAction = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/summary`);
     onClose();
   };
@@ -103,10 +83,9 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             onClick={handleSummaryAction}
             className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
             size="lg"
-            disabled={loadingAction === 'summary'}
           >
             <FileText className="w-5 h-5" />
-            {loadingAction === 'summary' ? 'Generating...' : 'Highlights'}
+            Highlights
           </Button>
           <Button
             onClick={handleChatAction}
