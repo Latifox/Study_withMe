@@ -39,8 +39,8 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
     onClose();
   };
 
-  const handleMindmapAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/mindmap`);
+  const handleStudyPlanAction = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/study-plan`);
     onClose();
   };
 
@@ -64,7 +64,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
         </DialogHeader>
         <div className="grid gap-4 py-6">
           <Button
-            onClick={handleMindmapAction}
+            onClick={handleStudyPlanAction}
             className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
             size="lg"
           >
