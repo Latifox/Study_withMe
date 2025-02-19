@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import HighlightsLoading from "@/components/story/HighlightsLoading";
 
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -19,14 +22,14 @@ const LectureSummary = () => {
     queryKey: ['lecture-summary', lectureId],
     queryFn: async () => {
       if (!lectureId) throw new Error('Lecture ID is required');
-      const { data, error } = await supabase.functions.invoke('generate-summary', {
+      const { data, error: functionError } = await supabase.functions.invoke('generate-summary', {
         body: { lecture_id: parseInt(lectureId) },
       });
 
-      if (error) {
-        console.error("Function invoke error:", error);
+      if (functionError) {
+        console.error("Function invoke error:", functionError);
         setError("Failed to generate summary. Please try again.");
-        throw error;
+        throw functionError;
       }
 
       if (!data || !data.summary) {
@@ -37,10 +40,17 @@ const LectureSummary = () => {
 
       return data.summary;
     },
-    onError: (err) => {
-      console.error("Query error:", err);
-      setError("Failed to load summary. Please check your connection.");
-    },
+    meta: {
+      onSettled: (data, error) => {
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Failed to generate summary. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
+    }
   });
 
   const handleBack = () => {
@@ -70,6 +80,8 @@ const LectureSummary = () => {
             </div>
           </CardContent>
         </Card>
+      ) : error ? (
+        <div className="text-center text-red-500">{error}</div>
       ) : null}
     </div>
   );
