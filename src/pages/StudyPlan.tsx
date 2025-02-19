@@ -1,8 +1,9 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network } from "lucide-react";
+import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -43,6 +44,26 @@ const StudyPlan = () => {
         throw error;
       }
 
+      // Insert the Story Mode step after the first step
+      if (data && data.learningSteps && data.learningSteps.length > 0) {
+        const storyModeStep = {
+          step: 1.5, // This ensures it sorts between steps 1 and 2
+          title: "Experience Story Mode",
+          description: "Dive into an interactive story-based learning experience that makes complex concepts easier to understand and remember.",
+          action: "story",
+          timeEstimate: "15-20 min",
+          benefits: ["Interactive Learning", "Engaging Narrative", "Better Retention"]
+        };
+
+        // Ensure proper step numbering
+        const updatedSteps = [...data.learningSteps];
+        updatedSteps.splice(1, 0, storyModeStep);
+        data.learningSteps = updatedSteps.map((step, index) => ({
+          ...step,
+          step: index + 1
+        }));
+      }
+
       return data;
     },
   });
@@ -50,7 +71,9 @@ const StudyPlan = () => {
   const getActionIcon = (action: string) => {
     switch (action) {
       case 'summary':
-        return <BookOpen className="w-6 h-6" />;
+        return <FileText className="w-6 h-6" />; // Changed from BookOpen to FileText
+      case 'story':
+        return <BookOpen className="w-6 h-6" />; // Using BookOpen for story mode
       case 'chat':
         return <MessageSquare className="w-6 h-6" />;
       case 'flashcards':
@@ -68,6 +91,9 @@ const StudyPlan = () => {
     switch (action) {
       case 'summary':
         navigate(`/course/${courseId}/lecture/${lectureId}/summary`);
+        break;
+      case 'story':
+        navigate(`/course/${courseId}/lecture/${lectureId}/story`);
         break;
       case 'chat':
         navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
