@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
@@ -80,30 +81,40 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
           className="space-y-3"
           disabled={hasSubmitted}
         >
-          {options.map((option) => (
-            <motion.div
-              key={option}
-              whileHover={{ scale: hasSubmitted ? 1 : 1.02 }}
-              whileTap={{ scale: hasSubmitted ? 1 : 0.98 }}
-              className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer
-                ${selectedAnswer === option ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}
-                ${hasSubmitted && option.toLowerCase() === question.correctAnswer.toString().toLowerCase() ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                ${hasSubmitted && selectedAnswer === option && option.toLowerCase() !== question.correctAnswer.toString().toLowerCase() ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
-                ${hasSubmitted ? 'cursor-not-allowed' : ''}
-              `}
-            >
-              <RadioGroupItem value={option} id={option} />
-              <label htmlFor={option} className="flex-1 cursor-pointer">
-                {option}
-              </label>
-              {hasSubmitted && option.toLowerCase() === question.correctAnswer.toString().toLowerCase() && (
-                <Check className="h-5 w-5 text-green-500" />
-              )}
-              {hasSubmitted && selectedAnswer === option && option.toLowerCase() !== question.correctAnswer.toString().toLowerCase() && (
-                <X className="h-5 w-5 text-red-500" />
-              )}
-            </motion.div>
-          ))}
+          {options.map((option) => {
+            const isSelected = selectedAnswer === option;
+            const isCorrectAnswer = option.toLowerCase() === question.correctAnswer.toString().toLowerCase();
+            const isWrongSelection = hasSubmitted && isSelected && !isCorrectAnswer;
+
+            return (
+              <div
+                key={option}
+                className={`relative rounded-lg border-2 transition-all ${
+                  hasSubmitted ? 'cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'
+                } ${
+                  isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'
+                } ${
+                  hasSubmitted && isCorrectAnswer ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''
+                } ${
+                  isWrongSelection ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
+                }`}
+              >
+                <label 
+                  className="flex items-center w-full p-3 space-x-3"
+                  htmlFor={option}
+                >
+                  <RadioGroupItem value={option} id={option} />
+                  <span className="flex-1">{option}</span>
+                  {hasSubmitted && isCorrectAnswer && (
+                    <Check className="h-5 w-5 text-green-500" />
+                  )}
+                  {isWrongSelection && (
+                    <X className="h-5 w-5 text-red-500" />
+                  )}
+                </label>
+              </div>
+            );
+          })}
         </RadioGroup>
       </div>
 
