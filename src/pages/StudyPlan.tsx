@@ -101,107 +101,137 @@ const StudyPlan = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 text-white/80 hover:text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Course
-          </Button>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Bold animated background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+        {/* Animated mesh pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
         </div>
+        
+        {/* Animated orbs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
+      </div>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="h-8 w-3/4 bg-white/10 animate-pulse rounded-lg" />
-            <div className="h-32 bg-white/10 animate-pulse rounded-lg" />
+      {/* Content */}
+      <div className="relative p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-4 mb-8">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Course
+            </Button>
+          </div>
+
+          {isLoading ? (
             <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-48 bg-white/10 animate-pulse rounded-lg" />
-              ))}
+              <div className="h-8 w-3/4 bg-white/10 animate-pulse rounded-lg" />
+              <div className="h-32 bg-white/10 animate-pulse rounded-lg" />
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-48 bg-white/10 animate-pulse rounded-lg" />
+                ))}
+              </div>
             </div>
-          </div>
-        ) : journey ? (
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="space-y-8"
-          >
-            <motion.div variants={item}>
-              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80 mb-4">
-                {journey.title}
-              </h1>
-              <Card className="p-6 backdrop-blur-xl bg-white/10 border-white/20 shadow-lg">
-                <h2 className="text-xl font-semibold mb-3 text-white">Key Topics</h2>
-                <div className="flex flex-wrap gap-2">
-                  {journey.keyTopics.map((topic, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-white/10 text-white/90 rounded-full text-sm backdrop-blur-xl border border-white/20"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </Card>
-            </motion.div>
-
-            <div className="space-y-6">
-              {journey.learningSteps.map((step, index) => (
-                <motion.div
-                  key={step.step}
-                  variants={item}
-                  className="relative"
-                >
-                  {index !== journey.learningSteps.length - 1 && (
-                    <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-white/20" />
-                  )}
-                  
-                  <Card className="relative backdrop-blur-xl bg-white/10 border-white/20 p-6 hover:bg-white/20 transition-all duration-300 shadow-lg">
-                    <div className="flex items-start gap-6">
-                      <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
-                        {getActionIcon(step.action)}
-                      </div>
-                      <div className="flex-grow">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                          <span className="text-sm text-white/60">{step.timeEstimate}</span>
-                        </div>
-                        <p className="text-white/80 mb-4">{step.description}</p>
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap gap-2">
-                            {step.benefits.map((benefit, i) => (
-                              <span
-                                key={i}
-                                className="text-sm text-white/60 bg-white/5 px-2 py-1 rounded border border-white/10"
-                              >
-                                {benefit}
-                              </span>
-                            ))}
-                          </div>
-                          <Button
-                            onClick={() => handleActionClick(step.action)}
-                            className="w-full sm:w-auto bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
-                          >
-                            Start This Step
-                          </Button>
-                        </div>
-                      </div>
+          ) : journey ? (
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              className="space-y-8"
+            >
+              <motion.div variants={item}>
+                <h1 className="text-4xl font-bold text-white mb-4">
+                  {journey.title}
+                </h1>
+                <Card className="group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
+                  <div className="p-6">
+                    <h2 className="text-xl font-semibold mb-3 text-white">Key Topics</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {journey.keyTopics.map((topic, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-white/10 text-white/90 rounded-full text-sm backdrop-blur-xl border border-white/20"
+                        >
+                          {topic}
+                        </span>
+                      ))}
                     </div>
-                  </Card>
-                </motion.div>
-              ))}
+                  </div>
+                </Card>
+              </motion.div>
+
+              <div className="space-y-6">
+                {journey.learningSteps.map((step, index) => (
+                  <motion.div
+                    key={step.step}
+                    variants={item}
+                    className="relative"
+                  >
+                    {index !== journey.learningSteps.length - 1 && (
+                      <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-white/20" />
+                    )}
+                    
+                    <Card className="group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] bg-white/10 backdrop-blur-md border-white/20">
+                      <div className="p-6">
+                        <div className="flex items-start gap-6">
+                          <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
+                            {getActionIcon(step.action)}
+                          </div>
+                          <div className="flex-grow">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-xl font-semibold text-white">{step.title}</h3>
+                              <span className="text-sm text-white/60">{step.timeEstimate}</span>
+                            </div>
+                            <p className="text-white/80 mb-4">{step.description}</p>
+                            <div className="space-y-3">
+                              <div className="flex flex-wrap gap-2">
+                                {step.benefits.map((benefit, i) => (
+                                  <span
+                                    key={i}
+                                    className="text-sm text-white/60 bg-white/5 px-2 py-1 rounded border border-white/10"
+                                  >
+                                    {benefit}
+                                  </span>
+                                ))}
+                              </div>
+                              <Button
+                                onClick={() => handleActionClick(step.action)}
+                                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
+                              >
+                                Start This Step
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <div className="text-center py-8 text-red-400">
+              Failed to generate learning journey. Please try again.
             </div>
-          </motion.div>
-        ) : (
-          <div className="text-center py-8 text-red-400">
-            Failed to generate learning journey. Please try again.
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
