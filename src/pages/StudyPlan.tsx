@@ -127,7 +127,7 @@ const StudyPlan = () => {
   const handleActionClick = (action: string) => {
     switch (action) {
       case 'summary':
-        navigate(`/course/${courseId}/lecture/${lectureId}/summary`);
+        navigate(`/course/${courseId}/lecture/${lectureId}/highlights`);
         break;
       case 'story':
         navigate(`/course/${courseId}/lecture/${lectureId}/story`);
@@ -139,7 +139,7 @@ const StudyPlan = () => {
         navigate(`/course/${courseId}/lecture/${lectureId}/flashcards`);
         break;
       case 'quiz':
-        navigate(`/course/${courseId}/lecture/${lectureId}/quiz`);
+        navigate(`/course/${courseId}/lecture/${lectureId}/take-quiz`);
         break;
       case 'resources':
         navigate(`/course/${courseId}/lecture/${lectureId}/resources`);
