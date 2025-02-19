@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -73,10 +74,10 @@ const Resources = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate(`/course/${courseId}`)}
-                className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-black/20 text-black"
+                className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Course
+                Back to Lectures
               </Button>
             </div>
 

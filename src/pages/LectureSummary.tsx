@@ -109,9 +109,9 @@ const LectureSummary = () => {
       <div className="container mx-auto p-4 space-y-6">
         <div className="flex justify-between items-center">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2"
+            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
