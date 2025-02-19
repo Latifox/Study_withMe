@@ -41,7 +41,7 @@ const HighlightsLoading = () => {
               transition={{ duration: 2, repeat: Infinity }}
               className="inline-block"
             >
-              <FileText className="w-12 h-12 text-white" />
+              <FileText className="w-12 h-12 text-black" />
             </motion.div>
             <h2 className="text-2xl font-bold text-[#1f2937]">Generating Lecture Highlights</h2>
             <p className="text-[#4b5563]">Analyzing content and extracting key insights...</p>
