@@ -7,10 +7,7 @@ const HighlightsLoading = () => {
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Background with correct colors */}
-      <div className="absolute inset-0">
-        {/* Base color fill */}
-        <div className="absolute inset-0 bg-[#E5DBF7]" />
-        
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100">
         {/* Subtle mesh pattern */}
         <div className="absolute inset-0 opacity-5">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -24,9 +21,9 @@ const HighlightsLoading = () => {
         </div>
         
         {/* Softer animated orbs */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[#F1EBFC] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#E5DBF7] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-[#DFD4F5] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-50 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
       </div>
 
       {/* Content */}
