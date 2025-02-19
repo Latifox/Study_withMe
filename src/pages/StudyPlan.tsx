@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +6,7 @@ import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network, FileText 
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import StudyPlanLoading from "@/components/story/StudyPlanLoading";
 
 interface LearningStep {
   step: number;
@@ -104,6 +104,10 @@ const StudyPlan = () => {
     hidden: { opacity: 0, x: -20 },
     show: { opacity: 1, x: 0 }
   };
+
+  if (isLoading) {
+    return <StudyPlanLoading />;
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden">
