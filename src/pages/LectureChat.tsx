@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -89,9 +88,9 @@ const LectureChat = () => {
     <BackgroundGradient>
       <div className="container mx-auto p-4">
         <Button 
-          variant="outline" 
+          variant="ghost" 
           onClick={() => navigate(`/course/${courseId}`)}
-          className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white mb-4"
+          className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Lectures
