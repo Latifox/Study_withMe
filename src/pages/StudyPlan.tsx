@@ -1,9 +1,10 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network, FileText } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 
@@ -41,24 +42,6 @@ const StudyPlan = () => {
           variant: "destructive",
         });
         throw error;
-      }
-
-      if (data && data.learningSteps && data.learningSteps.length > 0) {
-        const storyModeStep = {
-          step: 1.5,
-          title: "Experience Story Mode",
-          description: "Dive into an interactive story-based learning experience that makes complex concepts easier to understand and remember.",
-          action: "story",
-          timeEstimate: "15-20 min",
-          benefits: ["Interactive Learning", "Engaging Narrative", "Better Retention"]
-        };
-
-        const updatedSteps = [...data.learningSteps];
-        updatedSteps.splice(1, 0, storyModeStep);
-        data.learningSteps = updatedSteps.map((step, index) => ({
-          ...step,
-          step: index + 1
-        }));
       }
 
       return data;
