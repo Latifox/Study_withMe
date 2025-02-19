@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +16,7 @@ import LectureSummaryFull from "./pages/LectureSummaryFull";
 import QuizConfiguration from "./components/QuizConfiguration";
 import TakeQuiz from "./pages/TakeQuiz";
 import Flashcards from "./pages/Flashcards";
-import Mindmap from "./pages/Mindmap";
+import StudyPlan from "./pages/StudyPlan";
 import Resources from "./pages/Resources";
 import Story from "./pages/Story";
 import StoryNodes from "./pages/StoryNodes";
@@ -49,7 +50,7 @@ const App = () => (
             />
             <Route path="/course/:courseId/lecture/:lectureId/take-quiz" element={<TakeQuiz />} />
             <Route path="/course/:courseId/lecture/:lectureId/flashcards" element={<Flashcards />} />
-            <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<Mindmap />} />
+            <Route path="/course/:courseId/lecture/:lectureId/study-plan" element={<StudyPlan />} />
             <Route path="/course/:courseId/lecture/:lectureId/resources" element={<Resources />} />
             <Route path="/course/:courseId/lecture/:lectureId/story" element={<Story />} />
             <Route path="/course/:courseId/lecture/:lectureId/story/nodes" element={<StoryNodes />} />
