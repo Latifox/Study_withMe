@@ -1,143 +1,130 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
-
-interface Flashcard {
-  question: string;
-  answer: string;
-}
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import FlashcardsLoading from "@/components/story/FlashcardsLoading";
 
 const Flashcards = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
-  const [additionalCards, setAdditionalCards] = useState<Flashcard[]>([]);
 
-  const { data: initialFlashcards, isLoading } = useQuery({
-    queryKey: ['flashcards', lectureId],
+  const [newFront, setNewFront] = useState("");
+  const [newBack, setNewBack] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const {
+    data: flashcards,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["flashcards", lectureId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-flashcards', {
-        body: { lectureId: parseInt(lectureId!) }
-      });
-
-      if (error) {
-        console.error('Error generating flashcards:', error);
-        throw error;
-      }
-      return data.flashcards;
+      const { data } = await supabase
+        .from("flashcards")
+        .select("*")
+        .eq("lecture_id", lectureId);
+      return data;
     },
-    meta: {
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to generate flashcards. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
   });
 
-  const allFlashcards = [...(initialFlashcards || []), ...additionalCards];
-
-  const handleCardClick = (index: number) => {
-    setFlippedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
-      return newSet;
-    });
+  const handleBack = () => {
+    navigate(`/course/${courseId}`);
   };
 
-  const generateMoreFlashcards = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-flashcards', {
-        body: { lectureId: parseInt(lectureId!), count: 3 }
-      });
+  const createFlashcard = async () => {
+    setIsCreating(true);
+    const { data, error } = await supabase.from("flashcards").insert([
+      {
+        lecture_id: lectureId,
+        front: newFront,
+        back: newBack,
+      },
+    ]);
 
-      if (error) throw error;
-      setAdditionalCards(prev => [...prev, ...data.flashcards]);
-      
+    if (error) {
       toast({
-        title: "Success",
-        description: "Generated new flashcards successfully!",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate more flashcards. Please try again.",
+        title: "Uh oh! Something went wrong.",
+        description: "There was an error creating the flashcard.",
         variant: "destructive",
       });
+    } else {
+      toast({
+        title: "Success!",
+        description: "Flashcard created successfully.",
+      });
+      setNewFront("");
+      setNewBack("");
+      refetch();
     }
+    setIsCreating(false);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
-        <div className="max-w-4xl mx-auto text-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading flashcards...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <BackgroundGradient>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Course
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Flashcards
-          </h1>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {allFlashcards.map((flashcard, index) => (
-            <div
-              key={index}
-              className="perspective-1000 cursor-pointer"
-              onClick={() => handleCardClick(index)}
-            >
-              <div
-                className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${
-                  flippedCards.has(index) ? 'rotate-y-180' : ''
-                }`}
-              >
-                <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-white">
-                  <p className="text-lg">{flashcard.question}</p>
-                </Card>
-                <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-blue-50 rotate-y-180 backface-hidden">
-                  <p className="text-lg">{flashcard.answer}</p>
-                </Card>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-center">
-          <Button onClick={generateMoreFlashcards} size="lg">
-            Generate More Flashcards
-          </Button>
-        </div>
+    <div className="container mx-auto p-4">
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" onClick={handleBack} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Lectures
+        </Button>
+        <h1 className="text-2xl font-bold">Flashcards</h1>
       </div>
-    </BackgroundGradient>
+
+      {isLoading ? (
+        <FlashcardsLoading />
+      ) : flashcards ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {flashcards.map((card) => (
+            <Card key={card.id}>
+              <CardHeader>
+                <CardTitle>Flashcard</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm font-medium">Front:</p>
+                <p className="text-muted-foreground">{card.front}</p>
+                <Separator />
+                <p className="text-sm font-medium">Back:</p>
+                <p className="text-muted-foreground">{card.back}</p>
+              </CardContent>
+            </Card>
+          ))}
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Flashcard</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="front">Front</Label>
+                <Input
+                  id="front"
+                  value={newFront}
+                  onChange={(e) => setNewFront(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="back">Back</Label>
+                <Textarea
+                  id="back"
+                  value={newBack}
+                  onChange={(e) => setNewBack(e.target.value)}
+                />
+              </div>
+              <Button onClick={createFlashcard} disabled={isCreating}>
+                Create Flashcard
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+    </div>
   );
 };
 
