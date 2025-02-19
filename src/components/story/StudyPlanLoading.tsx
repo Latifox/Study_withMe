@@ -1,5 +1,6 @@
+
 import { motion } from "framer-motion";
-import { Network, Activity } from "lucide-react";
+import { Network } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 const StudyPlanLoading = () => {
@@ -58,26 +59,6 @@ const StudyPlanLoading = () => {
           </Card>
 
           <div className="space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center gap-4 text-white/80"
-            >
-              <Activity className="w-6 h-6" />
-              <div className="h-4 bg-white/20 rounded w-48 animate-pulse" />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="flex items-center gap-4 text-white/80"
-            >
-              <Activity className="w-6 h-6" />
-              <div className="h-4 bg-white/20 rounded w-56 animate-pulse" />
-            </motion.div>
-
             {[1, 2, 3].map((i) => (
               <Card 
                 key={i}
