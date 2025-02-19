@@ -6,7 +6,6 @@ import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network, FileText 
 import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import StudyPlanLoading from "@/components/story/StudyPlanLoading";
 
 interface LearningStep {
   step: number;
@@ -158,7 +157,15 @@ const StudyPlan = () => {
           </div>
 
           {isLoading ? (
-            <StudyPlanLoading />
+            <div className="space-y-4">
+              <div className="h-8 w-3/4 bg-white/10 animate-pulse rounded-lg" />
+              <div className="h-32 bg-white/10 animate-pulse rounded-lg" />
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-48 bg-white/10 animate-pulse rounded-lg" />
+                ))}
+              </div>
+            </div>
           ) : journey ? (
             <motion.div
               variants={container}

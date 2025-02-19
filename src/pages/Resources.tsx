@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
-import ResourcesLoading from "@/components/story/ResourcesLoading";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -84,61 +83,77 @@ const Resources = () => {
           </div>
 
           {isLoading ? (
-            <ResourcesLoading />
-          ) : resources ? (
-            resources?.map((conceptResource: ConceptResources) => (
-              <Card key={conceptResource.concept} className="mb-6">
-                <CardHeader>
-                  <CardTitle>{conceptResource.concept}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="video" className="w-full">
-                    <TabsList>
-                      <TabsTrigger value="video">Videos</TabsTrigger>
-                      <TabsTrigger value="article">Articles</TabsTrigger>
-                      <TabsTrigger value="research">Research</TabsTrigger>
-                    </TabsList>
-                    {['video', 'article', 'research'].map((type) => (
-                      <TabsContent key={type} value={type}>
-                        <ScrollArea className="h-[400px]">
-                          <div className="space-y-4">
-                            {conceptResource.resources
-                              .filter((resource) => resource.type === type)
-                              .map((resource, index) => (
-                                <Card key={index}>
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start gap-4">
-                                      <div className="mt-1">
-                                        {getResourceIcon(resource.type)}
-                                      </div>
-                                      <div>
-                                        <h3 className="font-semibold mb-2">
-                                          <a
-                                            href={resource.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 hover:underline"
-                                          >
-                                            {resource.title}
-                                          </a>
-                                        </h3>
-                                        <p className="text-gray-600">
-                                          {resource.description}
-                                        </p>
-                                      </div>
+            <div className="space-y-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-8 w-[250px]" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Skeleton className="h-10 w-[200px]" />
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((j) => (
+                          <Skeleton key={j} className="h-[100px] w-full" />
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : resources?.map((conceptResource: ConceptResources) => (
+            <Card key={conceptResource.concept} className="mb-6">
+              <CardHeader>
+                <CardTitle>{conceptResource.concept}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="video" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="video">Videos</TabsTrigger>
+                    <TabsTrigger value="article">Articles</TabsTrigger>
+                    <TabsTrigger value="research">Research</TabsTrigger>
+                  </TabsList>
+                  {['video', 'article', 'research'].map((type) => (
+                    <TabsContent key={type} value={type}>
+                      <ScrollArea className="h-[400px]">
+                        <div className="space-y-4">
+                          {conceptResource.resources
+                            .filter((resource) => resource.type === type)
+                            .map((resource, index) => (
+                              <Card key={index}>
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-4">
+                                    <div className="mt-1">
+                                      {getResourceIcon(resource.type)}
                                     </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                          </div>
-                        </ScrollArea>
-                      </TabsContent>
-                    ))}
-                  </Tabs>
-                </CardContent>
-              </Card>
-            ))
-          ) : null}
+                                    <div>
+                                      <h3 className="font-semibold mb-2">
+                                        <a
+                                          href={resource.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-600 hover:underline"
+                                        >
+                                          {resource.title}
+                                        </a>
+                                      </h3>
+                                      <p className="text-gray-600">
+                                        {resource.description}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </BackgroundGradient>
