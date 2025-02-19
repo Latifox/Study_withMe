@@ -1,3 +1,5 @@
+
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,72 +15,34 @@ import {
   Quote,
   Network,
   ClipboardList,
-  ChevronDown
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import AIProfessorLoading from "@/components/AIProfessorLoading";
+import HighlightsLoading from "@/components/HighlightsLoading";
 
-const LectureCard = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <Card className={cn(
-    "bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg",
-    "transition-all duration-300 hover:bg-white/30",
-    className
-  )}>
-    {children}
-  </Card>
-);
-
-const StylizedCardTitle = ({ icon: Icon, title, isOpen }: { icon: React.ElementType, title: string, isOpen: boolean }) => (
-  <div className="flex items-center gap-3 cursor-pointer w-full">
-    <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-      <Icon className="w-5 h-5 text-black" />
-    </div>
-    <h3 className="text-lg font-bold text-black flex-1">
-      {title}
-    </h3>
-    <ChevronDown className={cn(
-      "w-5 h-5 text-black transition-transform duration-200",
-      isOpen && "transform rotate-180"
-    )} />
-  </div>
-);
-
-interface CollapsibleCardProps {
+interface Section {
   icon: React.ElementType;
   title: string;
   content: string;
+  key: string;
 }
 
-const CollapsibleCard = ({ icon, title, content }: CollapsibleCardProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <LectureCard>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="w-full">
-          <CardHeader>
-            <StylizedCardTitle icon={icon} title={title} isOpen={isOpen} />
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
-            <ReactMarkdown>{content || ''}</ReactMarkdown>
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
-    </LectureCard>
-  );
-};
+const sections: Section[] = [
+  { icon: LayoutTemplate, title: "Structure", content: "", key: "structure" },
+  { icon: Brain, title: "Key Concepts", content: "", key: "keyConcepts" },
+  { icon: Lightbulb, title: "Main Ideas", content: "", key: "mainIdeas" },
+  { icon: Quote, title: "Important Quotes", content: "", key: "importantQuotes" },
+  { icon: Network, title: "Relationships", content: "", key: "relationships" },
+  { icon: ClipboardList, title: "Supporting Evidence", content: "", key: "supportingEvidence" }
+];
 
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [selectedSection, setSelectedSection] = useState<string>("structure");
 
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
@@ -94,7 +58,7 @@ const LectureSummary = () => {
     },
   });
 
-  const { data: summary, isLoading, error } = useQuery({
+  const { data: summary, isLoading } = useQuery({
     queryKey: ["lecture-summary", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
@@ -129,30 +93,16 @@ const LectureSummary = () => {
     }
   });
 
-  if (isLoading && lectureId && courseId) {
-    return <AIProfessorLoading 
-      lectureId={parseInt(lectureId)} 
-      courseId={parseInt(courseId)} 
-    />;
+  if (isLoading) {
+    return <HighlightsLoading />;
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="flex flex-col justify-center items-center h-[60vh] space-y-4">
-          <p className="text-destructive">{error.message}</p>
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Lectures
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const sectionsWithContent = sections.map(section => ({
+    ...section,
+    content: summary?.[section.key] || ''
+  }));
+
+  const selectedSectionContent = sectionsWithContent.find(s => s.key === selectedSection);
 
   return (
     <BackgroundGradient>
@@ -167,7 +117,7 @@ const LectureSummary = () => {
             Back to Lectures
           </Button>
           <Button
-            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary/fullversion`)}
+            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
             className="gap-2"
           >
             <ExternalLink className="w-4 h-4" />
@@ -175,51 +125,57 @@ const LectureSummary = () => {
           </Button>
         </div>
 
-        <div className="grid gap-6">
-          <LectureCard>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-                  <BookOpen className="w-6 h-6 text-black" />
-                </div>
-                <h2 className="text-2xl font-bold text-black">
-                  {lecture?.title} - Summary
-                </h2>
-              </CardTitle>
-            </CardHeader>
-          </LectureCard>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Left Column - Section List */}
+          <div className="w-full md:w-1/3 space-y-4">
+            <Card className="bg-white/20 backdrop-blur-sm border border-white/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
+                    <BookOpen className="w-6 h-6 text-black" />
+                  </div>
+                  <h2 className="text-xl font-bold text-black">
+                    {lecture?.title} - Highlights
+                  </h2>
+                </CardTitle>
+              </CardHeader>
+            </Card>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <CollapsibleCard
-              icon={LayoutTemplate}
-              title="Structure"
-              content={summary?.structure || ''}
-            />
-            <CollapsibleCard
-              icon={Brain}
-              title="Key Concepts"
-              content={summary?.keyConcepts || ''}
-            />
-            <CollapsibleCard
-              icon={Lightbulb}
-              title="Main Ideas"
-              content={summary?.mainIdeas || ''}
-            />
-            <CollapsibleCard
-              icon={Quote}
-              title="Important Quotes"
-              content={summary?.importantQuotes || ''}
-            />
-            <CollapsibleCard
-              icon={Network}
-              title="Relationships and Connections"
-              content={summary?.relationships || ''}
-            />
-            <CollapsibleCard
-              icon={ClipboardList}
-              title="Supporting Evidence & Examples"
-              content={summary?.supportingEvidence || ''}
-            />
+            {sectionsWithContent.map((section) => (
+              <Card
+                key={section.key}
+                className={cn(
+                  "bg-white/20 backdrop-blur-sm border border-white/30 cursor-pointer transition-all duration-200",
+                  selectedSection === section.key ? "ring-2 ring-purple-500" : "hover:bg-white/30"
+                )}
+                onClick={() => setSelectedSection(section.key)}
+              >
+                <div className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
+                      <section.icon className="w-5 h-5 text-black" />
+                    </div>
+                    <h3 className="text-lg font-bold text-black">
+                      {section.title}
+                    </h3>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Right Column - Content Display */}
+          <div className="w-full md:w-2/3">
+            <Card className="bg-white/20 backdrop-blur-sm border border-white/30">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-black">
+                  {selectedSectionContent?.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
+                <ReactMarkdown>{selectedSectionContent?.content || ''}</ReactMarkdown>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

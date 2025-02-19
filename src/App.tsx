@@ -39,9 +39,9 @@ const App = () => (
             <Route path="/invited-courses" element={<InvitedCourses />} />
             <Route path="/course/:courseId" element={<Course />} />
             <Route path="/course/:courseId/lecture/:lectureId/chat" element={<LectureChat />} />
-            <Route path="/course/:courseId/lecture/:lectureId/summary" element={<LectureSummary />} />
+            <Route path="/course/:courseId/lecture/:lectureId/highlights" element={<LectureSummary />} />
             <Route 
-              path="/course/:courseId/lecture/:lectureId/summary/fullversion" 
+              path="/course/:courseId/lecture/:lectureId/highlights/fullversion" 
               element={<LectureSummaryFull />} 
             />
             <Route 
