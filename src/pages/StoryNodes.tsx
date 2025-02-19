@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, BookOpen, Sparkles, Flame } from "lucide-react";
@@ -184,7 +185,7 @@ const StoryNodes = () => {
             className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-105"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Course
+            Back to Lectures
           </Button>
 
           <div className="flex items-center gap-4">
