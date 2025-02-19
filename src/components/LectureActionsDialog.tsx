@@ -24,8 +24,8 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
     onClose();
   };
 
-  const handleSummaryAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/summary`);
+  const handleHighlightsAction = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/highlights`);
     onClose();
   };
 
@@ -80,7 +80,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             Story Mode
           </Button>
           <Button
-            onClick={handleSummaryAction}
+            onClick={handleHighlightsAction}
             className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
             size="lg"
           >
