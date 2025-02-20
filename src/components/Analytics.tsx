@@ -336,50 +336,54 @@ const Analytics = () => {
               </div>
               
               <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <div className="flex gap-2">
-                  <div className="w-12 grid grid-rows-7 gap-1 text-xs text-white/40 mt-7">
+                <div className="flex gap-4">
+                  <div className="flex flex-col justify-between text-xs text-white/40 py-1">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="h-4 leading-4">{day}</div>
+                      <div key={day} className="h-4">{day}</div>
                     ))}
                   </div>
                   
                   <div className="relative flex-1">
-                    <div className="grid grid-cols-[repeat(52,1fr)] gap-1 pb-8">
-                      {weeks.map((weekStart, weekIndex) => (
-                        <div key={weekIndex} className="grid grid-rows-7 gap-1">
-                          {Array.from({ length: 7 }).map((_, dayIndex) => {
-                            const date = addDays(weekStart, dayIndex);
-                            const dateStr = startOfDay(date).toISOString();
-                            const score = heatmapData.get(dateStr) || 0;
-                            
-                            return (
-                              <TooltipProvider key={`${weekIndex}-${dayIndex}`}>
-                                <TooltipUI>
-                                  <TooltipTrigger>
-                                    <div 
-                                      className={cn(
-                                        "w-4 h-4 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
-                                        getHeatmapColor(score)
-                                      )}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="font-medium">
-                                      {format(date, 'MMM dd, yyyy')}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {score} XP earned
-                                    </p>
-                                  </TooltipContent>
-                                </TooltipUI>
-                              </TooltipProvider>
-                            );
-                          })}
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-[repeat(52,1fr)] auto-rows-fr gap-1">
+                      {weeks.map((weekStart, weekIndex) => {
+                        const weekDays = Array.from({ length: 7 }).map((_, dayIndex) => {
+                          const date = addDays(weekStart, dayIndex);
+                          const dateStr = startOfDay(date).toISOString();
+                          const score = heatmapData.get(dateStr) || 0;
+                          
+                          return (
+                            <TooltipProvider key={dateStr}>
+                              <TooltipUI>
+                                <TooltipTrigger>
+                                  <div 
+                                    className={cn(
+                                      "w-4 h-4 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                      getHeatmapColor(score)
+                                    )}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">
+                                    {format(date, 'MMM dd, yyyy')}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {score} XP earned
+                                  </p>
+                                </TooltipContent>
+                              </TooltipUI>
+                            </TooltipProvider>
+                          );
+                        });
+
+                        return (
+                          <div key={weekIndex} className="grid grid-rows-7 gap-1">
+                            {weekDays}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    <div className="absolute left-0 right-0 bottom-0">
+                    <div className="absolute left-0 right-0 bottom-[-24px]">
                       <div className="relative h-6">
                         {monthPositions.map(({ month, position }) => (
                           <div
