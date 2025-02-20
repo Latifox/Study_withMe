@@ -151,8 +151,10 @@ const Analytics = () => {
     const dateScores = new Map();
     userProgress.progressData.forEach(progress => {
       if (progress.completed_at) {
-        const dateKey = startOfDay(new Date(progress.completed_at)).toISOString();
-        dateScores.set(dateKey, (dateScores.get(dateKey) || 0) + (progress.score || 0));
+        const date = new Date(progress.completed_at);
+        const dateKey = startOfDay(date).toISOString();
+        const currentScore = dateScores.get(dateKey) || 0;
+        dateScores.set(dateKey, currentScore + (progress.score || 0));
       }
     });
     
@@ -188,7 +190,8 @@ const Analytics = () => {
     </div>;
   }
 
-  return <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/30 via-purple-500/30 to-indigo-600/30"></div>
         <div className="absolute inset-0">
@@ -334,54 +337,48 @@ const Analytics = () => {
               
               <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
                 <div className="flex gap-2">
-                  {/* Day labels column */}
                   <div className="w-12 grid grid-rows-7 gap-1 text-xs text-white/40 mt-7">
-                    {weekDays.map((day) => (
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                       <div key={day} className="h-4 leading-4">{day}</div>
                     ))}
                   </div>
                   
-                  {/* Main grid of squares */}
                   <div className="relative flex-1">
                     <div className="grid grid-cols-[repeat(52,1fr)] gap-1 pb-8">
-                      {Array.from({ length: 52 }).map((_, weekIndex) => {
-                        const currentWeek = addWeeks(startDate, weekIndex);
-                        return (
-                          <div key={weekIndex} className="grid grid-rows-7 gap-1">
-                            {Array.from({ length: 7 }).map((_, dayIndex) => {
-                              const date = addDays(currentWeek, dayIndex);
-                              const dateStr = startOfDay(date).toISOString();
-                              const score = heatmapData.get(dateStr) || 0;
-                              
-                              return (
-                                <TooltipProvider key={`${weekIndex}-${dayIndex}`}>
-                                  <TooltipUI>
-                                    <TooltipTrigger>
-                                      <div 
-                                        className={cn(
-                                          "w-4 h-4 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
-                                          getHeatmapColor(score)
-                                        )}
-                                      />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="font-medium">
-                                        {format(date, 'MMM dd, yyyy')}
-                                      </p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {score} XP earned
-                                      </p>
-                                    </TooltipContent>
-                                  </TooltipUI>
-                                </TooltipProvider>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
+                      {weeks.map((weekStart, weekIndex) => (
+                        <div key={weekIndex} className="grid grid-rows-7 gap-1">
+                          {Array.from({ length: 7 }).map((_, dayIndex) => {
+                            const date = addDays(weekStart, dayIndex);
+                            const dateStr = startOfDay(date).toISOString();
+                            const score = heatmapData.get(dateStr) || 0;
+                            
+                            return (
+                              <TooltipProvider key={`${weekIndex}-${dayIndex}`}>
+                                <TooltipUI>
+                                  <TooltipTrigger>
+                                    <div 
+                                      className={cn(
+                                        "w-4 h-4 rounded-sm transition-all duration-300 hover:transform hover:scale-150",
+                                        getHeatmapColor(score)
+                                      )}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="font-medium">
+                                      {format(date, 'MMM dd, yyyy')}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {score} XP earned
+                                    </p>
+                                  </TooltipContent>
+                                </TooltipUI>
+                              </TooltipProvider>
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Month labels */}
                     <div className="absolute left-0 right-0 bottom-0">
                       <div className="relative h-6">
                         {monthPositions.map(({ month, position }) => (
@@ -404,7 +401,8 @@ const Analytics = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default Analytics;
