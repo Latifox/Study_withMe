@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,10 +17,8 @@ const Course = () => {
   const [selectedLectureId, setSelectedLectureId] = useState<number | null>(null);
   const [showAIConfig, setShowAIConfig] = useState<number | null>(null);
   
-  // Validate courseId is a valid number
   const parsedCourseId = courseId ? parseInt(courseId) : null;
   
-  // Return to home if courseId is invalid
   if (!parsedCourseId || isNaN(parsedCourseId)) {
     navigate('/');
     return null;
@@ -53,14 +50,12 @@ const Course = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 1000, // Refetch every second while the component is mounted
+    refetchInterval: 1000,
   });
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Bold animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-        {/* Animated mesh pattern */}
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -72,23 +67,20 @@ const Course = () => {
           </svg>
         </div>
         
-        {/* Animated orbs */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
         
-        {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
       </div>
 
-      {/* Content */}
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
             <Button 
               variant="outline" 
               onClick={() => navigate('/uploaded-courses')}
-              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Courses
