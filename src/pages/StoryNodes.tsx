@@ -182,7 +182,7 @@ const StoryNodes = () => {
           <Button 
             variant="ghost" 
             onClick={handleBack} 
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-105"
+            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white transition-all duration-300 hover:scale-105"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Lectures
