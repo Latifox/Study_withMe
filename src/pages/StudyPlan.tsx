@@ -193,7 +193,7 @@ const StudyPlan = () => {
             <Button
               variant="ghost"
               onClick={() => navigate(`/course/${courseId}`)}
-              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Lectures
