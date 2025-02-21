@@ -93,9 +93,24 @@ const Resources = () => {
                 <CardContent>
                   <Tabs defaultValue="video" className="w-full">
                     <TabsList className="bg-white/10">
-                      <TabsTrigger value="video" className="data-[state=active]:bg-white/20 text-black border border-black">Videos</TabsTrigger>
-                      <TabsTrigger value="article" className="data-[state=active]:bg-white/20 text-black border border-black">Articles</TabsTrigger>
-                      <TabsTrigger value="research" className="data-[state=active]:bg-white/20 text-black border border-black">Research</TabsTrigger>
+                      <TabsTrigger 
+                        value="video" 
+                        className="data-[state=active]:bg-white/40 data-[state=active]:border-2 text-black border border-black transition-all duration-200"
+                      >
+                        Videos
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="article" 
+                        className="data-[state=active]:bg-white/40 data-[state=active]:border-2 text-black border border-black transition-all duration-200"
+                      >
+                        Articles
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="research" 
+                        className="data-[state=active]:bg-white/40 data-[state=active]:border-2 text-black border border-black transition-all duration-200"
+                      >
+                        Research
+                      </TabsTrigger>
                     </TabsList>
                     {['video', 'article', 'research'].map((type) => (
                       <TabsContent key={type} value={type}>
