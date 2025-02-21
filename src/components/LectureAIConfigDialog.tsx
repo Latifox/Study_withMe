@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -158,15 +159,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto backdrop-blur-md bg-white/10 border border-white/20">
+      <DialogContent className="sm:max-w-[425px] bg-slate-900/95 backdrop-blur-md border-slate-800">
         <DialogHeader>
-          <DialogTitle className="text-black font-bold">Configure AI Settings</DialogTitle>
+          <DialogTitle className="text-white">Configure AI Settings</DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
             <div className="flex justify-between">
-              <Label className="text-black">Temperature</Label>
-              <span className="text-sm text-black/80">{temperature[0]}</span>
+              <Label className="text-white">Temperature</Label>
+              <span className="text-sm text-white/80">{temperature[0]}</span>
             </div>
             <Slider
               value={temperature}
@@ -175,15 +176,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
               step={0.1}
               className="w-full"
             />
-            <p className="text-sm text-black/70">
+            <p className="text-sm text-white/70">
               Controls randomness in responses. Higher values make output more creative but less focused.
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between">
-              <Label className="text-black">Creativity Level</Label>
-              <span className="text-sm text-black/80">{creativity[0]}</span>
+              <Label className="text-white">Creativity Level</Label>
+              <span className="text-sm text-white/80">{creativity[0]}</span>
             </div>
             <Slider
               value={creativity}
@@ -192,15 +193,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
               step={0.1}
               className="w-full"
             />
-            <p className="text-sm text-black/70">
+            <p className="text-sm text-white/70">
               Balances between creative and analytical responses.
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between">
-              <Label className="text-black">Detail Level</Label>
-              <span className="text-sm text-black/80">{detailLevel[0]}</span>
+              <Label className="text-white">Detail Level</Label>
+              <span className="text-sm text-white/80">{detailLevel[0]}</span>
             </div>
             <Slider
               value={detailLevel}
@@ -209,40 +210,53 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
               step={0.1}
               className="w-full"
             />
-            <p className="text-sm text-black/70">
+            <p className="text-sm text-white/70">
               Controls the depth and length of AI responses.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-black">Custom Instructions</Label>
+            <Label className="text-white">Custom Instructions</Label>
             <Textarea
               placeholder="Enter any specific instructions or requirements for content generation"
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
-              className="min-h-[100px] bg-white/5 border-white/20 text-black placeholder:text-black/50"
+              className="min-h-[100px] bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
             />
-            <p className="text-sm text-black/70">
+            <p className="text-sm text-white/70">
               Specify any particular focus areas or special requirements for the content generation.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-black">Content Language (Optional)</Label>
+            <Label className="text-white">Content Language (Optional)</Label>
             <Input
               placeholder="Enter target language (e.g., English, Spanish, French)"
               value={contentLanguage}
               onChange={(e) => setContentLanguage(e.target.value)}
-              className="bg-white/5 border-white/20 text-black placeholder:text-black/50"
+              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
             />
-            <p className="text-sm text-black/70">
+            <p className="text-sm text-white/70">
               Leave empty to use the original lecture language.
             </p>
           </div>
 
-          <Button onClick={handleSave} disabled={isSaving} className="w-full bg-black/10 hover:bg-black/20 text-black border border-black/20">
-            {isSaving ? "Regenerating Content..." : "Save Configuration"}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              className="bg-transparent text-white border-slate-700 hover:bg-slate-800"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isSaving ? "Regenerating Content..." : "Save Configuration"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -250,3 +264,4 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 };
 
 export default LectureAIConfigDialog;
+
