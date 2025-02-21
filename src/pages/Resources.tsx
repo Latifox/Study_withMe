@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Youtube, FileText, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Skeleton } from "@/components/ui/skeleton";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import ResourcesLoading from "@/components/ResourcesLoading";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -57,13 +57,17 @@ const Resources = () => {
   const getResourceIcon = (type: Resource['type']) => {
     switch (type) {
       case 'video':
-        return <Youtube className="w-4 h-4" />;
+        return <Youtube className="w-4 h-4 text-white" />;
       case 'article':
-        return <FileText className="w-4 h-4" />;
+        return <FileText className="w-4 h-4 text-white" />;
       case 'research':
-        return <GraduationCap className="w-4 h-4" />;
+        return <GraduationCap className="w-4 h-4 text-white" />;
     }
   };
+
+  if (isLoading) {
+    return <ResourcesLoading />;
+  }
 
   return (
     <div className="relative min-h-screen">
@@ -74,44 +78,24 @@ const Resources = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate(`/course/${courseId}`)}
-                className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
+                className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white text-white"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Lectures
               </Button>
             </div>
 
-            {isLoading ? (
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i}>
-                    <CardHeader>
-                      <Skeleton className="h-8 w-[250px]" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <Skeleton className="h-10 w-[200px]" />
-                        <div className="space-y-3">
-                          {[1, 2, 3].map((j) => (
-                            <Skeleton key={j} className="h-[100px] w-full" />
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : resources?.map((conceptResource: ConceptResources) => (
-              <Card key={conceptResource.concept} className="mb-6">
+            {resources?.map((conceptResource: ConceptResources) => (
+              <Card key={conceptResource.concept} className="mb-6 group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
                 <CardHeader>
-                  <CardTitle>{conceptResource.concept}</CardTitle>
+                  <CardTitle className="text-white">{conceptResource.concept}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="video" className="w-full">
-                    <TabsList>
-                      <TabsTrigger value="video">Videos</TabsTrigger>
-                      <TabsTrigger value="article">Articles</TabsTrigger>
-                      <TabsTrigger value="research">Research</TabsTrigger>
+                    <TabsList className="bg-white/10">
+                      <TabsTrigger value="video" className="data-[state=active]:bg-white/20 text-white">Videos</TabsTrigger>
+                      <TabsTrigger value="article" className="data-[state=active]:bg-white/20 text-white">Articles</TabsTrigger>
+                      <TabsTrigger value="research" className="data-[state=active]:bg-white/20 text-white">Research</TabsTrigger>
                     </TabsList>
                     {['video', 'article', 'research'].map((type) => (
                       <TabsContent key={type} value={type}>
@@ -120,10 +104,10 @@ const Resources = () => {
                             {conceptResource.resources
                               .filter((resource) => resource.type === type)
                               .map((resource, index) => (
-                                <Card key={index}>
+                                <Card key={index} className="group hover:shadow-lg transition-all duration-300 bg-white/5 backdrop-blur-sm border-white/10">
                                   <CardContent className="p-4">
                                     <div className="flex items-start gap-4">
-                                      <div className="mt-1">
+                                      <div className="mt-1 p-2 bg-white/10 rounded-full">
                                         {getResourceIcon(resource.type)}
                                       </div>
                                       <div>
@@ -132,12 +116,12 @@ const Resources = () => {
                                             href={resource.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:underline"
+                                            className="text-white hover:text-blue-200 transition-colors"
                                           >
                                             {resource.title}
                                           </a>
                                         </h3>
-                                        <p className="text-gray-600">
+                                        <p className="text-white/60">
                                           {resource.description}
                                         </p>
                                       </div>
