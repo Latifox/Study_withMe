@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,7 +30,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [contentLanguage, setContentLanguage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch existing configuration
   const { data: config } = useQuery({
     queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
@@ -50,7 +48,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     enabled: !!lectureId && isOpen,
   });
 
-  // Update local state when config is fetched
   useEffect(() => {
     if (config?.config) {
       setTemperature([config.config.temperature]);
@@ -63,7 +60,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
   const regenerateContent = async () => {
     try {
-      // First, get the lecture content
       const { data: lecture, error: lectureError } = await supabase
         .from('lectures')
         .select('content')
@@ -72,7 +68,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (lectureError) throw lectureError;
 
-      // Generate new segments structure
       const { error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
         body: {
           lectureId: lectureId,
@@ -82,7 +77,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (segmentError) throw segmentError;
 
-      // Get the newly created segments
       const { data: segments, error: fetchError } = await supabase
         .from('lecture_segments')
         .select('sequence_number')
@@ -90,7 +84,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (fetchError) throw fetchError;
 
-      // Generate content for each segment
       const contentPromises = segments.map(segment =>
         supabase.functions.invoke('generate-segment-content', {
           body: {
@@ -121,7 +114,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     try {
       setIsSaving(true);
 
-      // Save AI config
       const { error: configError } = await supabase
         .from("lecture_ai_configs")
         .upsert(
@@ -140,10 +132,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (configError) throw configError;
 
-      // Regenerate content with new settings
       await regenerateContent();
 
-      // Invalidate all relevant queries
       await queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       await queryClient.invalidateQueries({ queryKey: ["segment-content", lectureId] });
       await queryClient.invalidateQueries({ queryKey: ["story-content", lectureId] });
@@ -168,15 +158,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto backdrop-blur-md bg-white/10 border border-white/20">
         <DialogHeader>
-          <DialogTitle>Configure AI Settings</DialogTitle>
+          <DialogTitle className="text-black font-bold">Configure AI Settings</DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
             <div className="flex justify-between">
-              <Label>Temperature</Label>
-              <span className="text-sm text-muted-foreground">{temperature[0]}</span>
+              <Label className="text-black">Temperature</Label>
+              <span className="text-sm text-black/80">{temperature[0]}</span>
             </div>
             <Slider
               value={temperature}
@@ -185,15 +175,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
               step={0.1}
               className="w-full"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-black/70">
               Controls randomness in responses. Higher values make output more creative but less focused.
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between">
-              <Label>Creativity Level</Label>
-              <span className="text-sm text-muted-foreground">{creativity[0]}</span>
+              <Label className="text-black">Creativity Level</Label>
+              <span className="text-sm text-black/80">{creativity[0]}</span>
             </div>
             <Slider
               value={creativity}
@@ -202,15 +192,15 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
               step={0.1}
               className="w-full"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-black/70">
               Balances between creative and analytical responses.
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between">
-              <Label>Detail Level</Label>
-              <span className="text-sm text-muted-foreground">{detailLevel[0]}</span>
+              <Label className="text-black">Detail Level</Label>
+              <span className="text-sm text-black/80">{detailLevel[0]}</span>
             </div>
             <Slider
               value={detailLevel}
@@ -219,37 +209,38 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
               step={0.1}
               className="w-full"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-black/70">
               Controls the depth and length of AI responses.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Custom Instructions</Label>
+            <Label className="text-black">Custom Instructions</Label>
             <Textarea
               placeholder="Enter any specific instructions or requirements for content generation"
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
-              className="min-h-[100px]"
+              className="min-h-[100px] bg-white/5 border-white/20 text-black placeholder:text-black/50"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-black/70">
               Specify any particular focus areas or special requirements for the content generation.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Content Language (Optional)</Label>
+            <Label className="text-black">Content Language (Optional)</Label>
             <Input
               placeholder="Enter target language (e.g., English, Spanish, French)"
               value={contentLanguage}
               onChange={(e) => setContentLanguage(e.target.value)}
+              className="bg-white/5 border-white/20 text-black placeholder:text-black/50"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-black/70">
               Leave empty to use the original lecture language.
             </p>
           </div>
 
-          <Button onClick={handleSave} disabled={isSaving} className="w-full">
+          <Button onClick={handleSave} disabled={isSaving} className="w-full bg-black/10 hover:bg-black/20 text-black border border-black/20">
             {isSaving ? "Regenerating Content..." : "Save Configuration"}
           </Button>
         </div>
