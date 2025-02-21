@@ -78,7 +78,7 @@ const Resources = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate(`/course/${courseId}`)}
-                className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white text-white"
+                className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Lectures
