@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
+import { useToast } from "@/hooks/use-toast";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -26,6 +27,7 @@ interface ConceptResources {
 const Resources = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: lecture } = useQuery({
     queryKey: ['lecture', lectureId],
@@ -36,7 +38,15 @@ const Resources = () => {
         .eq('id', parseInt(lectureId as string))
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching lecture:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch lecture content. Please try again.",
+          variant: "destructive",
+        });
+        throw error;
+      }
       return data;
     }
   });
@@ -44,11 +54,26 @@ const Resources = () => {
   const { data: resources, isLoading } = useQuery({
     queryKey: ['lecture-resources', lectureId],
     queryFn: async () => {
+      console.log('Fetching resources for lecture content:', lecture?.content?.substring(0, 100));
+      
       const { data, error } = await supabase.functions.invoke('generate-resources', {
         body: { lectureContent: lecture?.content },
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error generating resources:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate resources. Please try again.",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error('No data returned from generate-resources');
+      }
+      
       return data;
     },
     enabled: !!lecture?.content,
@@ -160,4 +185,3 @@ const Resources = () => {
 };
 
 export default Resources;
-
