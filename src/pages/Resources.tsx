@@ -57,11 +57,11 @@ const Resources = () => {
   const getResourceIcon = (type: Resource['type']) => {
     switch (type) {
       case 'video':
-        return <Youtube className="w-4 h-4 text-white" />;
+        return <Youtube className="w-4 h-4 text-black" />;
       case 'article':
-        return <FileText className="w-4 h-4 text-white" />;
+        return <FileText className="w-4 h-4 text-black" />;
       case 'research':
-        return <GraduationCap className="w-4 h-4 text-white" />;
+        return <GraduationCap className="w-4 h-4 text-black" />;
     }
   };
 
@@ -88,14 +88,14 @@ const Resources = () => {
             {resources?.map((conceptResource: ConceptResources) => (
               <Card key={conceptResource.concept} className="mb-6 group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
                 <CardHeader>
-                  <CardTitle className="text-white">{conceptResource.concept}</CardTitle>
+                  <CardTitle className="text-black">{conceptResource.concept}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="video" className="w-full">
                     <TabsList className="bg-white/10">
-                      <TabsTrigger value="video" className="data-[state=active]:bg-white/20 text-white">Videos</TabsTrigger>
-                      <TabsTrigger value="article" className="data-[state=active]:bg-white/20 text-white">Articles</TabsTrigger>
-                      <TabsTrigger value="research" className="data-[state=active]:bg-white/20 text-white">Research</TabsTrigger>
+                      <TabsTrigger value="video" className="data-[state=active]:bg-white/20 text-black">Videos</TabsTrigger>
+                      <TabsTrigger value="article" className="data-[state=active]:bg-white/20 text-black">Articles</TabsTrigger>
+                      <TabsTrigger value="research" className="data-[state=active]:bg-white/20 text-black">Research</TabsTrigger>
                     </TabsList>
                     {['video', 'article', 'research'].map((type) => (
                       <TabsContent key={type} value={type}>
@@ -116,12 +116,12 @@ const Resources = () => {
                                             href={resource.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-white hover:text-blue-200 transition-colors"
+                                            className="text-black hover:text-black/80 transition-colors"
                                           >
                                             {resource.title}
                                           </a>
                                         </h3>
-                                        <p className="text-white/60">
+                                        <p className="text-black/80">
                                           {resource.description}
                                         </p>
                                       </div>
