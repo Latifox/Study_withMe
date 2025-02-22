@@ -9,11 +9,13 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Starting generate-segment-content function');
     const {
       lectureId,
       segmentNumber,
@@ -22,13 +24,13 @@ serve(async (req) => {
       lectureContent
     } = await req.json();
 
+    console.log(`Processing segment ${segmentNumber} for lecture ${lectureId}`);
+    console.log('Segment title:', segmentTitle);
+    console.log('Segment description:', segmentDescription);
+
     if (!lectureId || !segmentNumber || !segmentTitle || !segmentDescription || !lectureContent) {
       throw new Error('Missing required parameters');
     }
-
-    console.log(`Generating content for segment ${segmentNumber} of lecture ${lectureId}`);
-    console.log('Segment title:', segmentTitle);
-    console.log('Segment description:', segmentDescription);
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
@@ -36,6 +38,7 @@ serve(async (req) => {
     }
 
     // Generate the theory slides
+    console.log('Generating theory slides...');
     const slidesResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -71,10 +74,22 @@ serve(async (req) => {
       }),
     });
 
+    if (!slidesResponse.ok) {
+      const errorText = await slidesResponse.text();
+      console.error('OpenAI API error (slides):', errorText);
+      throw new Error(`OpenAI API error: ${slidesResponse.status} ${errorText}`);
+    }
+
     const slidesData = await slidesResponse.json();
+    if (!slidesData.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI API (slides)');
+    }
+
+    console.log('Theory slides generated successfully');
     const { slide1, slide2 } = JSON.parse(slidesData.choices[0].message.content);
 
     // Generate the quizzes
+    console.log('Generating quizzes...');
     const quizResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -120,7 +135,18 @@ serve(async (req) => {
       }),
     });
 
+    if (!quizResponse.ok) {
+      const errorText = await quizResponse.text();
+      console.error('OpenAI API error (quiz):', errorText);
+      throw new Error(`OpenAI API error: ${quizResponse.status} ${errorText}`);
+    }
+
     const quizData = await quizResponse.json();
+    if (!quizData.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI API (quiz)');
+    }
+
+    console.log('Quizzes generated successfully');
     const { multipleChoice, trueFalse } = JSON.parse(quizData.choices[0].message.content);
 
     // Create or update the segment content in the database
@@ -129,6 +155,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    console.log('Saving content to database...');
     const { error: upsertError } = await supabaseClient
       .from('segments_content')
       .upsert({
