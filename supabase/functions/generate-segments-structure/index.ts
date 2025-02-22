@@ -1,42 +1,39 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import "https://deno.land/x/xhr@0.1.0/mod.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { lectureId, lectureContent, lectureTitle } = await req.json()
+    const { lectureId, lectureContent, lectureTitle } = await req.json();
 
-    if (!lectureId || !lectureContent) {
-      throw new Error('Missing required parameters')
+    if (!lectureId || !lectureContent || !lectureTitle) {
+      throw new Error('Missing required parameters');
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const supabase = createClient(supabaseUrl!, supabaseKey!)
+    console.log('Received lecture content length:', lectureContent.length);
+    console.log('Lecture title:', lectureTitle);
 
-    console.log('Fetching AI config for lecture:', lectureId)
-    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Fetch AI configuration
-    const { data: aiConfig, error: configError } = await supabase
+    const { data: aiConfig } = await supabase
       .from('lecture_ai_configs')
       .select('*')
       .eq('lecture_id', lectureId)
-      .maybeSingle()
-
-    if (configError) {
-      console.error('Error fetching AI config:', configError)
-    }
+      .maybeSingle();
 
     // Use default values if no config is found
     const config = aiConfig || {
@@ -45,19 +42,21 @@ serve(async (req) => {
       detail_level: 0.6,
       content_language: 'English',
       custom_instructions: ''
+    };
+
+    console.log('Using AI config:', config);
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not found');
     }
 
-    console.log('Using AI config:', config)
+    const systemPrompt = `You are an expert educational content creator. Analyze the lecture content and create a logical structure of segments 
+    in ${config.detail_level > 0.5 ? 'detailed' : 'concise'} format using 
+    ${config.content_language || 'English'} language. 
+    ${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`;
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
-    
-    // Build the system prompt incorporating AI config
-    let systemPrompt = `You are an expert educational content organizer. Create a structured outline for a lecture titled "${lectureTitle}" 
-    in ${config.content_language || 'English'}. Break down the content into 3-5 logical segments. 
-    Be ${config.creativity_level > 0.5 ? 'creative and engaging' : 'focused and analytical'} in your approach. 
-    Provide ${config.detail_level > 0.5 ? 'detailed' : 'concise'} segment descriptions.
-    ${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`
-
+    console.log('Sending request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -71,69 +70,94 @@ serve(async (req) => {
           { role: 'system', content: systemPrompt },
           {
             role: 'user',
-            content: `Based on this lecture content, create a logical segment structure:
-            ${lectureContent.substring(0, 8000)}` // Limit content length
+            content: `Given this lecture titled "${lectureTitle}", create a logical segments structure.
+            
+            Content to analyze:
+            ${lectureContent.substring(0, 8000)}
+            
+            Create a list of segments (3-7 segments). Each segment should contain:
+            1. A clear title focusing on one main concept
+            2. A brief description of what will be covered
+            3. An appropriate sequence number
+            
+            Return ONLY valid JSON without any markdown formatting, following this exact structure:
+            {
+              "segments": [
+                {
+                  "title": "segment title",
+                  "segment_description": "description of what this segment covers",
+                  "sequence_number": 1
+                },
+                ...
+              ]
+            }`
           }
         ],
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+      const error = await response.text();
+      console.error('OpenAI API error:', error);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const aiResponse = await response.json()
-    const segmentText = aiResponse.choices[0].message.content
+    const data = await response.json();
+    console.log('OpenAI response received');
 
-    // Parse the segments from the AI response
-    const segments = []
-    let currentSegment = null
-    const lines = segmentText.split('\n')
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI');
+    }
 
-    for (const line of lines) {
-      const segmentMatch = line.match(/^Segment (\d+):\s*(.+)/)
-      const descriptionMatch = line.match(/^Description:\s*(.+)/)
+    let segments;
+    try {
+      // Parse the generated content, handling potential markdown formatting
+      const jsonStr = data.choices[0].message.content.replace(/```json\n?|\n?```/g, '');
+      segments = JSON.parse(jsonStr);
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      console.log('Raw OpenAI response:', data.choices[0].message.content);
+      throw new Error('Failed to parse segment structure from OpenAI response');
+    }
 
-      if (segmentMatch) {
-        if (currentSegment) segments.push(currentSegment)
-        currentSegment = {
-          sequence_number: parseInt(segmentMatch[1]),
-          title: segmentMatch[2].trim(),
-          segment_description: ''
-        }
-      } else if (descriptionMatch && currentSegment) {
-        currentSegment.segment_description = descriptionMatch[1].trim()
+    console.log('Successfully parsed segments:', segments);
+
+    // Insert segments into the database
+    if (segments?.segments?.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('lecture_segments')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (deleteError) {
+        throw deleteError;
       }
-    }
-    if (currentSegment) segments.push(currentSegment)
 
-    // Save segments to database
-    console.log('Saving segments:', segments)
-    for (const segment of segments) {
       const { error: insertError } = await supabase
         .from('lecture_segments')
-        .insert({
-          lecture_id: lectureId,
-          sequence_number: segment.sequence_number,
-          title: segment.title,
-          segment_description: segment.segment_description
-        })
+        .insert(
+          segments.segments.map((segment: any) => ({
+            lecture_id: lectureId,
+            title: segment.title,
+            segment_description: segment.segment_description,
+            sequence_number: segment.sequence_number,
+          }))
+        );
 
       if (insertError) {
-        console.error('Error inserting segment:', insertError)
-        throw insertError
+        throw insertError;
       }
     }
 
-    return new Response(JSON.stringify({ segments }), {
+    return new Response(JSON.stringify(segments), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
 
   } catch (error) {
-    console.error('Error in generate-segments-structure:', error)
+    console.error('Error in generate-segments-structure:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
   }
-})
+});
