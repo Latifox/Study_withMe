@@ -46,69 +46,10 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         throw contentError;
       }
 
-      // If no content exists yet, trigger content generation
+      // If no content exists yet, wait for content generation
       if (!segmentContent) {
-        console.log('No content found, triggering generation with description:', segment.segment_description);
-        console.log('Full lecture content:', segment.lectures?.content);
-        
-        const { error: generationError } = await supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId: numericLectureId,
-            segmentNumber: sequenceNumber,
-            segmentTitle: segment.title,
-            segmentDescription: segment.segment_description,
-            lectureContent: segment.lectures?.content || ''
-          }
-        });
-
-        if (generationError) {
-          console.error('Error generating content:', generationError);
-          throw generationError;
-        }
-
-        // Fetch the newly generated content
-        const { data: newContent, error: newContentError } = await supabase
-          .from('segments_content')
-          .select('*')
-          .eq('lecture_id', numericLectureId)
-          .eq('sequence_number', sequenceNumber)
-          .maybeSingle();
-
-        if (newContentError) {
-          console.error('Error fetching new content:', newContentError);
-          throw newContentError;
-        }
-
-        if (!newContent) {
-          console.error('Content generation failed - no content returned');
-          throw new Error('Content generation failed');
-        }
-
-        return {
-          segments: [{
-            id: `segment_${sequenceNumber}`,
-            title: segment.title,
-            slides: [
-              { id: 'slide-1', content: newContent.theory_slide_1 },
-              { id: 'slide-2', content: newContent.theory_slide_2 }
-            ],
-            questions: [
-              {
-                type: newContent.quiz_1_type,
-                question: newContent.quiz_1_question,
-                options: newContent.quiz_1_options,
-                correctAnswer: newContent.quiz_1_correct_answer,
-                explanation: newContent.quiz_1_explanation
-              },
-              {
-                type: newContent.quiz_2_type,
-                question: newContent.quiz_2_question,
-                correctAnswer: newContent.quiz_2_correct_answer,
-                explanation: newContent.quiz_2_explanation
-              }
-            ].filter(Boolean)
-          }]
-        };
+        console.log('No content found, waiting for generation...');
+        throw new Error('Content is being generated');
       }
 
       return {
@@ -137,7 +78,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         }]
       };
     },
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 10000),
+    retry: 10, // Increase retries to allow for content generation
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff with 30s max
   });
 };
+

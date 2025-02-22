@@ -121,7 +121,7 @@ export const recreateLecture = async (
 
     // Generate segment structure for the new lecture
     console.log('Generating segments structure...');
-    const { error: structureError } = await supabase.functions.invoke('generate-segments-structure', {
+    const { data: structureResult, error: structureError } = await supabase.functions.invoke('generate-segments-structure', {
       body: {
         lectureId: newLecture.id,
         lectureContent: oldLecture.content,
@@ -136,6 +136,41 @@ export const recreateLecture = async (
     }
 
     console.log('Generated segments structure successfully');
+
+    // Get all segments for the new lecture
+    const { data: segments, error: segmentsError } = await supabase
+      .from('lecture_segments')
+      .select('sequence_number, title, segment_description')
+      .eq('lecture_id', newLecture.id)
+      .order('sequence_number');
+
+    if (segmentsError) {
+      console.error('Error fetching segments:', segmentsError);
+      throw segmentsError;
+    }
+
+    // Generate content for each segment
+    console.log('Generating content for segments...');
+    for (const segment of segments) {
+      console.log(`Generating content for segment ${segment.sequence_number}...`);
+      const { error: contentError } = await supabase.functions.invoke('generate-segment-content', {
+        body: {
+          lectureId: newLecture.id,
+          segmentNumber: segment.sequence_number,
+          segmentTitle: segment.title,
+          segmentDescription: segment.segment_description,
+          lectureContent: oldLecture.content
+        }
+      });
+
+      if (contentError) {
+        console.error(`Error generating content for segment ${segment.sequence_number}:`, contentError);
+        // Continue with other segments even if one fails
+        continue;
+      }
+    }
+
+    console.log('Segment content generation completed');
 
     // Only delete the old lecture after everything else succeeds
     console.log('Deleting old lecture...');
@@ -157,3 +192,4 @@ export const recreateLecture = async (
     throw error;
   }
 };
+
