@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { recreateLecture } from "@/utils/lectureContentUtils";
 import AIConfigSliders from "./AIConfigSliders";
 import AIConfigInputs from "./AIConfigInputs";
+import AIProfessorLoading from "./AIProfessorLoading";
 
 interface LectureAIConfigDialogProps {
   isOpen: boolean;
@@ -30,6 +31,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [contentLanguage, setContentLanguage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showAIProfessor, setShowAIProfessor] = useState(false);
+  const [newLectureId, setNewLectureId] = useState<number | null>(null);
 
   // Fetch existing configuration
   const { data: config } = useQuery({
@@ -75,7 +78,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       console.log('Starting lecture recreation process...');
 
       // Create a new lecture with the updated AI config
-      const newLectureId = await recreateLecture(lectureId, {
+      const newId = await recreateLecture(lectureId, {
         temperature: temperature[0],
         creativity_level: creativity[0],
         detail_level: detailLevel[0],
@@ -84,6 +87,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       });
 
       console.log('Lecture recreation completed successfully');
+      setNewLectureId(newId);
+      setShowAIProfessor(true);
 
       // First invalidate and refetch the mindmap structure
       await queryClient.invalidateQueries({ queryKey: ["lectures"] });
@@ -94,11 +99,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         refetchType: "none" // Don't refetch immediately to show loading state
       });
 
-      toast({
-        title: "Success",
-        description: "AI configuration saved and content regeneration started",
-      });
-
       onClose();
     } catch (error) {
       console.error("Error in handleSave:", error);
@@ -107,11 +107,16 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         description: error instanceof Error ? error.message : "Failed to save configuration and regenerate content",
         variant: "destructive",
       });
+      setShowAIProfessor(false);
     } finally {
       setIsSaving(false);
       setIsGenerating(false);
     }
   };
+
+  if (showAIProfessor && newLectureId) {
+    return <AIProfessorLoading lectureId={newLectureId} courseId={parseInt(window.location.pathname.split('/')[2])} />;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
