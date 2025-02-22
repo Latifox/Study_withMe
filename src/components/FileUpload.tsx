@@ -93,7 +93,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
         body: {
           lectureId: lectureData.id,
-          lectureContent: extractionData.content
+          lectureContent: extractionData.content  // Now passing the content properly
         }
       });
 
@@ -226,4 +226,3 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 };
 
 export default FileUpload;
-
