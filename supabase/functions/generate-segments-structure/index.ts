@@ -39,43 +39,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert in organizing educational content. Your task is to break down lecture content into logical segments, each with a HIGHLY SPECIFIC and DETAILED description of what should be covered.
+            content: `Break down the lecture content into 4-5 logical segments. For each segment:
+1. Create a clear title (max 10 words)
+2. Write a brief description (max 2 sentences)
 
-CRITICAL REQUIREMENTS:
-1. For each segment:
-   - Create a clear, descriptive title that precisely indicates the specific topic
-   - Write a DETAILED description that:
-     * Lists SPECIFIC concepts, theories, or examples that MUST be covered
-     * Clearly defines the SCOPE and BOUNDARIES of the content
-     * Identifies any prerequisite knowledge needed
-     * Provides clear guidance on what should NOT be included
-     * Suggests specific real-world applications or examples
-   - Descriptions should be 3-4 sentences long
-   - NO GENERIC descriptions allowed
-   - NO OVERLAP between segments
-
-2. Structure Guidelines:
-   - Generate 4-6 segments total
-   - Each segment must cover DISTINCT topics
-   - Order segments logically from foundational to advanced concepts
-   - Ensure natural progression of complexity
-
-3. Language and Style:
-   - Use the SAME LANGUAGE as the input content
-   - Be specific and concrete, avoid vague terms
-   - Use precise technical terminology when appropriate
-
-4. Content Focus:
-   - Each segment should have a SINGLE clear focus
-   - Explicitly state what makes this segment different from others
-   - Highlight unique aspects that should be emphasized
-
-IMPORTANT: Return ONLY a JSON object with this structure:
+Return ONLY a JSON object:
 {
   "segments": [
     {
-      "title": "Specific, focused topic title",
-      "description": "Detailed, concrete description with specific concepts and boundaries"
+      "title": "string",
+      "description": "string"
     }
   ]
 }`
