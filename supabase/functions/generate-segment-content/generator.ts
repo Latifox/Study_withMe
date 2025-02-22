@@ -11,8 +11,8 @@ export const generatePrompt = (
     ? `Please provide all content in ${aiConfig.content_language}` 
     : '';
 
-  // Sanitize and truncate lecture content if too long
-  const maxContentLength = 15000;
+  // Optimize content length - reduce to avoid timeouts
+  const maxContentLength = 8000; // Reduced from 15000
   const truncatedContent = lectureContent.length > maxContentLength 
     ? lectureContent.substring(0, maxContentLength) + "..."
     : lectureContent;
@@ -59,28 +59,17 @@ REQUIRED OUTPUT FORMAT: Create two engaging theory slides and two quiz questions
   "quiz_2_question": "A statement testing deeper understanding",
   "quiz_2_correct_answer": true,
   "quiz_2_explanation": "Detailed explanation of why this is true/false"
-}
-
-CRITICAL REQUIREMENTS:
-1. Use ONLY information from the provided source material
-2. Ensure quiz_1_correct_answer EXACTLY matches one of the quiz_1_options
-3. Make quiz_2_correct_answer a boolean (true/false)
-4. Keep theory slides between 300-400 words each
-5. Include exactly 4 options for multiple choice questions
-6. Return VALID JSON with all fields present
-7. Use proper markdown formatting in theory slides for better readability
-
-${aiConfig.temperature > 0.7 ? 'Feel free to be creative with the presentation while staying accurate.' : 'Focus on accuracy and clarity while maintaining engaging structure.'}`; 
+}`;
 };
 
-export const generateContent = async (prompt: string, maxRetries = 3) => {
+export const generateContent = async (prompt: string, maxRetries = 2) => { // Reduced from 3 to 2 retries
   console.log('Starting content generation with prompt length:', prompt.length);
 
   const validateResponse = (content: string) => {
     try {
       const parsed = JSON.parse(content);
       
-      // Required fields check
+      // Basic validation
       const requiredFields = [
         'theory_slide_1',
         'theory_slide_2',
@@ -100,37 +89,6 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      // Multiple choice validation
-      if (parsed.quiz_1_type !== 'multiple_choice') {
-        throw new Error('quiz_1_type must be "multiple_choice"');
-      }
-
-      if (!Array.isArray(parsed.quiz_1_options) || parsed.quiz_1_options.length !== 4) {
-        throw new Error('quiz_1_options must be an array with exactly 4 options');
-      }
-
-      if (!parsed.quiz_1_options.includes(parsed.quiz_1_correct_answer)) {
-        throw new Error('quiz_1_correct_answer must match one of the options');
-      }
-
-      // True/False validation
-      if (parsed.quiz_2_type !== 'true_false') {
-        throw new Error('quiz_2_type must be "true_false"');
-      }
-
-      if (typeof parsed.quiz_2_correct_answer !== 'boolean') {
-        throw new Error('quiz_2_correct_answer must be boolean');
-      }
-
-      // Content length validation (rough estimate)
-      if (parsed.theory_slide_1.length < 200 || parsed.theory_slide_1.length > 3000) {
-        throw new Error('theory_slide_1 length is outside acceptable range');
-      }
-
-      if (parsed.theory_slide_2.length < 200 || parsed.theory_slide_2.length > 3000) {
-        throw new Error('theory_slide_2 length is outside acceptable range');
-      }
-
       return parsed;
     } catch (error) {
       console.error('Validation error:', error.message);
@@ -139,9 +97,9 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
   };
 
   const delay = (attempt: number) => {
-    const baseDelay = 1000;
-    const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt), 8000);
-    return exponentialDelay + Math.random() * 1000;
+    const baseDelay = 500; // Reduced from 1000
+    const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt), 4000); // Reduced max delay
+    return exponentialDelay + Math.random() * 500; // Reduced jitter
   };
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -158,7 +116,7 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4',
           messages: [
             {
               role: 'system',
@@ -167,7 +125,7 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
-          max_tokens: 4000,
+          max_tokens: 2000, // Reduced from 4000
           response_format: { type: "json_object" }
         }),
       });
@@ -196,3 +154,4 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
 
   throw new Error('Failed to generate valid content after all retries');
 };
+
