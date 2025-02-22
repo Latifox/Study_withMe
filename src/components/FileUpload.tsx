@@ -24,6 +24,21 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const readFileContent = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result.toString());
+        } else {
+          reject(new Error('Failed to read file content'));
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsText(file);
+    });
+  };
+
   const handleUpload = async () => {
     if (!file || !title || !courseId) {
       toast({
@@ -34,11 +49,15 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       return;
     }
 
-    // Set uploading state to disable the button
     setIsUploading(true);
 
     try {
-      // Upload PDF to storage first
+      // Read file content first
+      console.log('Reading file content...');
+      const fileContent = await readFileContent(file);
+      console.log('File content length:', fileContent.length);
+
+      // Upload PDF to storage
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
       
@@ -50,7 +69,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       if (uploadError) throw uploadError;
       console.log('PDF uploaded successfully');
 
-      // Save lecture metadata and get the lecture ID
+      // Save lecture metadata
       console.log('Saving lecture to database...');
       const { data: lectureData, error: dbError } = await supabase
         .from('lectures')
@@ -81,14 +100,14 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       });
 
       if (extractionError) throw extractionError;
+      console.log('PDF content extracted:', extractionData);
+      console.log('Content length:', extractionData.content?.length || 0);
+
       if (!extractionData || !extractionData.content) {
         throw new Error('No content returned from PDF extraction');
       }
-      
-      console.log('PDF content extracted:', extractionData);
-      console.log('Content length:', extractionData.content.length);
 
-      // Generate segment structure (titles and descriptions)
+      // Generate segment structure
       console.log('Generating segment structure...');
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
         body: {
@@ -114,7 +133,8 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         supabase.functions.invoke('generate-segment-content', {
           body: {
             lectureId: lectureData.id,
-            segmentNumber: segment.sequence_number
+            segmentNumber: segment.sequence_number,
+            lectureContent: extractionData.content
           }
         })
       );
@@ -133,7 +153,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
-      setIsUploading(false); // Re-enable the button on error
+      setIsUploading(false);
       toast({
         title: "Error",
         description: error.message || "Failed to upload lecture",
