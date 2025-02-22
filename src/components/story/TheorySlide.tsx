@@ -14,13 +14,6 @@ interface TheorySlideProps {
   onContinue: () => void;
 }
 
-// Define interface for code component props
-interface CodeProps {
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-}
-
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
   // Remove "Did you know?" sections from the content
   const cleanContent = content.replace(/Did you know\?.*?(?=\n\n|\n$|$)/gs, '');
@@ -50,58 +43,30 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
       <Card className="relative overflow-hidden bg-white/95 backdrop-blur-md border-white/20 shadow-lg">
         <div className="relative p-8">
           <div className="prose prose-lg max-w-none">
-            <TypeAnimation
-              sequence={[processedContent]}
-              wrapper="div"
-              speed={90}
-              cursor={false}
-              className="hidden"
-            />
             <ReactMarkdown
               remarkPlugins={[remarkMath]}
               rehypePlugins={[rehypeKatex]}
               components={{
                 h1: ({ node, ...props }) => (
-                  <h1 
-                    className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2 animate-fade-in"
-                    {...props}
-                  />
+                  <h1 className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2" {...props} />
                 ),
                 h2: ({ node, ...props }) => (
-                  <h2
-                    className="text-2xl font-semibold mb-4 text-gray-800 mt-8 animate-fade-in" 
-                    {...props}
-                  />
+                  <h2 className="text-2xl font-semibold mb-4 text-gray-800 mt-8" {...props} />
                 ),
                 h3: ({ node, ...props }) => (
-                  <h3
-                    className="text-xl font-medium mb-3 text-gray-800 mt-6 animate-fade-in" 
-                    {...props}
-                  />
+                  <h3 className="text-xl font-medium mb-3 text-gray-800 mt-6" {...props} />
                 ),
                 p: ({ node, ...props }) => (
-                  <p
-                    className="mb-4 text-gray-700 leading-relaxed text-lg animate-fade-in" 
-                    {...props}
-                  />
+                  <p className="mb-4 text-gray-700 leading-relaxed text-lg" {...props} />
                 ),
                 ul: ({ node, ...props }) => (
-                  <ul
-                    className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500 animate-fade-in" 
-                    {...props}
-                  />
+                  <ul className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500" {...props} />
                 ),
                 ol: ({ node, ...props }) => (
-                  <ol
-                    className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500 animate-fade-in" 
-                    {...props}
-                  />
+                  <ol className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500" {...props} />
                 ),
                 li: ({ node, ...props }) => (
-                  <li
-                    className="text-gray-700 leading-relaxed text-lg pl-2 animate-fade-in" 
-                    {...props}
-                  />
+                  <li className="text-gray-700 leading-relaxed text-lg pl-2" {...props} />
                 ),
                 strong: ({ node, ...props }) => (
                   <strong className="font-semibold text-gray-900 bg-yellow-50 px-1 rounded" {...props} />
@@ -109,10 +74,10 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 em: ({ node, ...props }) => (
                   <em className="text-gray-800 italic" {...props} />
                 ),
-                code: ({ inline, className, children }: CodeProps) => {
+                code: ({ inline, className, children, ...props }) => {
                   if (inline) {
                     return (
-                      <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800">
+                      <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800" {...props}>
                         {children}
                       </code>
                     );
@@ -120,7 +85,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                   return (
                     <div className="relative">
                       <pre className="overflow-x-auto p-4 rounded-lg bg-gray-100 border border-gray-200">
-                        <code className="text-sm font-mono text-gray-800">
+                        <code className="text-sm font-mono text-gray-800" {...props}>
                           {children}
                         </code>
                       </pre>
