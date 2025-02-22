@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const deleteExistingContent = async (lectureId: number) => {
@@ -13,8 +14,6 @@ export const deleteExistingContent = async (lectureId: number) => {
     throw quizError;
   }
 
-  await new Promise(resolve => setTimeout(resolve, 500));
-
   // Delete user progress
   console.log('Deleting user progress...');
   const { error: progressError } = await supabase
@@ -26,8 +25,6 @@ export const deleteExistingContent = async (lectureId: number) => {
     console.error('Error deleting user progress:', progressError);
     throw progressError;
   }
-
-  await new Promise(resolve => setTimeout(resolve, 500));
 
   // Delete segments content
   console.log('Deleting segments content...');
@@ -41,8 +38,6 @@ export const deleteExistingContent = async (lectureId: number) => {
     throw contentError;
   }
 
-  await new Promise(resolve => setTimeout(resolve, 500));
-
   // Delete lecture segments
   console.log('Deleting lecture segments...');
   const { error: segmentsError } = await supabase
@@ -54,8 +49,6 @@ export const deleteExistingContent = async (lectureId: number) => {
     console.error('Error deleting lecture segments:', segmentsError);
     throw segmentsError;
   }
-
-  await new Promise(resolve => setTimeout(resolve, 500));
 };
 
 export const recreateLecture = async (
