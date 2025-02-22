@@ -67,22 +67,21 @@ serve(async (req) => {
 For each segment, create:
 1. A concise title (max 8 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3), concept4 (short context for concept4)"
+   "Key concepts: concept1 (aspects to explore: definitions, classifications, applications, impacts), concept2 (aspects to explore: historical context, current relevance, future implications), concept3 (aspects to explore: types, characteristics, practical uses), concept4 (aspects to explore: components, relationships, significance)"
    
    Rules for the description:
    - You MUST include EXACTLY 4 key concepts, no more, no less
-   - Each concept MUST have a short context in parentheses
-   - The context should specify HOW the concept is used or applied in this specific segment
-   - Contexts should differentiate how each concept is used differently across segments
+   - Each concept MUST have context specifying the aspects that should be explored in parentheses
+   - Each context MUST include at least 3 different aspects to explore (like definitions, classifications, impacts, applications, etc.)
    - Start EXACTLY with "Key concepts: " followed by the concepts list
    - Use commas to separate concept entries
    - Make sure each concept is unique within the segment
-   - Make each context specific and actionable
+   - Each concept's aspects should be specific to how that concept will be explored in this segment
 
 Target language: ${targetLanguage}
 
 Example of good description format:
-"Key concepts: energy reserves (geographical distribution analysis), resource accessibility (technological extraction methods), renewable potential (current infrastructure limitations), sustainability metrics (long-term viability assessment)"
+"Key concepts: energy sources (aspects to explore: classification types, environmental impacts, availability factors), resource management (aspects to explore: planning strategies, efficiency metrics, optimization techniques), technological integration (aspects to explore: implementation methods, compatibility issues, performance indicators), sustainability practices (aspects to explore: environmental benefits, economic viability, social acceptance)"
 
 Return ONLY a JSON object in this format:
 {
@@ -144,8 +143,16 @@ Return ONLY a JSON object in this format:
           throw new Error(`Segment ${index + 1} must have exactly 4 concepts`);
         }
         concepts.forEach((concept, conceptIndex) => {
-          if (!concept.includes('(') || !concept.includes(')')) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include context in parentheses`);
+          if (!concept.includes('(aspects to explore:') || !concept.includes(')')) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects to explore in parentheses`);
+          }
+          // Check that each concept has at least 3 aspects listed
+          const aspectsMatch = concept.match(/aspects to explore:\s*(.*?)\)/);
+          if (aspectsMatch) {
+            const aspects = aspectsMatch[1].split(',').map(a => a.trim());
+            if (aspects.length < 3) {
+              throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 3 aspects to explore`);
+            }
           }
         });
         
