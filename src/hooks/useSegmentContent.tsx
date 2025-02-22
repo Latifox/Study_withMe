@@ -46,23 +46,23 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         throw contentError;
       }
 
-      // If no content exists yet, return partial data with just the segment structure
+      // If no content exists yet, show the segment structure with loading messages
       if (!segmentContent) {
-        console.log('No content found, returning partial data...');
         return {
           segments: [{
             id: `segment_${sequenceNumber}`,
             title: segment.title,
+            description: segment.segment_description,
             slides: [
-              { id: 'slide-1', content: 'Content is being generated...' },
-              { id: 'slide-2', content: 'Content is being generated...' }
+              { id: 'slide-1', content: 'Your content is being generated using the new AI configuration...' },
+              { id: 'slide-2', content: 'This usually takes about 30 seconds per segment...' }
             ],
             questions: [{
               type: 'multiple_choice',
-              question: 'Content is being generated...',
-              options: ['...'],
-              correctAnswer: '...',
-              explanation: 'Content is being generated...'
+              question: 'Please wait while your quiz questions are being generated...',
+              options: ['This should only take a moment...'],
+              correctAnswer: 'This should only take a moment...',
+              explanation: 'Quiz content is being generated with your specified AI settings.'
             }]
           }]
         };
@@ -73,6 +73,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         segments: [{
           id: `segment_${sequenceNumber}`,
           title: segment.title,
+          description: segment.segment_description,
           slides: [
             { id: 'slide-1', content: segmentContent.theory_slide_1 },
             { id: 'slide-2', content: segmentContent.theory_slide_2 }
@@ -99,3 +100,4 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+

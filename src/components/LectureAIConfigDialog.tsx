@@ -85,13 +85,18 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       console.log('Lecture recreation completed successfully');
 
-      // Invalidate queries to refresh the UI
+      // First invalidate and refetch the mindmap structure
       await queryClient.invalidateQueries({ queryKey: ["lectures"] });
-      await queryClient.invalidateQueries({ queryKey: ["segment-content"] });
+      
+      // Then show loading state for content generation
+      await queryClient.invalidateQueries({ 
+        queryKey: ["segment-content"],
+        refetchType: "none" // Don't refetch immediately to show loading state
+      });
 
       toast({
         title: "Success",
-        description: "AI configuration saved and content regenerated successfully",
+        description: "AI configuration saved and content regeneration started",
       });
 
       onClose();
@@ -154,3 +159,4 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 };
 
 export default LectureAIConfigDialog;
+
