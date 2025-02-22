@@ -67,26 +67,22 @@ serve(async (req) => {
 For each segment, create:
 1. A concise title (max 8 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (aspects1, aspects2, aspects3), concept2 (aspects1, aspects2, aspects3), concept3 (aspects1, aspects2, aspects3), concept4 (aspects1, aspects2, aspects3)"
+   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3), concept4 (short context for concept4)"
    
    Rules for the description:
    - You MUST include EXACTLY 4 key concepts, no more, no less
-   - Each concept MUST have 2-3 specific aspects to explore in parentheses, separated by commas
-   - The aspects should specify WHAT to explore about the concept (e.g., definition, types, applications, impacts, limitations, examples, case studies)
-   - Make sure the aspects are DIFFERENT across segments even for the same concept
-   - If a concept appears in multiple segments, use completely different aspects to explore
+   - Each concept MUST have a short context in parentheses
+   - The context should specify HOW the concept is used or applied in this specific segment
+   - Contexts should differentiate how each concept is used differently across segments
    - Start EXACTLY with "Key concepts: " followed by the concepts list
    - Use commas to separate concept entries
-   - Make sure each concept is unique within a segment
-   - Each aspect should be clear and specific
+   - Make sure each concept is unique within the segment
+   - Make each context specific and actionable
 
 Target language: ${targetLanguage}
 
 Example of good description format:
-"Key concepts: energy reserves (global distribution, extraction methods, future projections), resource accessibility (technological barriers, economic constraints, regional variations), renewable potential (current adoption rates, infrastructure needs, policy impacts), sustainability metrics (environmental indicators, social factors, economic viability)"
-
-Bad example (too vague or definitional):
-"Key concepts: energy reserves (fossil fuel deposits in the ground), resource accessibility (ability to access resources), renewable potential (possibility of renewable energy), sustainability metrics (ways to measure sustainability)"
+"Key concepts: energy reserves (geographical distribution analysis), resource accessibility (technological extraction methods), renewable potential (current infrastructure limitations), sustainability metrics (long-term viability assessment)"
 
 Return ONLY a JSON object in this format:
 {
@@ -150,11 +146,6 @@ Return ONLY a JSON object in this format:
         concepts.forEach((concept, conceptIndex) => {
           if (!concept.includes('(') || !concept.includes(')')) {
             throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include context in parentheses`);
-          }
-          // Validate that each concept has multiple aspects
-          const context = concept.match(/\((.*?)\)/)?.[1];
-          if (!context || !context.includes(',')) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have multiple aspects separated by commas`);
           }
         });
         
