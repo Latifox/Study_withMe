@@ -29,6 +29,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [customInstructions, setCustomInstructions] = useState("");
   const [contentLanguage, setContentLanguage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch existing configuration
   const { data: config } = useQuery({
@@ -70,6 +71,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
     try {
       setIsSaving(true);
+      setIsGenerating(true);
       console.log('Starting lecture recreation process...');
 
       // Create a new lecture with the updated AI config
@@ -102,6 +104,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       });
     } finally {
       setIsSaving(false);
+      setIsGenerating(false);
     }
   };
 
@@ -138,10 +141,10 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={isSaving}
+              disabled={isSaving || isGenerating}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              {isSaving ? "Regenerating Content..." : "Save Configuration"}
+              {isSaving ? "Saving..." : isGenerating ? "Regenerating Content..." : "Save Configuration"}
             </Button>
           </div>
         </div>
