@@ -1,188 +1,158 @@
-import { AIConfig } from "./types.ts";
 
-export const generatePrompt = (
-  segmentTitle: string,
-  segmentDescription: string,
-  lectureContent: string,
-  aiConfig: AIConfig
-) => {
-  const languageInstruction = aiConfig.content_language 
-    ? `Please provide all content in ${aiConfig.content_language}` 
-    : '';
+import { ChatCompletionRequestMessage } from "https://deno.land/x/openai@v4.20.1/resources/mod.ts";
 
-  // Optimize content length while maintaining quality
-  const maxContentLength = 12000;
-  const truncatedContent = lectureContent.length > maxContentLength 
-    ? lectureContent.substring(0, maxContentLength) + "..."
-    : lectureContent;
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-  console.log('Generating prompt for segment:', segmentTitle);
-  console.log('Content length:', truncatedContent.length);
+interface SegmentInfo {
+  title: string;
+  description: string;
+  lectureContent: string;
+}
 
-  return `You are a specialized educational content generator focused on creating engaging, well-structured learning segments.
+export interface GeneratedContent {
+  theory_slide_1: string;
+  theory_slide_2: string;
+  quiz_1_type: "multiple_choice" | "true_false";
+  quiz_1_question: string;
+  quiz_1_options?: string[];
+  quiz_1_correct_answer: string | boolean;
+  quiz_1_explanation: string;
+  quiz_2_type: "multiple_choice" | "true_false";
+  quiz_2_question: string;
+  quiz_2_correct_answer: string | boolean;
+  quiz_2_explanation: string;
+}
 
-TASK: Create an engaging educational segment about: "${segmentTitle}"
-
-SEGMENT DESCRIPTION:
-${segmentDescription}
-
-SOURCE MATERIAL:
-"""
-${truncatedContent}
-"""
-
-CRITICAL REQUIREMENTS:
-1. Use ONLY information from the provided source material
-2. First theory slide MUST be 150 words or less and ONLY cover concepts explicitly mentioned in the segment description
-3. Second theory slide should be between 300-400 words
-4. Include exactly 4 options for multiple choice questions
-5. Return VALID JSON with all fields present
-6. Use proper markdown formatting for better readability
-7. Ensure quiz_1_correct_answer EXACTLY matches one of the quiz_1_options
-8. Make quiz_2_correct_answer a boolean (true/false)
-9. DO NOT use any emojis or special characters in the content
-10. Use clear, professional formatting without decorative elements
-11. DO NOT introduce concepts that are not mentioned in the segment description
-
-FORMAT INSTRUCTIONS:
-1. Use clear hierarchical structure with headers (# for main titles, ## for subtitles)
-2. Break complex concepts into bullet points or numbered lists
-3. FIRST THEORY SLIDE MUST:
-   - Start with a brief introduction (2-3 sentences)
-   - Use bullet points to list main concepts
-   - Include a "Key Points" section with 2-3 bullet points
-   - Total word count must stay under 150 words
-4. Second theory slide should expand on these concepts with more details and examples
-5. Use **bold** and _italic_ for emphasis on important terms
-6. Add concise "Key Takeaways" sections at the end of each slide
-7. Maintain professional formatting without emojis or decorative symbols
-
-${aiConfig.custom_instructions ? `\nCUSTOM INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
-${languageInstruction}
-
-OUTPUT FORMAT:
-Return content in this exact JSON structure:
-{
-  "theory_slide_1": "Structured overview with bullet points and sections (MAX 150 words)",
-  "theory_slide_2": "Detailed examples and practical applications with proper markdown formatting (300-400 words)",
-  "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "A conceptual question testing understanding",
-  "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-  "quiz_1_correct_answer": "Exact match to one of the options",
-  "quiz_1_explanation": "Clear explanation of why this answer is correct",
-  "quiz_2_type": "true_false",
-  "quiz_2_question": "A statement testing deeper understanding",
-  "quiz_2_correct_answer": true,
-  "quiz_2_explanation": "Detailed explanation of why this is true/false"
-}`;
-};
-
-export const generateContent = async (prompt: string) => {
-  console.log('Starting content generation with prompt length:', prompt.length);
-
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  };
-
-  const validateResponse = (content: string) => {
-    try {
-      const parsed = JSON.parse(content);
-      
-      // Strict validation
-      const requiredFields = [
-        'theory_slide_1',
-        'theory_slide_2',
-        'quiz_1_type',
-        'quiz_1_question',
-        'quiz_1_options',
-        'quiz_1_correct_answer',
-        'quiz_1_explanation',
-        'quiz_2_type',
-        'quiz_2_question',
-        'quiz_2_correct_answer',
-        'quiz_2_explanation'
-      ];
-
-      const missingFields = requiredFields.filter(field => !(field in parsed));
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-      }
-
-      // Validate quiz formats
-      if (!Array.isArray(parsed.quiz_1_options) || parsed.quiz_1_options.length !== 4) {
-        throw new Error('quiz_1_options must be an array with exactly 4 options');
-      }
-
-      if (!parsed.quiz_1_options.includes(parsed.quiz_1_correct_answer)) {
-        throw new Error('quiz_1_correct_answer must match one of the options');
-      }
-
-      if (typeof parsed.quiz_2_correct_answer !== 'boolean') {
-        throw new Error('quiz_2_correct_answer must be boolean');
-      }
-
-      // Remove any emojis from the content
-      const removeEmojis = (text: string) => {
-        return text.replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
-      };
-
-      // Clean all text fields
-      parsed.theory_slide_1 = removeEmojis(parsed.theory_slide_1);
-      parsed.theory_slide_2 = removeEmojis(parsed.theory_slide_2);
-      parsed.quiz_1_question = removeEmojis(parsed.quiz_1_question);
-      parsed.quiz_1_explanation = removeEmojis(parsed.quiz_1_explanation);
-      parsed.quiz_2_question = removeEmojis(parsed.quiz_2_question);
-      parsed.quiz_2_explanation = removeEmojis(parsed.quiz_2_explanation);
-      parsed.quiz_1_options = parsed.quiz_1_options.map(removeEmojis);
-
-      return parsed;
-    } catch (error) {
-      console.error('Validation error:', error.message);
-      throw error;
-    }
-  };
-
-  try {
-    console.log('Making OpenAI API request...');
+export class ContentGenerator {
+  private async callOpenAI(messages: ChatCompletionRequestMessage[]) {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert educational content generator. Always return complete, valid JSON containing exactly the required fields. Do not use emojis or decorative symbols in the content.'
-          },
-          { role: 'user', content: prompt }
-        ],
+        messages,
         temperature: 0.7,
-        max_tokens: 3000,
-        response_format: { type: "json_object" }
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`OpenAI API error (${response.status}):`, errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const error = await response.json();
+      console.error('OpenAI API error:', error);
+      throw new Error('Failed to generate content');
     }
 
     const data = await response.json();
-    console.log('Received response from OpenAI, validating...');
-    
-    const content = data.choices[0].message.content;
-    const validatedContent = validateResponse(content);
-    
-    console.log('Content validation successful');
-    return JSON.stringify(validatedContent);
-
-  } catch (error) {
-    console.error('Content generation error:', error);
-    throw error;
+    return data.choices[0].message.content;
   }
-};
+
+  async generateTheorySlides(segmentInfo: SegmentInfo): Promise<{ slide1: string; slide2: string }> {
+    const prompt = {
+      role: "system",
+      content: `You are an expert educational content creator. Your task is to create two theory slides based on a lecture segment.
+The content must be strictly based on the provided lecture content - do not add external information.
+Format the content using markdown, including headers (## for main sections, ### for subsections).
+Each slide should be focused and concise, building upon each other:
+- Slide 1 should introduce core concepts and fundamental ideas
+- Slide 2 should expand on these concepts with more detail and practical implications
+Use bullet points for clarity where appropriate.
+Ensure all content directly relates to the segment title and description provided.`
+    };
+
+    const userPrompt = {
+      role: "user",
+      content: `Create two theory slides for a segment with the following details:
+Title: ${segmentInfo.title}
+Description: ${segmentInfo.description}
+Using only this lecture content:
+${segmentInfo.lectureContent}
+
+Return the slides in a JSON format with keys "slide1" and "slide2".`
+    };
+
+    const slidesContent = await this.callOpenAI([prompt, userPrompt]);
+    return JSON.parse(slidesContent);
+  }
+
+  async generateQuizzes(segmentInfo: SegmentInfo): Promise<{
+    quiz1: {
+      type: "multiple_choice";
+      question: string;
+      options: string[];
+      correctAnswer: string;
+      explanation: string;
+    };
+    quiz2: {
+      type: "true_false";
+      question: string;
+      correctAnswer: boolean;
+      explanation: string;
+    };
+  }> {
+    const prompt = {
+      role: "system",
+      content: `You are an expert quiz creator for educational content. Your task is to create two quizzes based on a lecture segment:
+1. First quiz should be multiple choice with 4 options
+2. Second quiz should be true/false
+The questions must be strictly based on the provided lecture content - do not add external information.
+Ensure questions test understanding rather than mere recall.
+Make sure the correct answers and explanations are clearly justified by the lecture content.`
+    };
+
+    const userPrompt = {
+      role: "user",
+      content: `Create two quizzes for a segment with the following details:
+Title: ${segmentInfo.title}
+Description: ${segmentInfo.description}
+Using only this lecture content:
+${segmentInfo.lectureContent}
+
+Return the quizzes in a JSON format with this structure:
+{
+  "quiz1": {
+    "type": "multiple_choice",
+    "question": "...",
+    "options": ["A", "B", "C", "D"],
+    "correctAnswer": "...",
+    "explanation": "..."
+  },
+  "quiz2": {
+    "type": "true_false",
+    "question": "...",
+    "correctAnswer": true/false,
+    "explanation": "..."
+  }
+}`
+    };
+
+    const quizzesContent = await this.callOpenAI([prompt, userPrompt]);
+    return JSON.parse(quizzesContent);
+  }
+
+  async generateContent(segmentInfo: SegmentInfo): Promise<GeneratedContent> {
+    console.log('Generating content for segment:', segmentInfo.title);
+    
+    const [slides, quizzes] = await Promise.all([
+      this.generateTheorySlides(segmentInfo),
+      this.generateQuizzes(segmentInfo)
+    ]);
+
+    console.log('Content generated successfully');
+
+    return {
+      theory_slide_1: slides.slide1,
+      theory_slide_2: slides.slide2,
+      quiz_1_type: "multiple_choice",
+      quiz_1_question: quizzes.quiz1.question,
+      quiz_1_options: quizzes.quiz1.options,
+      quiz_1_correct_answer: quizzes.quiz1.correctAnswer,
+      quiz_1_explanation: quizzes.quiz1.explanation,
+      quiz_2_type: "true_false",
+      quiz_2_question: quizzes.quiz2.question,
+      quiz_2_correct_answer: quizzes.quiz2.correctAnswer,
+      quiz_2_explanation: quizzes.quiz2.explanation,
+    };
+  }
+}
