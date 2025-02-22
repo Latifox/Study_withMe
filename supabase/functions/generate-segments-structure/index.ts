@@ -25,6 +25,29 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    );
+
+    // Get language settings from AI config and lecture
+    const { data: aiConfig } = await supabaseClient
+      .from('lecture_ai_configs')
+      .select('content_language')
+      .eq('lecture_id', lectureId)
+      .maybeSingle();
+
+    const { data: lecture } = await supabaseClient
+      .from('lectures')
+      .select('original_language')
+      .eq('id', lectureId)
+      .single();
+
+    const targetLanguage = aiConfig?.content_language || lecture?.original_language || 'English';
+    console.log('Using target language:', targetLanguage);
+
     console.log('Generating segments structure for lecture:', lectureId);
     console.log('Content length:', lectureContent.length);
 
@@ -39,11 +62,18 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Break down the lecture content into 4-5 logical segments. For each segment:
-1. Create a clear title (max 10 words)
-2. Write a brief description (max 2 sentences)
+            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 4-5 focused segments.
 
-Return ONLY a JSON object:
+For each segment, create:
+1. A concise title (max 8 words) that clearly indicates the specific topic
+2. A focused description that serves as instructions for content generation:
+   - Identify 2-3 KEY concepts that MUST be covered
+   - Be specific and concrete, avoid generic terms
+   - Maximum 1-2 sentences
+
+Target language: ${targetLanguage}
+
+Return ONLY a JSON object in this format:
 {
   "segments": [
     {
@@ -104,17 +134,6 @@ Return ONLY a JSON object:
       console.error('Raw content:', openAIResponse.choices[0].message.content);
       throw new Error(`Failed to parse OpenAI response: ${error.message}`);
     }
-
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          persistSession: false
-        }
-      }
-    );
 
     // Delete existing segments for this lecture
     const { error: deleteError } = await supabaseClient
