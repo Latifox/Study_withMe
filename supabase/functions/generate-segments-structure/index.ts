@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,44 +41,38 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing educational content and breaking it down into logical segments.
-            Your task is to analyze lecture content and create meaningful, content-specific segments that accurately reflect the actual material.
-            You must read and understand the content thoroughly before creating segments.
-            Each segment must be based on the actual topics and concepts present in the lecture content.
-            Do not generate generic or template-based segments.
-            Each segment's title and description must directly reference specific concepts, terms, or ideas from the lecture content.`
-          },
-          {
-            role: 'user',
-            content: `You are analyzing a lecture titled "${lectureTitle}". 
-            Read through the following lecture content carefully and break it into 5-8 logical segments.
-            Each segment must be based on the actual content and topics covered in the lecture.
-            
+            content: `You are an expert professor tasked with breaking down lecture content into logical learning segments.
+            Your goal is to create 5-8 segments that will guide students through the material in a clear, pedagogical manner.
             For each segment:
-            1. Create a title that reflects the specific concept or topic from the lecture
-            2. Write a description of 3-5 sentences that outlines the actual content that appears in the lecture
+            1. Create a specific, content-based title that reflects what will be taught
+            2. Write a description in a professorial voice that:
+               - Directly addresses students ("In this segment, you will learn...")
+               - Outlines specific learning objectives
+               - Maintains a supportive, encouraging tone
+               - Uses active voice and clear language
+               - Does not repeat concepts covered in other segments
+               - Is 3-5 sentences long
             
-            The descriptions must:
-            - Reference specific concepts, terms, and examples from the lecture content
-            - Explain how these specific concepts relate to each other
-            - Not use generic descriptions - they must be based on the actual lecture material
-            - Build progressively on previous segments in the order they appear in the lecture
-            
-            Return the segments in this exact JSON format:
+            Example format:
             {
               "segments": [
                 {
-                  "title": "segment title",
-                  "segment_description": "description referencing actual lecture content"
+                  "title": "Introduction to Electric Field Theory",
+                  "segment_description": "In this segment, you will learn the fundamental concepts of electric fields and their mathematical representation. We will explore how charged particles create electric fields and understand the significance of field lines in visualizing these invisible forces. You will develop the skills to calculate field strength at various points and appreciate how this knowledge forms the foundation for understanding more complex electromagnetic phenomena."
                 }
               ]
-            }
-
+            }`
+          },
+          {
+            role: 'user',
+            content: `As an expert professor teaching a course, review this lecture titled "${lectureTitle}" and create 5-8 pedagogical segments.
+            Each segment should build progressively on previous concepts and guide students through the material.
+            
             Here's the lecture content to analyze:
             ${lectureContent}`
           }
         ],
-        temperature: 0.3, // Lower temperature for more focused output
+        temperature: 0.3,
         max_tokens: 2000,
       }),
     });
@@ -95,19 +90,25 @@ serve(async (req) => {
       throw new Error('Invalid response from OpenAI');
     }
 
-    // Log the raw response from OpenAI
+    // Log the raw response
     console.log('Raw OpenAI response:', data.choices[0].message.content);
 
-    const segments = JSON.parse(data.choices[0].message.content);
+    // Parse JSON without code block markers if present
+    let cleanContent = data.choices[0].message.content.replace(/```json\n?|\n?```/g, '');
+    const segments = JSON.parse(cleanContent);
 
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Delete existing segments for this lecture
-    const { error: deleteError } = await supabaseClient
+    const { error: deleteError } = await supabase
       .from('lecture_segments')
       .delete()
       .eq('lecture_id', lectureId);
@@ -125,7 +126,7 @@ serve(async (req) => {
       segment_description: segment.segment_description
     }));
 
-    const { error: insertError } = await supabaseClient
+    const { error: insertError } = await supabase
       .from('lecture_segments')
       .insert(formattedSegments);
 
@@ -153,3 +154,4 @@ serve(async (req) => {
     );
   }
 });
+
