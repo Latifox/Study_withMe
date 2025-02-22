@@ -1,7 +1,6 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,26 +33,43 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert in organizing educational content. Your task is to break down the lecture content into logical segments, each focusing on distinct concepts.
+            content: `You are an expert in organizing educational content. Your task is to break down lecture content into logical segments, each with a HIGHLY SPECIFIC and DETAILED description of what should be covered.
 
 CRITICAL REQUIREMENTS:
 1. For each segment:
-   - Create a clear, descriptive title
-   - List 3-5 KEY CONCEPTS that this segment should explore in depth
-   - Each concept should be specific and focused
-   - NO CONCEPT should appear in more than one segment
-   - Format as "Key concepts to explore: [concept1], [concept2], [concept3]"
+   - Create a clear, descriptive title that precisely indicates the specific topic
+   - Write a DETAILED description that:
+     * Lists SPECIFIC concepts, theories, or examples that MUST be covered
+     * Clearly defines the SCOPE and BOUNDARIES of the content
+     * Identifies any prerequisite knowledge needed
+     * Provides clear guidance on what should NOT be included
+     * Suggests specific real-world applications or examples
+   - Descriptions should be 3-4 sentences long
+   - NO GENERIC descriptions allowed
+   - NO OVERLAP between segments
 
-2. Generate 4-6 segments total
-3. Use the SAME LANGUAGE as the input content
-4. Each segment must cover DISTINCT topics (no overlap)
+2. Structure Guidelines:
+   - Generate 4-6 segments total
+   - Each segment must cover DISTINCT topics
+   - Order segments logically from foundational to advanced concepts
+   - Ensure natural progression of complexity
+
+3. Language and Style:
+   - Use the SAME LANGUAGE as the input content
+   - Be specific and concrete, avoid vague terms
+   - Use precise technical terminology when appropriate
+
+4. Content Focus:
+   - Each segment should have a SINGLE clear focus
+   - Explicitly state what makes this segment different from others
+   - Highlight unique aspects that should be emphasized
 
 IMPORTANT: Return ONLY a JSON object with this structure:
 {
   "segments": [
     {
-      "title": "Clear topic title",
-      "description": "Key concepts to explore: [concept1], [concept2], [concept3]"
+      "title": "Specific, focused topic title",
+      "description": "Detailed, concrete description with specific concepts and boundaries"
     }
   ]
 }`
@@ -83,19 +99,16 @@ IMPORTANT: Return ONLY a JSON object with this structure:
 
     let segments;
     try {
-      // First try to parse the response
       const rawContent = openAIResponse.choices[0].message.content;
       console.log('Raw OpenAI content:', rawContent);
       
       const parsedContent = JSON.parse(rawContent);
       console.log('Parsed content:', JSON.stringify(parsedContent, null, 2));
 
-      // Check if we have a segments array
       if (!parsedContent.segments || !Array.isArray(parsedContent.segments)) {
         throw new Error('Response missing segments array');
       }
 
-      // Validate each segment
       parsedContent.segments.forEach((segment, index) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Segment ${index + 1} missing valid title`);
@@ -112,7 +125,6 @@ IMPORTANT: Return ONLY a JSON object with this structure:
       console.error('Error parsing OpenAI response:', error);
       console.error('Raw content:', openAIResponse.choices[0].message.content);
       
-      // Try to recover if possible
       const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -216,3 +228,4 @@ Do not add any additional fields or text.`
     );
   }
 });
+
