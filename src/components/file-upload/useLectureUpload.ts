@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
-export const useLectureUpload = (courseId?: string, onClose: () => void) => {
+export const useLectureUpload = (onClose: () => void, courseId?: string) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);

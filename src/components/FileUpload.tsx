@@ -19,7 +19,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     showAIProfessor,
     currentLectureId,
     handleUpload
-  } = useLectureUpload(courseId, onClose);
+  } = useLectureUpload(onClose, courseId);
 
   if (showAIProfessor && currentLectureId && courseId) {
     return <AIProfessorLoading 
