@@ -16,83 +16,127 @@ serve(async (req) => {
   try {
     const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent } = await req.json();
 
-    console.log(`Generating content for segment ${segmentNumber} of lecture ${lectureId}`);
-    console.log('Title:', segmentTitle);
-    console.log('Description:', segmentDescription);
-
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key is not configured');
+    if (!lectureId || !segmentNumber || !segmentTitle || !segmentDescription || !lectureContent) {
+      throw new Error('Missing required parameters');
     }
 
-    // Call OpenAI to generate segment content
+    console.log(`Processing segment ${segmentNumber} for lecture ${lectureId}`);
+    console.log(`Title: ${segmentTitle}`);
+    console.log(`Description: ${segmentDescription}`);
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch AI configuration and lecture language
+    const { data: aiConfig, error: configError } = await supabaseClient
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .single();
+
+    if (configError) {
+      console.error('Error fetching AI config:', configError);
+    }
+
+    const { data: lecture, error: lectureError } = await supabaseClient
+      .from('lectures')
+      .select('original_language')
+      .eq('id', lectureId)
+      .single();
+
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
+    }
+
+    // Determine content language
+    const targetLanguage = aiConfig?.content_language || lecture?.original_language || 'English';
+    
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not found');
+    }
+
+    const temperature = aiConfig?.temperature || 0.7;
+    const creativityLevel = aiConfig?.creativity_level || 0.5;
+    const detailLevel = aiConfig?.detail_level || 0.6;
+    const customInstructions = aiConfig?.custom_instructions || '';
+
+    // Prepare system message based on AI configuration
+    const systemMessage = `You are an expert educational content creator tasked with generating engaging learning materials.
+Configuration:
+- Target Language: ${targetLanguage}
+- Creativity Level: ${creativityLevel} (higher means more creative and engaging content)
+- Detail Level: ${detailLevel} (higher means more detailed explanations)
+${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
+
+Guidelines:
+1. Generate content in ${targetLanguage}
+2. Each theory slide should be comprehensive but concise
+3. Quiz 1 must be multiple choice
+4. Quiz 2 must be true/false
+5. Use markdown for formatting
+6. Return only a valid JSON object matching the structure provided, no additional text or markdown formatting
+7. Maintain academic rigor while being engaging
+8. Scale detail level according to configuration (${detailLevel})
+9. Adjust creativity in examples and explanations (${creativityLevel})`;
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: `You are an educational content generator. Generate content that matches exactly this JSON structure for a segment:
-{
-  "theory_slide_1": "string",
-  "theory_slide_2": "string",
-  "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "string",
-  "quiz_1_options": ["string", "string", "string", "string"],
-  "quiz_1_correct_answer": "string (must be one of the options)",
-  "quiz_1_explanation": "string",
-  "quiz_2_type": "true_false",
-  "quiz_2_question": "string",
-  "quiz_2_correct_answer": boolean,
-  "quiz_2_explanation": "string"
-}`
-          },
+          { role: 'system', content: systemMessage },
           {
             role: 'user',
-            content: `Generate educational content for this segment:
+            content: `Generate learning content for the following segment:
+
 Title: ${segmentTitle}
 Description: ${segmentDescription}
-Context from lecture: ${lectureContent.substring(0, 2000)}
 
-Requirements:
-1. Theory slides should teach concepts progressively
-2. Quiz 1 must be multiple choice with exactly 4 options
-3. Quiz 2 must be true/false
-4. Use markdown for formatting
-5. Keep explanations clear and concise
-6. Return only a valid JSON object matching the structure provided, no additional text or markdown formatting
+Context from lecture: ${lectureContent}
 
-Remember: Your output must be a valid JSON object that can be parsed and exactly matches the structure provided.`
+Generate content in this exact JSON structure:
+{
+  "theory_slide_1": "First theory slide content with key concepts",
+  "theory_slide_2": "Second theory slide content with examples and applications",
+  "quiz_1_type": "multiple_choice",
+  "quiz_1_question": "The question text",
+  "quiz_1_options": ["Option A", "Option B", "Option C", "Option D"],
+  "quiz_1_correct_answer": "The correct option",
+  "quiz_1_explanation": "Explanation of the correct answer",
+  "quiz_2_type": "true_false",
+  "quiz_2_question": "A true/false question",
+  "quiz_2_correct_answer": true or false,
+  "quiz_2_explanation": "Explanation of why the answer is true or false"
+}`
           }
         ],
-        temperature: 0.7,
-      }),
+        temperature: temperature
+      })
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    const data = await response.json();
+    console.log('OpenAI response received');
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI');
     }
 
-    const data = await response.json();
-    const contentString = data.choices[0].message.content;
-    
-    // Extract the JSON object from the response
-    let content;
+    const content = data.choices[0].message.content;
+    console.log('Processing content:', content.substring(0, 200) + '...');
+
+    let parsedContent;
     try {
-      // Find the JSON object in the response (it might be wrapped in backticks or markdown)
-      const jsonMatch = contentString.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON object found in response');
-      }
-      content = JSON.parse(jsonMatch[0]);
+      parsedContent = JSON.parse(content);
     } catch (error) {
-      console.error('JSON parsing error:', error);
-      throw new Error(`Failed to parse generated content: ${error.message}`);
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Failed to parse AI-generated content');
     }
 
     // Validate the content structure
@@ -111,39 +155,18 @@ Remember: Your output must be a valid JSON object that can be parsed and exactly
     ];
 
     for (const field of requiredFields) {
-      if (!(field in content)) {
+      if (!parsedContent[field]) {
         throw new Error(`Missing required field: ${field}`);
       }
     }
 
-    // Validate quiz_1_options is an array with exactly 4 options
-    if (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length !== 4) {
-      throw new Error('quiz_1_options must be an array with exactly 4 options');
+    if (!Array.isArray(parsedContent.quiz_1_options)) {
+      throw new Error('quiz_1_options must be an array');
     }
 
-    // Validate quiz_1_correct_answer is one of the options
-    if (!content.quiz_1_options.includes(content.quiz_1_correct_answer)) {
-      throw new Error('quiz_1_correct_answer must be one of the quiz_1_options');
-    }
-
-    // Validate quiz types
-    if (content.quiz_1_type !== 'multiple_choice') {
-      throw new Error('quiz_1_type must be "multiple_choice"');
-    }
-    if (content.quiz_2_type !== 'true_false') {
-      throw new Error('quiz_2_type must be "true_false"');
-    }
-
-    // Validate quiz_2_correct_answer is boolean
-    if (typeof content.quiz_2_correct_answer !== 'boolean') {
+    if (typeof parsedContent.quiz_2_correct_answer !== 'boolean') {
       throw new Error('quiz_2_correct_answer must be a boolean');
     }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // Store the content in the database
     const { error: dbError } = await supabaseClient
@@ -151,16 +174,19 @@ Remember: Your output must be a valid JSON object that can be parsed and exactly
       .upsert({
         lecture_id: lectureId,
         sequence_number: segmentNumber,
-        ...content
+        ...parsedContent
       });
 
     if (dbError) {
       console.error('Database error:', dbError);
-      throw new Error(`Failed to save content to database: ${dbError.message}`);
+      throw dbError;
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Content generated and saved successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: `Content generated for segment ${segmentNumber}`
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -169,11 +195,11 @@ Remember: Your output must be a valid JSON object that can be parsed and exactly
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'An error occurred while generating content'
+        error: error.message 
       }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
