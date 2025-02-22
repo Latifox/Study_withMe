@@ -10,10 +10,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const TIMEOUT = 50000; // 50 second timeout
+
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
   try {
     const { lectureId, segmentNumber } = await req.json();
@@ -54,6 +60,7 @@ serve(async (req) => {
 
     if (existingContent) {
       console.log('Content already exists, returning existing content');
+      clearTimeout(timeoutId);
       return new Response(
         JSON.stringify({ segmentContent: existingContent }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -85,13 +92,13 @@ serve(async (req) => {
       );
       console.log('Successfully saved segment content');
 
+      clearTimeout(timeoutId);
       return new Response(
         JSON.stringify({ segmentContent }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (error) {
       if (error.message.includes('Theory slide')) {
-        // Retry once with a more explicit prompt for word count
         console.log('Retrying content generation with emphasis on word count...');
         const retryPrompt = generatePrompt(segment.title, segment.segment_description, lectureContent, {
           ...aiConfig,
@@ -109,6 +116,7 @@ serve(async (req) => {
           content
         );
         
+        clearTimeout(timeoutId);
         return new Response(
           JSON.stringify({ segmentContent }), 
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -117,13 +125,17 @@ serve(async (req) => {
       throw error;
     }
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error('Error in generate-segment-content:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
         details: error.stack
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: error.status || 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
