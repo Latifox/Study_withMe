@@ -67,20 +67,22 @@ serve(async (req) => {
 For each segment, create:
 1. A concise title (max 8 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3)"
+   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3), concept4 (short context for concept4)"
    
    Rules for the description:
-   - Include 2-4 key concepts
+   - You MUST include EXACTLY 4 key concepts, no more, no less
    - Each concept MUST have a short context in parentheses
    - The context should specify HOW the concept is used or applied in this specific segment
    - Contexts should differentiate how each concept is used differently across segments
    - Start EXACTLY with "Key concepts: " followed by the concepts list
    - Use commas to separate concept entries
+   - Make sure each concept is unique within the segment
+   - Make each context specific and actionable
 
 Target language: ${targetLanguage}
 
 Example of good description format:
-"Key concepts: energy reserves (geographical distribution patterns), resource accessibility (technological limitations), renewable potential (current infrastructure constraints)"
+"Key concepts: energy reserves (geographical distribution analysis), resource accessibility (technological extraction methods), renewable potential (current infrastructure limitations), sustainability metrics (long-term viability assessment)"
 
 Return ONLY a JSON object in this format:
 {
@@ -138,14 +140,21 @@ Return ONLY a JSON object in this format:
           throw new Error(`Segment ${index + 1} description must start with "Key concepts: "`);
         }
         const concepts = segment.description.substring(13).split(',').map(c => c.trim());
-        if (concepts.length < 2 || concepts.length > 4) {
-          throw new Error(`Segment ${index + 1} must have 2-4 concepts`);
+        if (concepts.length !== 4) {
+          throw new Error(`Segment ${index + 1} must have exactly 4 concepts`);
         }
         concepts.forEach((concept, conceptIndex) => {
           if (!concept.includes('(') || !concept.includes(')')) {
             throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include context in parentheses`);
           }
         });
+        
+        // Check for duplicate concepts within the segment
+        const conceptNames = concepts.map(c => c.split('(')[0].trim().toLowerCase());
+        const uniqueConceptNames = new Set(conceptNames);
+        if (uniqueConceptNames.size !== concepts.length) {
+          throw new Error(`Segment ${index + 1} contains duplicate concepts`);
+        }
       });
 
       segments = parsedContent.segments;
