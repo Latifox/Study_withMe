@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { AIConfig } from "./types.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -96,3 +96,4 @@ export async function saveSegmentContent(
     throw error;
   }
 }
+
