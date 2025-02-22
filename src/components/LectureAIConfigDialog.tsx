@@ -164,4 +164,3 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 };
 
 export default LectureAIConfigDialog;
-
