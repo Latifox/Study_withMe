@@ -38,4 +38,3 @@ name = "generate-story-content"
 
 [[edge_functions]]
 name = "map-subject-content"
-
