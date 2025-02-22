@@ -1,4 +1,3 @@
-
 import { AIConfig } from "./types.ts";
 
 export const generatePrompt = (
@@ -8,92 +7,40 @@ export const generatePrompt = (
   aiConfig: AIConfig
 ) => {
   const languageInstruction = aiConfig.content_language 
-    ? `Generate ALL content in ${aiConfig.content_language} ONLY. Do not mix languages.` 
-    : 'Generate the content in the same language as the lecture content. Do not mix languages.';
+    ? `Please provide all content in ${aiConfig.content_language}` 
+    : '';
 
-  const creativityLevel = aiConfig.creativity_level || 0.5;
-  const detailLevel = aiConfig.detail_level || 0.6;
-
-  return `You are an enthusiastic and engaging educator creating high-quality educational content that captivates students.
+  return `As an AI professor, create engaging learning content for a lecture segment with the following title: "${segmentTitle}". 
+The lecture segment is part of ${lectureContent} and should cover the concepts listed in ${segmentDescription}. The content that will be generated will only source information from the lecture content, no external sources.
+${aiConfig.custom_instructions ? `\nAdditional Instructions:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
 
-Your task is to create TWO comprehensive theory slides and TWO challenging quiz questions focusing on these specific concepts:
-${segmentDescription}
+Generate content that follows this exact structure (these are required field names):
+1. Two theory slides (theory_slide_1 and theory_slide_2):
+   - theory_slide_1 should introduce the main concepts
+   - theory_slide_2 should dive deeper with examples and applications
+   Both slides should use clear, concise language with examples where appropriate.
 
-Content Type: ${segmentTitle}
-Source Material: ${lectureContent}
-
-CRITICAL REQUIREMENTS:
-
-1. Content Organization:
-   - Each theory slide should focus on DIFFERENT concepts from the list above
-   - Do not mix concepts between slides
-   - Present complete, in-depth explanations of each concept
-   - Use clear headings and structured content
-
-2. Writing Style:
-   - Be ENGAGING and ENTHUSIASTIC in your explanations
-   - Use a conversational, friendly tone
-   - Include relevant analogies or relatable examples (but still based on lecture content)
-   - Use phrases like "Imagine...", "Think about...", "Here's something fascinating..."
-   - Break down complex ideas with engaging explanations
-   - Add occasional light humor or interesting observations
-   - Use rhetorical questions to engage readers
-
-3. Word Count:
-   - EACH theory slide MUST contain BETWEEN 300 AND 400 WORDS
-   - This is a target requirement (acceptable range: 225-550 words)
-
-4. Content Source:
-   - Use ONLY information from the provided lecture content
-   - Focus on explaining the listed concepts thoroughly
-   - Stay focused on the specific topics assigned to this segment
-   - While being engaging, do NOT invent or add external information
-
-5. Content Structure:
-   - Start with an engaging hook or interesting perspective
-   - Use clear subheadings to organize content
-   - Include "Did you know?" segments or interesting highlights
-   - End with thought-provoking conclusions
-   - Use bullet points or numbered lists where appropriate
-
-6. LaTeX Formatting:
-   - Format ALL mathematical expressions using LaTeX
-   - Use $\\text{word}$ for text within math
-   - Use $\\rightarrow$ for arrows
-   - Use proper LaTeX syntax for all mathematical notation
-
-7. Quizzes:
-   - Quiz 1 (Multiple Choice):
-     * Create a challenging but engaging conceptual question
-     * Frame it as an interesting scenario or puzzle
-     * All 4 options should seem plausible
-     * Test deep understanding, not memorization
+2. Two quiz questions to test understanding:
+   - First quiz (quiz_1):
+     * A multiple-choice question with type "multiple_choice"
+     * The question itself (quiz_1_question)
+     * 4 options as an array (quiz_1_options)
+     * The correct answer matching one of the options (quiz_1_correct_answer)
+     * A detailed explanation (quiz_1_explanation)
    
-   - Quiz 2 (True/False):
-     * Create a subtle, thought-provoking statement
-     * Make it intriguing and discussion-worthy
-     * The answer should require careful analysis
-     * Avoid obvious true/false statements
+   - Second quiz (quiz_2):
+     * A true/false question with type "true_false" 
+     * The question itself (quiz_2_question)
+     * The correct answer as a boolean (quiz_2_correct_answer)
+     * A detailed explanation (quiz_2_explanation)
 
-${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
-
-Remember: While being engaging and fun, you must STRICTLY stick to the lecture content - no external information!
-
-Return a JSON object with:
-{
-  "theory_slide_1": "First engaging, comprehensive slide",
-  "theory_slide_2": "Second engaging, comprehensive slide",
-  "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "engaging challenging question",
-  "quiz_1_options": ["four", "plausible", "answer", "options"],
-  "quiz_1_correct_answer": "must match one option",
-  "quiz_1_explanation": "detailed explanation",
-  "quiz_2_type": "true_false",
-  "quiz_2_question": "intriguing statement",
-  "quiz_2_correct_answer": boolean,
-  "quiz_2_explanation": "detailed explanation"
-}`;
+Guidelines:
+- Keep theory slides concise but informative
+- Quiz questions should test understanding, not just memorization
+- Cover different aspects of the topic between the two questions
+- Ensure all content is factually accurate
+- Use a clear, educational tone`;
 };
 
 const delay = (attempts: number) => {
