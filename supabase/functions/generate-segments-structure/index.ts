@@ -56,7 +56,6 @@ serve(async (req) => {
     const targetLanguage = aiConfig?.content_language || lecture?.original_language || 'English';
     console.log('Using target language:', targetLanguage);
 
-    // First analyze the content to identify main topics
     const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -68,12 +67,12 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing educational content and identifying key topics. Analyze this lecture content and identify the 5-7 most important main topics that need to be covered, ensuring comprehensive coverage of the material. Return a JSON object with an array of topics, each containing:
-1. topic_title: A clear, descriptive title (max 5 words)
-2. key_concepts: Array of 2-3 most important concepts within this topic
-3. suggested_aspects: For each concept, 2 aspects to explore (like types, properties, applications, etc.)
+            content: `As an educational content analyzer, break down this lecture into 5-7 key topics. For each topic:
+1. Give a clear, descriptive title (max 5 words)
+2. List 2-3 core concepts that must be taught
+3. For each concept, specify 2 general aspects to explore (like "structure", "function", "types", "applications")
 
-Focus on capturing the breadth of the lecture while maintaining logical progression.`
+Focus on core material and logical progression.`
           },
           {
             role: 'user',
@@ -104,25 +103,20 @@ Focus on capturing the breadth of the lecture while maintaining logical progress
         messages: [
           {
             role: 'system',
-            content: `You are an expert at organizing educational content into clear, focused segments. Based on the provided topic analysis, create ${topics.topics.length} segments that will effectively teach this material. For each segment:
+            content: `Create ${topics.topics.length} educational segments based on the provided topics. For each segment:
 
-1. Title: Maximum 5 words, matching the analyzed topic titles
-2. Description: Must start with "Key concepts:" followed by 2-3 key concepts in this EXACT format:
-   "Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
+Title: Max 5 words, clear and descriptive
+Description: Start with "Key concepts:" and list 2-3 concepts with their aspects in this format:
+"Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
 
-CRUCIAL RULES:
-- DO NOT include any actual content or examples in the aspects
-- Aspects should be general categories/dimensions to explore, NOT specific examples or values
-- CORRECT example: "coal (types, properties)" - just naming the aspects to explore
-- INCORRECT example: "coal (bituminous, lignite)" - DO NOT list specific types!
-- INCORRECT example: "coal (high carbon content, black color)" - DO NOT describe properties!
+Rules:
+- Write in ${targetLanguage}
 - Each concept must have exactly 2 aspects
-- Use simple, clear nouns for aspects like: properties, types, methods, applications, structure, function, etc.
-- Concepts must be unique across all segments
-- Always write in ${targetLanguage}
+- Use general aspect categories like: properties, types, methods, applications, structure, function
+- NO examples or specific details in aspects
+- Keep concepts unique across segments
 
-Use the analyzed topics and their key concepts as a basis for your segments.
-Respond only with a JSON object containing an array of segments with title and description fields.`
+The description should ONLY list concepts and aspects, nothing else.`
           },
           {
             role: 'user',
@@ -140,6 +134,10 @@ Respond only with a JSON object containing an array of segments with title and d
 
     const segmentsData = await segmentsResponse.json();
     const segments = JSON.parse(segmentsData.choices[0].message.content);
+
+    if (!segments || !segments.segments || !Array.isArray(segments.segments)) {
+      throw new Error('Invalid segments structure returned from OpenAI');
+    }
 
     // Delete existing segments
     const { error: deleteError } = await supabaseClient
@@ -163,7 +161,10 @@ Respond only with a JSON object containing an array of segments with title and d
 
     if (insertError) throw insertError;
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      segmentCount: segmentsToInsert.length
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
@@ -171,7 +172,8 @@ Respond only with a JSON object containing an array of segments with title and d
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({
-        error: error.message
+        error: error.message,
+        stack: error.stack
       }),
       {
         status: 500,
