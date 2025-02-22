@@ -38,7 +38,7 @@ serve(async (req) => {
             content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
             For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
             These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
-            Focus on explaining the relationships between concepts and what specific details or examples should be covered.
+            Focus on explaining the relationships between concepts and what specific points need to be addressed.
             Do not just list topics - explain how they should be presented and what specific points need to be addressed.`
           },
           {
@@ -73,7 +73,26 @@ serve(async (req) => {
     const data = await response.json();
     console.log('Received response from OpenAI');
 
-    const segments = JSON.parse(data.choices[0].message.content);
+    // Validate response format
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid response format from OpenAI:', data);
+      throw new Error('Invalid response format from OpenAI');
+    }
+
+    let segments;
+    try {
+      segments = JSON.parse(data.choices[0].message.content);
+      console.log('Parsed segments:', JSON.stringify(segments, null, 2));
+      
+      // Validate segments structure
+      if (!segments.segments || !Array.isArray(segments.segments)) {
+        throw new Error('Invalid segments structure');
+      }
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      console.error('Raw response:', data.choices[0].message.content);
+      throw new Error('Failed to parse segments from OpenAI response');
+    }
 
     // Create Supabase client
     const supabaseClient = createClient(
@@ -125,3 +144,4 @@ serve(async (req) => {
     );
   }
 });
+
