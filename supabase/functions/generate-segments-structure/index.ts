@@ -70,17 +70,23 @@ serve(async (req) => {
 
 For each segment, create:
 1. A concise title (max 5 words)
-2. A description that follows this EXACT format:
-   "Key concepts: concept1 (aspect1, aspect2, aspect3), concept2 (aspect1, aspect2), concept3 (aspect1, aspect2)"
+2. A description that lists ONLY aspect names in parentheses, NO content or definitions.
+Format: "Key concepts: concept1 (aspect1, aspect2, aspect3), concept2 (aspect1, aspect2), concept3 (aspect1, aspect2)"
 
-Rules for the description:
-- Each concept MUST have at least 2 specific, detailed aspects listed in parentheses
+Rules for aspects:
+- List 2-3 aspects per concept that are names of what to explore (e.g. properties, classification, applications)
+- DO NOT include any content, definitions or explanations in the aspects
+- Use nouns or short phrases for aspects (e.g. "properties", "types", "applications")
+
+Example description:
+"Key concepts: forces (types, measurement, applications), motion (properties, equations), energy (forms, conservation)"
+
+Rules for ALL descriptions:
+- Each concept MUST have 2-3 aspects listed in parentheses
 - List 2-4 key concepts per segment
 - Concepts MUST be unique across all segments
 - Start directly with "Key concepts:"
 - Use commas to separate concept entries
-- Aspects should be specific learning points, not generic descriptions
-- Do not provide definitions in the aspects, only list what to explore
 
 Target language: ${targetLanguage}
 
