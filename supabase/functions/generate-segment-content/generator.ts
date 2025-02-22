@@ -1,4 +1,3 @@
-
 import { AIConfig } from "./types.ts";
 
 export const generatePrompt = (
@@ -47,11 +46,15 @@ CRITICAL REQUIREMENTS:
 
 FORMAT INSTRUCTIONS:
 1. Use clear hierarchical structure with headers (# for main titles, ## for subtitles)
-2. Break down complex concepts into bullet points or numbered lists
-3. Use **bold** and _italic_ for emphasis where appropriate
-4. First theory slide should provide a concise overview of ONLY the main concepts mentioned in the segment description
-5. Second theory slide should expand on these concepts with more details and examples
-6. Add "Key Takeaways" sections at the end of each slide
+2. Break complex concepts into bullet points or numbered lists
+3. FIRST THEORY SLIDE MUST:
+   - Start with a brief introduction (2-3 sentences)
+   - Use bullet points to list main concepts
+   - Include a "Key Points" section with 2-3 bullet points
+   - Total word count must stay under 150 words
+4. Second theory slide should expand on these concepts with more details and examples
+5. Use **bold** and _italic_ for emphasis on important terms
+6. Add concise "Key Takeaways" sections at the end of each slide
 7. Maintain professional formatting without emojis or decorative symbols
 
 ${aiConfig.custom_instructions ? `\nCUSTOM INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
@@ -60,7 +63,7 @@ ${languageInstruction}
 OUTPUT FORMAT:
 Return content in this exact JSON structure:
 {
-  "theory_slide_1": "Concise overview focusing only on concepts from segment description (MAX 150 words)",
+  "theory_slide_1": "Structured overview with bullet points and sections (MAX 150 words)",
   "theory_slide_2": "Detailed examples and practical applications with proper markdown formatting (300-400 words)",
   "quiz_1_type": "multiple_choice",
   "quiz_1_question": "A conceptual question testing understanding",
@@ -183,4 +186,3 @@ export const generateContent = async (prompt: string) => {
     throw error;
   }
 };
-
