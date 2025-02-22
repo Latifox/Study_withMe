@@ -67,21 +67,22 @@ serve(async (req) => {
 For each segment, create:
 1. A concise title (max 8 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (aspects to explore: definitions, classifications, applications, impacts), concept2 (aspects to explore: historical context, current relevance, future implications), concept3 (aspects to explore: types, characteristics, practical uses), concept4 (aspects to explore: components, relationships, significance)"
+   "Key concepts: concept1 (aspects: definition, classification), concept2 (aspects: history, components), concept3 (aspects: applications, impacts), concept4 (aspects: examples, future trends)"
    
    Rules for the description:
    - You MUST include EXACTLY 4 key concepts, no more, no less
-   - Each concept MUST have context specifying the aspects that should be explored in parentheses
-   - Each context MUST include at least 3 different aspects to explore (like definitions, classifications, impacts, applications, etc.)
+   - Each concept MUST be followed by "(aspects: X, Y, Z)" where X, Y, Z are aspects to be explored
+   - DO NOT include any actual definitions or content within the parentheses
+   - ONLY list the aspects that should be covered for each concept (like definition, classification, examples, etc.)
+   - Each concept MUST have at least 2 different aspects to be explored
    - Start EXACTLY with "Key concepts: " followed by the concepts list
    - Use commas to separate concept entries
    - Make sure each concept is unique within the segment
-   - Each concept's aspects should be specific to how that concept will be explored in this segment
 
 Target language: ${targetLanguage}
 
 Example of good description format:
-"Key concepts: energy sources (aspects to explore: classification types, environmental impacts, availability factors), resource management (aspects to explore: planning strategies, efficiency metrics, optimization techniques), technological integration (aspects to explore: implementation methods, compatibility issues, performance indicators), sustainability practices (aspects to explore: environmental benefits, economic viability, social acceptance)"
+"Key concepts: photosynthesis (aspects: definition, stages), cellular respiration (aspects: process, efficiency), metabolic pathways (aspects: types, regulation), energy transfer (aspects: mechanisms, applications)"
 
 Return ONLY a JSON object in this format:
 {
@@ -143,15 +144,15 @@ Return ONLY a JSON object in this format:
           throw new Error(`Segment ${index + 1} must have exactly 4 concepts`);
         }
         concepts.forEach((concept, conceptIndex) => {
-          if (!concept.includes('(aspects to explore:') || !concept.includes(')')) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects to explore in parentheses`);
+          if (!concept.includes('(aspects:') || !concept.includes(')')) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects list in parentheses`);
           }
-          // Check that each concept has at least 3 aspects listed
-          const aspectsMatch = concept.match(/aspects to explore:\s*(.*?)\)/);
+          // Check that each concept has at least 2 aspects listed
+          const aspectsMatch = concept.match(/aspects:\s*(.*?)\)/);
           if (aspectsMatch) {
             const aspects = aspectsMatch[1].split(',').map(a => a.trim());
-            if (aspects.length < 3) {
-              throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 3 aspects to explore`);
+            if (aspects.length < 2) {
+              throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 2 aspects listed`);
             }
           }
         });
