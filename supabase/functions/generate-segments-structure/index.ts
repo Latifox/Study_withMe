@@ -65,13 +65,18 @@ serve(async (req) => {
             content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 4-5 focused segments.
 
 For each segment, create:
-1. A concise title (max 8 words) that clearly indicates the specific topic
-2. A focused description that serves as instructions for content generation:
-   - Identify 2-3 KEY concepts that MUST be covered
-   - Be specific and concrete, avoid generic terms
-   - Maximum 1-2 sentences
+1. A concise title (max 8 words)
+2. A focused description for content generation that:
+   - Identifies 2-3 KEY concepts
+   - For each concept, specify HOW it should be covered in this specific context
+   - Example format: "Explain [concept] focusing on its role in [specific context], covering [specific aspect]"
+   - Be specific about which aspects to cover to avoid redundancy
+   - Maximum 2-3 sentences that build clear contextual boundaries
 
 Target language: ${targetLanguage}
+
+Example of good contextual description:
+"Explain energy resource reserves focusing on their geographical distribution and accessibility challenges. Address renewable energy potential specifically in the context of current infrastructure limitations."
 
 Return ONLY a JSON object in this format:
 {
@@ -191,3 +196,4 @@ Return ONLY a JSON object in this format:
     );
   }
 });
+
