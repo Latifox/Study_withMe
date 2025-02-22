@@ -15,12 +15,21 @@ serve(async (req) => {
   }
 
   try {
-    const { content } = await req.json();
-    if (!content) {
-      throw new Error('No content provided');
+    const { lectureContent, lectureId } = await req.json();
+    
+    console.log('Request received for lecture:', lectureId);
+    console.log('Content length:', lectureContent?.length || 0);
+
+    if (!lectureContent || typeof lectureContent !== 'string') {
+      console.error('Invalid or missing content:', lectureContent);
+      throw new Error('No content provided or invalid content format');
     }
 
-    console.log('Content length:', content.length);
+    if (!lectureId) {
+      console.error('No lecture ID provided');
+      throw new Error('Lecture ID is required');
+    }
+
     console.log('Generating segment structure...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -61,7 +70,7 @@ serve(async (req) => {
             }
             
             Here is the content to analyze:
-            ${content}`
+            ${lectureContent}`
           }
         ],
         temperature: 0.7,
@@ -123,11 +132,6 @@ serve(async (req) => {
       supabaseUrl,
       supabaseServiceKey
     );
-
-    const { lectureId } = await req.json();
-    if (!lectureId) {
-      throw new Error('No lecture ID provided');
-    }
 
     console.log(`Saving ${segments.segments.length} segments for lecture ${lectureId}`);
 
