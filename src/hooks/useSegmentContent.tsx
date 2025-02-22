@@ -13,10 +13,15 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       // First check if segment exists
       const { data: segment, error: segmentError } = await supabase
         .from('lecture_segments')
-        .select('*')
+        .select(`
+          *,
+          lectures (
+            content
+          )
+        `)
         .eq('lecture_id', numericLectureId)
         .eq('sequence_number', sequenceNumber)
-        .maybeSingle(); // Using maybeSingle instead of single to handle no results gracefully
+        .maybeSingle();
 
       if (segmentError) {
         console.error('Error fetching segment:', segmentError);
@@ -31,10 +36,10 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       // Then fetch corresponding content
       const { data: segmentContent, error: contentError } = await supabase
         .from('segments_content')
-        .select('*') // Select all fields
+        .select('*')
         .eq('lecture_id', numericLectureId)
         .eq('sequence_number', sequenceNumber)
-        .maybeSingle(); // Using maybeSingle instead of single
+        .maybeSingle();
 
       if (contentError) {
         console.error('Error fetching content:', contentError);
@@ -43,11 +48,16 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
 
       // If no content exists yet, trigger content generation
       if (!segmentContent) {
-        console.log('No content found, triggering generation...');
+        console.log('No content found, triggering generation with description:', segment.segment_description);
+        console.log('Full lecture content:', segment.lectures?.content);
+        
         const { error: generationError } = await supabase.functions.invoke('generate-segment-content', {
           body: {
             lectureId: numericLectureId,
-            segmentNumber: sequenceNumber
+            segmentNumber: sequenceNumber,
+            segmentTitle: segment.title,
+            segmentDescription: segment.segment_description,
+            lectureContent: segment.lectures?.content || ''
           }
         });
 
@@ -127,7 +137,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         }]
       };
     },
-    retry: 3, // Allow retries
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 10000), // Exponential backoff
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 10000),
   });
 };
