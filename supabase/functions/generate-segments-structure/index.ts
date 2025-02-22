@@ -1,7 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from '@supabase/supabase-js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -56,8 +56,8 @@ serve(async (req) => {
     const targetLanguage = aiConfig?.content_language || lecture?.original_language || 'English';
     console.log('Using target language:', targetLanguage);
 
-    console.log('Making OpenAI API request...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // First analyze the content to identify main topics
+    const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
@@ -68,10 +68,46 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into clear, organized segments. Generate 5-7 segments for this lecture. For each segment:
+            content: `You are an expert at analyzing educational content and identifying key topics. Analyze this lecture content and identify the 5-7 most important main topics that need to be covered, ensuring comprehensive coverage of the material. Return a JSON object with an array of topics, each containing:
+1. topic_title: A clear, descriptive title (max 5 words)
+2. key_concepts: Array of 2-3 most important concepts within this topic
+3. suggested_aspects: For each concept, 2 aspects to explore (like types, properties, applications, etc.)
 
-1. Title: Maximum 5 words, clear and descriptive
-2. Description: Must start with "Key concepts:" followed by 2-4 key concepts in this EXACT format:
+Focus on capturing the breadth of the lecture while maintaining logical progression.`
+          },
+          {
+            role: 'user',
+            content: lectureContent
+          }
+        ],
+        temperature: 0.3,
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!analysisResponse.ok) {
+      throw new Error(`OpenAI API error: ${analysisResponse.status} ${analysisResponse.statusText}`);
+    }
+
+    const analysisData = await analysisResponse.json();
+    const topics = JSON.parse(analysisData.choices[0].message.content);
+
+    // Now generate the final segments based on the analysis
+    const segmentsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert at organizing educational content into clear, focused segments. Based on the provided topic analysis, create ${topics.topics.length} segments that will effectively teach this material. For each segment:
+
+1. Title: Maximum 5 words, matching the analyzed topic titles
+2. Description: Must start with "Key concepts:" followed by 2-3 key concepts in this EXACT format:
    "Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
 
 CRUCIAL RULES:
@@ -85,87 +121,59 @@ CRUCIAL RULES:
 - Concepts must be unique across all segments
 - Always write in ${targetLanguage}
 
+Use the analyzed topics and their key concepts as a basis for your segments.
 Respond only with a JSON object containing an array of segments with title and description fields.`
           },
           {
             role: 'user',
-            content: lectureContent
+            content: JSON.stringify(topics)
           }
         ],
-        temperature: 0.3,
+        temperature: 0.2,
         response_format: { type: "json_object" }
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    if (!segmentsResponse.ok) {
+      throw new Error(`OpenAI API error: ${segmentsResponse.status} ${segmentsResponse.statusText}`);
     }
 
-    const openAIResponse = await response.json();
-    console.log('Received OpenAI response');
+    const segmentsData = await segmentsResponse.json();
+    const segments = JSON.parse(segmentsData.choices[0].message.content);
 
-    if (!openAIResponse.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response structure from OpenAI');
-    }
+    // Delete existing segments
+    const { error: deleteError } = await supabaseClient
+      .from('lecture_segments')
+      .delete()
+      .eq('lecture_id', lectureId);
 
-    let segments;
-    try {
-      const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
-      
-      if (!parsedContent.segments || !Array.isArray(parsedContent.segments)) {
-        throw new Error('Response missing segments array');
-      }
+    if (deleteError) throw deleteError;
 
-      if (parsedContent.segments.length < 5) {
-        throw new Error('Not enough segments generated (minimum 5 required)');
-      }
+    // Insert new segments
+    const segmentsToInsert = segments.segments.map((segment: any, index: number) => ({
+      lecture_id: lectureId,
+      sequence_number: index + 1,
+      title: segment.title,
+      segment_description: segment.description
+    }));
 
-      segments = parsedContent.segments;
-      console.log('Parsed segments:', segments);
+    const { error: insertError } = await supabaseClient
+      .from('lecture_segments')
+      .insert(segmentsToInsert);
 
-      // Delete existing segments
-      const { error: deleteError } = await supabaseClient
-        .from('lecture_segments')
-        .delete()
-        .eq('lecture_id', lectureId);
+    if (insertError) throw insertError;
 
-      if (deleteError) throw deleteError;
-
-      // Insert new segments
-      const segmentsToInsert = segments.map((segment: any, index: number) => ({
-        lecture_id: lectureId,
-        sequence_number: index + 1,
-        title: segment.title,
-        segment_description: segment.description
-      }));
-
-      const { data: insertedSegments, error: insertError } = await supabaseClient
-        .from('lecture_segments')
-        .insert(segmentsToInsert)
-        .select();
-
-      if (insertError) throw insertError;
-
-      console.log('Successfully inserted segments');
-      return new Response(JSON.stringify({ segments: insertedSegments }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-
-    } catch (error) {
-      console.error('Error processing OpenAI response:', error);
-      throw error;
-    }
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
 
   } catch (error) {
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }), 
-      { 
+      JSON.stringify({
+        error: error.message
+      }),
+      {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
