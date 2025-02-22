@@ -1,14 +1,11 @@
 
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Upload } from "lucide-react";
 import AIProfessorLoading from "./AIProfessorLoading";
+import { useFileUpload } from "@/hooks/useFileUpload";
 
 interface FileUploadProps {
   courseId?: string;
@@ -16,138 +13,16 @@ interface FileUploadProps {
 }
 
 const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [showAIProfessor, setShowAIProfessor] = useState(false);
-  const [currentLectureId, setCurrentLectureId] = useState<number | null>(null);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const readFileContent = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          resolve(event.target.result.toString());
-        } else {
-          reject(new Error('Failed to read file content'));
-        }
-      };
-      reader.onerror = (error) => reject(error);
-      reader.readAsText(file);
-    });
-  };
-
-  const handleUpload = async () => {
-    if (!file || !title || !courseId) {
-      toast({
-        title: "Error",
-        description: "Please provide both a title and a file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      // Read file content first
-      console.log('Reading file content...');
-      const fileContent = await readFileContent(file);
-      console.log('File content length:', fileContent.length);
-
-      // Upload PDF to storage
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${crypto.randomUUID()}.${fileExt}`;
-      
-      console.log('Uploading PDF to storage...');
-      const { error: uploadError } = await supabase.storage
-        .from('lecture_pdfs')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-      console.log('PDF uploaded successfully');
-
-      // Save lecture metadata
-      console.log('Saving lecture to database...');
-      const { data: lectureData, error: dbError } = await supabase
-        .from('lectures')
-        .insert({
-          course_id: parseInt(courseId),
-          title,
-          pdf_path: filePath,
-          content: fileContent // Save content in the lectures table
-        })
-        .select()
-        .single();
-
-      if (dbError) throw dbError;
-      console.log('Lecture saved successfully');
-
-      if (!lectureData?.id) {
-        throw new Error('No lecture ID returned from database');
-      }
-
-      setCurrentLectureId(lectureData.id);
-      setShowAIProfessor(true);
-
-      // Generate segment structure
-      console.log('Generating segment structure...');
-      const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
-        body: {
-          lectureId: lectureData.id,
-          lectureContent: fileContent
-        }
-      });
-
-      if (segmentError) {
-        console.error('Segment generation error:', segmentError);
-        throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
-      }
-      
-      if (!segmentData || !segmentData.segments) {
-        throw new Error('No segments returned from generation');
-      }
-      
-      console.log('Segment structure generated:', segmentData);
-
-      // Generate content for each segment in parallel
-      console.log('Generating content for all segments...');
-      const segmentPromises = segmentData.segments.map((segment: any) => 
-        supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId: lectureData.id,
-            segmentNumber: segment.sequence_number,
-            lectureContent: fileContent,
-            segmentTitle: segment.title,
-            segmentDescription: segment.segment_description
-          }
-        })
-      );
-
-      await Promise.all(segmentPromises);
-      console.log('All segment content generated successfully');
-
-      await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      toast({
-        title: "Success",
-        description: "Lecture uploaded and processed successfully!",
-      });
-      onClose();
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      setIsUploading(false);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload lecture",
-        variant: "destructive",
-      });
-    }
-  };
+  const {
+    file,
+    setFile,
+    title,
+    setTitle,
+    isUploading,
+    showAIProfessor,
+    currentLectureId,
+    handleUpload
+  } = useFileUpload({ courseId, onClose });
 
   if (showAIProfessor && currentLectureId && courseId) {
     return <AIProfessorLoading 
@@ -233,4 +108,3 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 };
 
 export default FileUpload;
-
