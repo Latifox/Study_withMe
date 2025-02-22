@@ -1,7 +1,6 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,14 +13,16 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, lectureContent } = await req.json();
+    const { lectureId, lectureContent, lectureTitle } = await req.json();
     console.log('Received request for lecture:', lectureId);
+    console.log('Lecture title:', lectureTitle);
 
     if (!lectureContent) {
       throw new Error('No lecture content provided');
     }
 
     console.log('Content length:', lectureContent.length);
+    console.log('First 500 characters of content:', lectureContent.substring(0, 500));
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
@@ -39,31 +40,35 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
-            For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
-            These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
-            Focus on explaining the relationships between concepts and what specific points need to be addressed.
-            Do not just list topics - explain how they should be presented and what specific points need to be addressed.
-            Important: Make sure each segment covers unique concepts - do not repeat the same concepts across multiple segments.`
+            content: `You are an expert at analyzing educational content and breaking it down into logical segments.
+            Your task is to analyze lecture content and create meaningful, content-specific segments that accurately reflect the actual material.
+            You must read and understand the content thoroughly before creating segments.
+            Each segment must be based on the actual topics and concepts present in the lecture content.
+            Do not generate generic or template-based segments.
+            Each segment's title and description must directly reference specific concepts, terms, or ideas from the lecture content.`
           },
           {
             role: 'user',
-            content: `Analyze this lecture content and break it into 5-8 logical segments. For each segment:
-            1. Create a clear, focused title that reflects the main concept being covered
-            2. Write a detailed description of 3-5 sentences explaining what specific content should be covered in that segment
+            content: `You are analyzing a lecture titled "${lectureTitle}". 
+            Read through the following lecture content carefully and break it into 5-8 logical segments.
+            Each segment must be based on the actual content and topics covered in the lecture.
             
-            The descriptions should:
-            - Be specific about what aspects to cover
-            - Explain how concepts relate to each other
-            - Not repeat concepts that are covered in other segments
-            - Include examples or applications where relevant
+            For each segment:
+            1. Create a title that reflects the specific concept or topic from the lecture
+            2. Write a description of 3-5 sentences that outlines the actual content that appears in the lecture
             
-            Each segment should build on previous ones in a logical progression. Return the segments in this exact JSON format:
+            The descriptions must:
+            - Reference specific concepts, terms, and examples from the lecture content
+            - Explain how these specific concepts relate to each other
+            - Not use generic descriptions - they must be based on the actual lecture material
+            - Build progressively on previous segments in the order they appear in the lecture
+            
+            Return the segments in this exact JSON format:
             {
               "segments": [
                 {
                   "title": "segment title",
-                  "segment_description": "detailed 3-5 sentence description"
+                  "segment_description": "description referencing actual lecture content"
                 }
               ]
             }
@@ -72,7 +77,7 @@ serve(async (req) => {
             ${lectureContent}`
           }
         ],
-        temperature: 0.7,  // Balanced between creativity and consistency
+        temperature: 0.3, // Lower temperature for more focused output
         max_tokens: 2000,
       }),
     });
@@ -85,6 +90,13 @@ serve(async (req) => {
 
     const data = await response.json();
     console.log('Received response from OpenAI');
+    
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI');
+    }
+
+    // Log the raw response from OpenAI
+    console.log('Raw OpenAI response:', data.choices[0].message.content);
 
     const segments = JSON.parse(data.choices[0].message.content);
 

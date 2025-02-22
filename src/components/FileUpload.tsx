@@ -34,7 +34,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       return;
     }
 
-    // Set uploading state to disable the button
     setIsUploading(true);
 
     try {
@@ -63,7 +62,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         .single();
 
       if (dbError) throw dbError;
-      console.log('Lecture saved successfully');
+      console.log('Lecture saved successfully:', lectureData);
 
       if (!lectureData?.id) {
         throw new Error('No lecture ID returned from database');
@@ -85,7 +84,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         throw new Error('No content returned from PDF extraction');
       }
       
-      console.log('PDF content extracted:', extractionData);
+      console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
       console.log('Content length:', extractionData.content.length);
 
       // Generate segment structure (titles and descriptions)
@@ -93,7 +92,8 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
         body: {
           lectureId: lectureData.id,
-          lectureContent: extractionData.content
+          lectureContent: extractionData.content,
+          lectureTitle: title // Pass the lecture title for better context
         }
       });
 
@@ -133,7 +133,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
-      setIsUploading(false); // Re-enable the button on error
+      setIsUploading(false);
       toast({
         title: "Error",
         description: error.message || "Failed to upload lecture",
