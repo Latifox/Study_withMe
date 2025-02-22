@@ -40,14 +40,16 @@ CRITICAL REQUIREMENTS:
 5. Use proper markdown formatting for better readability
 6. Ensure quiz_1_correct_answer EXACTLY matches one of the quiz_1_options
 7. Make quiz_2_correct_answer a boolean (true/false)
+8. DO NOT use any emojis or special characters in the content
+9. Use clear, professional formatting without decorative elements
 
 FORMAT INSTRUCTIONS:
 1. Use clear hierarchical structure with headers (# for main titles, ## for subtitles)
 2. Break down complex concepts into bullet points or numbered lists
-3. Include visual markers like ▶️, 💡, 🔑, ⚡️ to highlight important points
-4. Use **bold** and _italic_ for emphasis
-5. Break content into clear sections with descriptive headings
-6. Add "Key Takeaways" sections where appropriate
+3. Use **bold** and _italic_ for emphasis where appropriate
+4. Break content into clear sections with descriptive headings
+5. Add "Key Takeaways" sections where appropriate
+6. Maintain professional formatting without emojis or decorative symbols
 
 ${aiConfig.custom_instructions ? `\nCUSTOM INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
@@ -114,6 +116,20 @@ export const generateContent = async (prompt: string) => {
         throw new Error('quiz_2_correct_answer must be boolean');
       }
 
+      // Remove any emojis from the content
+      const removeEmojis = (text: string) => {
+        return text.replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+      };
+
+      // Clean all text fields
+      parsed.theory_slide_1 = removeEmojis(parsed.theory_slide_1);
+      parsed.theory_slide_2 = removeEmojis(parsed.theory_slide_2);
+      parsed.quiz_1_question = removeEmojis(parsed.quiz_1_question);
+      parsed.quiz_1_explanation = removeEmojis(parsed.quiz_1_explanation);
+      parsed.quiz_2_question = removeEmojis(parsed.quiz_2_question);
+      parsed.quiz_2_explanation = removeEmojis(parsed.quiz_2_explanation);
+      parsed.quiz_1_options = parsed.quiz_1_options.map(removeEmojis);
+
       return parsed;
     } catch (error) {
       console.error('Validation error:', error.message);
@@ -134,7 +150,7 @@ export const generateContent = async (prompt: string) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert educational content generator. Always return complete, valid JSON containing exactly the required fields.'
+            content: 'You are an expert educational content generator. Always return complete, valid JSON containing exactly the required fields. Do not use emojis or decorative symbols in the content.'
           },
           { role: 'user', content: prompt }
         ],
@@ -164,3 +180,4 @@ export const generateContent = async (prompt: string) => {
     throw error;
   }
 };
+
