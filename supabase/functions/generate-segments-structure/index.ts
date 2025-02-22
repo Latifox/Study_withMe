@@ -19,7 +19,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Starting generate-segments-structure function')
+
     if (!openAiKey) {
+      console.error('OpenAI API key not configured')
       throw new Error('OpenAI API key not configured')
     }
 
@@ -27,13 +30,15 @@ serve(async (req) => {
     const { lectureId, lectureContent } = await req.json()
 
     if (!lectureId || !lectureContent) {
+      console.error('Missing required parameters:', { lectureId, hasContent: !!lectureContent })
       throw new Error('Missing required parameters: lectureId or lectureContent')
     }
 
-    console.log('Generating structure for lecture:', lectureId)
+    console.log('Processing lecture:', lectureId)
     console.log('Content length:', lectureContent.length)
 
     // Call OpenAI to generate the segments
+    console.log('Calling OpenAI API...')
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -45,16 +50,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an educational content structuring assistant. Your task is to analyze lecture content and break it down into logical segments. Each segment should have a clear title and a detailed narrative description explaining what will be covered."
+            content: "You are an educational content structuring assistant. Your task is to analyze lecture content and break it down into logical segments. Each segment should have a title, sequence number, and description. You must return your response in valid JSON format with no markdown."
           },
           {
             role: "user",
-            content: `Please analyze this lecture content and break it into 4-6 learning segments. Each segment should have:
-            1. A title that clearly indicates the main topic
-            2. A sequence number (starting from 1)
-            3. A detailed description (1-2 paragraphs) explaining what concepts and ideas will be covered
-            
-            Format your response as a JSON object with this exact structure:
+            content: `Please analyze this lecture content and break it into 4-6 learning segments. Return ONLY a JSON object with this structure (no markdown or text):
             {
               "segments": [
                 {
@@ -64,8 +64,8 @@ serve(async (req) => {
                 }
               ]
             }
-            
-            Here's the content to analyze:
+
+            Use this lecture content:
             ${lectureContent.substring(0, 15000)}`
           }
         ],
@@ -81,28 +81,31 @@ serve(async (req) => {
     }
 
     const result = await response.json()
-    if (!result.choices || !result.choices[0] || !result.choices[0].message) {
+    if (!result.choices?.[0]?.message?.content) {
       console.error('Unexpected OpenAI response format:', result)
       throw new Error('Invalid response format from OpenAI')
     }
 
+    console.log('Received OpenAI response, parsing JSON...')
     const content = result.choices[0].message.content
-    console.log('OpenAI response:', content)
-
+    
     let segments
     try {
-      segments = JSON.parse(content)
-      // Validate the structure
+      segments = JSON.parse(content.trim())
       if (!segments.segments || !Array.isArray(segments.segments)) {
+        console.error('Invalid segments structure:', segments)
         throw new Error('Invalid segments structure')
       }
     } catch (error) {
-      console.error('Error parsing OpenAI response:', error)
+      console.error('Error parsing OpenAI response:', error, '\nContent:', content)
       throw new Error('Failed to parse segments structure from OpenAI response')
     }
 
+    console.log('Successfully parsed segments:', segments)
+
     // Insert segments into database
     for (const segment of segments.segments) {
+      console.log('Inserting segment:', segment)
       const { error: insertError } = await supabase
         .from('lecture_segments')
         .insert({
@@ -127,7 +130,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-segments-structure:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.stack || 'No stack trace available'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
