@@ -113,9 +113,9 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       if (segmentError) throw segmentError;
 
       // Wait for segments to be created
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Fetch the new segments and regenerate content for each
+      // Fetch the new segments
       const { data: segments, error: fetchError } = await supabase
         .from('lecture_segments')
         .select('*')
@@ -125,18 +125,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       console.log('Regenerating content for segments:', segments);
 
-      // Make sure segments_content table is clean before generating new content
-      const { error: deleteError } = await supabase
-        .from('segments_content')
-        .delete()
-        .eq('lecture_id', lectureId);
-
-      if (deleteError) {
-        console.error('Error deleting old content:', deleteError);
-        throw deleteError;
-      }
-
-      // Generate content for each segment sequentially to avoid overwhelming the API
+      // Generate content for each segment sequentially
       for (const segment of segments) {
         console.log('Generating content for segment:', segment.sequence_number);
         const { error: contentError } = await supabase.functions.invoke('generate-segment-content', {
@@ -154,8 +143,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           throw contentError;
         }
 
-        // Wait a bit between segments to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait between segments to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       // Invalidate relevant queries
