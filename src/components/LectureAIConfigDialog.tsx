@@ -60,27 +60,61 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   }, [config]);
 
   const deleteExistingContent = async () => {
-    const tables = [
-      { name: 'quiz_progress', message: 'Deleting quiz progress...' },
-      { name: 'user_progress', message: 'Deleting user progress...' },
-      { name: 'segments_content', message: 'Deleting segments content...' },
-      { name: 'lecture_segments', message: 'Deleting lecture segments...' }
-    ];
+    // Delete quiz progress
+    console.log('Deleting quiz progress...');
+    const { error: quizError } = await supabase
+      .from('quiz_progress')
+      .delete()
+      .eq('lecture_id', lectureId);
 
-    for (const table of tables) {
-      console.log(table.message);
-      const { error } = await supabase
-        .from(table.name)
-        .delete()
-        .eq('lecture_id', lectureId);
-
-      if (error) {
-        console.error(`Error deleting from ${table.name}:`, error);
-        throw error;
-      }
-      // Add a small delay between operations
-      await new Promise(resolve => setTimeout(resolve, 500));
+    if (quizError) {
+      console.error('Error deleting quiz progress:', quizError);
+      throw quizError;
     }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Delete user progress
+    console.log('Deleting user progress...');
+    const { error: progressError } = await supabase
+      .from('user_progress')
+      .delete()
+      .eq('lecture_id', lectureId);
+
+    if (progressError) {
+      console.error('Error deleting user progress:', progressError);
+      throw progressError;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Delete segments content
+    console.log('Deleting segments content...');
+    const { error: contentError } = await supabase
+      .from('segments_content')
+      .delete()
+      .eq('lecture_id', lectureId);
+
+    if (contentError) {
+      console.error('Error deleting segments content:', contentError);
+      throw contentError;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Delete lecture segments
+    console.log('Deleting lecture segments...');
+    const { error: segmentsError } = await supabase
+      .from('lecture_segments')
+      .delete()
+      .eq('lecture_id', lectureId);
+
+    if (segmentsError) {
+      console.error('Error deleting lecture segments:', segmentsError);
+      throw segmentsError;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
   };
 
   const handleSave = async () => {
@@ -337,3 +371,4 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 };
 
 export default LectureAIConfigDialog;
+
