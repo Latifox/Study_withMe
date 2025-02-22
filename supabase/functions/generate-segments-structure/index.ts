@@ -15,23 +15,12 @@ serve(async (req) => {
   }
 
   try {
-    const requestData = await req.json();
-    console.log('Request data:', requestData);
-    
-    const { lectureId, lectureContent } = requestData;
-    
-    if (!lectureContent) {
-      console.error('No lecture content provided');
-      throw new Error('No lecture content provided');
+    const { content } = await req.json();
+    if (!content) {
+      throw new Error('No content provided');
     }
 
-    if (!lectureId) {
-      console.error('No lecture ID provided');
-      throw new Error('No lecture ID provided');
-    }
-
-    console.log('Content length:', lectureContent.length);
-    console.log('Lecture ID:', lectureId);
+    console.log('Content length:', content.length);
     console.log('Generating segment structure...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -39,7 +28,6 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log('Making OpenAI API request...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -47,38 +35,33 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are an expert educator skilled at creating engaging, narrative-style learning content. Your task is to analyze educational materials and break them down into logical learning segments that tell a cohesive story.
-
-For each segment, you will write a detailed narrative description that:
-1. Provides context and background information
-2. Explains real-world applications and implications
-3. Highlights connections between concepts
-4. Describes specific examples and scenarios
-5. Outlines a clear learning journey
-
-Avoid simply listing topics or concepts. Instead, craft a narrative that explains how concepts build upon each other and connect to form a complete understanding. Each description should read like a mini-story that guides the learning process.`
+            content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
+            For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
+            These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
+            Focus on explaining the relationships between concepts and what specific points need to be addressed.
+            Do not just list topics - explain how they should be presented and what specific points need to be addressed.`
           },
           {
             role: 'user',
             content: `Please analyze this content and break it down into 4-8 logical learning segments. For each segment:
-            1. Create a clear, descriptive title that captures the main theme
-            2. Write a detailed narrative description (3-5 sentences) that tells the story of what will be learned, including context, connections, and real-world relevance
+            1. Give it a clear, descriptive title
+            2. Write a detailed 3-5 sentence description explaining exactly what content should be covered
             3. Format your response as a JSON object with this structure:
             {
               "segments": [
                 {
                   "title": "Segment Title",
-                  "description": "Narrative description..."
+                  "description": "Detailed 3-5 sentence description..."
                 }
               ]
             }
             
             Here is the content to analyze:
-            ${lectureContent}`
+            ${content}`
           }
         ],
         temperature: 0.7,
@@ -94,6 +77,7 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
     const data = await response.json();
     console.log('Received OpenAI response');
 
+    // Validate response format
     if (!data.choices?.[0]?.message?.content) {
       console.error('Invalid response format from OpenAI:', data);
       throw new Error('Invalid response format from OpenAI');
@@ -107,10 +91,12 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       segments = JSON.parse(rawContent);
       console.log('Parsed segments:', JSON.stringify(segments, null, 2));
       
+      // Validate segments structure
       if (!segments.segments || !Array.isArray(segments.segments)) {
         throw new Error('Invalid segments structure');
       }
 
+      // Validate each segment
       segments.segments.forEach((segment: any, index: number) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Invalid title in segment ${index}`);
@@ -125,6 +111,7 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       throw new Error(`Failed to parse segments from OpenAI response: ${error.message}`);
     }
 
+    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -137,8 +124,14 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       supabaseServiceKey
     );
 
+    const { lectureId } = await req.json();
+    if (!lectureId) {
+      throw new Error('No lecture ID provided');
+    }
+
     console.log(`Saving ${segments.segments.length} segments for lecture ${lectureId}`);
 
+    // Insert segments into the database
     const { error: insertError } = await supabaseClient
       .from('lecture_segments')
       .upsert(
@@ -160,7 +153,7 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
     return new Response(
       JSON.stringify({ 
         message: 'Segments generated and saved successfully',
-        segments: segments.segments 
+        segmentCount: segments.segments.length 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -182,4 +175,3 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
     );
   }
 });
-

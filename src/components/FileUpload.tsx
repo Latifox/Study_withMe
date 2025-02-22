@@ -34,14 +34,11 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       return;
     }
 
+    // Set uploading state to disable the button
     setIsUploading(true);
 
     try {
-      // Read the PDF file content
-      const fileContent = await file.text();
-      console.log('File content length:', fileContent.length);
-
-      // Upload PDF to storage
+      // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
       
@@ -61,7 +58,6 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
-          content: fileContent // Save the content directly in the lectures table
         })
         .select()
         .single();
@@ -76,11 +72,28 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       setCurrentLectureId(lectureData.id);
       setShowAIProfessor(true);
 
+      console.log('Extracting PDF content...');
+      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
+        body: {
+          filePath,
+          lectureId: lectureData.id.toString()
+        }
+      });
+
+      if (extractionError) throw extractionError;
+      if (!extractionData || !extractionData.content) {
+        throw new Error('No content returned from PDF extraction');
+      }
+      
+      console.log('PDF content extracted:', extractionData);
+      console.log('Content length:', extractionData.content.length);
+
+      // Generate segment structure (titles and descriptions)
       console.log('Generating segment structure...');
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
         body: {
           lectureId: lectureData.id,
-          lectureContent: fileContent // Pass the content directly
+          lectureContent: extractionData.content
         }
       });
 
@@ -120,7 +133,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
-      setIsUploading(false);
+      setIsUploading(false); // Re-enable the button on error
       toast({
         title: "Error",
         description: error.message || "Failed to upload lecture",
