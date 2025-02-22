@@ -15,8 +15,11 @@ interface TheorySlideProps {
 }
 
 // Define interface for code component props
-interface CodeComponentProps extends Components['code'] {
+interface CodeComponentProps {
+  node?: any;
   inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
 }
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
@@ -130,4 +133,3 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 };
 
 export default TheorySlide;
-
