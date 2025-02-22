@@ -59,49 +59,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     }
   }, [config]);
 
-  const regenerateContent = async () => {
-    try {
-      const { data: lecture, error: lectureError } = await supabase
-        .from('lectures')
-        .select('content')
-        .eq('id', lectureId)
-        .single();
-
-      if (lectureError) throw lectureError;
-
-      const { error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
-        body: {
-          lectureId: lectureId,
-          lectureContent: lecture.content
-        }
-      });
-
-      if (segmentError) throw segmentError;
-
-      const { data: segments, error: fetchError } = await supabase
-        .from('lecture_segments')
-        .select('sequence_number')
-        .eq('lecture_id', lectureId);
-
-      if (fetchError) throw fetchError;
-
-      const contentPromises = segments.map(segment =>
-        supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId: lectureId,
-            segmentNumber: segment.sequence_number
-          }
-        })
-      );
-
-      await Promise.all(contentPromises);
-
-    } catch (error) {
-      console.error('Error regenerating content:', error);
-      throw error;
-    }
-  };
-
   const handleSave = async () => {
     if (!lectureId) {
       toast({
@@ -115,6 +72,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     try {
       setIsSaving(true);
 
+      // Update AI configuration
       const { error: configError } = await supabase
         .from("lecture_ai_configs")
         .upsert(
@@ -133,11 +91,59 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (configError) throw configError;
 
-      await regenerateContent();
+      // The handle_ai_config_change trigger will automatically delete existing content
+      // Now we need to regenerate the content
 
+      // First get the lecture content
+      const { data: lecture, error: lectureError } = await supabase
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single();
+
+      if (lectureError) throw lectureError;
+
+      // Regenerate segments structure
+      console.log('Regenerating segments structure...');
+      const { error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
+        body: {
+          lectureId,
+          lectureContent: lecture.content,
+          lectureTitle: lecture.title
+        }
+      });
+
+      if (segmentError) throw segmentError;
+
+      // Fetch the new segments and regenerate content for each
+      const { data: segments, error: fetchError } = await supabase
+        .from('lecture_segments')
+        .select('*')
+        .eq('lecture_id', lectureId);
+
+      if (fetchError) throw fetchError;
+
+      console.log('Regenerating content for segments:', segments);
+
+      // Generate content for each segment sequentially to avoid overwhelming the API
+      for (const segment of segments) {
+        console.log('Generating content for segment:', segment.sequence_number);
+        const { error: contentError } = await supabase.functions.invoke('generate-segment-content', {
+          body: {
+            lectureId,
+            segmentNumber: segment.sequence_number,
+            segmentTitle: segment.title,
+            segmentDescription: segment.segment_description,
+            lectureContent: lecture.content
+          }
+        });
+
+        if (contentError) throw contentError;
+      }
+
+      // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       await queryClient.invalidateQueries({ queryKey: ["segment-content", lectureId] });
-      await queryClient.invalidateQueries({ queryKey: ["story-content", lectureId] });
 
       toast({
         title: "Success",
