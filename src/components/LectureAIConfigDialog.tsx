@@ -31,33 +31,57 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
   const [contentLanguage, setContentLanguage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Fetch existing configuration
   const { data: config } = useQuery({
     queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
       if (!lectureId) return null;
       
       const { data: configData, error: configError } = await supabase
-        .from("lecture_ai_configs")
-        .select("*")
-        .eq("lecture_id", lectureId)
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
         .maybeSingle();
 
       if (configError) throw configError;
-
-      return { config: configData };
+      return configData;
     },
     enabled: !!lectureId && isOpen,
   });
 
   useEffect(() => {
-    if (config?.config) {
-      setTemperature([config.config.temperature]);
-      setCreativity([config.config.creativity_level]);
-      setDetailLevel([config.config.detail_level]);
-      setCustomInstructions(config.config.custom_instructions || "");
-      setContentLanguage(config.config.content_language || "");
+    if (config) {
+      setTemperature([config.temperature]);
+      setCreativity([config.creativity_level]);
+      setDetailLevel([config.detail_level]);
+      setCustomInstructions(config.custom_instructions || "");
+      setContentLanguage(config.content_language || "");
     }
   }, [config]);
+
+  const deleteExistingContent = async () => {
+    const tables = [
+      { name: 'quiz_progress', message: 'Deleting quiz progress...' },
+      { name: 'user_progress', message: 'Deleting user progress...' },
+      { name: 'segments_content', message: 'Deleting segments content...' },
+      { name: 'lecture_segments', message: 'Deleting lecture segments...' }
+    ];
+
+    for (const table of tables) {
+      console.log(table.message);
+      const { error } = await supabase
+        .from(table.name)
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (error) {
+        console.error(`Error deleting from ${table.name}:`, error);
+        throw error;
+      }
+      // Add a small delay between operations
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
 
   const handleSave = async () => {
     if (!lectureId) {
@@ -88,9 +112,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         throw new Error('Lecture not found');
       }
 
-      console.log('Starting AI config update process...');
-
-      // Update AI configuration first before deleting old content
+      // Save AI configuration
       console.log('Updating AI configuration...');
       const { error: configError } = await supabase
         .from('lecture_ai_configs')
@@ -102,9 +124,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
             detail_level: detailLevel[0],
             custom_instructions: customInstructions,
             content_language: contentLanguage,
-          },
-          {
-            onConflict: 'lecture_id'
           }
         );
 
@@ -113,38 +132,17 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         throw configError;
       }
 
-      // Wait for configuration to be updated
+      // Wait for configuration to be saved
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Manually delete existing content
-      console.log('Deleting old content...');
-
-      // Delete in the correct order to respect foreign key constraints
-      const deleteQueries = [
-        { table: 'quiz_progress', message: 'Deleting quiz progress...' },
-        { table: 'user_progress', message: 'Deleting user progress...' },
-        { table: 'segments_content', message: 'Deleting segments content...' },
-        { table: 'lecture_segments', message: 'Deleting lecture segments...' },
-      ];
-
-      for (const { table, message } of deleteQueries) {
-        console.log(message);
-        const { error: deleteError } = await supabase
-          .from(table)
-          .delete()
-          .eq('lecture_id', lectureId);
-
-        if (deleteError) {
-          console.error(`Error deleting from ${table}:`, deleteError);
-          throw deleteError;
-        }
-      }
+      // Delete existing content
+      await deleteExistingContent();
 
       // Wait for deletions to complete
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Regenerate segments structure
-      console.log('Calling generate-segments-structure function...');
+      // Generate new segments structure
+      console.log('Generating new segments structure...');
       const { error: segmentError } = await supabase.functions.invoke(
         'generate-segments-structure',
         {
@@ -162,10 +160,9 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       }
 
       // Wait for segments to be created
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Fetch the new segments
-      console.log('Fetching newly created segments...');
       const { data: segments, error: fetchError } = await supabase
         .from('lecture_segments')
         .select('*')
@@ -182,7 +179,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       console.log(`Found ${segments.length} segments, generating content...`);
 
-      // Generate content for each segment sequentially
+      // Generate content for each segment
       for (const segment of segments) {
         console.log(`Generating content for segment ${segment.sequence_number}...`);
         const { error: contentError } = await supabase.functions.invoke(
@@ -206,11 +203,11 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           throw contentError;
         }
 
-        // Wait between segments to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait between segments
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
-      // Invalidate relevant queries
+      // Invalidate queries
       await queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       await queryClient.invalidateQueries({ queryKey: ["segment-content", lectureId] });
 
