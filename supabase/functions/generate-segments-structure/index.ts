@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,13 +20,18 @@ serve(async (req) => {
       throw new Error('Missing required parameters: lectureId or lectureContent');
     }
 
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
     console.log('Generating segments structure for lecture:', lectureId);
     console.log('Content length:', lectureContent.length);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -85,16 +91,15 @@ IMPORTANT: Return ONLY a JSON object with this structure:
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI API error:', error);
-      throw new Error(`Failed to generate segments: ${error}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error response:', errorText);
+      throw new Error(`OpenAI API call failed: ${response.status} ${response.statusText}`);
     }
 
     const openAIResponse = await response.json();
-    console.log('OpenAI response:', JSON.stringify(openAIResponse, null, 2));
-
     if (!openAIResponse.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI');
+      console.error('Invalid OpenAI response structure:', openAIResponse);
+      throw new Error('Invalid response structure from OpenAI');
     }
 
     let segments;
@@ -124,58 +129,18 @@ IMPORTANT: Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.error('Raw content:', openAIResponse.choices[0].message.content);
-      
-      const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `Fix this JSON to match the required format exactly:
-{
-  "segments": [
-    {
-      "title": "string",
-      "description": "string"
-    }
-  ]
-}
-Do not add any additional fields or text.`
-            },
-            {
-              role: 'user',
-              content: openAIResponse.choices[0].message.content
-            }
-          ],
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        }),
-      });
-
-      if (!retryResponse.ok) {
-        throw new Error('Failed to recover malformed JSON');
-      }
-
-      const retryData = await retryResponse.json();
-      const retryContent = JSON.parse(retryData.choices[0].message.content);
-      
-      if (!retryContent.segments || !Array.isArray(retryContent.segments)) {
-        throw new Error('Recovery attempt failed to produce valid segments');
-      }
-
-      segments = retryContent.segments;
-      console.log('Recovered segments through retry');
+      throw new Error(`Failed to parse OpenAI response: ${error.message}`);
     }
 
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false
+        }
+      }
     );
 
     // Delete existing segments for this lecture
@@ -210,11 +175,14 @@ Do not add any additional fields or text.`
       throw insertError;
     }
 
-    console.log('Successfully inserted segments:', JSON.stringify(insertedSegments, null, 2));
+    console.log('Successfully inserted segments:', insertedSegments);
 
     return new Response(
       JSON.stringify({ segments: insertedSegments }), 
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
     );
 
   } catch (error) {
@@ -224,8 +192,10 @@ Do not add any additional fields or text.`
         error: error.message,
         details: error.stack
       }), 
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
-
