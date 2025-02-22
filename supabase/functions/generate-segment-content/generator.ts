@@ -21,9 +21,9 @@ export const generatePrompt = (
   console.log('Content length:', truncatedContent.length);
   console.log('Language instruction:', languageInstruction);
 
-  return `You are a specialized educational content generator focused on creating clear, structured learning segments.
+  return `You are a specialized educational content generator focused on creating engaging, well-structured learning segments.
 
-TASK: Create a focused educational segment about: "${segmentTitle}"
+TASK: Create an engaging educational segment about: "${segmentTitle}"
 
 CONTEXT:
 ${segmentDescription}
@@ -33,13 +33,23 @@ SOURCE MATERIAL:
 ${truncatedContent}
 """
 
+FORMATTING INSTRUCTIONS:
+1. Use clear hierarchical structure with headers (# for main titles, ## for subtitles)
+2. Break down complex concepts into bullet points or numbered lists
+3. Include visual markers like ▶️, 💡, 🔑, ⚡️ to highlight important points
+4. Use formatting like **bold** and _italic_ for emphasis
+5. Break content into clear sections with descriptive headings
+6. Add "Key Takeaways" sections where appropriate
+7. Use comparisons and examples to illustrate concepts
+8. Include relevant formulas or diagrams using markdown if needed
+
 ${aiConfig.custom_instructions ? `\nCUSTOM INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
 
-REQUIRED OUTPUT FORMAT: Create two theory slides and two quiz questions in this exact JSON structure:
+REQUIRED OUTPUT FORMAT: Create two engaging theory slides and two quiz questions in this exact JSON structure:
 {
-  "theory_slide_1": "Clear, focused content explaining fundamental concepts (300-400 words)",
-  "theory_slide_2": "Detailed examples and practical applications (300-400 words)",
+  "theory_slide_1": "Clear, focused content with proper markdown formatting (300-400 words)",
+  "theory_slide_2": "Detailed examples and practical applications with proper markdown formatting (300-400 words)",
   "quiz_1_type": "multiple_choice",
   "quiz_1_question": "A conceptual question testing understanding",
   "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
@@ -58,8 +68,9 @@ CRITICAL REQUIREMENTS:
 4. Keep theory slides between 300-400 words each
 5. Include exactly 4 options for multiple choice questions
 6. Return VALID JSON with all fields present
+7. Use proper markdown formatting in theory slides for better readability
 
-${aiConfig.temperature > 0.7 ? 'Feel free to be creative while staying accurate.' : 'Focus on accuracy and clarity.'}`;
+${aiConfig.temperature > 0.7 ? 'Feel free to be creative with the presentation while staying accurate.' : 'Focus on accuracy and clarity while maintaining engaging structure.'}`; 
 };
 
 export const generateContent = async (prompt: string, maxRetries = 3) => {
