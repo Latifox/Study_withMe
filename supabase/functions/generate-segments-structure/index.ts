@@ -1,7 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,20 +9,24 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { lectureId, content } = await req.json();
-    console.log('Received request for lecture:', lectureId);
+    const { content } = await req.json();
+    if (!content) {
+      throw new Error('No content provided');
+    }
+
+    console.log('Content length:', content.length);
+    console.log('Generating segment structure...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      throw new Error('Missing OpenAI API key');
+      throw new Error('OpenAI API key not configured');
     }
-
-    console.log('Content length:', content?.length || 0);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -43,35 +47,35 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Analyze this lecture content and break it into 4-7 logical segments. For each segment:
-            1. Create a clear, focused title
-            2. Write a detailed description of 3-5 sentences explaining what content should be covered in that segment
-            The descriptions should be specific about what aspects to cover and how concepts relate to each other.
-            
-            Here's an example of a good segment description:
-            "This segment should explain the different types of coal based on their carbon content and formation process. It should detail how anthracite, bituminous, and lignite coal differ in their properties and energy output. The explanation should include specific examples of where each type is commonly found and their primary industrial applications."
-
-            Each segment should build on previous ones in a logical progression. Return the segments in this exact JSON format:
+            content: `Please analyze this content and break it down into 4-8 logical learning segments. For each segment:
+            1. Give it a clear, descriptive title
+            2. Write a detailed 3-5 sentence description explaining exactly what content should be covered
+            3. Format your response as a JSON object with this structure:
             {
               "segments": [
                 {
-                  "title": "segment title",
-                  "segment_description": "3-5 sentences describing what content should be covered"
+                  "title": "Segment Title",
+                  "description": "Detailed 3-5 sentence description..."
                 }
               ]
             }
-
-            Here's the lecture content to analyze:
+            
+            Here is the content to analyze:
             ${content}`
           }
         ],
-        temperature: 0.5,
-        max_tokens: 2000,
+        temperature: 0.7,
       }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
-    console.log('Received response from OpenAI');
+    console.log('Received OpenAI response');
 
     // Validate response format
     if (!data.choices?.[0]?.message?.content) {
@@ -81,67 +85,93 @@ serve(async (req) => {
 
     let segments;
     try {
-      segments = JSON.parse(data.choices[0].message.content);
+      const rawContent = data.choices[0].message.content;
+      console.log('Raw OpenAI response:', rawContent);
+      
+      segments = JSON.parse(rawContent);
       console.log('Parsed segments:', JSON.stringify(segments, null, 2));
       
       // Validate segments structure
       if (!segments.segments || !Array.isArray(segments.segments)) {
         throw new Error('Invalid segments structure');
       }
+
+      // Validate each segment
+      segments.segments.forEach((segment: any, index: number) => {
+        if (!segment.title || typeof segment.title !== 'string') {
+          throw new Error(`Invalid title in segment ${index}`);
+        }
+        if (!segment.description || typeof segment.description !== 'string') {
+          throw new Error(`Invalid description in segment ${index}`);
+        }
+      });
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.error('Raw response:', data.choices[0].message.content);
-      throw new Error('Failed to parse segments from OpenAI response');
+      throw new Error(`Failed to parse segments from OpenAI response: ${error.message}`);
     }
 
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Delete existing segments for this lecture
-    const { error: deleteError } = await supabaseClient
-      .from('lecture_segments')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (deleteError) {
-      console.error('Error deleting existing segments:', deleteError);
-      throw deleteError;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase configuration');
     }
 
-    // Insert new segments with sequence numbers
-    const formattedSegments = segments.segments.map((segment: any, index: number) => ({
-      lecture_id: lectureId,
-      sequence_number: index + 1,
-      title: segment.title,
-      segment_description: segment.segment_description
-    }));
+    const supabaseClient = createClient(
+      supabaseUrl,
+      supabaseServiceKey
+    );
 
+    const { lectureId } = await req.json();
+    if (!lectureId) {
+      throw new Error('No lecture ID provided');
+    }
+
+    console.log(`Saving ${segments.segments.length} segments for lecture ${lectureId}`);
+
+    // Insert segments into the database
     const { error: insertError } = await supabaseClient
       .from('lecture_segments')
-      .insert(formattedSegments);
+      .upsert(
+        segments.segments.map((segment: any, index: number) => ({
+          lecture_id: lectureId,
+          sequence_number: index + 1,
+          title: segment.title,
+          segment_description: segment.description
+        }))
+      );
 
     if (insertError) {
       console.error('Error inserting segments:', insertError);
-      throw insertError;
+      throw new Error(`Failed to save segments: ${insertError.message}`);
     }
 
+    console.log('Successfully saved segments');
+
     return new Response(
-      JSON.stringify({ message: 'Segments created successfully', segments: formattedSegments }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        message: 'Segments generated and saved successfully',
+        segmentCount: segments.segments.length 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in generate-segments-structure:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'An unexpected error occurred',
+        details: error.toString()
+      }),
       { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
       }
     );
   }
 });
-
