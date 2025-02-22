@@ -22,19 +22,25 @@ interface AIProfessorLoadingProps {
 }
 
 const titlePositions = [
-  { left: '20%', top: '15%' },
-  { left: '80%', top: '32%' },
-  { left: '20%', top: '49%' },
-  { left: '80%', top: '66%' },
-  { left: '20%', top: '83%' },
+  { left: '20%', top: '12%' },
+  { left: '80%', top: '25%' },
+  { left: '20%', top: '38%' },
+  { left: '80%', top: '51%' },
+  { left: '20%', top: '64%' },
+  { left: '80%', top: '77%' },
+  { left: '20%', top: '90%' },
+  { left: '80%', top: '90%' },
 ];
 
 const descriptionPositions = [
-  { left: '55%', top: '15%' },
-  { left: '45%', top: '32%' },
-  { left: '55%', top: '49%' },
-  { left: '45%', top: '66%' },
-  { left: '55%', top: '83%' },
+  { left: '55%', top: '12%' },
+  { left: '45%', top: '25%' },
+  { left: '55%', top: '38%' },
+  { left: '45%', top: '51%' },
+  { left: '55%', top: '64%' },
+  { left: '45%', top: '77%' },
+  { left: '55%', top: '90%' },
+  { left: '45%', top: '90%' },
 ];
 
 const getDescriptionPath = (start: Position, end: Position) => {
@@ -134,7 +140,7 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
     );
   }
 
-  const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(5).fill({ title: '', sequence_number: 0, segment_description: '' });
+  const displayedSegments = data && data.length > 0 ? data.slice(0, titlePositions.length) : Array(titlePositions.length).fill({ title: '', sequence_number: 0, segment_description: '' });
 
   const getEmptyBoxDelay = (index: number) => index * (baseDelay * 2);
   const getConnectorDelay = (index: number) => (index * (baseDelay * 2)) + baseDelay;
