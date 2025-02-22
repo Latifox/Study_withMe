@@ -7,11 +7,16 @@ import { ChevronRight } from "lucide-react";
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { TypeAnimation } from 'react-type-animation';
+import { Components } from 'react-markdown';
 
 interface TheorySlideProps {
   content: string;
   onContinue: () => void;
+}
+
+// Define interface for code component props
+interface CodeComponentProps extends Components['code'] {
+  inline?: boolean;
 }
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
@@ -74,7 +79,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
                 em: ({ node, ...props }) => (
                   <em className="text-gray-800 italic" {...props} />
                 ),
-                code: ({ inline, className, children, ...props }) => {
+                code: ({ inline, className, children, ...props }: CodeComponentProps) => {
                   if (inline) {
                     return (
                       <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800" {...props}>
@@ -125,3 +130,4 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
 };
 
 export default TheorySlide;
+
