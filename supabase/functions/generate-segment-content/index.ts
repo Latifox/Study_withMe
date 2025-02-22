@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,7 +65,7 @@ Requirements:
 3. Quiz 2 must be true/false
 4. Use markdown for formatting
 5. Keep explanations clear and concise
-6. Format as a strict JSON object matching the structure provided
+6. Return only a valid JSON object matching the structure provided, no additional text or markdown formatting
 
 Remember: Your output must be a valid JSON object that can be parsed and exactly matches the structure provided.`
           }
@@ -138,12 +139,13 @@ Remember: Your output must be a valid JSON object that can be parsed and exactly
       throw new Error('quiz_2_correct_answer must be a boolean');
     }
 
-    // Store the content in the database
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
+    // Store the content in the database
     const { error: dbError } = await supabaseClient
       .from('segments_content')
       .upsert({
