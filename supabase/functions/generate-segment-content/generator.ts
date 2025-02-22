@@ -1,4 +1,4 @@
-import { Configuration, OpenAIApi } from "openai";
+
 import { Database } from '../../../src/integrations/supabase/types';
 
 type PublicSchema = Database['public'];
@@ -120,3 +120,4 @@ ${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_ins
     throw new Error(`Failed to parse OpenAI response: ${error}`);
   }
 }
+
