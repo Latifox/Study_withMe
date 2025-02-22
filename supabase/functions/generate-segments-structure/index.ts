@@ -47,7 +47,6 @@ serve(async (req) => {
 
     const targetLanguage = aiConfig?.content_language || lecture?.original_language || 'English';
     console.log('Using target language:', targetLanguage);
-
     console.log('Generating segments structure for lecture:', lectureId);
     console.log('Content length:', lectureContent.length);
 
@@ -58,25 +57,23 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 4-6 focused segments.
+            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 3-5 focused segments.
 
 For each segment, create:
 1. A concise title (max 5 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.)), concept2 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.), concept3 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.)), concept4 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.))"
-   
-   Rules for the description:
-   - You MUST include EXACTLY 4 key concepts, no more, no less
-   - Each concept MUST have at least 3 aspects pointed out
-   - The aspects should reflect different findings in the lecture regarding a concept
-   - The aspects should only be mentioned NOT DEFINED. (if we want the definition of a concept we should fetch "concept1 (definition)" and not the actual definition of the concept
-   - Start DIRECTLY WITH CONCEPTS
-   - Use commas to separate concept entries
-   - Make sure each concept is unique within all segments so no concept is repeated twice.
+   "Key concepts: concept1 (aspects to point out), concept2 (aspects to point out), concept3 (aspects to point out)"
+
+Rules for the description:
+- Each concept should have at least 2 aspects listed in parentheses
+- List 2-4 key concepts per segment
+- Try to keep concepts unique across segments when possible
+- Start directly with "Key concepts:"
+- Use commas to separate concept entries
 
 Target language: ${targetLanguage}
 
@@ -124,7 +121,8 @@ Return ONLY a JSON object in this format:
         throw new Error('Response missing segments array');
       }
 
-      parsedContent.segments.forEach((segment, index) => {
+      // Basic validation of segments
+      parsedContent.segments.forEach((segment: any, index: number) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Segment ${index + 1} missing valid title`);
         }
@@ -132,47 +130,35 @@ Return ONLY a JSON object in this format:
           throw new Error(`Segment ${index + 1} missing valid description`);
         }
         
-        // Split the description into concepts
-        const concepts = segment.description.split(',').map(c => c.trim());
-        if (concepts.length !== 4) {
-          throw new Error(`Segment ${index + 1} must have exactly 4 concepts`);
+        // Ensure description starts with "Key concepts:"
+        if (!segment.description.startsWith('Key concepts:')) {
+          throw new Error(`Segment ${index + 1} description must start with "Key concepts:"`);
+        }
+        
+        // Basic format check for concepts and aspects
+        const concepts = segment.description.replace('Key concepts:', '').split(',').map((c: string) => c.trim());
+        if (concepts.length < 2 || concepts.length > 4) {
+          throw new Error(`Segment ${index + 1} must have between 2 and 4 concepts`);
         }
 
-        // Check each concept has at least 3 aspects
-        concepts.forEach((concept, conceptIndex) => {
-          const aspectMatch = concept.match(/\((.*?)\)/);
-          if (!aspectMatch) {
+        // Check each concept has aspects in parentheses
+        concepts.forEach((concept: string, conceptIndex: number) => {
+          if (!concept.includes('(') || !concept.includes(')')) {
             throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects in parentheses`);
           }
-          const aspects = aspectMatch[1].split(',').map(a => a.trim());
-          if (aspects.length < 3) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 3 aspects`);
-          }
-        });
-        
-        // Check for duplicate concepts across all segments
-        const conceptNames = new Set();
-        parsedContent.segments.forEach(seg => {
-          seg.description.split(',').forEach(concept => {
-            const conceptName = concept.split('(')[0].trim().toLowerCase();
-            if (conceptNames.has(conceptName)) {
-              throw new Error(`Duplicate concept found: ${conceptName}`);
-            }
-            conceptNames.add(conceptName);
-          });
         });
       });
 
       segments = parsedContent.segments;
       console.log('Valid segments found:', segments.length);
 
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
+    } catch (error: any) {
+      console.error('Error parsing or validating OpenAI response:', error);
       console.error('Raw content:', openAIResponse.choices[0].message.content);
-      throw new Error(`Failed to parse OpenAI response: ${error.message}`);
+      throw new Error(`Failed to parse or validate OpenAI response: ${error.message}`);
     }
 
-    // Delete existing segments for this lecture
+    // Delete existing segments
     const { error: deleteError } = await supabaseClient
       .from('lecture_segments')
       .delete()
@@ -183,8 +169,8 @@ Return ONLY a JSON object in this format:
       throw deleteError;
     }
 
-    // Prepare segments for insertion with proper mapping
-    const segmentsToInsert = segments.map((segment, index) => ({
+    // Prepare segments for insertion
+    const segmentsToInsert = segments.map((segment: any, index: number) => ({
       lecture_id: lectureId,
       sequence_number: index + 1,
       title: segment.title,
@@ -214,7 +200,7 @@ Return ONLY a JSON object in this format:
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in generate-segments-structure:', error);
     return new Response(
       JSON.stringify({ 
@@ -228,4 +214,3 @@ Return ONLY a JSON object in this format:
     );
   }
 });
-
