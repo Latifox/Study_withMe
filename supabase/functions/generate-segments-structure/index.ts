@@ -49,17 +49,16 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
-            For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
-            These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
-            Focus on explaining the relationships between concepts and what specific points need to be addressed.
-            Do not just list topics - explain how they should be presented and what specific points need to be addressed.`
+            For each segment, write a detailed description of 3-5 sentences that explains exactly what content should be covered.
+            Your output must be a valid JSON object with no markdown syntax or code blocks.
+            Focus on creating narrative descriptions that explain relationships between concepts and what specific points need to be addressed.`
           },
           {
             role: 'user',
-            content: `Please analyze this content and break it down into 4-8 logical learning segments. For each segment:
+            content: `Analyze this content and break it down into 4-8 logical learning segments. For each segment:
             1. Give it a clear, descriptive title
             2. Write a detailed 3-5 sentence description explaining exactly what content should be covered
-            3. Format your response as a JSON object with this structure:
+            3. Return ONLY a JSON object with this exact structure, no markdown or text:
             {
               "segments": [
                 {
@@ -86,7 +85,6 @@ serve(async (req) => {
     const data = await response.json();
     console.log('Received OpenAI response');
 
-    // Validate response format
     if (!data.choices?.[0]?.message?.content) {
       console.error('Invalid response format from OpenAI:', data);
       throw new Error('Invalid response format from OpenAI');
@@ -97,15 +95,21 @@ serve(async (req) => {
       const rawContent = data.choices[0].message.content;
       console.log('Raw OpenAI response:', rawContent);
       
-      segments = JSON.parse(rawContent);
+      // Clean the response: remove any markdown code block syntax
+      const cleanedContent = rawContent
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      
+      console.log('Cleaned content:', cleanedContent);
+      
+      segments = JSON.parse(cleanedContent);
       console.log('Parsed segments:', JSON.stringify(segments, null, 2));
       
-      // Validate segments structure
       if (!segments.segments || !Array.isArray(segments.segments)) {
         throw new Error('Invalid segments structure');
       }
 
-      // Validate each segment
       segments.segments.forEach((segment: any, index: number) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Invalid title in segment ${index}`);
@@ -120,7 +124,6 @@ serve(async (req) => {
       throw new Error(`Failed to parse segments from OpenAI response: ${error.message}`);
     }
 
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -135,7 +138,6 @@ serve(async (req) => {
 
     console.log(`Saving ${segments.segments.length} segments for lecture ${lectureId}`);
 
-    // Insert segments into the database
     const { error: insertError } = await supabaseClient
       .from('lecture_segments')
       .upsert(
