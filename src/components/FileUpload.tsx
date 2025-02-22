@@ -110,8 +110,8 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 
       // Generate content for each segment in parallel
       console.log('Generating content for all segments...');
-      const segmentPromises = segmentData.segments.map((segment: any) => 
-        supabase.functions.invoke('generate-segment-content', {
+      const segmentPromises = segmentData.segments.map(async (segment: any) => {
+        const response = await supabase.functions.invoke('generate-segment-content', {
           body: {
             lectureId: lectureData.id,
             segmentNumber: segment.sequence_number,
@@ -119,9 +119,22 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
             segmentDescription: segment.segment_description,
             lectureContent: extractionData.content
           }
-        })
-      );
+        });
 
+        if (response.error) {
+          console.error(`Error generating content for segment ${segment.sequence_number}:`, response.error);
+          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${response.error.message}`);
+        }
+
+        if (!response.data?.success) {
+          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${response.data?.error || 'Unknown error'}`);
+        }
+        
+        return response;
+      });
+
+      // Wait for all segments to be processed
+      console.log('Waiting for all segments to complete...');
       await Promise.all(segmentPromises);
       console.log('All segment content generated successfully');
 
