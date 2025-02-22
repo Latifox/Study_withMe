@@ -66,17 +66,21 @@ serve(async (req) => {
 
 For each segment, create:
 1. A concise title (max 8 words)
-2. A focused description for content generation that:
-   - Identifies 2-3 KEY concepts
-   - For each concept, specify HOW it should be covered in this specific context
-   - Example format: "Explain [concept] focusing on its role in [specific context], covering [specific aspect]"
-   - Be specific about which aspects to cover to avoid redundancy
-   - Maximum 2-3 sentences that build clear contextual boundaries
+2. A description that follows this EXACT format:
+   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3)"
+   
+   Rules for the description:
+   - Include 2-4 key concepts
+   - Each concept MUST have a short context in parentheses
+   - The context should specify HOW the concept is used or applied in this specific segment
+   - Contexts should differentiate how each concept is used differently across segments
+   - Start EXACTLY with "Key concepts: " followed by the concepts list
+   - Use commas to separate concept entries
 
 Target language: ${targetLanguage}
 
-Example of good contextual description:
-"Explain energy resource reserves focusing on their geographical distribution and accessibility challenges. Address renewable energy potential specifically in the context of current infrastructure limitations."
+Example of good description format:
+"Key concepts: energy reserves (geographical distribution patterns), resource accessibility (technological limitations), renewable potential (current infrastructure constraints)"
 
 Return ONLY a JSON object in this format:
 {
@@ -129,6 +133,19 @@ Return ONLY a JSON object in this format:
         if (!segment.description || typeof segment.description !== 'string') {
           throw new Error(`Segment ${index + 1} missing valid description`);
         }
+        // Validate description format
+        if (!segment.description.startsWith('Key concepts: ')) {
+          throw new Error(`Segment ${index + 1} description must start with "Key concepts: "`);
+        }
+        const concepts = segment.description.substring(13).split(',').map(c => c.trim());
+        if (concepts.length < 2 || concepts.length > 4) {
+          throw new Error(`Segment ${index + 1} must have 2-4 concepts`);
+        }
+        concepts.forEach((concept, conceptIndex) => {
+          if (!concept.includes('(') || !concept.includes(')')) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include context in parentheses`);
+          }
+        });
       });
 
       segments = parsedContent.segments;
