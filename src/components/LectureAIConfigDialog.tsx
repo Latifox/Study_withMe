@@ -72,9 +72,56 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
     try {
       setIsSaving(true);
 
+      // First get the lecture content
+      const { data: lecture, error: lectureError } = await supabase
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single();
+
+      if (lectureError) throw lectureError;
+
+      // Manually delete old content in the correct order
+      console.log('Deleting old content...');
+      
+      // Delete quiz progress first
+      const { error: deleteQuizError } = await supabase
+        .from('quiz_progress')
+        .delete()
+        .eq('lecture_id', lectureId);
+      
+      if (deleteQuizError) throw deleteQuizError;
+
+      // Delete user progress
+      const { error: deleteProgressError } = await supabase
+        .from('user_progress')
+        .delete()
+        .eq('lecture_id', lectureId);
+      
+      if (deleteProgressError) throw deleteProgressError;
+
+      // Delete segments content
+      const { error: deleteContentError } = await supabase
+        .from('segments_content')
+        .delete()
+        .eq('lecture_id', lectureId);
+      
+      if (deleteContentError) throw deleteContentError;
+
+      // Delete lecture segments
+      const { error: deleteSegmentsError } = await supabase
+        .from('lecture_segments')
+        .delete()
+        .eq('lecture_id', lectureId);
+      
+      if (deleteSegmentsError) throw deleteSegmentsError;
+
+      // Wait for deletions to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       // Update AI configuration
       const { error: configError } = await supabase
-        .from("lecture_ai_configs")
+        .from('lecture_ai_configs')
         .upsert(
           {
             lecture_id: lectureId,
@@ -91,14 +138,8 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (configError) throw configError;
 
-      // First get the lecture content
-      const { data: lecture, error: lectureError } = await supabase
-        .from('lectures')
-        .select('content, title')
-        .eq('id', lectureId)
-        .single();
-
-      if (lectureError) throw lectureError;
+      // Wait for config update to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Regenerate segments structure
       console.log('Regenerating segments structure...');
@@ -113,7 +154,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       if (segmentError) throw segmentError;
 
       // Wait for segments to be created
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Fetch the new segments
       const { data: segments, error: fetchError } = await supabase
@@ -144,7 +185,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         }
 
         // Wait between segments to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
 
       // Invalidate relevant queries
