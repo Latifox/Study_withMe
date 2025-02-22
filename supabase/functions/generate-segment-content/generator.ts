@@ -11,41 +11,54 @@ export const generatePrompt = (
     ? `Please provide all content in ${aiConfig.content_language}` 
     : '';
 
-  return `As an expert educator, create engaging, lecture-specific learning content for a segment titled "${segmentTitle}". 
-The segment is part of this lecture content: ${lectureContent}
-The segment should specifically focus on these concepts: ${segmentDescription}
+  // Sanitize and truncate lecture content if too long
+  const maxContentLength = 15000; // OpenAI has token limits
+  const truncatedContent = lectureContent.length > maxContentLength 
+    ? lectureContent.substring(0, maxContentLength) + "..."
+    : lectureContent;
 
-${aiConfig.custom_instructions ? `\nAdditional Instructions:\n${aiConfig.custom_instructions}` : ''}
+  console.log('Generating prompt for segment:', segmentTitle);
+  console.log('Content length:', truncatedContent.length);
+
+  return `As an expert educator, create engaging educational content for the following lecture segment.
+
+SEGMENT TITLE: "${segmentTitle}"
+
+SEGMENT DESCRIPTION: "${segmentDescription}"
+
+LECTURE CONTENT TO USE AS SOURCE:
+"""
+${truncatedContent}
+"""
+
+${aiConfig.custom_instructions ? `\nADDITIONAL INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
 
-Important requirements:
-1. You MUST source information ONLY from the provided lecture content, no external sources.
-2. Structure your response in a logical, pedagogically sound way that best fits THIS specific lecture topic.
-3. Create two complementary theory slides that naturally build upon each other:
-   - theory_slide_1: A foundational explanation of the core concepts
-   - theory_slide_2: A deeper exploration with relevant examples and applications from the lecture
-   Ensure each slide contains sufficient content (at least 150 words) while remaining clear and focused.
+IMPORTANT REQUIREMENTS:
 
-4. Design two assessment questions that thoughtfully test understanding:
-   - First quiz (quiz_1):
+1. You MUST only use information from the provided lecture content above - no external knowledge.
+
+2. Generate the following content structure:
+
+A. Two theory slides that build upon each other:
+   - theory_slide_1: Introduce the core concepts (300-400 words)
+   - theory_slide_2: Deeper exploration with examples from the lecture (300-400 words)
+
+B. Two assessment questions:
+   - quiz_1 (multiple choice):
      * type: "multiple_choice"
-     * quiz_1_question: Create a question that tests deeper understanding
-     * quiz_1_options: Provide 4 well-thought-out options
-     * quiz_1_correct_answer: Specify the correct option
-     * quiz_1_explanation: Explain why this answer is correct
+     * quiz_1_question: Create a conceptual question
+     * quiz_1_options: Array of 4 distinct options
+     * quiz_1_correct_answer: One of the options
+     * quiz_1_explanation: Clear explanation
    
-   - Second quiz (quiz_2):
+   - quiz_2 (true/false):
      * type: "true_false"
-     * quiz_2_question: Create a nuanced true/false question
-     * quiz_2_correct_answer: Provide the answer as a boolean
-     * quiz_2_explanation: Explain the reasoning
+     * quiz_2_question: Create a nuanced statement
+     * quiz_2_correct_answer: Boolean
+     * quiz_2_explanation: Clear reasoning
 
-Guidelines:
-- Let the content structure flow naturally based on the lecture material
-- Create thought-provoking questions that test conceptual understanding
-- Maintain academic rigor while being clear and engaging
-- Use examples and applications specifically from the lecture content
-- Structure the content in a way that best serves this particular topic`;
+Your response must be valid JSON containing all these fields.`;
 };
 
 const delay = (attempts: number) => {
@@ -57,7 +70,7 @@ const delay = (attempts: number) => {
 };
 
 export const generateContent = async (prompt: string, maxRetries = 3) => {
-  console.log('Generating content with prompt:', prompt);
+  console.log('Generating content with prompt length:', prompt.length);
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -78,10 +91,7 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
           messages: [
             { 
               role: 'system', 
-              content: `You are an expert educator specializing in creating engaging, lecture-specific educational content.
-Your role is to structure content in the most effective way for each unique topic, while maintaining academic rigor.
-You must use ONLY information from the provided lecture content - no external knowledge.
-Focus on creating clear, logically flowing content that builds understanding step by step.`
+              content: 'You are an expert educator that creates lecture content. Always return complete, valid JSON containing all required fields. Format all content clearly.'
             },
             { role: 'user', content: prompt }
           ],
@@ -104,12 +114,13 @@ Focus on creating clear, logically flowing content that builds understanding ste
 
       const data = await response.json();
       const content = data.choices[0].message.content;
+      console.log('Received response from OpenAI');
 
       try {
         const parsed = JSON.parse(content);
-        console.log('Parsed response:', JSON.stringify(parsed, null, 2));
+        console.log('Successfully parsed response');
         
-        // Validate the minimal structure before returning
+        // Validate the minimal required structure
         if (!parsed.theory_slide_1 || !parsed.theory_slide_2) {
           console.error('Missing required slides in response:', parsed);
           if (attempt < maxRetries) {
@@ -128,7 +139,16 @@ Focus on creating clear, logically flowing content that builds understanding ste
           throw new Error('Invalid quiz_2_correct_answer type');
         }
 
-        console.log('Successfully generated and validated content');
+        // Additional validation
+        if (!Array.isArray(parsed.quiz_1_options) || parsed.quiz_1_options.length !== 4) {
+          console.error('Invalid quiz_1_options:', parsed.quiz_1_options);
+          if (attempt < maxRetries) {
+            continue;
+          }
+          throw new Error('Invalid quiz_1_options format');
+        }
+
+        console.log('Successfully validated content structure');
         return JSON.stringify(parsed);
       } catch (error) {
         if (attempt === maxRetries) {
