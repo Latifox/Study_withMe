@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteExistingContent } from "@/utils/lectureContentUtils";
+import { recreateLecture } from "@/utils/lectureContentUtils";
 import AIConfigSliders from "./AIConfigSliders";
 import AIConfigInputs from "./AIConfigInputs";
 
@@ -70,123 +70,23 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
     try {
       setIsSaving(true);
+      console.log('Starting lecture recreation process...');
 
-      // First get the lecture content
-      const { data: lecture, error: lectureError } = await supabase
-        .from('lectures')
-        .select('content, title')
-        .eq('id', lectureId)
-        .maybeSingle();
+      // Create a new lecture with the updated AI config
+      const newLectureId = await recreateLecture(lectureId, {
+        temperature: temperature[0],
+        creativity_level: creativity[0],
+        detail_level: detailLevel[0],
+        content_language: contentLanguage,
+        custom_instructions: customInstructions,
+      });
 
-      if (lectureError) {
-        console.error('Error fetching lecture:', lectureError);
-        throw lectureError;
-      }
-      
-      if (!lecture) {
-        throw new Error('Lecture not found');
-      }
+      console.log('Lecture recreation completed successfully');
 
-      // Save AI configuration
-      console.log('Updating AI configuration...');
-      const { error: configError } = await supabase
-        .from('lecture_ai_configs')
-        .upsert(
-          {
-            lecture_id: lectureId,
-            temperature: temperature[0],
-            creativity_level: creativity[0],
-            detail_level: detailLevel[0],
-            custom_instructions: customInstructions,
-            content_language: contentLanguage,
-          }
-        );
+      // Invalidate queries to refresh the UI
+      await queryClient.invalidateQueries({ queryKey: ["lectures"] });
+      await queryClient.invalidateQueries({ queryKey: ["segment-content"] });
 
-      if (configError) {
-        console.error('Error updating AI config:', configError);
-        throw configError;
-      }
-
-      // Wait for configuration to be saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Delete existing content
-      await deleteExistingContent(lectureId);
-
-      // Wait for deletions to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Generate new segments structure
-      console.log('Generating new segments structure...');
-      const { error: segmentError } = await supabase.functions.invoke(
-        'generate-segments-structure',
-        {
-          body: {
-            lectureId,
-            lectureContent: lecture.content,
-            lectureTitle: lecture.title
-          }
-        }
-      );
-
-      if (segmentError) {
-        console.error('Error generating segments:', segmentError);
-        throw segmentError;
-      }
-
-      // Wait for segments to be created
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Fetch the new segments
-      const { data: segments, error: fetchError } = await supabase
-        .from('lecture_segments')
-        .select('*')
-        .eq('lecture_id', lectureId);
-
-      if (fetchError) {
-        console.error('Error fetching segments:', fetchError);
-        throw fetchError;
-      }
-
-      if (!segments || segments.length === 0) {
-        throw new Error('No segments were created');
-      }
-
-      console.log(`Found ${segments.length} segments, generating content...`);
-
-      // Generate content for each segment
-      for (const segment of segments) {
-        console.log(`Generating content for segment ${segment.sequence_number}...`);
-        const { error: contentError } = await supabase.functions.invoke(
-          'generate-segment-content',
-          {
-            body: {
-              lectureId,
-              segmentNumber: segment.sequence_number,
-              segmentTitle: segment.title,
-              segmentDescription: segment.segment_description,
-              lectureContent: lecture.content
-            }
-          }
-        );
-
-        if (contentError) {
-          console.error(
-            `Error generating content for segment ${segment.sequence_number}:`,
-            contentError
-          );
-          throw contentError;
-        }
-
-        // Wait between segments
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      // Invalidate queries
-      await queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
-      await queryClient.invalidateQueries({ queryKey: ["segment-content", lectureId] });
-
-      console.log('Content regeneration completed successfully');
       toast({
         title: "Success",
         description: "AI configuration saved and content regenerated successfully",
@@ -251,4 +151,3 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 };
 
 export default LectureAIConfigDialog;
-
