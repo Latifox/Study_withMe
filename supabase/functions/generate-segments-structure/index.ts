@@ -15,12 +15,15 @@ serve(async (req) => {
   }
 
   try {
-    const { content } = await req.json();
-    if (!content) {
+    const { lectureId, lectureContent } = await req.json();
+    
+    console.log('Received request with:', { lectureId, contentLength: lectureContent?.length });
+    
+    if (!lectureContent) {
       throw new Error('No content provided');
     }
 
-    console.log('Content length:', content.length);
+    console.log('Content length:', lectureContent.length);
     console.log('Generating segment structure...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -66,7 +69,7 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
             }
             
             Here is the content to analyze:
-            ${content}`
+            ${lectureContent}`
           }
         ],
         temperature: 0.7,
@@ -129,7 +132,6 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       supabaseServiceKey
     );
 
-    const { lectureId } = await req.json();
     if (!lectureId) {
       throw new Error('No lecture ID provided');
     }
@@ -158,7 +160,7 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
     return new Response(
       JSON.stringify({ 
         message: 'Segments generated and saved successfully',
-        segmentCount: segments.segments.length 
+        segments: segments.segments 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
