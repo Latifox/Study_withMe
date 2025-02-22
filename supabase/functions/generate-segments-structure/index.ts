@@ -15,15 +15,23 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, lectureContent } = await req.json();
+    const requestData = await req.json();
+    console.log('Request data:', requestData);
     
-    console.log('Received request with:', { lectureId, contentLength: lectureContent?.length });
+    const { lectureId, lectureContent } = requestData;
     
     if (!lectureContent) {
-      throw new Error('No content provided');
+      console.error('No lecture content provided');
+      throw new Error('No lecture content provided');
+    }
+
+    if (!lectureId) {
+      console.error('No lecture ID provided');
+      throw new Error('No lecture ID provided');
     }
 
     console.log('Content length:', lectureContent.length);
+    console.log('Lecture ID:', lectureId);
     console.log('Generating segment structure...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -31,6 +39,7 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
+    console.log('Making OpenAI API request...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -85,7 +94,6 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
     const data = await response.json();
     console.log('Received OpenAI response');
 
-    // Validate response format
     if (!data.choices?.[0]?.message?.content) {
       console.error('Invalid response format from OpenAI:', data);
       throw new Error('Invalid response format from OpenAI');
@@ -99,12 +107,10 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       segments = JSON.parse(rawContent);
       console.log('Parsed segments:', JSON.stringify(segments, null, 2));
       
-      // Validate segments structure
       if (!segments.segments || !Array.isArray(segments.segments)) {
         throw new Error('Invalid segments structure');
       }
 
-      // Validate each segment
       segments.segments.forEach((segment: any, index: number) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Invalid title in segment ${index}`);
@@ -119,7 +125,6 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       throw new Error(`Failed to parse segments from OpenAI response: ${error.message}`);
     }
 
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -132,13 +137,8 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
       supabaseServiceKey
     );
 
-    if (!lectureId) {
-      throw new Error('No lecture ID provided');
-    }
-
     console.log(`Saving ${segments.segments.length} segments for lecture ${lectureId}`);
 
-    // Insert segments into the database
     const { error: insertError } = await supabaseClient
       .from('lecture_segments')
       .upsert(
@@ -182,3 +182,4 @@ Avoid simply listing topics or concepts. Instead, craft a narrative that explain
     );
   }
 });
+
