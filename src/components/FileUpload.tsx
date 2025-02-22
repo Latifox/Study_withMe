@@ -93,7 +93,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         body: {
           lectureId: lectureData.id,
           lectureContent: extractionData.content,
-          lectureTitle: title // Pass the lecture title for better context
+          lectureTitle: title
         }
       });
 
@@ -114,7 +114,10 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
         supabase.functions.invoke('generate-segment-content', {
           body: {
             lectureId: lectureData.id,
-            segmentNumber: segment.sequence_number
+            segmentNumber: segment.sequence_number,
+            segmentTitle: segment.title,
+            segmentDescription: segment.segment_description,
+            lectureContent: extractionData.content
           }
         })
       );
@@ -226,4 +229,3 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 };
 
 export default FileUpload;
-
