@@ -24,7 +24,7 @@ export const generatePrompt = (
 
 TASK: Create an engaging educational segment about: "${segmentTitle}"
 
-CONTEXT:
+SEGMENT DESCRIPTION:
 ${segmentDescription}
 
 SOURCE MATERIAL:
@@ -34,22 +34,25 @@ ${truncatedContent}
 
 CRITICAL REQUIREMENTS:
 1. Use ONLY information from the provided source material
-2. Keep theory slides between 300-400 words each
-3. Include exactly 4 options for multiple choice questions
-4. Return VALID JSON with all fields present
-5. Use proper markdown formatting for better readability
-6. Ensure quiz_1_correct_answer EXACTLY matches one of the quiz_1_options
-7. Make quiz_2_correct_answer a boolean (true/false)
-8. DO NOT use any emojis or special characters in the content
-9. Use clear, professional formatting without decorative elements
+2. First theory slide MUST be 150 words or less and ONLY cover concepts explicitly mentioned in the segment description
+3. Second theory slide should be between 300-400 words
+4. Include exactly 4 options for multiple choice questions
+5. Return VALID JSON with all fields present
+6. Use proper markdown formatting for better readability
+7. Ensure quiz_1_correct_answer EXACTLY matches one of the quiz_1_options
+8. Make quiz_2_correct_answer a boolean (true/false)
+9. DO NOT use any emojis or special characters in the content
+10. Use clear, professional formatting without decorative elements
+11. DO NOT introduce concepts that are not mentioned in the segment description
 
 FORMAT INSTRUCTIONS:
 1. Use clear hierarchical structure with headers (# for main titles, ## for subtitles)
 2. Break down complex concepts into bullet points or numbered lists
 3. Use **bold** and _italic_ for emphasis where appropriate
-4. Break content into clear sections with descriptive headings
-5. Add "Key Takeaways" sections where appropriate
-6. Maintain professional formatting without emojis or decorative symbols
+4. First theory slide should provide a concise overview of ONLY the main concepts mentioned in the segment description
+5. Second theory slide should expand on these concepts with more details and examples
+6. Add "Key Takeaways" sections at the end of each slide
+7. Maintain professional formatting without emojis or decorative symbols
 
 ${aiConfig.custom_instructions ? `\nCUSTOM INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
@@ -57,7 +60,7 @@ ${languageInstruction}
 OUTPUT FORMAT:
 Return content in this exact JSON structure:
 {
-  "theory_slide_1": "Clear, focused content with proper markdown formatting (300-400 words)",
+  "theory_slide_1": "Concise overview focusing only on concepts from segment description (MAX 150 words)",
   "theory_slide_2": "Detailed examples and practical applications with proper markdown formatting (300-400 words)",
   "quiz_1_type": "multiple_choice",
   "quiz_1_question": "A conceptual question testing understanding",
