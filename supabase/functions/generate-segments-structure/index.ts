@@ -1,153 +1,127 @@
 
-import { createClient } from '@supabase/supabase-js';
-import { corsHeaders } from '../_shared/cors.ts';
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-Deno.serve(async (req) => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { lecture_id } = await req.json()
-    
-    if (!lecture_id) {
-      throw new Error('lecture_id is required')
+    const { lectureId, content } = await req.json();
+    console.log('Received request for lecture:', lectureId);
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('Missing OpenAI API key');
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
+    console.log('Content length:', content?.length || 0);
 
-    // Get lecture content
-    console.log('Fetching lecture content for lecture:', lecture_id)
-    const { data: lectureData, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('content, title')
-      .eq('id', lecture_id)
-      .single()
-
-    if (lectureError) {
-      console.error('Error fetching lecture:', lectureError)
-      throw lectureError
-    }
-
-    if (!lectureData.content) {
-      throw new Error('No content found for lecture')
-    }
-
-    const MAX_TOKENS = 500
-    const MIN_SEGMENTS = 5
-    const MAX_SEGMENTS = 8
-
-    const promptContent = `
-    Analyze the following lecture content and generate between ${MIN_SEGMENTS} and ${MAX_SEGMENTS} sequential learning segments.
-    Each segment should have:
-    - A title (max 5 words)
-    - A description listing ONLY key concepts and their aspects (e.g., "Key concepts: coal (types, properties), energy (conversion, efficiency)")
-
-    CRITICAL:
-    1. Descriptions should ONLY list concepts and aspects, not actual content
-    2. Format: "Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
-    3. Each segment should build on previous knowledge
-    4. Avoid duplicate concepts across segments
-    5. Focus on MAJOR concepts only
-
-    LECTURE CONTENT:
-    ${lectureData.content.substring(0, 8000)}
-
-    OUTPUT FORMAT:
-    Return a JSON array with each segment containing 'sequence_number', 'title', and 'segment_description'.
-    Example:
-    [
-      {
-        "sequence_number": 1,
-        "title": "Introduction to Coal Properties",
-        "segment_description": "Key concepts: coal (types, composition), mineral content (classification, distribution)"
-      },
-      ...
-    ]`
-
-    console.log('Sending request to OpenAI...')
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: 'gpt-4o-mini',
         messages: [
           {
-            role: "system",
-            content: "You are a professional educational content structuring assistant. Always return valid JSON arrays containing between 5 and 8 segments."
+            role: 'system',
+            content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
+            For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
+            These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
+            Focus on explaining the relationships between concepts and what specific details or examples should be covered.
+            Do not just list topics - explain how they should be presented and what specific points need to be addressed.`
           },
           {
-            role: "user",
-            content: promptContent
+            role: 'user',
+            content: `Analyze this lecture content and break it into 4-7 logical segments. For each segment:
+            1. Create a clear, focused title
+            2. Write a detailed description of 3-5 sentences explaining what content should be covered in that segment
+            The descriptions should be specific about what aspects to cover and how concepts relate to each other.
+            
+            Here's an example of a good segment description:
+            "This segment should explain the different types of coal based on their carbon content and formation process. It should detail how anthracite, bituminous, and lignite coal differ in their properties and energy output. The explanation should include specific examples of where each type is commonly found and their primary industrial applications."
+
+            Each segment should build on previous ones in a logical progression. Return the segments in this exact JSON format:
+            {
+              "segments": [
+                {
+                  "title": "segment title",
+                  "segment_description": "3-5 sentences describing what content should be covered"
+                }
+              ]
+            }
+
+            Here's the lecture content to analyze:
+            ${content}`
           }
         ],
-        temperature: 0.7,
-        max_tokens: MAX_TOKENS,
-        response_format: { type: "json_object" }
+        temperature: 0.5,
+        max_tokens: 2000,
       }),
-    })
+    });
 
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.text()
-      console.error('OpenAI API error:', errorData)
-      throw new Error(`OpenAI API error: ${openAIResponse.status}`)
-    }
+    const data = await response.json();
+    console.log('Received response from OpenAI');
 
-    const completion = await openAIResponse.json()
-    const segments = JSON.parse(completion.choices[0].message.content)
+    const segments = JSON.parse(data.choices[0].message.content);
 
-    console.log('Generated segments:', segments)
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     // Delete existing segments for this lecture
     const { error: deleteError } = await supabaseClient
       .from('lecture_segments')
       .delete()
-      .eq('lecture_id', lecture_id)
+      .eq('lecture_id', lectureId);
 
     if (deleteError) {
-      console.error('Error deleting existing segments:', deleteError)
-      throw deleteError
+      console.error('Error deleting existing segments:', deleteError);
+      throw deleteError;
     }
 
-    // Insert new segments
+    // Insert new segments with sequence numbers
+    const formattedSegments = segments.segments.map((segment: any, index: number) => ({
+      lecture_id: lectureId,
+      sequence_number: index + 1,
+      title: segment.title,
+      segment_description: segment.segment_description
+    }));
+
     const { error: insertError } = await supabaseClient
       .from('lecture_segments')
-      .insert(
-        segments.map((segment: any) => ({
-          lecture_id,
-          sequence_number: segment.sequence_number,
-          title: segment.title,
-          segment_description: segment.segment_description
-        }))
-      )
+      .insert(formattedSegments);
 
     if (insertError) {
-      console.error('Error inserting segments:', insertError)
-      throw insertError
+      console.error('Error inserting segments:', insertError);
+      throw insertError;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      segments: segments
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+    return new Response(
+      JSON.stringify({ message: 'Segments created successfully', segments: formattedSegments }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
-    console.error('Error:', error)
-    return new Response(JSON.stringify({
-      error: error.message
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    console.error('Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
-})
-
+});
