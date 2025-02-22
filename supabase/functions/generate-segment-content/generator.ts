@@ -12,88 +12,132 @@ export const generatePrompt = (
     : '';
 
   // Sanitize and truncate lecture content if too long
-  const maxContentLength = 15000; // OpenAI has token limits
+  const maxContentLength = 15000;
   const truncatedContent = lectureContent.length > maxContentLength 
     ? lectureContent.substring(0, maxContentLength) + "..."
     : lectureContent;
 
   console.log('Generating prompt for segment:', segmentTitle);
   console.log('Content length:', truncatedContent.length);
+  console.log('Language instruction:', languageInstruction);
 
-  return `You are an expert educator tasked with creating engaging content for a lecture segment.
-Use ONLY the provided lecture content as your source material.
+  return `You are a specialized educational content generator focused on creating clear, structured learning segments.
 
-SEGMENT TITLE: "${segmentTitle}"
+TASK: Create a focused educational segment about: "${segmentTitle}"
 
-SEGMENT DESCRIPTION: "${segmentDescription}"
+CONTEXT:
+${segmentDescription}
 
-SOURCE CONTENT:
+SOURCE MATERIAL:
 """
 ${truncatedContent}
 """
 
-${aiConfig.custom_instructions ? `\nADDITIONAL INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
+${aiConfig.custom_instructions ? `\nCUSTOM INSTRUCTIONS:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
 
-Create a structured educational segment with the following components:
-
-1. THEORY SLIDES:
-   First slide (theory_slide_1): 
-   - Focus on introducing fundamental concepts
-   - Length: 300-400 words
-   - Keep it clear and engaging
-   
-   Second slide (theory_slide_2):
-   - Build upon the first slide
-   - Include specific examples from the lecture
-   - Length: 300-400 words
-   - Demonstrate practical applications
-
-2. ASSESSMENT QUESTIONS:
-   Multiple Choice Question (quiz_1):
-   - Create a conceptual question testing understanding
-   - Provide exactly 4 distinct options
-   - Include clear explanation for the correct answer
-   
-   True/False Question (quiz_2):
-   - Create a nuanced statement based on the content
-   - Include clear reasoning for why it's true or false
-
-YOUR RESPONSE MUST BE VALID JSON with this exact structure:
+REQUIRED OUTPUT FORMAT: Create two theory slides and two quiz questions in this exact JSON structure:
 {
-  "theory_slide_1": "content...",
-  "theory_slide_2": "content...",
+  "theory_slide_1": "Clear, focused content explaining fundamental concepts (300-400 words)",
+  "theory_slide_2": "Detailed examples and practical applications (300-400 words)",
   "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "question text...",
-  "quiz_1_options": ["option1", "option2", "option3", "option4"],
-  "quiz_1_correct_answer": "exact match to one of the options",
-  "quiz_1_explanation": "explanation...",
+  "quiz_1_question": "A conceptual question testing understanding",
+  "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+  "quiz_1_correct_answer": "Exact match to one of the options",
+  "quiz_1_explanation": "Clear explanation of why this answer is correct",
   "quiz_2_type": "true_false",
-  "quiz_2_question": "statement...",
-  "quiz_2_correct_answer": true or false,
-  "quiz_2_explanation": "reasoning..."
+  "quiz_2_question": "A statement testing deeper understanding",
+  "quiz_2_correct_answer": true,
+  "quiz_2_explanation": "Detailed explanation of why this is true/false"
 }
 
-Remember: Use ONLY information from the provided lecture content. Do not add external knowledge.`;
-};
+CRITICAL REQUIREMENTS:
+1. Use ONLY information from the provided source material
+2. Ensure quiz_1_correct_answer EXACTLY matches one of the quiz_1_options
+3. Make quiz_2_correct_answer a boolean (true/false)
+4. Keep theory slides between 300-400 words each
+5. Include exactly 4 options for multiple choice questions
+6. Return VALID JSON with all fields present
 
-const delay = (attempts: number) => {
-  const baseDelay = 2000;
-  const maxDelay = 32000;
-  const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempts), maxDelay);
-  const jitter = Math.random() * 1000;
-  return exponentialDelay + jitter;
+${aiConfig.temperature > 0.7 ? 'Feel free to be creative while staying accurate.' : 'Focus on accuracy and clarity.'}`;
 };
 
 export const generateContent = async (prompt: string, maxRetries = 3) => {
-  console.log('Generating content with prompt length:', prompt.length);
+  console.log('Starting content generation with prompt length:', prompt.length);
+
+  const validateResponse = (content: string) => {
+    try {
+      const parsed = JSON.parse(content);
+      
+      // Required fields check
+      const requiredFields = [
+        'theory_slide_1',
+        'theory_slide_2',
+        'quiz_1_type',
+        'quiz_1_question',
+        'quiz_1_options',
+        'quiz_1_correct_answer',
+        'quiz_1_explanation',
+        'quiz_2_type',
+        'quiz_2_question',
+        'quiz_2_correct_answer',
+        'quiz_2_explanation'
+      ];
+
+      const missingFields = requiredFields.filter(field => !(field in parsed));
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Multiple choice validation
+      if (parsed.quiz_1_type !== 'multiple_choice') {
+        throw new Error('quiz_1_type must be "multiple_choice"');
+      }
+
+      if (!Array.isArray(parsed.quiz_1_options) || parsed.quiz_1_options.length !== 4) {
+        throw new Error('quiz_1_options must be an array with exactly 4 options');
+      }
+
+      if (!parsed.quiz_1_options.includes(parsed.quiz_1_correct_answer)) {
+        throw new Error('quiz_1_correct_answer must match one of the options');
+      }
+
+      // True/False validation
+      if (parsed.quiz_2_type !== 'true_false') {
+        throw new Error('quiz_2_type must be "true_false"');
+      }
+
+      if (typeof parsed.quiz_2_correct_answer !== 'boolean') {
+        throw new Error('quiz_2_correct_answer must be boolean');
+      }
+
+      // Content length validation (rough estimate)
+      if (parsed.theory_slide_1.length < 200 || parsed.theory_slide_1.length > 3000) {
+        throw new Error('theory_slide_1 length is outside acceptable range');
+      }
+
+      if (parsed.theory_slide_2.length < 200 || parsed.theory_slide_2.length > 3000) {
+        throw new Error('theory_slide_2 length is outside acceptable range');
+      }
+
+      return parsed;
+    } catch (error) {
+      console.error('Validation error:', error.message);
+      throw error;
+    }
+  };
+
+  const delay = (attempt: number) => {
+    const baseDelay = 1000;
+    const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt), 8000);
+    return exponentialDelay + Math.random() * 1000;
+  };
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
-        const waitTime = delay(attempt - 1);
-        console.log(`Retry attempt ${attempt}, waiting ${waitTime}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        console.log(`Retry attempt ${attempt + 1}/${maxRetries + 1}`);
+        await new Promise(resolve => setTimeout(resolve, delay(attempt)));
       }
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -105,72 +149,37 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { 
-              role: 'system', 
-              content: 'You are an expert educator that creates lecture content. Always return complete, valid JSON containing all required fields. Each multiple choice question must have exactly 4 options.'
+            {
+              role: 'system',
+              content: 'You are an expert educational content generator. Always return complete, valid JSON containing exactly the required fields.'
             },
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
+          max_tokens: 4000,
           response_format: { type: "json_object" }
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+        const errorData = await response.text();
+        console.error(`OpenAI API error (${response.status}):`, errorData);
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
 
       const data = await response.json();
       const content = data.choices[0].message.content;
-      console.log('Received response from OpenAI');
-
-      try {
-        const parsed = JSON.parse(content);
-        console.log('Successfully parsed JSON response');
-        
-        // Validate all required fields are present and have the correct format
-        if (!parsed.theory_slide_1 || !parsed.theory_slide_2) {
-          throw new Error('Missing theory slides');
-        }
-
-        if (!parsed.quiz_1_type || parsed.quiz_1_type !== 'multiple_choice') {
-          throw new Error('Invalid quiz_1_type');
-        }
-
-        if (!Array.isArray(parsed.quiz_1_options) || parsed.quiz_1_options.length !== 4) {
-          throw new Error('Invalid quiz_1_options format - must be array of exactly 4 options');
-        }
-
-        if (!parsed.quiz_1_correct_answer || !parsed.quiz_1_options.includes(parsed.quiz_1_correct_answer)) {
-          throw new Error('Invalid quiz_1_correct_answer - must match one of the options');
-        }
-
-        if (!parsed.quiz_2_type || parsed.quiz_2_type !== 'true_false') {
-          throw new Error('Invalid quiz_2_type');
-        }
-
-        if (typeof parsed.quiz_2_correct_answer !== 'boolean') {
-          throw new Error('Invalid quiz_2_correct_answer type - must be boolean');
-        }
-
-        // If all validations pass, return the stringified JSON
-        console.log('All validations passed, returning content');
-        return JSON.stringify(parsed);
-      } catch (error) {
-        console.error('Content validation failed:', error.message);
-        if (attempt === maxRetries) {
-          throw new Error(`Failed to validate content: ${error.message}`);
-        }
-        console.log('Will retry due to validation failure...');
-        continue;
-      }
+      
+      console.log('Received response from OpenAI, validating...');
+      const validatedContent = validateResponse(content);
+      console.log('Content validation successful');
+      
+      return JSON.stringify(validatedContent);
     } catch (error) {
+      console.error(`Attempt ${attempt + 1} failed:`, error.message);
       if (attempt === maxRetries) {
-        throw error;
+        throw new Error(`Failed to generate valid content after ${maxRetries + 1} attempts: ${error.message}`);
       }
-      console.error(`Attempt ${attempt + 1} failed:`, error);
-      continue;
     }
   }
 

@@ -1,91 +1,98 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { AIConfig, GeneratedContent } from './types.ts';
+import { createClient } from '@supabase/supabase-js';
+import { AIConfig } from "./types.ts";
 
-export const initSupabaseClient = () => {
-  return createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-};
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-export const getLectureContent = async (supabaseClient: any, lectureId: number) => {
-  const { data, error } = await supabaseClient
-    .from('lectures')
-    .select('content, original_language')
-    .eq('id', lectureId)
-    .single();
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  if (error) throw error;
-  return {
-    content: data.content,
-    language: data.original_language
-  };
-};
+export async function getLectureContent(lectureId: number, segmentNumber: number) {
+  console.log(`Fetching content for lecture ${lectureId}, segment ${segmentNumber}`);
 
-export const getAIConfig = async (supabaseClient: any, lectureId: number): Promise<AIConfig> => {
-  const { data, error } = await supabaseClient
-    .from('lecture_ai_configs')
-    .select('*')
-    .eq('lecture_id', lectureId)
-    .maybeSingle();
+  try {
+    // Get lecture content
+    const { data: lecture, error: lectureError } = await supabase
+      .from('lectures')
+      .select('content')
+      .eq('id', lectureId)
+      .single();
 
-  if (error) throw error;
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
+      throw lectureError;
+    }
 
-  // If no custom language is set in AI config, we'll use the lecture's original language
-  const { data: lecture } = await supabaseClient
-    .from('lectures')
-    .select('original_language')
-    .eq('id', lectureId)
-    .single();
+    // Get segment info
+    const { data: segment, error: segmentError } = await supabase
+      .from('lecture_segments')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .eq('sequence_number', segmentNumber)
+      .single();
 
-  return {
-    temperature: data?.temperature ?? 0.7,
-    creativity_level: data?.creativity_level ?? 0.5,
-    detail_level: data?.detail_level ?? 0.6,
-    custom_instructions: data?.custom_instructions ?? '',
-    content_language: data?.content_language ?? lecture?.original_language ?? ''
-  };
-};
+    if (segmentError) {
+      console.error('Error fetching segment:', segmentError);
+      throw segmentError;
+    }
 
-export const getExistingContent = async (supabaseClient: any, lectureId: number, segmentNumber: number) => {
-  const { data, error } = await supabaseClient
-    .from('segments_content')
-    .select('*')
-    .eq('lecture_id', lectureId)
-    .eq('sequence_number', segmentNumber)
-    .maybeSingle();
+    // Get AI config
+    const { data: aiConfig, error: configError } = await supabase
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .maybeSingle();
 
-  if (error) throw error;
-  return data;
-};
+    if (configError) {
+      console.error('Error fetching AI config:', configError);
+      throw configError;
+    }
 
-export const saveSegmentContent = async (
-  supabaseClient: any,
+    return {
+      content: lecture.content,
+      segment,
+      config: aiConfig as AIConfig
+    };
+  } catch (error) {
+    console.error('Error in getLectureContent:', error);
+    throw error;
+  }
+}
+
+export async function saveSegmentContent(
   lectureId: number,
   segmentNumber: number,
-  content: GeneratedContent
-) => {
-  const { error } = await supabaseClient
-    .from('segments_content')
-    .upsert({
-      lecture_id: lectureId,
-      sequence_number: segmentNumber,
-      theory_slide_1: content.theory_slide_1,
-      theory_slide_2: content.theory_slide_2,
-      quiz_1_type: content.quiz_1_type,
-      quiz_1_question: content.quiz_1_question,
-      quiz_1_options: content.quiz_1_options,
-      quiz_1_correct_answer: content.quiz_1_correct_answer,
-      quiz_1_explanation: content.quiz_1_explanation,
-      quiz_2_type: content.quiz_2_type,
-      quiz_2_question: content.quiz_2_question,
-      quiz_2_correct_answer: content.quiz_2_correct_answer,
-      quiz_2_explanation: content.quiz_2_explanation
-    }, {
-      onConflict: 'lecture_id,sequence_number'
-    });
+  content: any
+) {
+  console.log(`Saving content for lecture ${lectureId}, segment ${segmentNumber}`);
 
-  if (error) throw error;
-  return content;
-};
+  try {
+    const { error } = await supabase
+      .from('segments_content')
+      .upsert({
+        lecture_id: lectureId,
+        sequence_number: segmentNumber,
+        theory_slide_1: content.theory_slide_1,
+        theory_slide_2: content.theory_slide_2,
+        quiz_1_type: content.quiz_1_type,
+        quiz_1_question: content.quiz_1_question,
+        quiz_1_options: content.quiz_1_options,
+        quiz_1_correct_answer: content.quiz_1_correct_answer,
+        quiz_1_explanation: content.quiz_1_explanation,
+        quiz_2_type: content.quiz_2_type,
+        quiz_2_question: content.quiz_2_question,
+        quiz_2_correct_answer: content.quiz_2_correct_answer,
+        quiz_2_explanation: content.quiz_2_explanation
+      });
+
+    if (error) {
+      console.error('Error saving segment content:', error);
+      throw error;
+    }
+
+    console.log('Content saved successfully');
+  } catch (error) {
+    console.error('Error in saveSegmentContent:', error);
+    throw error;
+  }
+}
