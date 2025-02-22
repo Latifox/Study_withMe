@@ -68,21 +68,24 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into clear, organized segments. Generate 5-7 segments for this lecture, ensuring each segment follows this specific format:
+            content: `You are an expert at breaking down educational content into clear, organized segments. Generate 5-7 segments for this lecture. For each segment:
 
 1. Title: Maximum 5 words, clear and descriptive
-2. Description: Must start with "Key concepts:" followed by 2-4 key concepts
-   Format: "Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
+2. Description: Must start with "Key concepts:" followed by 2-4 key concepts in this EXACT format:
+   "Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
 
-Rules:
-- Each concept must have exactly 2 aspects in parentheses
-- Use simple, clear nouns or short phrases for aspects
-- Aspects should be categories or topics, not definitions
-- Examples of good aspects: (properties, applications), (types, calculations), (methods, examples)
+CRUCIAL RULES:
+- DO NOT include any actual content or examples in the aspects
+- Aspects should be general categories/dimensions to explore, NOT specific examples or values
+- CORRECT example: "coal (types, properties)" - just naming the aspects to explore
+- INCORRECT example: "coal (bituminous, lignite)" - DO NOT list specific types!
+- INCORRECT example: "coal (high carbon content, black color)" - DO NOT describe properties!
+- Each concept must have exactly 2 aspects
+- Use simple, clear nouns for aspects like: properties, types, methods, applications, structure, function, etc.
 - Concepts must be unique across all segments
 - Always write in ${targetLanguage}
 
-Respond only with a JSON object containing an array of segments.`
+Respond only with a JSON object containing an array of segments with title and description fields.`
           },
           {
             role: 'user',
