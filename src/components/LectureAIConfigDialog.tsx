@@ -91,9 +91,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (configError) throw configError;
 
-      // The handle_ai_config_change trigger will automatically delete existing content
-      // Now we need to regenerate the content
-
       // First get the lecture content
       const { data: lecture, error: lectureError } = await supabase
         .from('lectures')
@@ -115,6 +112,9 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       if (segmentError) throw segmentError;
 
+      // Wait for segments to be created
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       // Fetch the new segments and regenerate content for each
       const { data: segments, error: fetchError } = await supabase
         .from('lecture_segments')
@@ -124,6 +124,17 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       if (fetchError) throw fetchError;
 
       console.log('Regenerating content for segments:', segments);
+
+      // Make sure segments_content table is clean before generating new content
+      const { error: deleteError } = await supabase
+        .from('segments_content')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (deleteError) {
+        console.error('Error deleting old content:', deleteError);
+        throw deleteError;
+      }
 
       // Generate content for each segment sequentially to avoid overwhelming the API
       for (const segment of segments) {
@@ -138,7 +149,13 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           }
         });
 
-        if (contentError) throw contentError;
+        if (contentError) {
+          console.error('Error generating content for segment:', segment.sequence_number, contentError);
+          throw contentError;
+        }
+
+        // Wait a bit between segments to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       // Invalidate relevant queries
