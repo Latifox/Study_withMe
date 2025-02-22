@@ -62,27 +62,23 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 4-5 focused segments.
+            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 4-6 focused segments.
 
 For each segment, create:
-1. A concise title (max 8 words)
+1. A concise title (max 5 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3), concept4 (short context for concept4)"
+   "Key concepts: concept1 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.)), concept2 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.), concept3 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.)), concept4 (aspects to point out about concept (eg. Definition, clasifications, impacts, formulas, distribution etc.))"
    
    Rules for the description:
    - You MUST include EXACTLY 4 key concepts, no more, no less
-   - Each concept MUST have a short context in parentheses
-   - The context should specify HOW the concept is used or applied in this specific segment
-   - Contexts should differentiate how each concept is used differently across segments
-   - Start EXACTLY with "Key concepts: " followed by the concepts list
+   - Each concept MUST have at least 3 aspects pointed out
+   - The aspects should reflect different findings in the lecture regarding a concept
+   - The aspects should only be mentioned NOT DEFINED. (if we want the definition of a concept we should fetch "concept1 (definition)" and not the actual definition of the concept
+   - Start DIRECTLY WITH CONCEPTS
    - Use commas to separate concept entries
-   - Make sure each concept is unique within the segment
-   - Make each context specific and actionable
+   - Make sure each concept is unique within all segments so no concept is repeated twice.
 
 Target language: ${targetLanguage}
-
-Example of good description format:
-"Key concepts: energy reserves (geographical distribution analysis), resource accessibility (technological extraction methods), renewable potential (current infrastructure limitations), sustainability metrics (long-term viability assessment)"
 
 Return ONLY a JSON object in this format:
 {
@@ -135,26 +131,36 @@ Return ONLY a JSON object in this format:
         if (!segment.description || typeof segment.description !== 'string') {
           throw new Error(`Segment ${index + 1} missing valid description`);
         }
-        // Validate description format
-        if (!segment.description.startsWith('Key concepts: ')) {
-          throw new Error(`Segment ${index + 1} description must start with "Key concepts: "`);
-        }
-        const concepts = segment.description.substring(13).split(',').map(c => c.trim());
+        
+        // Split the description into concepts
+        const concepts = segment.description.split(',').map(c => c.trim());
         if (concepts.length !== 4) {
           throw new Error(`Segment ${index + 1} must have exactly 4 concepts`);
         }
+
+        // Check each concept has at least 3 aspects
         concepts.forEach((concept, conceptIndex) => {
-          if (!concept.includes('(') || !concept.includes(')')) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include context in parentheses`);
+          const aspectMatch = concept.match(/\((.*?)\)/);
+          if (!aspectMatch) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects in parentheses`);
+          }
+          const aspects = aspectMatch[1].split(',').map(a => a.trim());
+          if (aspects.length < 3) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 3 aspects`);
           }
         });
         
-        // Check for duplicate concepts within the segment
-        const conceptNames = concepts.map(c => c.split('(')[0].trim().toLowerCase());
-        const uniqueConceptNames = new Set(conceptNames);
-        if (uniqueConceptNames.size !== concepts.length) {
-          throw new Error(`Segment ${index + 1} contains duplicate concepts`);
-        }
+        // Check for duplicate concepts across all segments
+        const conceptNames = new Set();
+        parsedContent.segments.forEach(seg => {
+          seg.description.split(',').forEach(concept => {
+            const conceptName = concept.split('(')[0].trim().toLowerCase();
+            if (conceptNames.has(conceptName)) {
+              throw new Error(`Duplicate concept found: ${conceptName}`);
+            }
+            conceptNames.add(conceptName);
+          });
+        });
       });
 
       segments = parsedContent.segments;
