@@ -6,14 +6,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { deleteExistingContent } from "@/utils/lectureContentUtils";
+import AIConfigSliders from "./AIConfigSliders";
+import AIConfigInputs from "./AIConfigInputs";
 
 interface LectureAIConfigDialogProps {
   isOpen: boolean;
@@ -58,64 +57,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       setContentLanguage(config.content_language || "");
     }
   }, [config]);
-
-  const deleteExistingContent = async () => {
-    // Delete quiz progress
-    console.log('Deleting quiz progress...');
-    const { error: quizError } = await supabase
-      .from('quiz_progress')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (quizError) {
-      console.error('Error deleting quiz progress:', quizError);
-      throw quizError;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Delete user progress
-    console.log('Deleting user progress...');
-    const { error: progressError } = await supabase
-      .from('user_progress')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (progressError) {
-      console.error('Error deleting user progress:', progressError);
-      throw progressError;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Delete segments content
-    console.log('Deleting segments content...');
-    const { error: contentError } = await supabase
-      .from('segments_content')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (contentError) {
-      console.error('Error deleting segments content:', contentError);
-      throw contentError;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Delete lecture segments
-    console.log('Deleting lecture segments...');
-    const { error: segmentsError } = await supabase
-      .from('lecture_segments')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (segmentsError) {
-      console.error('Error deleting lecture segments:', segmentsError);
-      throw segmentsError;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-  };
 
   const handleSave = async () => {
     if (!lectureId) {
@@ -170,7 +111,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Delete existing content
-      await deleteExistingContent();
+      await deleteExistingContent(lectureId);
 
       // Wait for deletions to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -271,82 +212,21 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           <DialogTitle className="text-white">Configure AI Settings</DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label className="text-white">Temperature</Label>
-              <span className="text-sm text-white/80">{temperature[0]}</span>
-            </div>
-            <Slider
-              value={temperature}
-              onValueChange={setTemperature}
-              max={1}
-              step={0.1}
-              className="w-full"
-            />
-            <p className="text-sm text-white/70">
-              Controls randomness in responses. Higher values make output more creative but less focused.
-            </p>
-          </div>
+          <AIConfigSliders
+            temperature={temperature}
+            setTemperature={setTemperature}
+            creativity={creativity}
+            setCreativity={setCreativity}
+            detailLevel={detailLevel}
+            setDetailLevel={setDetailLevel}
+          />
 
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label className="text-white">Creativity Level</Label>
-              <span className="text-sm text-white/80">{creativity[0]}</span>
-            </div>
-            <Slider
-              value={creativity}
-              onValueChange={setCreativity}
-              max={1}
-              step={0.1}
-              className="w-full"
-            />
-            <p className="text-sm text-white/70">
-              Balances between creative and analytical responses.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label className="text-white">Detail Level</Label>
-              <span className="text-sm text-white/80">{detailLevel[0]}</span>
-            </div>
-            <Slider
-              value={detailLevel}
-              onValueChange={setDetailLevel}
-              max={1}
-              step={0.1}
-              className="w-full"
-            />
-            <p className="text-sm text-white/70">
-              Controls the depth and length of AI responses.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-white">Custom Instructions</Label>
-            <Textarea
-              placeholder="Enter any specific instructions or requirements for content generation"
-              value={customInstructions}
-              onChange={(e) => setCustomInstructions(e.target.value)}
-              className="min-h-[100px] bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
-            />
-            <p className="text-sm text-white/70">
-              Specify any particular focus areas or special requirements for the content generation.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-white">Content Language (Optional)</Label>
-            <Input
-              placeholder="Enter target language (e.g., English, Spanish, French)"
-              value={contentLanguage}
-              onChange={(e) => setContentLanguage(e.target.value)}
-              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
-            />
-            <p className="text-sm text-white/70">
-              Leave empty to use the original lecture language.
-            </p>
-          </div>
+          <AIConfigInputs
+            customInstructions={customInstructions}
+            setCustomInstructions={setCustomInstructions}
+            contentLanguage={contentLanguage}
+            setContentLanguage={setContentLanguage}
+          />
 
           <div className="flex justify-end gap-2">
             <Button 
