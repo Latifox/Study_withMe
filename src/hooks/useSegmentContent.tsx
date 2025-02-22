@@ -46,12 +46,29 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         throw contentError;
       }
 
-      // If no content exists yet, wait for content generation
+      // If no content exists yet, return partial data with just the segment structure
       if (!segmentContent) {
-        console.log('No content found, waiting for generation...');
-        throw new Error('Content is being generated');
+        console.log('No content found, returning partial data...');
+        return {
+          segments: [{
+            id: `segment_${sequenceNumber}`,
+            title: segment.title,
+            slides: [
+              { id: 'slide-1', content: 'Content is being generated...' },
+              { id: 'slide-2', content: 'Content is being generated...' }
+            ],
+            questions: [{
+              type: 'multiple_choice',
+              question: 'Content is being generated...',
+              options: ['...'],
+              correctAnswer: '...',
+              explanation: 'Content is being generated...'
+            }]
+          }]
+        };
       }
 
+      // Return full data if content exists
       return {
         segments: [{
           id: `segment_${sequenceNumber}`,
@@ -78,8 +95,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         }]
       };
     },
-    retry: 10, // Increase retries to allow for content generation
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff with 30s max
+    retry: 10,
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-
