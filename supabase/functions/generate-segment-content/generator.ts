@@ -1,3 +1,4 @@
+
 import { AIConfig } from "./types.ts";
 
 export const generatePrompt = (
@@ -10,37 +11,41 @@ export const generatePrompt = (
     ? `Please provide all content in ${aiConfig.content_language}` 
     : '';
 
-  return `As an AI professor, create engaging learning content for a lecture segment with the following title: "${segmentTitle}". 
-The lecture segment is part of ${lectureContent} and should cover the concepts listed in ${segmentDescription}. The content that will be generated will only source information from the lecture content, no external sources.
+  return `As an expert educator, create engaging, lecture-specific learning content for a segment titled "${segmentTitle}". 
+The segment is part of this lecture content: ${lectureContent}
+The segment should specifically focus on these concepts: ${segmentDescription}
+
 ${aiConfig.custom_instructions ? `\nAdditional Instructions:\n${aiConfig.custom_instructions}` : ''}
 ${languageInstruction}
 
-Generate content that follows this exact structure (these are required field names):
-1. Two theory slides (theory_slide_1 and theory_slide_2):
-   - theory_slide_1 should introduce the main concepts
-   - theory_slide_2 should dive deeper with examples and applications
-   Both slides should use clear, concise language with examples where appropriate.
+Important requirements:
+1. You MUST source information ONLY from the provided lecture content, no external sources.
+2. Structure your response in a logical, pedagogically sound way that best fits THIS specific lecture topic.
+3. Create two complementary theory slides that naturally build upon each other:
+   - theory_slide_1: A foundational explanation of the core concepts
+   - theory_slide_2: A deeper exploration with relevant examples and applications from the lecture
+   Ensure each slide contains sufficient content (at least 150 words) while remaining clear and focused.
 
-2. Two quiz questions to test understanding:
+4. Design two assessment questions that thoughtfully test understanding:
    - First quiz (quiz_1):
-     * A multiple-choice question with type "multiple_choice"
-     * The question itself (quiz_1_question)
-     * 4 options as an array (quiz_1_options)
-     * The correct answer matching one of the options (quiz_1_correct_answer)
-     * A detailed explanation (quiz_1_explanation)
+     * type: "multiple_choice"
+     * quiz_1_question: Create a question that tests deeper understanding
+     * quiz_1_options: Provide 4 well-thought-out options
+     * quiz_1_correct_answer: Specify the correct option
+     * quiz_1_explanation: Explain why this answer is correct
    
    - Second quiz (quiz_2):
-     * A true/false question with type "true_false" 
-     * The question itself (quiz_2_question)
-     * The correct answer as a boolean (quiz_2_correct_answer)
-     * A detailed explanation (quiz_2_explanation)
+     * type: "true_false"
+     * quiz_2_question: Create a nuanced true/false question
+     * quiz_2_correct_answer: Provide the answer as a boolean
+     * quiz_2_explanation: Explain the reasoning
 
 Guidelines:
-- Keep theory slides concise but informative
-- Quiz questions should test understanding, not just memorization
-- Cover different aspects of the topic between the two questions
-- Ensure all content is factually accurate
-- Use a clear, educational tone`;
+- Let the content structure flow naturally based on the lecture material
+- Create thought-provoking questions that test conceptual understanding
+- Maintain academic rigor while being clear and engaging
+- Use examples and applications specifically from the lecture content
+- Structure the content in a way that best serves this particular topic`;
 };
 
 const delay = (attempts: number) => {
@@ -69,16 +74,14 @@ export const generateContent = async (prompt: string, maxRetries = 3) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini-2024-07-18',
+          model: 'gpt-4o-mini',
           messages: [
             { 
               role: 'system', 
-              content: `You are an expert educator generating educational content.
-Key requirements:
-1. Use ONLY information from the provided lecture content
-2. Format all LaTeX properly (\\text{}, \\rightarrow, etc.)
-3. Create challenging, nuanced quiz questions
-4. Return complete JSON with all required fields`
+              content: `You are an expert educator specializing in creating engaging, lecture-specific educational content.
+Your role is to structure content in the most effective way for each unique topic, while maintaining academic rigor.
+You must use ONLY information from the provided lecture content - no external knowledge.
+Focus on creating clear, logically flowing content that builds understanding step by step.`
             },
             { role: 'user', content: prompt }
           ],
