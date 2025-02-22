@@ -67,22 +67,22 @@ serve(async (req) => {
 For each segment, create:
 1. A concise title (max 8 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (aspects: definition, classification), concept2 (aspects: history, components), concept3 (aspects: applications, impacts), concept4 (aspects: examples, future trends)"
+   "Key concepts: concept1 (short context for concept1), concept2 (short context for concept2), concept3 (short context for concept3), concept4 (short context for concept4)"
    
    Rules for the description:
    - You MUST include EXACTLY 4 key concepts, no more, no less
-   - Each concept MUST be followed by "(aspects: X, Y, Z)" where X, Y, Z are aspects to be explored
-   - DO NOT include any actual definitions or content within the parentheses
-   - ONLY list the aspects that should be covered for each concept (like definition, classification, examples, etc.)
-   - Each concept MUST have at least 2 different aspects to be explored
+   - Each concept MUST have a short context in parentheses
+   - The context should specify HOW the concept is used or applied in this specific segment
+   - Contexts should differentiate how each concept is used differently across segments
    - Start EXACTLY with "Key concepts: " followed by the concepts list
    - Use commas to separate concept entries
    - Make sure each concept is unique within the segment
+   - Make each context specific and actionable
 
 Target language: ${targetLanguage}
 
 Example of good description format:
-"Key concepts: photosynthesis (aspects: definition, stages), cellular respiration (aspects: process, efficiency), metabolic pathways (aspects: types, regulation), energy transfer (aspects: mechanisms, applications)"
+"Key concepts: energy reserves (geographical distribution analysis), resource accessibility (technological extraction methods), renewable potential (current infrastructure limitations), sustainability metrics (long-term viability assessment)"
 
 Return ONLY a JSON object in this format:
 {
@@ -144,16 +144,8 @@ Return ONLY a JSON object in this format:
           throw new Error(`Segment ${index + 1} must have exactly 4 concepts`);
         }
         concepts.forEach((concept, conceptIndex) => {
-          if (!concept.includes('(aspects:') || !concept.includes(')')) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects list in parentheses`);
-          }
-          // Check that each concept has at least 2 aspects listed
-          const aspectsMatch = concept.match(/aspects:\s*(.*?)\)/);
-          if (aspectsMatch) {
-            const aspects = aspectsMatch[1].split(',').map(a => a.trim());
-            if (aspects.length < 2) {
-              throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 2 aspects listed`);
-            }
+          if (!concept.includes('(') || !concept.includes(')')) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include context in parentheses`);
           }
         });
         
