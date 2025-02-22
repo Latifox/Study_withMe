@@ -77,6 +77,7 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
           course_id: parseInt(courseId),
           title,
           pdf_path: filePath,
+          content: fileContent // Save content in the lectures table
         })
         .select()
         .single();
@@ -91,28 +92,12 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       setCurrentLectureId(lectureData.id);
       setShowAIProfessor(true);
 
-      console.log('Extracting PDF content...');
-      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
-        body: {
-          filePath,
-          lectureId: lectureData.id.toString()
-        }
-      });
-
-      if (extractionError) throw extractionError;
-      console.log('PDF content extracted:', extractionData);
-      console.log('Content length:', extractionData.content?.length || 0);
-
-      if (!extractionData || !extractionData.content) {
-        throw new Error('No content returned from PDF extraction');
-      }
-
       // Generate segment structure
       console.log('Generating segment structure...');
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
         body: {
           lectureId: lectureData.id,
-          lectureContent: extractionData.content
+          lectureContent: fileContent
         }
       });
 
@@ -134,7 +119,9 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
           body: {
             lectureId: lectureData.id,
             segmentNumber: segment.sequence_number,
-            lectureContent: extractionData.content
+            lectureContent: fileContent,
+            segmentTitle: segment.title,
+            segmentDescription: segment.segment_description
           }
         })
       );
@@ -246,3 +233,4 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
 };
 
 export default FileUpload;
+

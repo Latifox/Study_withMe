@@ -1,42 +1,37 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.1';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.20.0';
+import { corsHeaders } from './cors.ts';
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { lectureContent, lectureId } = await req.json();
+    // Parse request
+    const { lectureId, lectureContent } = await req.json();
+    console.log('Received request for lecture:', lectureId);
     
-    console.log('Request received for lecture:', lectureId);
-    console.log('Content length:', lectureContent?.length || 0);
-
-    if (!lectureContent || typeof lectureContent !== 'string') {
-      console.error('Invalid or missing content:', lectureContent);
-      throw new Error('No content provided or invalid content format');
+    if (!lectureContent) {
+      console.error('No content provided');
+      throw new Error('No content provided');
     }
 
     if (!lectureId) {
       console.error('No lecture ID provided');
-      throw new Error('Lecture ID is required');
+      throw new Error('No lecture ID provided');
     }
-
-    console.log('Generating segment structure...');
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
+    let segments;
+    console.log('Making OpenAI request...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -62,25 +57,19 @@ serve(async (req) => {
             {
               "segments": [
                 {
-                  "title": "Segment Title",
-                  "description": "Detailed 3-5 sentence description..."
+                  "title": "segment title",
+                  "segment_description": "detailed 3-5 sentence description"
                 }
               ]
             }
             
-            Here is the content to analyze:
-            ${lectureContent}`
+            Here's the content to analyze: ${lectureContent}`
           }
         ],
         temperature: 0.7,
+        max_tokens: 2000,
       }),
     });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-    }
 
     const data = await response.json();
     console.log('Received OpenAI response');
@@ -90,8 +79,8 @@ serve(async (req) => {
       throw new Error('Invalid response format from OpenAI');
     }
 
-    let segments;
     try {
+      console.log('Parsing OpenAI response...');
       const rawContent = data.choices[0].message.content;
       console.log('Raw OpenAI response:', rawContent);
       
@@ -114,13 +103,15 @@ serve(async (req) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Invalid title in segment ${index}`);
         }
-        if (!segment.description || typeof segment.description !== 'string') {
+        if (!segment.segment_description || typeof segment.segment_description !== 'string') {
           throw new Error(`Invalid description in segment ${index}`);
         }
+        // Add sequence number to each segment
+        segment.sequence_number = index + 1;
       });
+
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
-      console.error('Raw response:', data.choices[0].message.content);
       throw new Error(`Failed to parse segments from OpenAI response: ${error.message}`);
     }
 
@@ -131,53 +122,49 @@ serve(async (req) => {
       throw new Error('Missing Supabase configuration');
     }
 
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseServiceKey
-    );
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (!segments || !Array.isArray(segments.segments)) {
+      throw new Error('Invalid segments data structure');
+    }
 
     console.log(`Saving ${segments.segments.length} segments for lecture ${lectureId}`);
 
     const { error: insertError } = await supabaseClient
       .from('lecture_segments')
       .upsert(
-        segments.segments.map((segment: any, index: number) => ({
+        segments.segments.map(segment => ({
           lecture_id: lectureId,
-          sequence_number: index + 1,
           title: segment.title,
-          segment_description: segment.description
+          segment_description: segment.segment_description,
+          sequence_number: segment.sequence_number
         }))
       );
 
     if (insertError) {
       console.error('Error inserting segments:', insertError);
-      throw new Error(`Failed to save segments: ${insertError.message}`);
+      throw insertError;
     }
 
     console.log('Successfully saved segments');
 
     return new Response(
       JSON.stringify({ 
-        message: 'Segments generated and saved successfully',
-        segmentCount: segments.segments.length 
+        segments: segments.segments,
+        message: 'Segments created successfully' 
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in generate-segments-structure:', error);
+    console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message || 'An unexpected error occurred',
-        details: error.toString()
-      }),
+      JSON.stringify({ error: error.message }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
+
