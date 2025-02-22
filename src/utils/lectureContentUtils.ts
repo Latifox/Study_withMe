@@ -59,3 +59,110 @@ export const deleteExistingContent = async (lectureId: number) => {
   await new Promise(resolve => setTimeout(resolve, 500));
 };
 
+export const recreateLecture = async (
+  oldLectureId: number, 
+  aiConfig: { 
+    temperature: number;
+    creativity_level: number;
+    detail_level: number;
+    content_language?: string | null;
+    custom_instructions?: string | null;
+  }
+) => {
+  console.log('Starting lecture recreation process...');
+  
+  // First, get the old lecture data
+  const { data: oldLecture, error: fetchError } = await supabase
+    .from('lectures')
+    .select('*')
+    .eq('id', oldLectureId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching old lecture:', fetchError);
+    throw fetchError;
+  }
+
+  console.log('Retrieved old lecture data:', oldLecture);
+
+  // Start a transaction by creating the new lecture
+  const { data: newLecture, error: insertError } = await supabase
+    .from('lectures')
+    .insert({
+      course_id: oldLecture.course_id,
+      title: oldLecture.title,
+      content: oldLecture.content,
+      pdf_path: oldLecture.pdf_path,
+      original_language: oldLecture.original_language
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('Error creating new lecture:', insertError);
+    throw insertError;
+  }
+
+  console.log('Created new lecture:', newLecture);
+
+  // Create AI config for the new lecture
+  const { error: configError } = await supabase
+    .from('lecture_ai_configs')
+    .insert({
+      lecture_id: newLecture.id,
+      temperature: aiConfig.temperature,
+      creativity_level: aiConfig.creativity_level,
+      detail_level: aiConfig.detail_level,
+      content_language: aiConfig.content_language,
+      custom_instructions: aiConfig.custom_instructions
+    });
+
+  if (configError) {
+    console.error('Error creating AI config:', configError);
+    // If AI config creation fails, delete the new lecture to maintain consistency
+    await supabase.from('lectures').delete().eq('id', newLecture.id);
+    throw configError;
+  }
+
+  console.log('Created AI config for new lecture');
+
+  try {
+    // Generate segment structure for the new lecture
+    console.log('Generating segments structure...');
+    const { error: structureError } = await supabase.functions.invoke('generate-segments-structure', {
+      body: {
+        lectureId: newLecture.id,
+        lectureContent: oldLecture.content,
+        lectureTitle: oldLecture.title
+      }
+    });
+
+    if (structureError) {
+      throw structureError;
+    }
+
+    console.log('Generated segments structure successfully');
+
+    // Delete the old lecture (this will cascade delete all related data)
+    console.log('Deleting old lecture...');
+    const { error: deleteError } = await supabase
+      .from('lectures')
+      .delete()
+      .eq('id', oldLectureId);
+
+    if (deleteError) {
+      console.error('Error deleting old lecture:', deleteError);
+      throw deleteError;
+    }
+
+    console.log('Old lecture deleted successfully');
+
+    return newLecture.id;
+  } catch (error) {
+    console.error('Error in recreation process:', error);
+    // If anything fails after creating the new lecture, clean it up
+    await supabase.from('lectures').delete().eq('id', newLecture.id);
+    throw error;
+  }
+};
+
