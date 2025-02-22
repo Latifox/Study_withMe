@@ -35,27 +35,32 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
-            For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
-            These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
-            Focus on explaining the relationships between concepts and what specific points need to be addressed.
-            Do not just list topics - explain how they should be presented and what specific points need to be addressed.`
+            content: `You are an expert educator skilled at creating engaging, narrative-style learning content. Your task is to analyze educational materials and break them down into logical learning segments that tell a cohesive story.
+
+For each segment, you will write a detailed narrative description that:
+1. Provides context and background information
+2. Explains real-world applications and implications
+3. Highlights connections between concepts
+4. Describes specific examples and scenarios
+5. Outlines a clear learning journey
+
+Avoid simply listing topics or concepts. Instead, craft a narrative that explains how concepts build upon each other and connect to form a complete understanding. Each description should read like a mini-story that guides the learning process.`
           },
           {
             role: 'user',
             content: `Please analyze this content and break it down into 4-8 logical learning segments. For each segment:
-            1. Give it a clear, descriptive title
-            2. Write a detailed 3-5 sentence description explaining exactly what content should be covered
+            1. Create a clear, descriptive title that captures the main theme
+            2. Write a detailed narrative description (3-5 sentences) that tells the story of what will be learned, including context, connections, and real-world relevance
             3. Format your response as a JSON object with this structure:
             {
               "segments": [
                 {
                   "title": "Segment Title",
-                  "description": "Detailed 3-5 sentence description..."
+                  "description": "Narrative description..."
                 }
               ]
             }
