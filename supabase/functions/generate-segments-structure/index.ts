@@ -20,12 +20,15 @@ serve(async (req) => {
       throw new Error('Missing required parameters: lectureId or lectureContent');
     }
 
+    console.log('Processing request for lecture:', lectureId);
+    console.log('Content length:', lectureContent.length);
+
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
-    // Initialize Supabase client with environment variables
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -37,7 +40,7 @@ serve(async (req) => {
       auth: { persistSession: false }
     });
 
-    // Get language settings from AI config and lecture
+    // Get language settings
     const { data: aiConfig } = await supabaseClient
       .from('lecture_ai_configs')
       .select('content_language')
@@ -52,9 +55,8 @@ serve(async (req) => {
 
     const targetLanguage = aiConfig?.content_language || lecture?.original_language || 'English';
     console.log('Using target language:', targetLanguage);
-    console.log('Generating segments structure for lecture:', lectureId);
-    console.log('Content length:', lectureContent.length);
 
+    console.log('Making OpenAI API request...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,39 +68,21 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 5-7 focused segments (NEVER create fewer than 5 segments).
+            content: `You are an expert at breaking down educational content into clear, organized segments. Generate 5-7 segments for this lecture, ensuring each segment follows this specific format:
 
-For each segment, create:
-1. A concise title (max 5 words)
-2. A description that lists ONLY aspect names in parentheses, NO content or definitions.
-Format: "Key concepts: concept1 (aspect1, aspect2, aspect3), concept2 (aspect1, aspect2), concept3 (aspect1, aspect2)"
+1. Title: Maximum 5 words, clear and descriptive
+2. Description: Must start with "Key concepts:" followed by 2-4 key concepts
+   Format: "Key concepts: concept1 (aspect1, aspect2), concept2 (aspect1, aspect2)"
 
-Rules for aspects:
-- List 2-3 aspects per concept that are names of what to explore (e.g. properties, classification, applications)
-- DO NOT include any content, definitions or explanations in the aspects
-- Use nouns or short phrases for aspects (e.g. "properties", "types", "applications")
+Rules:
+- Each concept must have exactly 2 aspects in parentheses
+- Use simple, clear nouns or short phrases for aspects
+- Aspects should be categories or topics, not definitions
+- Examples of good aspects: (properties, applications), (types, calculations), (methods, examples)
+- Concepts must be unique across all segments
+- Always write in ${targetLanguage}
 
-Example description:
-"Key concepts: forces (types, measurement, applications), motion (properties, equations), energy (forms, conservation)"
-
-Rules for ALL descriptions:
-- Each concept MUST have 2-3 aspects listed in parentheses
-- List 2-4 key concepts per segment
-- Concepts MUST be unique across all segments
-- Start directly with "Key concepts:"
-- Use commas to separate concept entries
-
-Target language: ${targetLanguage}
-
-Return ONLY a JSON object in this format:
-{
-  "segments": [
-    {
-      "title": "string",
-      "description": "string"
-    }
-  ]
-}`
+Respond only with a JSON object containing an array of segments.`
           },
           {
             role: 'user',
@@ -112,140 +96,75 @@ Return ONLY a JSON object in this format:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error response:', errorText);
-      throw new Error(`OpenAI API call failed: ${response.status} ${response.statusText}`);
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
     const openAIResponse = await response.json();
+    console.log('Received OpenAI response');
+
     if (!openAIResponse.choices?.[0]?.message?.content) {
-      console.error('Invalid OpenAI response structure:', openAIResponse);
       throw new Error('Invalid response structure from OpenAI');
     }
 
     let segments;
     try {
-      const rawContent = openAIResponse.choices[0].message.content;
-      console.log('Raw OpenAI content:', rawContent);
+      const parsedContent = JSON.parse(openAIResponse.choices[0].message.content);
       
-      const parsedContent = JSON.parse(rawContent);
-      console.log('Parsed content:', JSON.stringify(parsedContent, null, 2));
-
       if (!parsedContent.segments || !Array.isArray(parsedContent.segments)) {
         throw new Error('Response missing segments array');
       }
 
-      // Validate minimum number of segments
       if (parsedContent.segments.length < 5) {
-        throw new Error('Less than 5 segments generated. Required minimum is 5 segments.');
+        throw new Error('Not enough segments generated (minimum 5 required)');
       }
-
-      // Basic validation of segments
-      const conceptsSet = new Set();
-      parsedContent.segments.forEach((segment: any, index: number) => {
-        if (!segment.title || typeof segment.title !== 'string') {
-          throw new Error(`Segment ${index + 1} missing valid title`);
-        }
-        if (segment.title.split(' ').length > 5) {
-          throw new Error(`Segment ${index + 1} title exceeds 5 words`);
-        }
-        if (!segment.description || typeof segment.description !== 'string') {
-          throw new Error(`Segment ${index + 1} missing valid description`);
-        }
-        
-        // Ensure description starts with "Key concepts:"
-        if (!segment.description.startsWith('Key concepts:')) {
-          throw new Error(`Segment ${index + 1} description must start with "Key concepts:"`);
-        }
-        
-        // Basic format check for concepts and aspects
-        const conceptsText = segment.description.replace('Key concepts:', '').trim();
-        const concepts = conceptsText.split(',').map((c: string) => c.trim());
-        
-        if (concepts.length < 2 || concepts.length > 4) {
-          throw new Error(`Segment ${index + 1} must have between 2 and 4 concepts`);
-        }
-
-        // Check each concept has aspects in parentheses and validate uniqueness
-        concepts.forEach((concept: string, conceptIndex: number) => {
-          const conceptMatch = concept.match(/^(.+?)\s*\((.*?)\)$/);
-          if (!conceptMatch) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects in parentheses`);
-          }
-
-          const conceptName = conceptMatch[1].trim().toLowerCase();
-          if (conceptsSet.has(conceptName)) {
-            throw new Error(`Duplicate concept "${conceptName}" found in segment ${index + 1}`);
-          }
-          conceptsSet.add(conceptName);
-
-          const aspects = conceptMatch[2].split(',').map(a => a.trim());
-          if (aspects.length < 2) {
-            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 2 aspects`);
-          }
-        });
-      });
 
       segments = parsedContent.segments;
-      console.log('Valid segments found:', segments.length);
+      console.log('Parsed segments:', segments);
 
-    } catch (error: any) {
-      console.error('Error parsing or validating OpenAI response:', error);
-      console.error('Raw content:', openAIResponse.choices[0].message.content);
-      throw new Error(`Failed to parse or validate OpenAI response: ${error.message}`);
+      // Delete existing segments
+      const { error: deleteError } = await supabaseClient
+        .from('lecture_segments')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new segments
+      const segmentsToInsert = segments.map((segment: any, index: number) => ({
+        lecture_id: lectureId,
+        sequence_number: index + 1,
+        title: segment.title,
+        segment_description: segment.description
+      }));
+
+      const { data: insertedSegments, error: insertError } = await supabaseClient
+        .from('lecture_segments')
+        .insert(segmentsToInsert)
+        .select();
+
+      if (insertError) throw insertError;
+
+      console.log('Successfully inserted segments');
+      return new Response(JSON.stringify({ segments: insertedSegments }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } catch (error) {
+      console.error('Error processing OpenAI response:', error);
+      throw error;
     }
 
-    // Delete existing segments
-    const { error: deleteError } = await supabaseClient
-      .from('lecture_segments')
-      .delete()
-      .eq('lecture_id', lectureId);
-
-    if (deleteError) {
-      console.error('Error deleting existing segments:', deleteError);
-      throw deleteError;
-    }
-
-    // Prepare segments for insertion
-    const segmentsToInsert = segments.map((segment: any, index: number) => ({
-      lecture_id: lectureId,
-      sequence_number: index + 1,
-      title: segment.title,
-      segment_description: segment.description
-    }));
-
-    console.log('Inserting segments:', JSON.stringify(segmentsToInsert, null, 2));
-
-    // Insert new segments
-    const { data: insertedSegments, error: insertError } = await supabaseClient
-      .from('lecture_segments')
-      .insert(segmentsToInsert)
-      .select();
-
-    if (insertError) {
-      console.error('Error inserting segments:', insertError);
-      throw insertError;
-    }
-
-    console.log('Successfully inserted segments:', insertedSegments);
-
-    return new Response(
-      JSON.stringify({ segments: insertedSegments }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
-
-  } catch (error: any) {
-    console.error('Error in generate-segments-structure:', error);
+  } catch (error) {
+    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
         details: error.stack
       }), 
       { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
