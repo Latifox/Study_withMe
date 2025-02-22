@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -108,34 +107,54 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
       
       console.log('Segment structure generated:', segmentData);
 
-      // Generate content for each segment in parallel
+      // Generate content for each segment with proper error handling and retries
       console.log('Generating content for all segments...');
-      const segmentPromises = segmentData.segments.map(async (segment: any) => {
-        const response = await supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId: lectureData.id,
-            segmentNumber: segment.sequence_number,
-            segmentTitle: segment.title,
-            segmentDescription: segment.segment_description,
-            lectureContent: extractionData.content
+      const maxRetries = 3;
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+      const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
+        try {
+          const response = await supabase.functions.invoke('generate-segment-content', {
+            body: {
+              lectureId: lectureData.id,
+              segmentNumber: segment.sequence_number,
+              segmentTitle: segment.title,
+              segmentDescription: segment.segment_description,
+              lectureContent: extractionData.content
+            }
+          });
+
+          if (response.error) {
+            throw response.error;
           }
-        });
 
-        if (response.error) {
-          console.error(`Error generating content for segment ${segment.sequence_number}:`, response.error);
-          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${response.error.message}`);
+          if (!response.data?.success) {
+            throw new Error(response.data?.error || 'Failed to generate segment content');
+          }
+
+          return response;
+        } catch (error) {
+          if (attemptCount < maxRetries) {
+            console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
+            await delay(2000 * (attemptCount + 1)); // Exponential backoff
+            return generateSegmentWithRetry(segment, attemptCount + 1);
+          }
+          throw error;
         }
+      };
 
-        if (!response.data?.success) {
-          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${response.data?.error || 'Unknown error'}`);
+      // Process segments sequentially to avoid overwhelming the OpenAI API
+      for (const segment of segmentData.segments) {
+        try {
+          console.log(`Processing segment ${segment.sequence_number}...`);
+          await generateSegmentWithRetry(segment);
+          console.log(`Segment ${segment.sequence_number} completed`);
+        } catch (error) {
+          console.error(`Failed to generate content for segment ${segment.sequence_number}:`, error);
+          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${error.message}`);
         }
-        
-        return response;
-      });
+      }
 
-      // Wait for all segments to be processed
-      console.log('Waiting for all segments to complete...');
-      await Promise.all(segmentPromises);
       console.log('All segment content generated successfully');
 
       await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });

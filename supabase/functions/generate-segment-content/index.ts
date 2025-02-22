@@ -1,7 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,80 +13,99 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!openAIApiKey || !supabaseUrl || !supabaseServiceKey) {
+    console.error('Missing required environment variables');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
-    console.log('Starting generate-segment-content function');
-    const {
+    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent } = await req.json();
+    console.log('Received request for segment content generation:', {
       lectureId,
       segmentNumber,
       segmentTitle,
       segmentDescription,
-      lectureContent
-    } = await req.json();
-
-    console.log(`Processing segment ${segmentNumber} for lecture ${lectureId}`);
-    console.log('Segment title:', segmentTitle);
-    console.log('Segment description:', segmentDescription);
+    });
 
     if (!lectureId || !segmentNumber || !segmentTitle || !segmentDescription || !lectureContent) {
+      console.error('Missing required parameters:', { lectureId, segmentNumber, segmentTitle, segmentDescription });
       throw new Error('Missing required parameters');
     }
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not found');
-    }
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Generate the theory slides
-    console.log('Generating theory slides...');
-    const slidesResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Generate theories and quizzes using GPT-4
+    const theoryPrompt1 = `Based on this lecture content: "${lectureContent}", create an engaging and informative theory slide about "${segmentTitle}". Focus specifically on this segment's description: "${segmentDescription}". Present the information in a clear, structured way using markdown format. Include relevant details and examples from the lecture content.`;
+    
+    const theoryPrompt2 = `Based on this lecture content: "${lectureContent}", create a second theory slide about "${segmentTitle}" that builds upon the first slide. Focus on: "${segmentDescription}". Present additional details, examples, and applications in markdown format. Make sure to complement the first slide without repeating the same information.`;
+
+    const quizPrompt = `Based on this lecture content: "${lectureContent}" and focusing on the segment "${segmentTitle}" with description "${segmentDescription}", generate 2 quiz questions. Each question should test understanding of key concepts. Format as JSON with this structure:
+    {
+      "questions": [
+        {
+          "type": "multiple_choice",
+          "question": "...",
+          "options": ["...", "...", "...", "..."],
+          "correctAnswer": "...",
+          "explanation": "..."
+        },
+        {
+          "type": "true_false",
+          "question": "...",
+          "correctAnswer": boolean,
+          "explanation": "..."
+        }
+      ]
+    }`;
+
+    console.log('Generating theory slide 1...');
+    const theory1Response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
-          {
-            role: 'system',
-            content: 'You are an expert educator who creates clear, engaging theory slides based on lecture content. Each slide should be concise yet comprehensive.'
-          },
-          {
-            role: 'user',
-            content: `Create two theory slides for a segment with title "${segmentTitle}" and description "${segmentDescription}". 
-            Use this lecture content as reference: "${lectureContent}".
-            
-            Return the slides in this exact JSON format:
-            {
-              "slide1": "First slide content",
-              "slide2": "Second slide content"
-            }
-            
-            Keep each slide focused, clear, and directly related to the segment topic.
-            Do not include any markdown or special formatting.
-            Slides should build upon each other logically.`
-          }
+          { role: 'system', content: 'You are a knowledgeable teacher creating educational content.' },
+          { role: 'user', content: theoryPrompt1 }
         ],
-        temperature: 0.7,
       }),
     });
 
-    if (!slidesResponse.ok) {
-      const errorText = await slidesResponse.text();
-      console.error('OpenAI API error (slides):', errorText);
-      throw new Error(`OpenAI API error: ${slidesResponse.status} ${errorText}`);
-    }
+    const theory1Data = await theory1Response.json();
+    const theory1Content = theory1Data.choices[0].message.content;
+    console.log('Theory 1 generated');
 
-    const slidesData = await slidesResponse.json();
-    if (!slidesData.choices?.[0]?.message?.content) {
-      console.error('Invalid slides response:', slidesData);
-      throw new Error('Invalid response format from OpenAI API (slides)');
-    }
+    console.log('Generating theory slide 2...');
+    const theory2Response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are a knowledgeable teacher creating educational content.' },
+          { role: 'user', content: theoryPrompt2 }
+        ],
+      }),
+    });
 
-    console.log('Theory slides generated successfully');
-    const { slide1, slide2 } = JSON.parse(slidesData.choices[0].message.content);
+    const theory2Data = await theory2Response.json();
+    const theory2Content = theory2Data.choices[0].message.content;
+    console.log('Theory 2 generated');
 
-    // Generate the quizzes
     console.log('Generating quizzes...');
     const quizResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -95,122 +114,52 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at creating educational assessments that test understanding of lecture content effectively.'
-          },
-          {
-            role: 'user',
-            content: `Create two quiz questions for a segment with title "${segmentTitle}" and description "${segmentDescription}".
-            Use this lecture content as reference: "${lectureContent}".
-            
-            Create:
-            1. One multiple-choice question with exactly 4 options
-            2. One true/false question
-            
-            Return in this exact JSON format:
-            {
-              "multipleChoice": {
-                "question": "Question text",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correctAnswer": "Correct option text",
-                "explanation": "Explanation of the correct answer"
-              },
-              "trueFalse": {
-                "question": "Question text",
-                "correctAnswer": true or false,
-                "explanation": "Explanation of the correct answer"
-              }
-            }
-            
-            Questions should test understanding of key concepts from the slides.
-            Make sure questions are challenging but fair.`
-          }
+          { role: 'system', content: 'You are a knowledgeable teacher creating educational quiz content.' },
+          { role: 'user', content: quizPrompt }
         ],
-        temperature: 0.7,
       }),
     });
 
-    if (!quizResponse.ok) {
-      const errorText = await quizResponse.text();
-      console.error('OpenAI API error (quiz):', errorText);
-      throw new Error(`OpenAI API error: ${quizResponse.status} ${errorText}`);
-    }
-
     const quizData = await quizResponse.json();
-    if (!quizData.choices?.[0]?.message?.content) {
-      console.error('Invalid quiz response:', quizData);
-      throw new Error('Invalid response format from OpenAI API (quiz)');
-    }
+    const quizContent = JSON.parse(quizData.choices[0].message.content);
+    console.log('Quizzes generated');
 
-    console.log('Quizzes generated successfully');
-    const { multipleChoice, trueFalse } = JSON.parse(quizData.choices[0].message.content);
-
-    // Create the Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // First check if the content already exists
-    console.log('Checking existing content...');
-    const { data: existingContent, error: fetchError } = await supabaseClient
-      .from('segments_content')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .eq('sequence_number', segmentNumber)
-      .single();
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching existing content:', fetchError);
-      throw fetchError;
-    }
-
-    console.log('Saving content to database...');
-    const contentData = {
+    // Prepare the content object
+    const segmentContent = {
       lecture_id: lectureId,
       sequence_number: segmentNumber,
-      theory_slide_1: slide1,
-      theory_slide_2: slide2,
-      quiz_1_type: 'multiple_choice',
-      quiz_1_question: multipleChoice.question,
-      quiz_1_options: multipleChoice.options,
-      quiz_1_correct_answer: multipleChoice.correctAnswer,
-      quiz_1_explanation: multipleChoice.explanation,
-      quiz_2_type: 'true_false',
-      quiz_2_question: trueFalse.question,
-      quiz_2_correct_answer: trueFalse.correctAnswer,
-      quiz_2_explanation: trueFalse.explanation
+      title: segmentTitle,
+      segment_description: segmentDescription,
+      slides: [
+        { content: theory1Content },
+        { content: theory2Content }
+      ],
+      questions: quizContent.questions
     };
 
-    const { error: upsertError } = await supabaseClient
+    console.log('Saving segment content to database...');
+    const { error: insertError } = await supabase
       .from('segments_content')
-      .upsert(contentData);
+      .insert(segmentContent);
 
-    if (upsertError) {
-      console.error('Error upserting content:', upsertError);
-      throw upsertError;
+    if (insertError) {
+      console.error('Error inserting segment content:', insertError);
+      throw insertError;
     }
 
-    console.log('Content successfully saved to database');
+    console.log('Segment content saved successfully');
     return new Response(
-      JSON.stringify({ success: true, message: 'Content generated and saved successfully' }),
+      JSON.stringify({ success: true, message: 'Segment content generated and saved successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in generate-segment-content:', error);
+    console.error('Error in generate-segment-content function:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'An unknown error occurred' 
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
