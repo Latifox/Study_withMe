@@ -14,15 +14,19 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, content } = await req.json();
+    const { lectureId, lectureContent } = await req.json();
     console.log('Received request for lecture:', lectureId);
+
+    if (!lectureContent) {
+      throw new Error('No lecture content provided');
+    }
+
+    console.log('Content length:', lectureContent.length);
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('Missing OpenAI API key');
     }
-
-    console.log('Content length:', content?.length || 0);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -38,37 +42,46 @@ serve(async (req) => {
             content: `You are an expert at analyzing educational content and breaking it down into logical segments. 
             For each segment, you will write a detailed description of 3-5 sentences that explains exactly what content should be covered.
             These descriptions will be used to generate theory slides, so be specific about what aspects and details should be included.
-            Focus on explaining the relationships between concepts and what specific details or examples should be covered.
-            Do not just list topics - explain how they should be presented and what specific points need to be addressed.`
+            Focus on explaining the relationships between concepts and what specific points need to be addressed.
+            Do not just list topics - explain how they should be presented and what specific points need to be addressed.
+            Important: Make sure each segment covers unique concepts - do not repeat the same concepts across multiple segments.`
           },
           {
             role: 'user',
-            content: `Analyze this lecture content and break it into 4-7 logical segments. For each segment:
-            1. Create a clear, focused title
-            2. Write a detailed description of 3-5 sentences explaining what content should be covered in that segment
-            The descriptions should be specific about what aspects to cover and how concepts relate to each other.
+            content: `Analyze this lecture content and break it into 5-8 logical segments. For each segment:
+            1. Create a clear, focused title that reflects the main concept being covered
+            2. Write a detailed description of 3-5 sentences explaining what specific content should be covered in that segment
             
-            Here's an example of a good segment description:
-            "This segment should explain the different types of coal based on their carbon content and formation process. It should detail how anthracite, bituminous, and lignite coal differ in their properties and energy output. The explanation should include specific examples of where each type is commonly found and their primary industrial applications."
-
+            The descriptions should:
+            - Be specific about what aspects to cover
+            - Explain how concepts relate to each other
+            - Not repeat concepts that are covered in other segments
+            - Include examples or applications where relevant
+            
             Each segment should build on previous ones in a logical progression. Return the segments in this exact JSON format:
             {
               "segments": [
                 {
                   "title": "segment title",
-                  "segment_description": "3-5 sentences describing what content should be covered"
+                  "segment_description": "detailed 3-5 sentence description"
                 }
               ]
             }
 
             Here's the lecture content to analyze:
-            ${content}`
+            ${lectureContent}`
           }
         ],
-        temperature: 0.5,
+        temperature: 0.7,  // Balanced between creativity and consistency
         max_tokens: 2000,
       }),
     });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('OpenAI API error:', error);
+      throw new Error('Failed to generate segments: ' + error);
+    }
 
     const data = await response.json();
     console.log('Received response from OpenAI');
@@ -110,7 +123,10 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: 'Segments created successfully', segments: formattedSegments }),
+      JSON.stringify({ 
+        message: 'Segments created successfully', 
+        segments: formattedSegments 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
