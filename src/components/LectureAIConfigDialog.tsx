@@ -77,49 +77,21 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
         .from('lectures')
         .select('content, title')
         .eq('id', lectureId)
-        .single();
+        .maybeSingle();
 
-      if (lectureError) throw lectureError;
-
-      // Manually delete old content in the correct order
-      console.log('Deleting old content...');
+      if (lectureError) {
+        console.error('Error fetching lecture:', lectureError);
+        throw lectureError;
+      }
       
-      // Delete quiz progress first
-      const { error: deleteQuizError } = await supabase
-        .from('quiz_progress')
-        .delete()
-        .eq('lecture_id', lectureId);
-      
-      if (deleteQuizError) throw deleteQuizError;
+      if (!lecture) {
+        throw new Error('Lecture not found');
+      }
 
-      // Delete user progress
-      const { error: deleteProgressError } = await supabase
-        .from('user_progress')
-        .delete()
-        .eq('lecture_id', lectureId);
-      
-      if (deleteProgressError) throw deleteProgressError;
+      console.log('Starting AI config update process...');
 
-      // Delete segments content
-      const { error: deleteContentError } = await supabase
-        .from('segments_content')
-        .delete()
-        .eq('lecture_id', lectureId);
-      
-      if (deleteContentError) throw deleteContentError;
-
-      // Delete lecture segments
-      const { error: deleteSegmentsError } = await supabase
-        .from('lecture_segments')
-        .delete()
-        .eq('lecture_id', lectureId);
-      
-      if (deleteSegmentsError) throw deleteSegmentsError;
-
-      // Wait for deletions to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Update AI configuration
+      // Update AI configuration first before deleting old content
+      console.log('Updating AI configuration...');
       const { error: configError } = await supabase
         .from('lecture_ai_configs')
         .upsert(
@@ -136,51 +108,101 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
           }
         );
 
-      if (configError) throw configError;
+      if (configError) {
+        console.error('Error updating AI config:', configError);
+        throw configError;
+      }
 
-      // Wait for config update to complete
+      // Wait for configuration to be updated
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Regenerate segments structure
-      console.log('Regenerating segments structure...');
-      const { error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
-        body: {
-          lectureId,
-          lectureContent: lecture.content,
-          lectureTitle: lecture.title
+      // Manually delete existing content
+      console.log('Deleting old content...');
+
+      // Delete in the correct order to respect foreign key constraints
+      const deleteQueries = [
+        { table: 'quiz_progress', message: 'Deleting quiz progress...' },
+        { table: 'user_progress', message: 'Deleting user progress...' },
+        { table: 'segments_content', message: 'Deleting segments content...' },
+        { table: 'lecture_segments', message: 'Deleting lecture segments...' },
+      ];
+
+      for (const { table, message } of deleteQueries) {
+        console.log(message);
+        const { error: deleteError } = await supabase
+          .from(table)
+          .delete()
+          .eq('lecture_id', lectureId);
+
+        if (deleteError) {
+          console.error(`Error deleting from ${table}:`, deleteError);
+          throw deleteError;
         }
-      });
+      }
 
-      if (segmentError) throw segmentError;
-
-      // Wait for segments to be created
+      // Wait for deletions to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Regenerate segments structure
+      console.log('Calling generate-segments-structure function...');
+      const { error: segmentError } = await supabase.functions.invoke(
+        'generate-segments-structure',
+        {
+          body: {
+            lectureId,
+            lectureContent: lecture.content,
+            lectureTitle: lecture.title
+          }
+        }
+      );
+
+      if (segmentError) {
+        console.error('Error generating segments:', segmentError);
+        throw segmentError;
+      }
+
+      // Wait for segments to be created
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
       // Fetch the new segments
+      console.log('Fetching newly created segments...');
       const { data: segments, error: fetchError } = await supabase
         .from('lecture_segments')
         .select('*')
         .eq('lecture_id', lectureId);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Error fetching segments:', fetchError);
+        throw fetchError;
+      }
 
-      console.log('Regenerating content for segments:', segments);
+      if (!segments || segments.length === 0) {
+        throw new Error('No segments were created');
+      }
+
+      console.log(`Found ${segments.length} segments, generating content...`);
 
       // Generate content for each segment sequentially
       for (const segment of segments) {
-        console.log('Generating content for segment:', segment.sequence_number);
-        const { error: contentError } = await supabase.functions.invoke('generate-segment-content', {
-          body: {
-            lectureId,
-            segmentNumber: segment.sequence_number,
-            segmentTitle: segment.title,
-            segmentDescription: segment.segment_description,
-            lectureContent: lecture.content
+        console.log(`Generating content for segment ${segment.sequence_number}...`);
+        const { error: contentError } = await supabase.functions.invoke(
+          'generate-segment-content',
+          {
+            body: {
+              lectureId,
+              segmentNumber: segment.sequence_number,
+              segmentTitle: segment.title,
+              segmentDescription: segment.segment_description,
+              lectureContent: lecture.content
+            }
           }
-        });
+        );
 
         if (contentError) {
-          console.error('Error generating content for segment:', segment.sequence_number, contentError);
+          console.error(
+            `Error generating content for segment ${segment.sequence_number}:`,
+            contentError
+          );
           throw contentError;
         }
 
@@ -192,6 +214,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
       await queryClient.invalidateQueries({ queryKey: ["lecture-ai-config", lectureId] });
       await queryClient.invalidateQueries({ queryKey: ["segment-content", lectureId] });
 
+      console.log('Content regeneration completed successfully');
       toast({
         title: "Success",
         description: "AI configuration saved and content regenerated successfully",
@@ -199,10 +222,10 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 
       onClose();
     } catch (error) {
-      console.error("Error saving configuration:", error);
+      console.error("Error in handleSave:", error);
       toast({
         title: "Error",
-        description: "Failed to save configuration and regenerate content",
+        description: error instanceof Error ? error.message : "Failed to save configuration and regenerate content",
         variant: "destructive",
       });
     } finally {
@@ -317,4 +340,3 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDi
 };
 
 export default LectureAIConfigDialog;
-
