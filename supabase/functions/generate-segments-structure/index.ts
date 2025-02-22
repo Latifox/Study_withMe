@@ -1,7 +1,6 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,23 +56,25 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 3-5 focused segments.
+            content: `You are an expert at breaking down educational content into logical segments. Your task is to analyze the content and create 5-7 focused segments (NEVER create fewer than 5 segments).
 
 For each segment, create:
 1. A concise title (max 5 words)
 2. A description that follows this EXACT format:
-   "Key concepts: concept1 (aspects to point out), concept2 (aspects to point out), concept3 (aspects to point out)"
+   "Key concepts: concept1 (aspect1, aspect2, aspect3), concept2 (aspect1, aspect2), concept3 (aspect1, aspect2)"
 
 Rules for the description:
-- Each concept should have at least 2 aspects listed in parentheses
+- Each concept MUST have at least 2 specific, detailed aspects listed in parentheses
 - List 2-4 key concepts per segment
-- Try to keep concepts unique across segments when possible
+- Concepts MUST be unique across all segments
 - Start directly with "Key concepts:"
 - Use commas to separate concept entries
+- Aspects should be specific learning points, not generic descriptions
+- Do not provide definitions in the aspects, only list what to explore
 
 Target language: ${targetLanguage}
 
@@ -121,10 +122,19 @@ Return ONLY a JSON object in this format:
         throw new Error('Response missing segments array');
       }
 
+      // Validate minimum number of segments
+      if (parsedContent.segments.length < 5) {
+        throw new Error('Less than 5 segments generated. Required minimum is 5 segments.');
+      }
+
       // Basic validation of segments
+      const conceptsSet = new Set();
       parsedContent.segments.forEach((segment: any, index: number) => {
         if (!segment.title || typeof segment.title !== 'string') {
           throw new Error(`Segment ${index + 1} missing valid title`);
+        }
+        if (segment.title.split(' ').length > 5) {
+          throw new Error(`Segment ${index + 1} title exceeds 5 words`);
         }
         if (!segment.description || typeof segment.description !== 'string') {
           throw new Error(`Segment ${index + 1} missing valid description`);
@@ -136,15 +146,29 @@ Return ONLY a JSON object in this format:
         }
         
         // Basic format check for concepts and aspects
-        const concepts = segment.description.replace('Key concepts:', '').split(',').map((c: string) => c.trim());
+        const conceptsText = segment.description.replace('Key concepts:', '').trim();
+        const concepts = conceptsText.split(',').map((c: string) => c.trim());
+        
         if (concepts.length < 2 || concepts.length > 4) {
           throw new Error(`Segment ${index + 1} must have between 2 and 4 concepts`);
         }
 
-        // Check each concept has aspects in parentheses
+        // Check each concept has aspects in parentheses and validate uniqueness
         concepts.forEach((concept: string, conceptIndex: number) => {
-          if (!concept.includes('(') || !concept.includes(')')) {
+          const conceptMatch = concept.match(/^(.+?)\s*\((.*?)\)$/);
+          if (!conceptMatch) {
             throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must include aspects in parentheses`);
+          }
+
+          const conceptName = conceptMatch[1].trim().toLowerCase();
+          if (conceptsSet.has(conceptName)) {
+            throw new Error(`Duplicate concept "${conceptName}" found in segment ${index + 1}`);
+          }
+          conceptsSet.add(conceptName);
+
+          const aspects = conceptMatch[2].split(',').map(a => a.trim());
+          if (aspects.length < 2) {
+            throw new Error(`Concept ${conceptIndex + 1} in segment ${index + 1} must have at least 2 aspects`);
           }
         });
       });
