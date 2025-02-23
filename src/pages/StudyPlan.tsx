@@ -118,13 +118,19 @@ const StudyPlan = () => {
         throw genError;
       }
 
+      // Convert defaultSteps to a plain object array that matches Json type
+      const learningStepsJson = defaultSteps.map(step => ({
+        ...step,
+        benefits: step.benefits
+      })) as unknown as Json;
+
       const { error: insertError } = await supabase
         .from('study_plans')
         .upsert({
           lecture_id: Number(lectureId),
           title: newPlan.title,
           key_topics: newPlan.key_topics,
-          learning_steps: defaultSteps as Json,
+          learning_steps: learningStepsJson,
           is_generated: true
         });
 
@@ -328,4 +334,3 @@ const StudyPlan = () => {
 };
 
 export default StudyPlan;
-
