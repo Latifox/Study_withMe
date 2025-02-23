@@ -150,7 +150,7 @@ serve(async (req) => {
       throw new Error('Invalid part specified');
     }
 
-    userPrompt = `Analyze this lecture content and provide a detailed analysis with rich markdown formatting following the specified structure. Make sure to use bullet points, numbered lists, bold text, and blockquotes appropriately:\n\n${lecture.content}`;
+    const userPrompt = `Analyze this lecture content and provide a detailed analysis with rich markdown formatting following the specified structure. Make sure to use bullet points, numbered lists, bold text, and blockquotes appropriately:\n\n${lecture.content}`;
 
     console.log(`Sending request to OpenAI for ${part}`);
 
@@ -274,3 +274,4 @@ serve(async (req) => {
     });
   }
 });
+
