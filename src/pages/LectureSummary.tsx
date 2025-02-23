@@ -6,6 +6,7 @@ import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 interface Part1Response {
   structure: string;
@@ -52,9 +53,7 @@ const LectureSummary = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen" style={{
-        background: 'linear-gradient(135deg, #FFE5A3 0%, #FFFFFF 50%, #A7D1FF 100%)'
-      }}>
+      <BackgroundGradient>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
@@ -64,7 +63,7 @@ const LectureSummary = () => {
             </div>
           </div>
         </div>
-      </div>
+      </BackgroundGradient>
     );
   }
 
@@ -139,9 +138,7 @@ const LectureSummary = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{
-      background: 'linear-gradient(135deg, #FFE5A3 0%, #FFFFFF 50%, #A7D1FF 100%)'
-    }}>
+    <BackgroundGradient>
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
           <Button
@@ -194,7 +191,7 @@ const LectureSummary = () => {
           </div>
         </div>
       </div>
-    </div>
+    </BackgroundGradient>
   );
 };
 
