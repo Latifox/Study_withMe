@@ -262,6 +262,47 @@ export type Database = {
           },
         ]
       }
+      study_plans: {
+        Row: {
+          created_at: string
+          id: number
+          is_generated: boolean | null
+          key_topics: string[]
+          learning_steps: Json
+          lecture_id: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_generated?: boolean | null
+          key_topics?: string[]
+          learning_steps?: Json
+          lecture_id?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_generated?: boolean | null
+          key_topics?: string[]
+          learning_steps?: Json
+          lecture_id?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_plans_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_progress: {
         Row: {
           completed_at: string | null

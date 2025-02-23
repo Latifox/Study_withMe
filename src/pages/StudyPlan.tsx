@@ -1,6 +1,5 @@
-
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network, FileText } from "lucide-react";
@@ -18,88 +17,126 @@ interface LearningStep {
   benefits: string[];
 }
 
-interface LearningJourney {
+interface StudyPlan {
+  id: number;
+  lecture_id: number;
   title: string;
-  keyTopics: string[];
-  learningSteps: LearningStep[];
+  key_topics: string[];
+  learning_steps: LearningStep[];
+  is_generated: boolean;
 }
 
 const StudyPlan = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: journey, isLoading } = useQuery({
+  const defaultSteps: LearningStep[] = [
+    {
+      step: 1,
+      title: "Get the Big Picture",
+      description: "Start with a comprehensive overview of the lecture material",
+      action: "summary",
+      timeEstimate: "5-10 minutes",
+      benefits: ["Quick understanding", "Main points highlighted", "Visual learning"]
+    },
+    {
+      step: 2,
+      title: "Interactive Story Mode",
+      description: "Experience the content through an engaging, interactive story",
+      action: "story",
+      timeEstimate: "15-20 minutes",
+      benefits: ["Immersive learning", "Better retention", "Fun and engaging"]
+    },
+    {
+      step: 3,
+      title: "Interactive Learning Session",
+      description: "Engage in a dynamic conversation about the lecture content",
+      action: "chat",
+      timeEstimate: "10-15 minutes",
+      benefits: ["Personalized explanations", "Clear doubts", "Deep understanding"]
+    },
+    {
+      step: 4,
+      title: "Quick Review",
+      description: "Test your knowledge with flashcards",
+      action: "flashcards",
+      timeEstimate: "5-10 minutes",
+      benefits: ["Active recall", "Spaced repetition", "Memory reinforcement"]
+    },
+    {
+      step: 5,
+      title: "Knowledge Check",
+      description: "Assess your understanding with a comprehensive quiz",
+      action: "quiz",
+      timeEstimate: "10-15 minutes",
+      benefits: ["Self-assessment", "Identify gaps", "Confidence building"]
+    },
+    {
+      step: 6,
+      title: "Explore Further",
+      description: "Access additional resources and related materials",
+      action: "resources",
+      timeEstimate: "5-10 minutes",
+      benefits: ["Deeper insights", "Extended learning", "Different perspectives"]
+    }
+  ];
+
+  const { data: studyPlan, isLoading } = useQuery({
     queryKey: ['study-plan', lectureId],
     queryFn: async () => {
-      // Predefined learning steps to ensure correct order
-      const defaultSteps: LearningStep[] = [
-        {
-          step: 1,
-          title: "Get the Big Picture",
-          description: "Start with a comprehensive overview of the lecture material",
-          action: "summary",
-          timeEstimate: "5-10 minutes",
-          benefits: ["Quick understanding", "Main points highlighted", "Visual learning"]
-        },
-        {
-          step: 2,
-          title: "Interactive Story Mode",
-          description: "Experience the content through an engaging, interactive story",
-          action: "story",
-          timeEstimate: "15-20 minutes",
-          benefits: ["Immersive learning", "Better retention", "Fun and engaging"]
-        },
-        {
-          step: 3,
-          title: "Interactive Learning Session",
-          description: "Engage in a dynamic conversation about the lecture content",
-          action: "chat",
-          timeEstimate: "10-15 minutes",
-          benefits: ["Personalized explanations", "Clear doubts", "Deep understanding"]
-        },
-        {
-          step: 4,
-          title: "Quick Review",
-          description: "Test your knowledge with flashcards",
-          action: "flashcards",
-          timeEstimate: "5-10 minutes",
-          benefits: ["Active recall", "Spaced repetition", "Memory reinforcement"]
-        },
-        {
-          step: 5,
-          title: "Knowledge Check",
-          description: "Assess your understanding with a comprehensive quiz",
-          action: "quiz",
-          timeEstimate: "10-15 minutes",
-          benefits: ["Self-assessment", "Identify gaps", "Confidence building"]
-        },
-        {
-          step: 6,
-          title: "Explore Further",
-          description: "Access additional resources and related materials",
-          action: "resources",
-          timeEstimate: "5-10 minutes",
-          benefits: ["Deeper insights", "Extended learning", "Different perspectives"]
-        }
-      ];
+      const { data: existingPlan, error: fetchError } = await supabase
+        .from('study_plans')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single();
 
-      const { data, error } = await supabase.functions.invoke<LearningJourney>("generate-mindmap", {
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingPlan?.is_generated) {
+        return {
+          ...existingPlan,
+          learningSteps: defaultSteps
+        };
+      }
+
+      const { data: newPlan, error: genError } = await supabase.functions.invoke<StudyPlan>("generate-mindmap", {
         body: { lectureId },
       });
 
-      if (error) {
+      if (genError) {
         toast({
           title: "Error",
           description: "Failed to generate learning journey. Please try again.",
           variant: "destructive",
         });
-        throw error;
+        throw genError;
       }
 
-      // Ensure the learning steps are in the correct order by using our predefined steps
+      const { error: insertError } = await supabase
+        .from('study_plans')
+        .upsert({
+          lecture_id: Number(lectureId),
+          title: newPlan.title,
+          key_topics: newPlan.keyTopics,
+          learning_steps: defaultSteps,
+          is_generated: true
+        });
+
+      if (insertError) {
+        console.error('Failed to store study plan:', insertError);
+        toast({
+          title: "Warning",
+          description: "Study plan generated but couldn't be saved for future use.",
+          variant: "destructive",
+        });
+      }
+
       return {
-        ...data,
+        ...newPlan,
         learningSteps: defaultSteps
       };
     },
@@ -200,17 +237,7 @@ const StudyPlan = () => {
             </Button>
           </div>
 
-          {isLoading ? (
-            <div className="space-y-4">
-              <div className="h-8 w-3/4 bg-white/10 animate-pulse rounded-lg" />
-              <div className="h-32 bg-white/10 animate-pulse rounded-lg" />
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-48 bg-white/10 animate-pulse rounded-lg" />
-                ))}
-              </div>
-            </div>
-          ) : journey ? (
+          {studyPlan ? (
             <motion.div
               variants={container}
               initial="hidden"
@@ -219,13 +246,13 @@ const StudyPlan = () => {
             >
               <motion.div variants={item}>
                 <h1 className="text-4xl font-bold text-white mb-4">
-                  {journey.title}
+                  {studyPlan.title}
                 </h1>
                 <Card className="group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
                   <div className="p-6">
                     <h2 className="text-xl font-semibold mb-3 text-white">Key Topics</h2>
                     <div className="flex flex-wrap gap-2">
-                      {journey.keyTopics.map((topic, index) => (
+                      {studyPlan.key_topics?.map((topic, index) => (
                         <span
                           key={index}
                           className="px-3 py-1 bg-white/10 text-white/90 rounded-full text-sm backdrop-blur-xl border border-white/20"
@@ -239,13 +266,13 @@ const StudyPlan = () => {
               </motion.div>
 
               <div className="space-y-6">
-                {journey.learningSteps.map((step, index) => (
+                {studyPlan.learningSteps.map((step, index) => (
                   <motion.div
                     key={step.step}
                     variants={item}
                     className="relative"
                   >
-                    {index !== journey.learningSteps.length - 1 && (
+                    {index !== studyPlan.learningSteps.length - 1 && (
                       <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-white/20" />
                     )}
                     
