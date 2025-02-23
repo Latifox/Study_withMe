@@ -14,8 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, sections } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'sections:', sections);
+    const { lectureId, category } = await req.json();
+    console.log('Processing request for lecture:', lectureId, 'category:', category);
 
     // Fetch lecture content
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -35,12 +35,11 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    // Construct a clear prompt that explicitly requests JSON
-    const systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide structured information. You MUST respond with a valid JSON object containing EXACTLY these keys: ${sections.join(', ')}. Each section must be properly formatted and contain relevant information from the lecture. DO NOT include any explanatory text outside the JSON structure.`;
+    const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the category: "${category}". Focus on making the content clear, organized, and easy to understand. Format your response in markdown for better readability.`;
 
-    const userPrompt = `Analyze the following lecture content and provide a response ONLY in JSON format with the requested sections: ${sections.join(', ')}.\n\nLecture content: ${lecture.content}`;
+    const userPrompt = `Analyze this lecture content and provide insights for the category "${category}":\n\n${lecture.content}`;
 
-    console.log('Sending request to OpenAI with sections:', sections);
+    console.log('Sending request to OpenAI');
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -72,31 +71,10 @@ serve(async (req) => {
       throw new Error('Invalid response format from OpenAI');
     }
 
-    const rawContent = data.choices[0].message.content.trim();
-    console.log('Raw content from OpenAI:', rawContent);
+    const content = data.choices[0].message.content.trim();
+    console.log('Successfully processed content');
 
-    // Clean the content and attempt to parse JSON
-    const cleanContent = rawContent.replace(/```json\n?|\n?```/g, '');
-    
-    let parsedContent;
-    try {
-      parsedContent = JSON.parse(cleanContent);
-      console.log('Successfully parsed JSON content');
-    } catch (error) {
-      console.error('JSON parsing error:', error);
-      console.error('Failed to parse content:', cleanContent);
-      throw new Error('Failed to parse OpenAI response as JSON');
-    }
-
-    // Validate all required sections are present
-    const missingKeys = sections.filter(key => !(key in parsedContent));
-    if (missingKeys.length > 0) {
-      console.error('Missing required sections in response:', missingKeys);
-      throw new Error(`Missing required sections: ${missingKeys.join(', ')}`);
-    }
-
-    console.log('Validation complete, sending response');
-    return new Response(JSON.stringify({ content: parsedContent }), {
+    return new Response(JSON.stringify({ content }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

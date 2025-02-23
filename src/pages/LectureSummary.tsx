@@ -9,72 +9,23 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
-type Section = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
+type Category = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
 
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
-  const [selectedSection, setSelectedSection] = useState<Section>('structure');
+  const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
 
-  // Group 1: Structure and Key Concepts
-  const { data: group1Data, isLoading: isLoadingGroup1 } = useQuery({
-    queryKey: ["lecture-summary-group1", lectureId],
+  const { data: content, isLoading } = useQuery({
+    queryKey: ["lecture-summary", lectureId, selectedCategory],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, sections: ['structure', 'keyConcepts'] }
+        body: { lectureId, category: selectedCategory }
       });
       if (error) throw error;
       return data.content;
     },
   });
-
-  // Group 2: Main Ideas and Important Quotes
-  const { data: group2Data, isLoading: isLoadingGroup2 } = useQuery({
-    queryKey: ["lecture-summary-group2", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, sections: ['mainIdeas', 'importantQuotes'] }
-      });
-      if (error) throw error;
-      return data.content;
-    },
-  });
-
-  // Group 3: Relationships and Supporting Evidence
-  const { data: group3Data, isLoading: isLoadingGroup3 } = useQuery({
-    queryKey: ["lecture-summary-group3", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, sections: ['relationships', 'supportingEvidence'] }
-      });
-      if (error) throw error;
-      return data.content;
-    },
-  });
-
-  const isLoading = isLoadingGroup1 || isLoadingGroup2 || isLoadingGroup3;
-
-  // Helper function to safely get content
-  const getSectionContent = (section: Section): string => {
-    const groupData = {
-      structure: group1Data?.structure,
-      keyConcepts: group1Data?.keyConcepts,
-      mainIdeas: group2Data?.mainIdeas,
-      importantQuotes: group2Data?.importantQuotes,
-      relationships: group3Data?.relationships,
-      supportingEvidence: group3Data?.supportingEvidence
-    }[section];
-
-    // If the content is an object, convert it to a string representation
-    if (typeof groupData === 'object' && groupData !== null) {
-      return Object.entries(groupData)
-        .map(([key, value]) => `### ${key}\n${value}`)
-        .join('\n\n');
-    }
-
-    // Return the content as is if it's a string, or empty string if undefined
-    return typeof groupData === 'string' ? groupData : '';
-  };
 
   if (isLoading) {
     return (
@@ -83,8 +34,8 @@ const LectureSummary = () => {
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-              <p className="text-lg text-black">Generating lecture summary...</p>
-              <p className="text-sm text-muted-foreground">This might take a moment as we analyze the content.</p>
+              <p className="text-lg text-black">Analyzing lecture content...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we process your request.</p>
             </div>
           </div>
         </div>
@@ -127,9 +78,9 @@ const LectureSummary = () => {
               <Card 
                 key={id}
                 className={`p-4 cursor-pointer hover:bg-white/80 transition-colors backdrop-blur-sm ${
-                  selectedSection === id ? 'bg-white/80 border-primary shadow-md' : 'bg-white/50'
+                  selectedCategory === id ? 'bg-white/80 border-primary shadow-md' : 'bg-white/50'
                 }`}
-                onClick={() => setSelectedSection(id as Section)}
+                onClick={() => setSelectedCategory(id as Category)}
               >
                 <h2 className="text-lg font-semibold text-black">{label}</h2>
               </Card>
@@ -141,7 +92,7 @@ const LectureSummary = () => {
             <Card className="p-6 bg-white/80 backdrop-blur-sm">
               <div className="prose prose-sm max-w-none text-black">
                 <ReactMarkdown>
-                  {getSectionContent(selectedSection)}
+                  {content || ''}
                 </ReactMarkdown>
               </div>
             </Card>
@@ -153,4 +104,3 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
-
