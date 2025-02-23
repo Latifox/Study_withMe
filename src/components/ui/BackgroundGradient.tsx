@@ -17,14 +17,38 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         }}
       >
         {/* Mesh grid overlay */}
-        <div className="absolute inset-0 opacity-20">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <div className="absolute inset-0" style={{ opacity: 0.15 }}>
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+              <pattern 
+                id="smallGrid" 
+                width="8" 
+                height="8" 
+                patternUnits="userSpaceOnUse"
+              >
+                <path 
+                  d="M 8 0 L 0 0 0 8" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="0.5"
+                />
+              </pattern>
+              <pattern 
+                id="grid" 
+                width="40" 
+                height="40" 
+                patternUnits="userSpaceOnUse"
+              >
+                <rect width="40" height="40" fill="url(#smallGrid)" />
+                <path 
+                  d="M 40 0 L 0 0 0 40" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="1"
+                />
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
+            <rect width="100%" height="100%" fill="url(#grid)" className="text-black" />
           </svg>
         </div>
       </div>
