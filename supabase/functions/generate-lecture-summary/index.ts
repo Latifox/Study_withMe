@@ -35,7 +35,10 @@ serve(async (req) => {
       supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
     ]);
 
-    if (lectureResult.error) throw lectureResult.error;
+    if (lectureResult.error) {
+      console.error('Error fetching lecture:', lectureResult.error);
+      throw lectureResult.error;
+    }
     
     const lecture = lectureResult.data;
     const aiConfig = configResult.data || {
@@ -47,25 +50,32 @@ serve(async (req) => {
     };
 
     console.log('Using AI config:', aiConfig);
+    console.log('Lecture content length:', lecture.content?.length || 0);
 
     // Prepare system message based on AI config
-    let systemMessage = `You are an educational content analyzer. Your task is to analyze lecture content and provide a structured summary.
-    Creativity Level: ${aiConfig.creativity_level} (higher means more creative and engaging language)
-    Detail Level: ${aiConfig.detail_level} (higher means more comprehensive analysis)
-    ${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
+    let systemMessage = `You are an educational content analyzer tasked with creating a detailed summary of the lecture content provided.
     
-    Format the response in the following JSON structure:
-    {
-      "structure": "Overview of main topics and organization",
-      "keyConcepts": "Key theoretical concepts and definitions",
-      "mainIdeas": "Main arguments and ideas",
-      "importantQuotes": "Notable quotes and statements",
-      "relationships": "Connections between concepts",
-      "supportingEvidence": "Examples and evidence used",
-      "fullContent": "Detailed comprehensive summary"
-    }
-    
-    ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_language}.` : ''}`;
+Guidelines for analysis:
+- Creativity Level: ${aiConfig.creativity_level} (higher means more creative and engaging language)
+- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive analysis)
+- Analyze the ENTIRE lecture content thoroughly
+- Extract SPECIFIC quotes directly from the text
+- Provide detailed examples and context for each section
+- Focus on creating a comprehensive and academic analysis
+${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
+
+Format the response in the following JSON structure:
+{
+  "structure": "Detailed overview of how the lecture content is organized, including main sections and their progression",
+  "keyConcepts": "Comprehensive list of theoretical concepts and their definitions, with examples from the text",
+  "mainIdeas": "In-depth analysis of the core arguments and ideas presented",
+  "importantQuotes": "Direct quotes from the lecture text with page/section references and explanation of their significance",
+  "relationships": "Analysis of how different concepts and ideas interconnect and influence each other",
+  "supportingEvidence": "Specific examples, data, or evidence used to support the main arguments",
+  "fullContent": "Detailed, comprehensive summary of the entire lecture content"
+}
+
+${aiConfig.content_language ? `Provide the response in ${aiConfig.content_language}.` : ''}`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -77,7 +87,10 @@ serve(async (req) => {
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemMessage },
-          { role: 'user', content: `Title: ${lecture.title}\n\nContent:\n${lecture.content}` }
+          { 
+            role: 'user', 
+            content: `Title: ${lecture.title}\n\nAnalyze this lecture content in detail:\n\n${lecture.content}` 
+          }
         ],
         temperature: aiConfig.temperature,
       }),
