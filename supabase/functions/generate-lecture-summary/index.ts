@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -14,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, fetchAll, category } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'fetchAll:', fetchAll, 'category:', category);
+    const { lectureId, fetchAll } = await req.json();
+    console.log('Processing request for lecture:', lectureId, 'fetchAll:', fetchAll);
 
     // Fetch lecture content
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -36,12 +35,11 @@ serve(async (req) => {
     console.log('Successfully fetched lecture content');
 
     if (fetchAll) {
-      // Generate all summaries at once
-      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for all categories. Format your response as a JSON object with the following keys: structure, keyConcepts, mainIdeas, importantQuotes, relationships, and supportingEvidence. Each value should be a markdown-formatted string.`;
+      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis organized into these sections: Structure, Key Concepts, Main Ideas, Important Quotes, Relationships, and Supporting Evidence. Format your entire response in markdown, using appropriate headers (##) for each section.`;
 
-      const userPrompt = `Analyze this lecture content and provide insights for all categories:\n\n${lecture.content}`;
+      const userPrompt = `Analyze this lecture content and provide a well-structured markdown analysis:\n\n${lecture.content}`;
 
-      console.log('Sending request to OpenAI for all categories');
+      console.log('Sending request to OpenAI for markdown analysis');
 
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -73,23 +71,24 @@ serve(async (req) => {
         throw new Error('Invalid response format from OpenAI');
       }
 
-      try {
-        const content = JSON.parse(data.choices[0].message.content.trim());
-        console.log('Successfully parsed JSON content');
-        return new Response(JSON.stringify(content), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (parseError) {
-        console.error('Error parsing JSON response:', parseError);
-        throw new Error('Failed to parse OpenAI response as JSON');
-      }
+      const content = {
+        structure: data.choices[0].message.content,
+        keyConcepts: data.choices[0].message.content,
+        mainIdeas: data.choices[0].message.content,
+        importantQuotes: data.choices[0].message.content,
+        relationships: data.choices[0].message.content,
+        supportingEvidence: data.choices[0].message.content
+      };
+
+      return new Response(JSON.stringify(content), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else {
-      // Handle single category request (existing functionality)
-      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the category: "${category}". Format your response in markdown for better readability.`;
+      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis in markdown format.`;
 
-      const userPrompt = `Analyze this lecture content and provide insights for the category "${category}":\n\n${lecture.content}`;
+      const userPrompt = `Analyze this lecture content and provide insights:\n\n${lecture.content}`;
 
-      console.log('Sending request to OpenAI for single category');
+      console.log('Sending request to OpenAI for markdown content');
 
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
