@@ -14,8 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, category } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'category:', category);
+    const { lectureId, fetchAll, category } = await req.json();
+    console.log('Processing request for lecture:', lectureId, 'fetchAll:', fetchAll, 'category:', category);
 
     // Fetch lecture content
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -35,49 +35,99 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the category: "${category}". Focus on making the content clear, organized, and easy to understand. Format your response in markdown for better readability.`;
+    if (fetchAll) {
+      // Generate all summaries at once
+      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for all categories. Format your response as a JSON object with the following keys: structure, keyConcepts, mainIdeas, importantQuotes, relationships, and supportingEvidence. Each value should be a markdown-formatted string.`;
 
-    const userPrompt = `Analyze this lecture content and provide insights for the category "${category}":\n\n${lecture.content}`;
+      const userPrompt = `Analyze this lecture content and provide insights for all categories:\n\n${lecture.content}`;
 
-    console.log('Sending request to OpenAI');
+      console.log('Sending request to OpenAI for all categories');
 
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-      }),
-    });
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+        }),
+      });
 
-    if (!openAIResponse.ok) {
-      const error = await openAIResponse.text();
-      console.error('OpenAI API Error:', error);
-      throw new Error('Failed to generate content from OpenAI');
+      if (!openAIResponse.ok) {
+        const error = await openAIResponse.text();
+        console.error('OpenAI API Error:', error);
+        throw new Error('Failed to generate content from OpenAI');
+      }
+
+      const data = await openAIResponse.json();
+      console.log('Received response from OpenAI');
+
+      if (!data.choices?.[0]?.message?.content) {
+        console.error('Invalid OpenAI response format:', JSON.stringify(data));
+        throw new Error('Invalid response format from OpenAI');
+      }
+
+      try {
+        const content = JSON.parse(data.choices[0].message.content.trim());
+        console.log('Successfully parsed JSON content');
+        return new Response(JSON.stringify(content), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        throw new Error('Failed to parse OpenAI response as JSON');
+      }
+    } else {
+      // Handle single category request (existing functionality)
+      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the category: "${category}". Format your response in markdown for better readability.`;
+
+      const userPrompt = `Analyze this lecture content and provide insights for the category "${category}":\n\n${lecture.content}`;
+
+      console.log('Sending request to OpenAI for single category');
+
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+        }),
+      });
+
+      if (!openAIResponse.ok) {
+        const error = await openAIResponse.text();
+        console.error('OpenAI API Error:', error);
+        throw new Error('Failed to generate content from OpenAI');
+      }
+
+      const data = await openAIResponse.json();
+      console.log('Received response from OpenAI');
+
+      if (!data.choices?.[0]?.message?.content) {
+        console.error('Invalid OpenAI response format:', JSON.stringify(data));
+        throw new Error('Invalid response format from OpenAI');
+      }
+
+      const content = data.choices[0].message.content.trim();
+      console.log('Successfully processed content');
+
+      return new Response(JSON.stringify({ content }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    const data = await openAIResponse.json();
-    console.log('Received response from OpenAI');
-
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid OpenAI response format:', JSON.stringify(data));
-      throw new Error('Invalid response format from OpenAI');
-    }
-
-    const content = data.choices[0].message.content.trim();
-    console.log('Successfully processed content');
-
-    return new Response(JSON.stringify({ content }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
     return new Response(JSON.stringify({ 

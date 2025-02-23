@@ -11,19 +11,23 @@ import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 type Category = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
 
+type SummaryContent = {
+  [key in Category]: string;
+};
+
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
 
-  const { data: content, isLoading } = useQuery({
-    queryKey: ["lecture-summary", lectureId, selectedCategory],
+  const { data: summaryData, isLoading } = useQuery({
+    queryKey: ["lecture-summary-all", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, category: selectedCategory }
+        body: { lectureId, fetchAll: true }
       });
       if (error) throw error;
-      return data.content;
+      return data as SummaryContent;
     },
   });
 
@@ -92,7 +96,7 @@ const LectureSummary = () => {
             <Card className="p-6 bg-white/80 backdrop-blur-sm">
               <div className="prose prose-sm max-w-none text-black">
                 <ReactMarkdown>
-                  {content || ''}
+                  {summaryData?.[selectedCategory] || ''}
                 </ReactMarkdown>
               </div>
             </Card>
