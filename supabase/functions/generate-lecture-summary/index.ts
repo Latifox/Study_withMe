@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -13,14 +14,46 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, fetchAll } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'fetchAll:', fetchAll);
+    const { lectureId, part } = await req.json();
+    console.log('Processing request for lecture:', lectureId, 'part:', part);
 
-    // Fetch lecture content
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // First check if we already have highlights for this lecture
+    const { data: existingHighlights } = await supabase
+      .from('lecture_highlights')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .single();
+
+    if (existingHighlights) {
+      console.log('Found existing highlights');
+      if (part === 'part1') {
+        return new Response(JSON.stringify({
+          content: {
+            structure: existingHighlights.structure,
+            keyConcepts: existingHighlights.key_concepts,
+            mainIdeas: existingHighlights.main_ideas
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } else if (part === 'part2') {
+        return new Response(JSON.stringify({
+          content: {
+            importantQuotes: existingHighlights.important_quotes,
+            relationships: existingHighlights.relationships,
+            supportingEvidence: existingHighlights.supporting_evidence
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // If no existing highlights, fetch lecture content and generate new ones
     const { data: lecture, error: lectureError } = await supabase
       .from('lectures')
       .select('content')
@@ -34,99 +67,111 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    if (fetchAll) {
-      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis organized into these sections: Structure, Key Concepts, Main Ideas, Important Quotes, Relationships, and Supporting Evidence. Format your entire response in markdown, using appropriate headers (##) for each section.`;
+    let systemPrompt, userPrompt;
+    
+    if (part === 'part1') {
+      systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the following sections:
+      1. Structure: Outline the organization and flow of the content
+      2. Key Concepts: List and explain the main theoretical concepts
+      3. Main Ideas: Summarize the central arguments or themes
+      
+      Format each section with clear markdown headers (##) and provide detailed, structured content.`;
+    } else if (part === 'part2') {
+      systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the following sections:
+      1. Important Quotes: Extract and explain significant quotations
+      2. Relationships: Analyze connections between concepts
+      3. Supporting Evidence: Detail the evidence used to support main arguments
+      
+      Format each section with clear markdown headers (##) and provide detailed, structured content.`;
+    } else {
+      throw new Error('Invalid part specified');
+    }
 
-      const userPrompt = `Analyze this lecture content and provide a well-structured markdown analysis:\n\n${lecture.content}`;
+    userPrompt = `Analyze this lecture content and provide a detailed analysis:\n\n${lecture.content}`;
 
-      console.log('Sending request to OpenAI for markdown analysis');
+    console.log(`Sending request to OpenAI for ${part}`);
 
-      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-        }),
-      });
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+      }),
+    });
 
-      if (!openAIResponse.ok) {
-        const error = await openAIResponse.text();
-        console.error('OpenAI API Error:', error);
-        throw new Error('Failed to generate content from OpenAI');
-      }
+    if (!openAIResponse.ok) {
+      const error = await openAIResponse.text();
+      console.error('OpenAI API Error:', error);
+      throw new Error('Failed to generate content from OpenAI');
+    }
 
-      const data = await openAIResponse.json();
-      console.log('Received response from OpenAI');
+    const data = await openAIResponse.json();
+    console.log('Received response from OpenAI');
 
-      if (!data.choices?.[0]?.message?.content) {
-        console.error('Invalid OpenAI response format:', JSON.stringify(data));
-        throw new Error('Invalid response format from OpenAI');
-      }
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid OpenAI response format:', JSON.stringify(data));
+      throw new Error('Invalid response format from OpenAI');
+    }
 
-      const content = {
-        structure: data.choices[0].message.content,
-        keyConcepts: data.choices[0].message.content,
-        mainIdeas: data.choices[0].message.content,
-        importantQuotes: data.choices[0].message.content,
-        relationships: data.choices[0].message.content,
-        supportingEvidence: data.choices[0].message.content
+    const content = data.choices[0].message.content.trim();
+
+    // Parse the markdown content into sections
+    const sections = content.split('##').filter(Boolean).map(s => s.trim());
+    let response;
+
+    if (part === 'part1') {
+      response = {
+        content: {
+          structure: sections[0] || '',
+          keyConcepts: sections[1] || '',
+          mainIdeas: sections[2] || ''
+        }
       };
 
-      return new Response(JSON.stringify(content), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else {
-      const systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis in markdown format.`;
+      // Store in database if this is the first part
+      await supabase
+        .from('lecture_highlights')
+        .upsert({
+          lecture_id: lectureId,
+          structure: sections[0] || '',
+          key_concepts: sections[1] || '',
+          main_ideas: sections[2] || '',
+        })
+        .select();
 
-      const userPrompt = `Analyze this lecture content and provide insights:\n\n${lecture.content}`;
+    } else if (part === 'part2') {
+      response = {
+        content: {
+          importantQuotes: sections[0] || '',
+          relationships: sections[1] || '',
+          supportingEvidence: sections[2] || ''
+        }
+      };
 
-      console.log('Sending request to OpenAI for markdown content');
-
-      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!openAIResponse.ok) {
-        const error = await openAIResponse.text();
-        console.error('OpenAI API Error:', error);
-        throw new Error('Failed to generate content from OpenAI');
-      }
-
-      const data = await openAIResponse.json();
-      console.log('Received response from OpenAI');
-
-      if (!data.choices?.[0]?.message?.content) {
-        console.error('Invalid OpenAI response format:', JSON.stringify(data));
-        throw new Error('Invalid response format from OpenAI');
-      }
-
-      const content = data.choices[0].message.content.trim();
-      console.log('Successfully processed content');
-
-      return new Response(JSON.stringify({ content }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Update the existing record with part 2 content
+      await supabase
+        .from('lecture_highlights')
+        .update({
+          important_quotes: sections[0] || '',
+          relationships: sections[1] || '',
+          supporting_evidence: sections[2] || ''
+        })
+        .eq('lecture_id', lectureId);
     }
+
+    console.log('Successfully processed content');
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
     return new Response(JSON.stringify({ 

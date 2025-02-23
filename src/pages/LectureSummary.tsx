@@ -20,16 +20,34 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
 
-  const { data: summaryData, isLoading } = useQuery({
-    queryKey: ["lecture-summary-all", lectureId],
+  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery({
+    queryKey: ["lecture-summary-part1", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, fetchAll: true }
+        body: { lectureId, part: 'part1' }
       });
       if (error) throw error;
-      return data as SummaryContent;
+      return data.content;
     },
   });
+
+  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery({
+    queryKey: ["lecture-summary-part2", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId, part: 'part2' }
+      });
+      if (error) throw error;
+      return data.content;
+    },
+  });
+
+  const isLoading = isLoadingPart1 || isLoadingPart2;
+  
+  const summaryData = {
+    ...part1Data,
+    ...part2Data
+  };
 
   if (isLoading) {
     return (

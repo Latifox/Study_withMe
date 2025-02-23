@@ -77,6 +77,53 @@ export type Database = {
           },
         ]
       }
+      lecture_highlights: {
+        Row: {
+          created_at: string | null
+          id: number
+          important_quotes: string | null
+          key_concepts: string | null
+          lecture_id: number | null
+          main_ideas: string | null
+          relationships: string | null
+          structure: string | null
+          supporting_evidence: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          important_quotes?: string | null
+          key_concepts?: string | null
+          lecture_id?: number | null
+          main_ideas?: string | null
+          relationships?: string | null
+          structure?: string | null
+          supporting_evidence?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          important_quotes?: string | null
+          key_concepts?: string | null
+          lecture_id?: number | null
+          main_ideas?: string | null
+          relationships?: string | null
+          structure?: string | null
+          supporting_evidence?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_highlights_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lecture_segments: {
         Row: {
           created_at: string
