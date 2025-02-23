@@ -23,16 +23,14 @@ serve(async (req) => {
     const { lectureId, part } = await req.json();
     console.log(`Generating summary for lecture ${lectureId}, part ${part}`);
 
-    // First, get the lecture content
+    // Get the lecture content
     const { data: lectureData, error: lectureError } = await supabase
       .from('lectures')
       .select('content, title')
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) {
-      throw new Error(`Error fetching lecture: ${lectureError.message}`);
-    }
+    if (lectureError) throw new Error(`Error fetching lecture: ${lectureError.message}`);
 
     // Get AI configuration
     const { data: aiConfig, error: aiConfigError } = await supabase
@@ -56,26 +54,31 @@ serve(async (req) => {
     Creativity Level: ${creativityLevel} - adjust your analysis style accordingly.
     Detail Level: ${detailLevel} - adjust the depth of your analysis.
     ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
-    ${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}
-    `;
+    ${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}`;
 
     let prompt = '';
     if (part === 'part1') {
-      prompt = `Analyze the following lecture content and provide a markdown-formatted response with these sections:
+      prompt = `Analyze the following lecture content and provide these sections:
       1. Structure: Outline the lecture's organization and flow
       2. Key Concepts: List and briefly explain the main concepts
       3. Main Ideas: Summarize the central arguments or points
 
+      Use markdown formatting for the response.
+
       Lecture Title: ${lectureData.title}
       Content: ${lectureData.content}`;
-    } else {
-      prompt = `Analyze the following lecture content and provide a markdown-formatted response with these sections:
+    } else if (part === 'part2') {
+      prompt = `Analyze the following lecture content and provide these sections:
       1. Important Quotes: Highlight significant quotations or statements
       2. Relationships: Explain connections between concepts
       3. Supporting Evidence: List examples, data, or evidence used
 
+      Use markdown formatting for the response.
+
       Lecture Title: ${lectureData.title}
       Content: ${lectureData.content}`;
+    } else {
+      throw new Error('Invalid part specified');
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -101,20 +104,20 @@ serve(async (req) => {
     let result = {};
 
     if (part === 'part1') {
+      const sections = content.split(/(?=## )/);
       result = {
-        structure: content.split('Key Concepts:')[0].replace('Structure:', '').trim(),
-        keyConcepts: content.split('Key Concepts:')[1].split('Main Ideas:')[0].trim(),
-        mainIdeas: content.split('Main Ideas:')[1].trim()
+        structure: sections[0]?.trim() || '',
+        keyConcepts: sections[1]?.replace(/^## Key Concepts:?/i, '').trim() || '',
+        mainIdeas: sections[2]?.replace(/^## Main Ideas:?/i, '').trim() || ''
       };
     } else {
+      const sections = content.split(/(?=## )/);
       result = {
-        importantQuotes: content.split('Relationships:')[0].replace('Important Quotes:', '').trim(),
-        relationships: content.split('Relationships:')[1].split('Supporting Evidence:')[0].trim(),
-        supportingEvidence: content.split('Supporting Evidence:')[1].trim()
+        importantQuotes: sections[0]?.trim() || '',
+        relationships: sections[1]?.replace(/^## Relationships:?/i, '').trim() || '',
+        supportingEvidence: sections[2]?.replace(/^## Supporting Evidence:?/i, '').trim() || ''
       };
     }
-
-    console.log(`Successfully generated ${part}`);
 
     return new Response(JSON.stringify({ content: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
