@@ -106,9 +106,27 @@ const StudyPlan = () => {
       }
 
       if (existingPlan?.is_generated) {
+        // Safely convert the stored learning_steps to our LearningStep type
+        const learningSteps = ((existingPlan.learning_steps as Json) as unknown as LearningStep[]) || defaultSteps;
+        
+        // Validate the structure of each learning step
+        const isValidLearningStep = (step: any): step is LearningStep => {
+          return typeof step === 'object' &&
+                 typeof step.step === 'number' &&
+                 typeof step.title === 'string' &&
+                 typeof step.description === 'string' &&
+                 typeof step.action === 'string' &&
+                 typeof step.timeEstimate === 'string' &&
+                 Array.isArray(step.benefits) &&
+                 step.benefits.every(b => typeof b === 'string');
+        };
+
+        // If any step is invalid, use defaultSteps instead
+        const validatedSteps = learningSteps.every(isValidLearningStep) ? learningSteps : defaultSteps;
+
         return {
           ...existingPlan,
-          learningSteps: existingPlan.learning_steps as LearningStep[] || defaultSteps,
+          learningSteps: validatedSteps,
           key_topics: existingPlan.key_topics || []
         };
       }
@@ -384,3 +402,4 @@ const StudyPlan = () => {
 };
 
 export default StudyPlan;
+
