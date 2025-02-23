@@ -27,7 +27,10 @@ serve(async (req) => {
       .eq('lecture_id', lectureId)
       .maybeSingle();
 
-    if (aiConfigError) throw aiConfigError;
+    if (aiConfigError) {
+      console.error('Error fetching AI config:', aiConfigError);
+      throw aiConfigError;
+    }
 
     // Fetch lecture content
     const { data: lecture, error: lectureError } = await supabase
@@ -36,7 +39,10 @@ serve(async (req) => {
       .eq('id', lectureId)
       .single();
 
-    if (lectureError) throw lectureError;
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
+      throw lectureError;
+    }
 
     const defaultConfig = {
       temperature: 0.7,
@@ -51,7 +57,7 @@ serve(async (req) => {
     
     const systemPrompt = `You are an expert educational content analyzer. ${
       config.custom_instructions ? config.custom_instructions + ' ' : ''
-    }Generate a detailed analysis in ${targetLanguage} for multiple aspects. Maintain consistent language throughout the response.`;
+    }Generate a detailed analysis in ${targetLanguage} for multiple aspects. Maintain consistent language throughout the response. Always return a valid JSON object with the specified structure. Do not include any explanatory text outside the JSON structure.`;
 
     // Generate a combined prompt for all requested sections
     const combinedPrompt = sections.map(section => generatePromptForSection(section, lecture.content)).join('\n\n');
@@ -82,7 +88,35 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const content = JSON.parse(data.choices[0].message.content);
+    
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid OpenAI response format:', data);
+      throw new Error('Invalid response format from OpenAI');
+    }
+
+    let content;
+    try {
+      const rawContent = data.choices[0].message.content.trim();
+      // Remove any potential markdown code block syntax
+      const cleanContent = rawContent.replace(/```json\n?|\n?```/g, '');
+      content = JSON.parse(cleanContent);
+      
+      // Validate the response structure
+      const expectedKeys = sections.reduce((acc: Record<string, boolean>, section: string) => {
+        acc[section] = true;
+        return acc;
+      }, {});
+
+      const missingKeys = Object.keys(expectedKeys).filter(key => !(key in content));
+      if (missingKeys.length > 0) {
+        console.error('Missing keys in response:', missingKeys);
+        throw new Error(`Missing required sections: ${missingKeys.join(', ')}`);
+      }
+    } catch (error) {
+      console.error('JSON parsing error:', error);
+      console.error('Raw content:', data.choices[0].message.content);
+      throw new Error('Failed to parse JSON response');
+    }
 
     return new Response(JSON.stringify({ content }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -100,27 +134,27 @@ function generatePromptForSection(section: string, content: string): string {
   const prompts: Record<string, string> = {
     structure: `Analyze this lecture content and create a detailed structural outline.
     Content to analyze: ${content}
-    Return the response as a JSON object with this exact key: { "structure": "detailed structural analysis" }`,
+    Return a valid JSON object: { "structure": "detailed structural analysis" }`,
     
     keyConcepts: `Analyze this lecture content and identify 4-5 key concepts with explanations.
     Content to analyze: ${content}
-    Return the response as a JSON object with this exact key: { "keyConcepts": {"concept1": "explanation1", ...} }`,
+    Return a valid JSON object: { "keyConcepts": {"concept1": "explanation1", ...} }`,
     
     mainIdeas: `Analyze this lecture content and list 4-5 main ideas with elaborations.
     Content to analyze: ${content}
-    Return the response as a JSON object with this exact key: { "mainIdeas": {"idea1": "explanation1", ...} }`,
+    Return a valid JSON object: { "mainIdeas": {"idea1": "explanation1", ...} }`,
     
     importantQuotes: `Find 4-5 significant quotes or statements from this lecture content.
     Content to analyze: ${content}
-    Return the response as a JSON object with this exact key: { "importantQuotes": {"context1": "quote1", ...} }`,
+    Return a valid JSON object: { "importantQuotes": {"context1": "quote1", ...} }`,
     
     relationships: `Identify 4-5 key relationships or connections between concepts in this lecture.
     Content to analyze: ${content}
-    Return the response as a JSON object with this exact key: { "relationships": {"connection1": "explanation1", ...} }`,
+    Return a valid JSON object: { "relationships": {"connection1": "explanation1", ...} }`,
     
     supportingEvidence: `Present 4-5 pieces of supporting evidence or examples from this lecture.
     Content to analyze: ${content}
-    Return the response as a JSON object with this exact key: { "supportingEvidence": {"evidence1": "explanation1", ...} }`
+    Return a valid JSON object: { "supportingEvidence": {"evidence1": "explanation1", ...} }`
   };
 
   return prompts[section] || prompts.structure;
