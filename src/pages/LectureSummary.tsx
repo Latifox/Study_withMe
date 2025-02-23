@@ -54,14 +54,26 @@ const LectureSummary = () => {
 
   const isLoading = isLoadingGroup1 || isLoadingGroup2 || isLoadingGroup3;
 
-  // Combine all data for easy access
-  const summaryData = {
-    structure: group1Data?.structure || '',
-    keyConcepts: group1Data?.keyConcepts || '',
-    mainIdeas: group2Data?.mainIdeas || '',
-    importantQuotes: group2Data?.importantQuotes || '',
-    relationships: group3Data?.relationships || '',
-    supportingEvidence: group3Data?.supportingEvidence || ''
+  // Helper function to safely get content
+  const getSectionContent = (section: Section): string => {
+    const groupData = {
+      structure: group1Data?.structure,
+      keyConcepts: group1Data?.keyConcepts,
+      mainIdeas: group2Data?.mainIdeas,
+      importantQuotes: group2Data?.importantQuotes,
+      relationships: group3Data?.relationships,
+      supportingEvidence: group3Data?.supportingEvidence
+    }[section];
+
+    // If the content is an object, convert it to a string representation
+    if (typeof groupData === 'object' && groupData !== null) {
+      return Object.entries(groupData)
+        .map(([key, value]) => `### ${key}\n${value}`)
+        .join('\n\n');
+    }
+
+    // Return the content as is if it's a string, or empty string if undefined
+    return typeof groupData === 'string' ? groupData : '';
   };
 
   if (isLoading) {
@@ -129,7 +141,7 @@ const LectureSummary = () => {
             <Card className="p-6 bg-white/80 backdrop-blur-sm">
               <div className="prose prose-sm max-w-none text-black">
                 <ReactMarkdown>
-                  {summaryData[selectedSection]}
+                  {getSectionContent(selectedSection)}
                 </ReactMarkdown>
               </div>
             </Card>
@@ -141,3 +153,4 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
+
