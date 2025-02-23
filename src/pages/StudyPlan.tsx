@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import StudyPlanLoading from "@/components/story/StudyPlanLoading";
+import { Json } from "@/integrations/supabase/types";
 
 interface LearningStep {
   step: number;
@@ -89,7 +91,7 @@ const StudyPlan = () => {
       const { data: existingPlan, error: fetchError } = await supabase
         .from('study_plans')
         .select('*')
-        .eq('lecture_id', lectureId)
+        .eq('lecture_id', Number(lectureId))
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
@@ -104,7 +106,7 @@ const StudyPlan = () => {
       }
 
       const { data: newPlan, error: genError } = await supabase.functions.invoke<StudyPlan>("generate-mindmap", {
-        body: { lectureId },
+        body: { lectureId: Number(lectureId) },
       });
 
       if (genError) {
@@ -121,8 +123,8 @@ const StudyPlan = () => {
         .upsert({
           lecture_id: Number(lectureId),
           title: newPlan.title,
-          key_topics: newPlan.keyTopics,
-          learning_steps: defaultSteps,
+          key_topics: newPlan.key_topics,
+          learning_steps: defaultSteps as Json,
           is_generated: true
         });
 
@@ -326,3 +328,4 @@ const StudyPlan = () => {
 };
 
 export default StudyPlan;
+
