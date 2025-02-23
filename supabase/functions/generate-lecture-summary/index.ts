@@ -51,70 +51,29 @@ serve(async (req) => {
     const maxExamples = Math.ceil(aiConfig.detail_level * 6);
     
     let systemMessage = "";
-    let responseFormat = "";
+    let userMessage = "";
 
     switch(part) {
       case 'part1':
-        systemMessage = `You are an expert educational content analyzer focused on structural analysis and key concepts. Analyze the lecture content and provide:
-1. A detailed outline of the lecture structure
-2. Key concepts with detailed explanations
-3. Main ideas with thorough analysis
-Format your response as a clean, properly escaped JSON object with these exact keys: structure, keyConcepts, mainIdeas`;
-        responseFormat = `{
-  "structure": "List of main points and sub-points",
-  "keyConcepts": {
-    "concept1": "detailed explanation",
-    "concept2": "detailed explanation"
-  },
-  "mainIdeas": {
-    "idea1": "thorough analysis",
-    "idea2": "thorough analysis"
-  }
-}`;
+        systemMessage = `You are an expert educational content analyzer. Create a JSON object with these exact keys: structure, keyConcepts, mainIdeas. Format the response as clean JSON without markdown formatting or code blocks. Do not include any text outside the JSON object.`;
         break;
 
       case 'part2':
-        systemMessage = `You are an expert educational content analyzer focused on relationships and evidence. Analyze the lecture content and provide:
-1. Important quotes with context and analysis
-2. Key relationships and connections between concepts
-3. Supporting evidence and examples
-Format your response as a clean, properly escaped JSON object with these exact keys: importantQuotes, relationships, supportingEvidence`;
-        responseFormat = `{
-  "importantQuotes": {
-    "quote1": "context and analysis",
-    "quote2": "context and analysis"
-  },
-  "relationships": {
-    "connection1": "detailed explanation",
-    "connection2": "detailed explanation"
-  },
-  "supportingEvidence": {
-    "evidence1": "detailed analysis",
-    "evidence2": "detailed analysis"
-  }
-}`;
+        systemMessage = `You are an expert educational content analyzer. Create a JSON object with these exact keys: importantQuotes, relationships, supportingEvidence. Format the response as clean JSON without markdown formatting or code blocks. Do not include any text outside the JSON object.`;
         break;
 
       case 'full':
-        systemMessage = `You are an expert educational content summarizer. Create a comprehensive, flowing summary of the entire lecture content that ties together all key points, concepts, and relationships.
-Format your response as a clean JSON object with a single key: fullContent`;
-        responseFormat = `{
-  "fullContent": "comprehensive flowing summary"
-}`;
+        systemMessage = `You are an expert educational content summarizer. Create a JSON object with a single key: fullContent. Format the response as clean JSON without markdown formatting or code blocks. Do not include any text outside the JSON object.`;
         break;
 
       default:
         throw new Error('Invalid part specified');
     }
 
-    systemMessage += `\n\nGuidelines:
-1. Use exactly this JSON structure
-2. Provide ${maxExamples} detailed items per section
-3. Use analysis depth level ${analysisDepth}
-4. Use ${aiConfig.content_language} with clear academic style
-5. Escape all special characters in JSON strings
-6. Format example: ${responseFormat}
-${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}`;
+    systemMessage += `\nAnalysis depth: ${analysisDepth}. Maximum examples per section: ${maxExamples}. Use ${aiConfig.content_language}.`;
+    if (aiConfig.custom_instructions) {
+      systemMessage += `\nAdditional requirements: ${aiConfig.custom_instructions}`;
+    }
 
     console.log('Sending request to OpenAI...');
     
@@ -127,10 +86,13 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemMessage },
+          { 
+            role: 'system', 
+            content: systemMessage 
+          },
           { 
             role: 'user', 
-            content: `Title: ${lecture.title}\n\nGenerate a structured analysis following the exact JSON format specified:\n\n${lecture.content}` 
+            content: `Title: ${lecture.title}\n\nContent:\n${lecture.content}`
           }
         ],
         temperature: aiConfig.temperature,
@@ -151,6 +113,9 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
     }
 
     let rawContent = data.choices[0].message.content.trim();
+    
+    // Remove any markdown or code block markers
+    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
     try {
       const parsedContent = JSON.parse(rawContent);

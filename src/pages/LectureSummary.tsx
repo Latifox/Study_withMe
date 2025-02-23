@@ -54,9 +54,9 @@ const LectureSummary = () => {
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
-              <BookOpen className="w-12 h-12 mx-auto animate-pulse text-white" />
-              <p className="text-lg text-white">Generating lecture summary...</p>
-              <p className="text-sm text-white/80">This might take a moment as we analyze the content.</p>
+              <BookOpen className="w-12 h-12 mx-auto animate-pulse text-black" />
+              <p className="text-lg text-black">Generating lecture summary...</p>
+              <p className="text-sm text-black/80">This might take a moment as we analyze the content.</p>
             </div>
           </div>
         </div>
