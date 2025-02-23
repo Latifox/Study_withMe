@@ -70,7 +70,7 @@ Guidelines for analysis:
 - Focus on creating a comprehensive and academic analysis
 ${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
 
-Format the response in the following JSON structure:
+Return your response as a JSON object with the following structure:
 {
   "structure": "Detailed overview of how the lecture content is organized, including main sections and their progression",
   "keyConcepts": "Comprehensive list of theoretical concepts and their definitions, with examples from the text",
@@ -81,6 +81,7 @@ Format the response in the following JSON structure:
   "fullContent": "Detailed, comprehensive summary of the entire lecture content"
 }
 
+Important: Do not use markdown formatting or code blocks in your response. Return only the raw JSON object.
 ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_language}.` : ''}`;
 
     console.log('Sending request to OpenAI...');
@@ -105,7 +106,6 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
 
     const data = await response.json();
     console.log('OpenAI Response Status:', response.status);
-    console.log('OpenAI Response:', JSON.stringify(data));
     
     if (!response.ok) {
       console.error('OpenAI API error:', data.error);
@@ -117,13 +117,20 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
       throw new Error('Invalid response format from OpenAI');
     }
 
+    // Clean up the response by removing any markdown formatting
+    let rawContent = data.choices[0].message.content;
+    console.log('Raw OpenAI response:', rawContent);
+
+    // Remove markdown code block syntax if present
+    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
     let summary;
     try {
-      summary = JSON.parse(data.choices[0].message.content);
+      summary = JSON.parse(rawContent);
       console.log('Successfully parsed summary');
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
-      console.log('Raw response:', data.choices[0].message.content);
+      console.log('Cleaned response that failed to parse:', rawContent);
       throw new Error('Failed to parse AI response');
     }
 
@@ -145,3 +152,4 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
     );
   }
 });
+
