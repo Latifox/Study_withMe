@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,7 +108,8 @@ const StudyPlan = () => {
       if (existingPlan?.is_generated) {
         return {
           ...existingPlan,
-          learningSteps: defaultSteps
+          learningSteps: existingPlan.learning_steps as LearningStep[] || defaultSteps,
+          key_topics: existingPlan.key_topics || []
         };
       }
 
@@ -135,7 +137,7 @@ const StudyPlan = () => {
         .upsert({
           lecture_id: Number(lectureId),
           title: newPlan.title,
-          key_topics: newPlan.key_topics,
+          key_topics: newPlan.key_topics || [],
           learning_steps: learningStepsJson,
           is_generated: true
         });
@@ -162,7 +164,8 @@ const StudyPlan = () => {
 
       return {
         ...newPlan,
-        learningSteps: defaultSteps
+        learningSteps: defaultSteps,
+        key_topics: newPlan.key_topics || []
       };
     },
     retry: (failureCount, error) => {
