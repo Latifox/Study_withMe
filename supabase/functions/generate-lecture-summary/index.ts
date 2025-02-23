@@ -63,7 +63,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze the following aspects simultaneously and provide a combined response:\n\n${combinedPrompt}` }
@@ -125,4 +125,3 @@ function generatePromptForSection(section: string, content: string): string {
 
   return prompts[section] || prompts.structure;
 }
-
