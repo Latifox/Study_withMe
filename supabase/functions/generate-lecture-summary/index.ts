@@ -34,6 +34,10 @@ serve(async (req) => {
       throw new Error(`Error fetching lecture: ${lectureError.message}`);
     }
 
+    if (!lectureData?.content) {
+      throw new Error('No lecture content found');
+    }
+
     // Get AI configuration
     const { data: aiConfig, error: aiConfigError } = await supabase
       .from('lecture_ai_configs')
@@ -52,7 +56,7 @@ serve(async (req) => {
     const customInstructions = aiConfig?.custom_instructions ?? '';
     const targetLanguage = aiConfig?.content_language;
 
-    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content. 
+    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content in markdown format. 
     Creativity Level: ${creativityLevel} - adjust your analysis style accordingly.
     Detail Level: ${detailLevel} - adjust the depth of your analysis.
     ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
@@ -61,19 +65,36 @@ serve(async (req) => {
 
     let prompt = '';
     if (part === 'part1') {
-      prompt = `Analyze the following lecture content and provide a markdown-formatted response with these sections:
-      1. Structure: Outline the lecture's organization and flow
-      2. Key Concepts: List and briefly explain the main concepts
-      3. Main Ideas: Summarize the central arguments or points
+      prompt = `Analyze the following lecture content and provide a markdown response with these sections:
+      
+      # Structure
+      [Write a clear outline of the lecture's organization and flow]
+      
+      # Key Concepts
+      [List and explain the main concepts]
+      
+      # Main Ideas
+      [Summarize the central arguments or points]
 
       Lecture Title: ${lectureData.title}
       Content: ${lectureData.content}`;
-    } else {
-      prompt = `Analyze the following lecture content and provide a markdown-formatted response with these sections:
-      1. Important Quotes: Highlight significant quotations or statements
-      2. Relationships: Explain connections between concepts
-      3. Supporting Evidence: List examples, data, or evidence used
+    } else if (part === 'part2') {
+      prompt = `Analyze the following lecture content and provide a markdown response with these sections:
+      
+      # Important Quotes
+      [Highlight significant quotations or statements]
+      
+      # Relationships
+      [Explain connections between concepts]
+      
+      # Supporting Evidence
+      [List examples, data, or evidence used]
 
+      Lecture Title: ${lectureData.title}
+      Content: ${lectureData.content}`;
+    } else if (part === 'full') {
+      prompt = `Generate a comprehensive summary of the following lecture content:
+      
       Lecture Title: ${lectureData.title}
       Content: ${lectureData.content}`;
     }
@@ -94,23 +115,45 @@ serve(async (req) => {
       }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
     console.log('OpenAI response received');
+
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI');
+    }
 
     const content = data.choices[0].message.content;
     let result = {};
 
     if (part === 'part1') {
+      const structureSection = content.split('# Key Concepts')[0].replace('# Structure', '').trim();
+      const keyConceptsSection = content.split('# Key Concepts')[1]?.split('# Main Ideas')[0]?.trim() || '';
+      const mainIdeasSection = content.split('# Main Ideas')[1]?.trim() || '';
+
       result = {
-        structure: content.split('Key Concepts:')[0].replace('Structure:', '').trim(),
-        keyConcepts: content.split('Key Concepts:')[1].split('Main Ideas:')[0].trim(),
-        mainIdeas: content.split('Main Ideas:')[1].trim()
+        structure: structureSection,
+        keyConcepts: keyConceptsSection,
+        mainIdeas: mainIdeasSection
+      };
+    } else if (part === 'part2') {
+      const quotesSection = content.split('# Relationships')[0].replace('# Important Quotes', '').trim();
+      const relationshipsSection = content.split('# Relationships')[1]?.split('# Supporting Evidence')[0]?.trim() || '';
+      const evidenceSection = content.split('# Supporting Evidence')[1]?.trim() || '';
+
+      result = {
+        importantQuotes: quotesSection,
+        relationships: relationshipsSection,
+        supportingEvidence: evidenceSection
       };
     } else {
       result = {
-        importantQuotes: content.split('Relationships:')[0].replace('Important Quotes:', '').trim(),
-        relationships: content.split('Relationships:')[1].split('Supporting Evidence:')[0].trim(),
-        supportingEvidence: content.split('Supporting Evidence:')[1].trim()
+        fullContent: content
       };
     }
 
