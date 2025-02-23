@@ -79,37 +79,70 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt, userPrompt;
+    let systemPrompt;
     
     if (part === 'part1') {
-      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure and formatting guidelines:
 
       ## Structure
-      [Provide a clear outline of how the content is organized]
+      - Use bullet points to outline the main sections
+      - Highlight **key sections** in bold
+      - Use > blockquotes for important structural notes
+      - Include nested lists for subsections
 
       ## Key Concepts
-      [List and explain the main theoretical concepts]
+      - List each concept with a brief description
+      - Use **bold text** for concept names
+      - Include > blockquotes for definitions
+      - Create nested lists for related subconcepts
+      - Use --- for separating major concepts
 
       ## Main Ideas
-      [Summarize the central arguments or themes]
+      - Present each main idea as a bullet point
+      - Use **bold text** for emphasis on critical points
+      - Include > blockquotes for significant statements
+      - Create numbered lists for sequential ideas
+      - Use nested points for supporting details
 
-      Important: Ensure each section is detailed and properly formatted with the '##' header.
+      Important: 
+      1. Use rich markdown formatting consistently
+      2. Ensure proper nesting of lists
+      3. Utilize bold text for emphasis
+      4. Include relevant blockquotes
+      5. Maintain clear hierarchical structure
       
       ${aiConfig?.custom_instructions ? `Additional instructions: ${aiConfig.custom_instructions}` : ''}
       ${aiConfig?.content_language ? `Please provide the content in: ${aiConfig.content_language}` : ''}`;
     } else if (part === 'part2') {
-      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure and formatting guidelines:
 
       ## Important Quotes
-      [Extract and explain significant quotations]
+      - Present each quote in a > blockquote format
+      - Add **bold context** before each quote
+      - Include bullet points for analysis
+      - Use --- to separate major quotes
+      - Add nested points for quote interpretation
 
       ## Relationships
-      [Analyze connections between concepts]
+      - Use bullet points for each relationship
+      - Highlight **connected concepts** in bold
+      - Include > blockquotes for key insights
+      - Create nested lists for detailed connections
+      - Use numbered lists for sequential relationships
 
       ## Supporting Evidence
-      [Detail the evidence used to support main arguments]
+      - List each piece of evidence with bullets
+      - Use **bold text** for key findings
+      - Include > blockquotes for direct references
+      - Create nested lists for detailed analysis
+      - Use --- to separate major evidence sections
 
-      Important: Ensure each section is detailed and properly formatted with the '##' header.
+      Important:
+      1. Use rich markdown formatting consistently
+      2. Ensure proper nesting of lists
+      3. Utilize bold text for emphasis
+      4. Include relevant blockquotes
+      5. Maintain clear hierarchical structure
       
       ${aiConfig?.custom_instructions ? `Additional instructions: ${aiConfig.custom_instructions}` : ''}
       ${aiConfig?.content_language ? `Please provide the content in: ${aiConfig.content_language}` : ''}`;
@@ -117,7 +150,7 @@ serve(async (req) => {
       throw new Error('Invalid part specified');
     }
 
-    userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
+    userPrompt = `Analyze this lecture content and provide a detailed analysis with rich markdown formatting following the specified structure. Make sure to use bullet points, numbered lists, bold text, and blockquotes appropriately:\n\n${lecture.content}`;
 
     console.log(`Sending request to OpenAI for ${part}`);
 
