@@ -55,13 +55,13 @@ async function getAIConfig(supabase: any, lectureId: number) {
     return null;
   }
 
-  // If no config is found, return default values
+  // If no config is found, return default values with higher detail and creativity
   return data || {
-    temperature: 0.7,
-    creativity_level: 0.5,
-    detail_level: 0.6,
+    temperature: 0.8,
+    creativity_level: 0.7,
+    detail_level: 0.9, // Increased detail level
     content_language: 'English',
-    custom_instructions: ''
+    custom_instructions: 'Provide comprehensive, detailed explanations with multiple examples and thorough analysis.'
   };
 }
 
@@ -110,52 +110,66 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    // Enhance system messages with AI configuration
+    // Enhanced system messages for more detailed content
     const baseSystemMessage = {
-      part1: `You are an expert educational content analyzer. Create a structured response with sections for lecture structure, key concepts, and main ideas. The response should be in valid JSON format but maintain markdown formatting within the text content. Use descriptive titles without underscores or technical identifiers.`,
-      part2: `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. Use descriptive titles for each item. The response should be in valid JSON format but maintain markdown formatting within the text content.`,
-      full: `You are an expert educational content summarizer. Create a comprehensive summary with markdown formatting.`
+      part1: `You are an expert educational content analyzer. Create a detailed, comprehensive response with extensive sections for lecture structure, key concepts, and main ideas. For each section, provide 4-5 detailed entries with thorough explanations, examples, and analysis. Focus on depth and completeness. The response should be in valid JSON format but maintain markdown formatting within the text content. Use descriptive titles without underscores or technical identifiers.`,
+      part2: `You are an expert educational content analyzer. Create a detailed response with 4-5 important quotes, comprehensive relationship analyses, and thorough supporting evidence. Each section should include detailed explanations, context, and analysis. Provide specific examples and in-depth reasoning for each point. The response should be in valid JSON format but maintain markdown formatting within the text content. Use descriptive titles for each item.`,
+      full: `You are an expert educational content summarizer. Create an extensive, detailed summary with comprehensive analysis, examples, and thorough explanations. Include multiple perspectives and practical applications. Use markdown formatting for better readability.`
     };
 
-    // Add AI configuration context to system message
     let systemMessage = baseSystemMessage[part as keyof typeof baseSystemMessage];
     if (aiConfig.custom_instructions) {
       systemMessage += `\n\nCustom Instructions: ${aiConfig.custom_instructions}`;
     }
     
-    // Add language preference if specified
     if (aiConfig.content_language && aiConfig.content_language !== 'English') {
       systemMessage += `\n\nPlease provide the response in ${aiConfig.content_language}.`;
     }
 
+    // Enhanced response formats for more detailed content
     const responseFormats = {
       part1: {
-        structure: "markdown formatted overview",
+        structure: "markdown formatted overview with detailed sections and subsections",
         keyConcepts: {
-          "Concept Title 1": "explanation1",
-          "Concept Title 2": "explanation2"
+          "Concept Title 1": "detailed explanation with examples and analysis",
+          "Concept Title 2": "detailed explanation with examples and analysis",
+          "Concept Title 3": "detailed explanation with examples and analysis",
+          "Concept Title 4": "detailed explanation with examples and analysis",
+          "Concept Title 5": "detailed explanation with examples and analysis"
         },
         mainIdeas: {
-          "Main Idea Title 1": "explanation1",
-          "Main Idea Title 2": "explanation2"
+          "Main Idea Title 1": "comprehensive explanation with context",
+          "Main Idea Title 2": "comprehensive explanation with context",
+          "Main Idea Title 3": "comprehensive explanation with context",
+          "Main Idea Title 4": "comprehensive explanation with context",
+          "Main Idea Title 5": "comprehensive explanation with context"
         }
       },
       part2: {
         importantQuotes: {
-          "Quote Context 1": "quote1",
-          "Quote Context 2": "quote2"
+          "Quote Context 1": "significant quote with detailed analysis",
+          "Quote Context 2": "significant quote with detailed analysis",
+          "Quote Context 3": "significant quote with detailed analysis",
+          "Quote Context 4": "significant quote with detailed analysis",
+          "Quote Context 5": "significant quote with detailed analysis"
         },
         relationships: {
-          "Relationship Title 1": "explanation1",
-          "Relationship Title 2": "explanation2"
+          "Relationship Title 1": "detailed analysis of connection",
+          "Relationship Title 2": "detailed analysis of connection",
+          "Relationship Title 3": "detailed analysis of connection",
+          "Relationship Title 4": "detailed analysis of connection",
+          "Relationship Title 5": "detailed analysis of connection"
         },
         supportingEvidence: {
-          "Evidence Title 1": "evidence1",
-          "Evidence Title 2": "evidence2"
+          "Evidence Title 1": "comprehensive evidence with analysis",
+          "Evidence Title 2": "comprehensive evidence with analysis",
+          "Evidence Title 3": "comprehensive evidence with analysis",
+          "Evidence Title 4": "comprehensive evidence with analysis",
+          "Evidence Title 5": "comprehensive evidence with analysis"
         }
       },
       full: {
-        fullContent: "full markdown-formatted summary"
+        fullContent: "comprehensive markdown-formatted summary with detailed analysis"
       }
     };
 
@@ -177,7 +191,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',  // Using the more powerful model for detailed content
         messages: [
           { 
             role: 'system', 
@@ -189,8 +203,9 @@ serve(async (req) => {
           }
         ],
         temperature: aiConfig.temperature,
-        presence_penalty: aiConfig.creativity_level * 0.5, // Scale creativity to presence penalty
-        frequency_penalty: aiConfig.detail_level * 0.5,    // Scale detail level to frequency penalty
+        presence_penalty: aiConfig.creativity_level * 0.7, // Increased presence penalty for more diverse content
+        frequency_penalty: aiConfig.detail_level * 0.7,    // Increased frequency penalty for more detailed responses
+        max_tokens: 4000, // Increased token limit for more detailed responses
       }),
     });
 
