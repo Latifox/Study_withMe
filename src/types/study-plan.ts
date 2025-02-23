@@ -15,4 +15,6 @@ export interface StudyPlan {
   key_topics: string[];
   learning_steps: LearningStep[];
   is_generated: boolean;
+  created_at?: string;
+  updated_at?: string;
 }

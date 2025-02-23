@@ -33,9 +33,9 @@ const StudyPlan = () => {
         .from('study_plans')
         .select('*')
         .eq('lecture_id', Number(lectureId))
-        .single();
+        .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
+      if (fetchError) {
         console.error('Failed to fetch study plan:', fetchError);
         throw fetchError;
       }
@@ -46,65 +46,65 @@ const StudyPlan = () => {
 
         return {
           ...existingPlan,
-          learningSteps: validatedSteps,
+          learning_steps: validatedSteps,
           key_topics: existingPlan.key_topics || []
         };
       }
 
-      const { data: newPlan, error: genError } = await supabase.functions.invoke<StudyPlanType>("generate-mindmap", {
-        body: { lectureId: Number(lectureId) },
-      });
-
-      if (genError) {
-        console.error('Failed to generate mindmap:', genError);
-        toast({
-          title: "Error",
-          description: "Failed to generate learning journey. Please try again.",
-          variant: "destructive",
+      try {
+        const { data: newPlan, error: genError } = await supabase.functions.invoke<StudyPlanType>("generate-mindmap", {
+          body: { lectureId: Number(lectureId) },
         });
-        throw genError;
-      }
 
-      const learningStepsJson = defaultSteps.map(step => ({
-        ...step,
-        benefits: step.benefits
-      })) as unknown as Json;
+        if (genError) throw genError;
 
-      const { error: insertError } = await supabase
-        .from('study_plans')
-        .upsert({
+        const learningStepsJson = defaultSteps.map(step => ({
+          ...step,
+          benefits: step.benefits
+        })) as unknown as Json;
+
+        const planToInsert = {
           lecture_id: Number(lectureId),
           title: newPlan.title,
           key_topics: newPlan.key_topics || [],
           learning_steps: learningStepsJson,
           is_generated: true
-        });
+        };
 
-      if (insertError) {
-        console.error('Failed to store study plan:', insertError);
-        
-        if (insertError.code === 'PGRST301') {
+        const { data: insertedPlan, error: insertError } = await supabase
+          .from('study_plans')
+          .insert(planToInsert)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Failed to store study plan:', insertError);
           toast({
-            title: "Authentication Error",
-            description: "Please log in to save your study plan.",
+            title: "Warning",
+            description: "Study plan generated but couldn't be saved for future use.",
             variant: "destructive",
           });
-          navigate('/auth');
-          throw insertError;
+          return {
+            ...planToInsert,
+            id: -1,
+            learning_steps: defaultSteps,
+          };
         }
 
+        return {
+          ...insertedPlan,
+          learning_steps: defaultSteps,
+        };
+
+      } catch (error) {
+        console.error('Failed to generate or store study plan:', error);
         toast({
-          title: "Warning",
-          description: "Study plan generated but couldn't be saved for future use.",
+          title: "Error",
+          description: "Failed to generate learning journey. Please try again.",
           variant: "destructive",
         });
+        throw error;
       }
-
-      return {
-        ...newPlan,
-        learningSteps: defaultSteps,
-        key_topics: newPlan.key_topics || []
-      };
     },
     retry: (failureCount, error) => {
       if (error.message === "Authentication required") {
@@ -202,17 +202,17 @@ const StudyPlan = () => {
                 <h1 className="text-4xl font-bold text-white mb-4">
                   {studyPlan.title}
                 </h1>
-                <KeyTopicsCard topics={studyPlan.key_topics} />
+                <KeyTopicsCard topics={studyPlan.key_topics || []} />
               </motion.div>
 
               <div className="space-y-6">
-                {studyPlan.learningSteps.map((step, index) => (
+                {studyPlan.learning_steps.map((step, index) => (
                   <motion.div
                     key={step.step}
                     variants={item}
                     className="relative"
                   >
-                    {index !== studyPlan.learningSteps.length - 1 && (
+                    {index !== studyPlan.learning_steps.length - 1 && (
                       <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-white/20" />
                     )}
                     <LearningStepCard
