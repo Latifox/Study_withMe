@@ -24,6 +24,7 @@ const LectureSummary = () => {
         body: { lectureId, sections: ['structure', 'keyConcepts'] }
       });
       if (error) throw error;
+      console.log('Group 1 Data:', data.content);
       return data.content;
     },
   });
@@ -36,6 +37,7 @@ const LectureSummary = () => {
         body: { lectureId, sections: ['mainIdeas', 'importantQuotes'] }
       });
       if (error) throw error;
+      console.log('Group 2 Data:', data.content);
       return data.content;
     },
   });
@@ -48,11 +50,29 @@ const LectureSummary = () => {
         body: { lectureId, sections: ['relationships', 'supportingEvidence'] }
       });
       if (error) throw error;
+      console.log('Group 3 Data:', data.content);
       return data.content;
     },
   });
 
   const isLoading = isLoadingGroup1 || isLoadingGroup2 || isLoadingGroup3;
+
+  // Parse and format the data
+  const processContent = (content: any) => {
+    if (typeof content === 'string') {
+      return content;
+    }
+    if (Array.isArray(content)) {
+      return content.map((item, index) => ({
+        title: `Point ${index + 1}`,
+        content: item
+      }));
+    }
+    if (typeof content === 'object' && content !== null) {
+      return Object.entries(content);
+    }
+    return [];
+  };
 
   // Combine all data for easy access
   const summaryData = {
@@ -81,6 +101,8 @@ const LectureSummary = () => {
   }
 
   const renderContent = () => {
+    const content = processContent(summaryData[selectedSection]);
+
     switch (selectedSection) {
       case 'structure':
         return (
@@ -89,22 +111,12 @@ const LectureSummary = () => {
           </div>
         );
       case 'keyConcepts':
-        return (
-          <div className="space-y-4">
-            {Object.entries(summaryData.keyConcepts).map(([concept, explanation], idx) => (
-              <div key={idx} className="border-l-2 border-primary pl-4">
-                <h3 className="font-semibold text-lg text-black">{concept}</h3>
-                <p className="text-gray-700 mt-1">{String(explanation)}</p>
-              </div>
-            ))}
-          </div>
-        );
       case 'mainIdeas':
         return (
           <div className="space-y-4">
-            {Object.entries(summaryData.mainIdeas).map(([idea, explanation], idx) => (
+            {Array.isArray(content) && content.map(([title, explanation], idx) => (
               <div key={idx} className="border-l-2 border-primary pl-4">
-                <h3 className="font-semibold text-lg text-black">{idea}</h3>
+                <h3 className="font-semibold text-lg text-black">{title}</h3>
                 <p className="text-gray-700 mt-1">{String(explanation)}</p>
               </div>
             ))}
@@ -113,7 +125,7 @@ const LectureSummary = () => {
       case 'importantQuotes':
         return (
           <div className="space-y-6">
-            {Object.entries(summaryData.importantQuotes).map(([context, quote], idx) => (
+            {Array.isArray(content) && content.map(([context, quote], idx) => (
               <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
                 <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{context}</h3>
                 <blockquote className="text-gray-700 mt-1 italic pl-4 border-l-4 border-primary/30">
@@ -124,22 +136,12 @@ const LectureSummary = () => {
           </div>
         );
       case 'relationships':
-        return (
-          <div className="space-y-6">
-            {Object.entries(summaryData.relationships).map(([connection, explanation], idx) => (
-              <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
-                <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{connection}</h3>
-                <p className="text-gray-700 mt-1">{String(explanation)}</p>
-              </div>
-            ))}
-          </div>
-        );
       case 'supportingEvidence':
         return (
           <div className="space-y-6">
-            {Object.entries(summaryData.supportingEvidence).map(([evidence, explanation], idx) => (
+            {Array.isArray(content) && content.map(([title, explanation], idx) => (
               <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
-                <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{evidence}</h3>
+                <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{title}</h3>
                 <p className="text-gray-700 mt-1">{String(explanation)}</p>
               </div>
             ))}
