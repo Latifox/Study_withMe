@@ -38,6 +38,47 @@ const sections: Section[] = [
   { icon: ClipboardList, title: "Supporting Evidence", content: "", key: "supportingEvidence" }
 ];
 
+const formatContent = (content: any, key: string): string => {
+  if (!content) return '';
+  
+  if (key === 'keyConcepts' && typeof content === 'object' && !Array.isArray(content)) {
+    // Format object-style key concepts into markdown
+    return Object.entries(content)
+      .map(([concept, definition]) => `**${concept}**: ${definition}`)
+      .join('\n\n');
+  }
+  
+  if (key === 'mainIdeas' && typeof content === 'object' && !Array.isArray(content)) {
+    // Format object-style main ideas into markdown
+    return Object.entries(content)
+      .map(([topic, explanation]) => `**${topic}**: ${explanation}`)
+      .join('\n\n');
+  }
+  
+  if (key === 'importantQuotes' && typeof content === 'object' && !Array.isArray(content)) {
+    // Format object-style quotes into markdown
+    return Object.entries(content)
+      .map(([section, quote]) => `**Section ${section}**: ${quote}`)
+      .join('\n\n');
+  }
+  
+  if (key === 'relationships' && typeof content === 'object' && !Array.isArray(content)) {
+    // Format object-style relationships into markdown
+    return Object.entries(content)
+      .map(([relation, description]) => `**${relation}**: ${description}`)
+      .join('\n\n');
+  }
+  
+  if (key === 'supportingEvidence' && typeof content === 'object' && !Array.isArray(content)) {
+    // Format object-style evidence into markdown
+    return Object.entries(content)
+      .map(([evidence, details]) => `**${evidence}**: ${details}`)
+      .join('\n\n');
+  }
+  
+  return content.toString();
+};
+
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const { toast } = useToast();
@@ -99,7 +140,7 @@ const LectureSummary = () => {
 
   const sectionsWithContent = sections.map(section => ({
     ...section,
-    content: summary?.[section.key] || ''
+    content: formatContent(summary?.[section.key], section.key) || ''
   }));
 
   const selectedSectionContent = sectionsWithContent.find(s => s.key === selectedSection);
@@ -184,3 +225,4 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
+
