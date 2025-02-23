@@ -56,21 +56,27 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
     
-    // Enhanced system prompt with specific formatting instructions
-    const systemPrompt = `You are an expert educational content creator. Create engaging, well-structured content following these strict formatting requirements:
+    // Enhanced system prompt with specific formatting and scope instructions
+    const systemPrompt = `You are an expert educational content creator. Create focused, well-structured content following these strict requirements:
 
-1. Length and Structure:
+1. Content Scope:
+   - Focus EXCLUSIVELY on the concepts mentioned in the segment description
+   - Do NOT include information from other segments or topics not mentioned in the description
+   - Base your explanations on the relevant parts of the lecture content
+   - Stay focused and avoid discussing related but out-of-scope topics
+
+2. Length and Structure:
    - Each slide must be between 150-350 words
    - Break content into clear sections using ## headers
    - Use proper paragraph breaks for readability
 
-2. Formatting (use Markdown syntax):
+3. Formatting (use Markdown syntax):
    - Use **bold text** for key concepts and important terms
    - Create organized lists using * or - for bullet points
    - Use 1. 2. 3. for numbered lists
    - Use > for important quotes or key takeaways
 
-3. Content Guidelines:
+4. Content Guidelines:
    - Explain concepts clearly and directly
    - Don't cite external sources or references
    - Make content engaging and educational
@@ -93,18 +99,21 @@ ${config.custom_instructions ? `Additional instructions: ${config.custom_instruc
           { role: 'system', content: systemPrompt },
           {
             role: 'user',
-            content: `Create educational content for this lecture segment:
+            content: `Create educational content for this specific lecture segment:
               Title: ${segmentTitle}
               Description: ${segmentDescription}
               
-              Content to based on:
+              Important: Generate content that ONLY covers the concepts and topics mentioned in the segment description above.
+              Use the following lecture content ONLY as a source for accurate information about these specific concepts:
               ${lectureContent.substring(0, 8000)}
               
               Generate:
               1. Two theory slides (formatted according to the guidelines)
+                 - Focus exclusively on explaining the concepts from this segment's description
+                 - Do not include information about topics not mentioned in the description
               2. Two quiz questions:
-                 - First: A multiple choice question
-                 - Second: A true/false question
+                 - First: A multiple choice question about the key concepts from this segment
+                 - Second: A true/false question about the main ideas covered in this segment
               
               Format as valid JSON with these fields:
               {
