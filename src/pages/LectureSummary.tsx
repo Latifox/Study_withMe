@@ -1,12 +1,12 @@
 
 import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 interface Part1Response {
   structure: string;
@@ -20,9 +20,12 @@ interface Part2Response {
   supportingEvidence: Record<string, string>;
 }
 
+type Section = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
+
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
+  const [selectedSection, setSelectedSection] = useState<Section>('structure');
 
   const { data: part1Data, isLoading: isLoadingPart1 } = useQuery<{ content: Part1Response }>({
     queryKey: ["lecture-summary-part1", lectureId],
@@ -54,13 +57,81 @@ const LectureSummary = () => {
         <div className="flex justify-center items-center h-[60vh]">
           <div className="text-center space-y-4">
             <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-            <p className="text-lg">Generating lecture summary...</p>
+            <p className="text-lg text-black">Generating lecture summary...</p>
             <p className="text-sm text-muted-foreground">This might take a moment as we analyze the content.</p>
           </div>
         </div>
       </div>
     );
   }
+
+  const renderContent = () => {
+    switch (selectedSection) {
+      case 'structure':
+        return (
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown>{part1Data?.content?.structure || ''}</ReactMarkdown>
+          </div>
+        );
+      case 'keyConcepts':
+        return (
+          <div className="space-y-4">
+            {Object.entries(part1Data?.content?.keyConcepts || {}).map(([concept, explanation], idx) => (
+              <div key={idx} className="border-l-2 border-primary pl-4">
+                <h3 className="font-medium text-black">{concept}</h3>
+                <p className="text-gray-700 mt-1">{String(explanation)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      case 'mainIdeas':
+        return (
+          <div className="space-y-4">
+            {Object.entries(part1Data?.content?.mainIdeas || {}).map(([idea, explanation], idx) => (
+              <div key={idx} className="border-l-2 border-primary pl-4">
+                <h3 className="font-medium text-black">{idea}</h3>
+                <p className="text-gray-700 mt-1">{String(explanation)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      case 'importantQuotes':
+        return (
+          <div className="space-y-4">
+            {Object.entries(part2Data?.content?.importantQuotes || {}).map(([context, quote], idx) => (
+              <div key={idx} className="border-l-2 border-primary pl-4">
+                <h3 className="font-medium text-black">{context}</h3>
+                <blockquote className="text-gray-700 mt-1 italic">{String(quote)}</blockquote>
+              </div>
+            ))}
+          </div>
+        );
+      case 'relationships':
+        return (
+          <div className="space-y-4">
+            {Object.entries(part2Data?.content?.relationships || {}).map(([connection, explanation], idx) => (
+              <div key={idx} className="border-l-2 border-primary pl-4">
+                <h3 className="font-medium text-black">{connection}</h3>
+                <p className="text-gray-700 mt-1">{String(explanation)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      case 'supportingEvidence':
+        return (
+          <div className="space-y-4">
+            {Object.entries(part2Data?.content?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
+              <div key={idx} className="border-l-2 border-primary pl-4">
+                <h3 className="font-medium text-black">{evidence}</h3>
+                <p className="text-gray-700 mt-1">{String(explanation)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -82,85 +153,57 @@ const LectureSummary = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Structure */}
-          <Card className="p-6 bg-white">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
-              <BookOpen className="w-5 h-5" />
-              Structure
-            </h2>
-            <div className="text-black">
-              <ReactMarkdown>{part1Data?.content?.structure || ''}</ReactMarkdown>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left Column - Navigation Cards */}
+        <div className="space-y-4">
+          <Card 
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSection === 'structure' ? 'bg-gray-50 border-primary' : 'bg-white'}`}
+            onClick={() => setSelectedSection('structure')}
+          >
+            <h2 className="text-lg font-semibold text-black">Structure</h2>
           </Card>
 
-          {/* Key Concepts */}
-          <Card className="p-6 bg-white">
-            <h2 className="text-xl font-semibold mb-4 text-black">Key Concepts</h2>
-            <div className="space-y-4">
-              {Object.entries(part1Data?.content?.keyConcepts || {}).map(([concept, explanation], idx) => (
-                <div key={idx} className="border-l-2 border-gray-200 pl-4">
-                  <h3 className="font-medium text-black">{concept}</h3>
-                  <p className="text-gray-700 text-sm mt-1">{String(explanation)}</p>
-                </div>
-              ))}
-            </div>
+          <Card 
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSection === 'keyConcepts' ? 'bg-gray-50 border-primary' : 'bg-white'}`}
+            onClick={() => setSelectedSection('keyConcepts')}
+          >
+            <h2 className="text-lg font-semibold text-black">Key Concepts</h2>
           </Card>
 
-          {/* Main Ideas */}
-          <Card className="p-6 bg-white">
-            <h2 className="text-xl font-semibold mb-4 text-black">Main Ideas</h2>
-            <div className="space-y-4">
-              {Object.entries(part1Data?.content?.mainIdeas || {}).map(([idea, explanation], idx) => (
-                <div key={idx} className="border-l-2 border-gray-200 pl-4">
-                  <h3 className="font-medium text-black">{idea}</h3>
-                  <p className="text-gray-700 text-sm mt-1">{String(explanation)}</p>
-                </div>
-              ))}
-            </div>
+          <Card 
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSection === 'mainIdeas' ? 'bg-gray-50 border-primary' : 'bg-white'}`}
+            onClick={() => setSelectedSection('mainIdeas')}
+          >
+            <h2 className="text-lg font-semibold text-black">Main Ideas</h2>
           </Card>
 
-          {/* Important Quotes */}
-          <Card className="p-6 bg-white">
-            <h2 className="text-xl font-semibold mb-4 text-black">Important Quotes</h2>
-            <div className="space-y-4">
-              {Object.entries(part2Data?.content?.importantQuotes || {}).map(([context, quote], idx) => (
-                <div key={idx} className="border-l-2 border-gray-200 pl-4">
-                  <h3 className="font-medium text-black">{context}</h3>
-                  <blockquote className="text-gray-700 text-sm mt-1 italic">{String(quote)}</blockquote>
-                </div>
-              ))}
-            </div>
+          <Card 
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSection === 'importantQuotes' ? 'bg-gray-50 border-primary' : 'bg-white'}`}
+            onClick={() => setSelectedSection('importantQuotes')}
+          >
+            <h2 className="text-lg font-semibold text-black">Important Quotes</h2>
+          </Card>
+
+          <Card 
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSection === 'relationships' ? 'bg-gray-50 border-primary' : 'bg-white'}`}
+            onClick={() => setSelectedSection('relationships')}
+          >
+            <h2 className="text-lg font-semibold text-black">Relationships</h2>
+          </Card>
+
+          <Card 
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSection === 'supportingEvidence' ? 'bg-gray-50 border-primary' : 'bg-white'}`}
+            onClick={() => setSelectedSection('supportingEvidence')}
+          >
+            <h2 className="text-lg font-semibold text-black">Supporting Evidence</h2>
           </Card>
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Relationships */}
+        {/* Right Column - Content Display */}
+        <div className="md:col-span-2">
           <Card className="p-6 bg-white">
-            <h2 className="text-xl font-semibold mb-4 text-black">Relationships</h2>
-            <div className="space-y-4">
-              {Object.entries(part2Data?.content?.relationships || {}).map(([connection, explanation], idx) => (
-                <div key={idx} className="border-l-2 border-gray-200 pl-4">
-                  <h3 className="font-medium text-black">{connection}</h3>
-                  <p className="text-gray-700 text-sm mt-1">{String(explanation)}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Supporting Evidence */}
-          <Card className="p-6 bg-white">
-            <h2 className="text-xl font-semibold mb-4 text-black">Supporting Evidence</h2>
-            <div className="space-y-4">
-              {Object.entries(part2Data?.content?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
-                <div key={idx} className="border-l-2 border-gray-200 pl-4">
-                  <h3 className="font-medium text-black">{evidence}</h3>
-                  <p className="text-gray-700 text-sm mt-1">{String(explanation)}</p>
-                </div>
-              ))}
+            <div className="text-black">
+              {renderContent()}
             </div>
           </Card>
         </div>
