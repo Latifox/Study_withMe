@@ -33,9 +33,9 @@ serve(async (req) => {
       if (part === 'part1') {
         return new Response(JSON.stringify({
           content: {
-            structure: existingHighlights.structure,
-            keyConcepts: existingHighlights.key_concepts,
-            mainIdeas: existingHighlights.main_ideas
+            structure: existingHighlights.structure || '',
+            keyConcepts: existingHighlights.key_concepts || '',
+            mainIdeas: existingHighlights.main_ideas || ''
           }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -43,9 +43,9 @@ serve(async (req) => {
       } else if (part === 'part2') {
         return new Response(JSON.stringify({
           content: {
-            importantQuotes: existingHighlights.important_quotes,
-            relationships: existingHighlights.relationships,
-            supportingEvidence: existingHighlights.supporting_evidence
+            importantQuotes: existingHighlights.important_quotes || '',
+            relationships: existingHighlights.relationships || '',
+            supportingEvidence: existingHighlights.supporting_evidence || ''
           }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -70,24 +70,36 @@ serve(async (req) => {
     let systemPrompt, userPrompt;
     
     if (part === 'part1') {
-      systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the following sections:
-      1. Structure: Outline the organization and flow of the content
-      2. Key Concepts: List and explain the main theoretical concepts
-      3. Main Ideas: Summarize the central arguments or themes
-      
-      Format each section with clear markdown headers (##) and provide detailed, structured content.`;
+      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+
+      ## Structure
+      [Provide a clear outline of how the content is organized]
+
+      ## Key Concepts
+      [List and explain the main theoretical concepts]
+
+      ## Main Ideas
+      [Summarize the central arguments or themes]
+
+      Important: Ensure each section is detailed and properly formatted with the '##' header.`;
     } else if (part === 'part2') {
-      systemPrompt = `You are an expert educational content analyzer. Analyze the lecture content and provide a comprehensive analysis for the following sections:
-      1. Important Quotes: Extract and explain significant quotations
-      2. Relationships: Analyze connections between concepts
-      3. Supporting Evidence: Detail the evidence used to support main arguments
-      
-      Format each section with clear markdown headers (##) and provide detailed, structured content.`;
+      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+
+      ## Important Quotes
+      [Extract and explain significant quotations]
+
+      ## Relationships
+      [Analyze connections between concepts]
+
+      ## Supporting Evidence
+      [Detail the evidence used to support main arguments]
+
+      Important: Ensure each section is detailed and properly formatted with the '##' header.`;
     } else {
       throw new Error('Invalid part specified');
     }
 
-    userPrompt = `Analyze this lecture content and provide a detailed analysis:\n\n${lecture.content}`;
+    userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
 
     console.log(`Sending request to OpenAI for ${part}`);
 
@@ -98,7 +110,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -124,50 +136,76 @@ serve(async (req) => {
     const content = data.choices[0].message.content.trim();
 
     // Parse the markdown content into sections
-    const sections = content.split('##').filter(Boolean).map(s => s.trim());
+    const sections = content.split('##')
+      .filter(Boolean)
+      .map(s => s.trim());
+
+    console.log(`Found ${sections.length} sections in the response`);
+
+    // Validate that we have exactly 3 sections
+    if (sections.length !== 3) {
+      console.error('Invalid number of sections:', sections.length);
+      throw new Error('Invalid number of sections in response');
+    }
+
     let response;
+    let dbUpdate;
 
     if (part === 'part1') {
       response = {
         content: {
-          structure: sections[0] || '',
-          keyConcepts: sections[1] || '',
-          mainIdeas: sections[2] || ''
+          structure: sections[0],
+          keyConcepts: sections[1],
+          mainIdeas: sections[2]
         }
       };
 
-      // Store in database if this is the first part
-      await supabase
-        .from('lecture_highlights')
-        .upsert({
-          lecture_id: lectureId,
-          structure: sections[0] || '',
-          key_concepts: sections[1] || '',
-          main_ideas: sections[2] || '',
-        })
-        .select();
+      dbUpdate = {
+        lecture_id: lectureId,
+        structure: sections[0],
+        key_concepts: sections[1],
+        main_ideas: sections[2],
+      };
 
     } else if (part === 'part2') {
       response = {
         content: {
-          importantQuotes: sections[0] || '',
-          relationships: sections[1] || '',
-          supportingEvidence: sections[2] || ''
+          importantQuotes: sections[0],
+          relationships: sections[1],
+          supportingEvidence: sections[2]
         }
       };
 
-      // Update the existing record with part 2 content
-      await supabase
-        .from('lecture_highlights')
-        .update({
-          important_quotes: sections[0] || '',
-          relationships: sections[1] || '',
-          supporting_evidence: sections[2] || ''
-        })
-        .eq('lecture_id', lectureId);
+      dbUpdate = {
+        important_quotes: sections[0],
+        relationships: sections[1],
+        supporting_evidence: sections[2]
+      };
     }
 
-    console.log('Successfully processed content');
+    // For part1, create new record. For part2, update existing record
+    if (part === 'part1') {
+      const { error: insertError } = await supabase
+        .from('lecture_highlights')
+        .upsert(dbUpdate);
+
+      if (insertError) {
+        console.error('Error inserting highlights:', insertError);
+        throw new Error('Failed to store highlights in database');
+      }
+    } else {
+      const { error: updateError } = await supabase
+        .from('lecture_highlights')
+        .update(dbUpdate)
+        .eq('lecture_id', lectureId);
+
+      if (updateError) {
+        console.error('Error updating highlights:', updateError);
+        throw new Error('Failed to update highlights in database');
+      }
+    }
+
+    console.log('Successfully processed and stored content for', part);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
