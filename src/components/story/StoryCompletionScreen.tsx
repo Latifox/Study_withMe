@@ -58,8 +58,11 @@ const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
     const currentSegment = parseInt(nodeId.split('_')[1]);
     const nextSegment = currentSegment + 1;
     
-    // Navigate to the next segment
-    navigate(`/course/${courseId}/lecture/${lectureId}/story/content/segment_${nextSegment}`);
+    // Navigate to the next segment and explicitly set step to 0 (first theory slide)
+    navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
+    setTimeout(() => {
+      navigate(`/course/${courseId}/lecture/${lectureId}/story/content/segment_${nextSegment}`);
+    }, 100);
   };
 
   return (
@@ -93,4 +96,3 @@ const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
 };
 
 export default StoryCompletionScreen;
-
