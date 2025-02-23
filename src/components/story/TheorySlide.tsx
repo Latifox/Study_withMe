@@ -14,7 +14,6 @@ interface TheorySlideProps {
   onContinue: () => void;
 }
 
-// Define interface for code component props
 interface CodeComponentProps {
   node?: any;
   inline?: boolean;
@@ -23,9 +22,10 @@ interface CodeComponentProps {
 }
 
 const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
-  // Remove "Did you know?" sections from the content
+  // Clean up any special sections and process Markdown content
   const cleanContent = content.replace(/Did you know\?.*?(?=\n\n|\n$|$)/gs, '');
   
+  // Process mathematical notations and preserve Markdown formatting
   const processedContent = cleanContent
     .replace(/\[ /g, '$$')
     .replace(/ \]/g, '$$')
@@ -41,6 +41,63 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
     }, 300);
   };
 
+  // Custom components for ReactMarkdown with improved styling
+  const customComponents: Components = {
+    h1: ({ node, ...props }) => (
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2" {...props} />
+    ),
+    h2: ({ node, ...props }) => (
+      <h2 className="text-2xl font-semibold mb-4 text-gray-800 mt-8" {...props} />
+    ),
+    h3: ({ node, ...props }) => (
+      <h3 className="text-xl font-medium mb-3 text-gray-800 mt-6" {...props} />
+    ),
+    p: ({ node, children, ...props }) => (
+      <p className="mb-4 text-gray-700 leading-relaxed text-lg whitespace-pre-wrap" {...props}>
+        {children}
+      </p>
+    ),
+    ul: ({ node, ...props }) => (
+      <ul className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500" {...props} />
+    ),
+    ol: ({ node, ...props }) => (
+      <ol className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500" {...props} />
+    ),
+    li: ({ node, ...props }) => (
+      <li className="text-gray-700 leading-relaxed text-lg pl-2" {...props} />
+    ),
+    strong: ({ node, ...props }) => (
+      <strong className="font-semibold text-gray-900 bg-yellow-50 px-1 rounded" {...props} />
+    ),
+    em: ({ node, ...props }) => (
+      <em className="text-gray-800 italic" {...props} />
+    ),
+    code: ({ inline, className, children, ...props }: CodeComponentProps) => {
+      if (inline) {
+        return (
+          <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800" {...props}>
+            {children}
+          </code>
+        );
+      }
+      return (
+        <div className="relative">
+          <pre className="overflow-x-auto p-4 rounded-lg bg-gray-100 border border-gray-200">
+            <code className="text-sm font-mono text-gray-800" {...props}>
+              {children}
+            </code>
+          </pre>
+        </div>
+      );
+    },
+    blockquote: ({ node, ...props }) => (
+      <blockquote 
+        className="border-l-4 border-blue-200 pl-4 my-4 italic text-gray-700 bg-blue-50 p-4 rounded-r"
+        {...props}
+      />
+    )
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -54,59 +111,7 @@ const TheorySlide = ({ content, onContinue }: TheorySlideProps) => {
             <ReactMarkdown
               remarkPlugins={[remarkMath]}
               rehypePlugins={[rehypeKatex]}
-              components={{
-                h1: ({ node, ...props }) => (
-                  <h1 className="text-3xl font-bold mb-6 text-gray-900 border-b pb-2" {...props} />
-                ),
-                h2: ({ node, ...props }) => (
-                  <h2 className="text-2xl font-semibold mb-4 text-gray-800 mt-8" {...props} />
-                ),
-                h3: ({ node, ...props }) => (
-                  <h3 className="text-xl font-medium mb-3 text-gray-800 mt-6" {...props} />
-                ),
-                p: ({ node, ...props }) => (
-                  <p className="mb-4 text-gray-700 leading-relaxed text-lg" {...props} />
-                ),
-                ul: ({ node, ...props }) => (
-                  <ul className="my-4 space-y-2 list-disc pl-6 marker:text-blue-500" {...props} />
-                ),
-                ol: ({ node, ...props }) => (
-                  <ol className="my-4 space-y-2 list-decimal pl-6 marker:text-blue-500" {...props} />
-                ),
-                li: ({ node, ...props }) => (
-                  <li className="text-gray-700 leading-relaxed text-lg pl-2" {...props} />
-                ),
-                strong: ({ node, ...props }) => (
-                  <strong className="font-semibold text-gray-900 bg-yellow-50 px-1 rounded" {...props} />
-                ),
-                em: ({ node, ...props }) => (
-                  <em className="text-gray-800 italic" {...props} />
-                ),
-                code: ({ inline, className, children, ...props }: CodeComponentProps) => {
-                  if (inline) {
-                    return (
-                      <code className="px-1.5 py-0.5 rounded bg-gray-100 text-sm font-mono text-gray-800" {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-                  return (
-                    <div className="relative">
-                      <pre className="overflow-x-auto p-4 rounded-lg bg-gray-100 border border-gray-200">
-                        <code className="text-sm font-mono text-gray-800" {...props}>
-                          {children}
-                        </code>
-                      </pre>
-                    </div>
-                  );
-                },
-                blockquote: ({ node, ...props }) => (
-                  <blockquote 
-                    className="border-l-4 border-blue-200 pl-4 my-4 italic text-gray-700 bg-blue-50 p-4 rounded-r"
-                    {...props}
-                  />
-                )
-              }}
+              components={customComponents}
             >
               {processedContent}
             </ReactMarkdown>
