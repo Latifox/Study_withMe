@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { lectureId, section } = await req.json();
+    const { lectureId, sections } = await req.json();
 
     // Fetch lecture AI configurations
     const { data: aiConfig, error: aiConfigError } = await supabase
@@ -51,7 +51,10 @@ serve(async (req) => {
     
     const systemPrompt = `You are an expert educational content analyzer. ${
       config.custom_instructions ? config.custom_instructions + ' ' : ''
-    }Generate a detailed analysis in ${targetLanguage}. Maintain consistent language throughout the response.`;
+    }Generate a detailed analysis in ${targetLanguage} for multiple aspects. Maintain consistent language throughout the response.`;
+
+    // Generate a combined prompt for all requested sections
+    const combinedPrompt = sections.map(section => generatePromptForSection(section, lecture.content)).join('\n\n');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -63,10 +66,7 @@ serve(async (req) => {
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
-          { 
-            role: 'user',
-            content: generatePromptForSection(section, lecture.content)
-          }
+          { role: 'user', content: `Analyze the following aspects simultaneously and provide a combined response:\n\n${combinedPrompt}` }
         ],
         temperature: config.temperature,
         presence_penalty: 0.1,
@@ -125,3 +125,4 @@ function generatePromptForSection(section: string, content: string): string {
 
   return prompts[section] || prompts.structure;
 }
+

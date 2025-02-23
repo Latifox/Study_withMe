@@ -16,80 +16,53 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedSection, setSelectedSection] = useState<Section>('structure');
 
-  // Individual queries for each section
-  const { data: structureData, isLoading: isLoadingStructure } = useQuery({
-    queryKey: ["lecture-summary-structure", lectureId],
+  // Group 1: Structure and Key Concepts
+  const { data: group1Data, isLoading: isLoadingGroup1 } = useQuery({
+    queryKey: ["lecture-summary-group1", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, section: 'structure' }
+        body: { lectureId, sections: ['structure', 'keyConcepts'] }
       });
       if (error) throw error;
       return data.content;
     },
   });
 
-  const { data: keyConceptsData, isLoading: isLoadingKeyConcepts } = useQuery({
-    queryKey: ["lecture-summary-keyConcepts", lectureId],
+  // Group 2: Main Ideas and Important Quotes
+  const { data: group2Data, isLoading: isLoadingGroup2 } = useQuery({
+    queryKey: ["lecture-summary-group2", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, section: 'keyConcepts' }
+        body: { lectureId, sections: ['mainIdeas', 'importantQuotes'] }
       });
       if (error) throw error;
       return data.content;
     },
   });
 
-  const { data: mainIdeasData, isLoading: isLoadingMainIdeas } = useQuery({
-    queryKey: ["lecture-summary-mainIdeas", lectureId],
+  // Group 3: Relationships and Supporting Evidence
+  const { data: group3Data, isLoading: isLoadingGroup3 } = useQuery({
+    queryKey: ["lecture-summary-group3", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, section: 'mainIdeas' }
+        body: { lectureId, sections: ['relationships', 'supportingEvidence'] }
       });
       if (error) throw error;
       return data.content;
     },
   });
 
-  const { data: importantQuotesData, isLoading: isLoadingQuotes } = useQuery({
-    queryKey: ["lecture-summary-importantQuotes", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, section: 'importantQuotes' }
-      });
-      if (error) throw error;
-      return data.content;
-    },
-  });
+  const isLoading = isLoadingGroup1 || isLoadingGroup2 || isLoadingGroup3;
 
-  const { data: relationshipsData, isLoading: isLoadingRelationships } = useQuery({
-    queryKey: ["lecture-summary-relationships", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, section: 'relationships' }
-      });
-      if (error) throw error;
-      return data.content;
-    },
-  });
-
-  const { data: evidenceData, isLoading: isLoadingEvidence } = useQuery({
-    queryKey: ["lecture-summary-evidence", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, section: 'supportingEvidence' }
-      });
-      if (error) throw error;
-      return data.content;
-    },
-  });
-
-  const isLoading = 
-    isLoadingStructure || 
-    isLoadingKeyConcepts || 
-    isLoadingMainIdeas || 
-    isLoadingQuotes || 
-    isLoadingRelationships || 
-    isLoadingEvidence;
+  // Combine all data for easy access
+  const summaryData = {
+    structure: group1Data?.structure || '',
+    keyConcepts: group1Data?.keyConcepts || {},
+    mainIdeas: group2Data?.mainIdeas || {},
+    importantQuotes: group2Data?.importantQuotes || {},
+    relationships: group3Data?.relationships || {},
+    supportingEvidence: group3Data?.supportingEvidence || {}
+  };
 
   if (isLoading) {
     return (
@@ -112,13 +85,13 @@ const LectureSummary = () => {
       case 'structure':
         return (
           <div className="prose prose-sm max-w-none">
-            <ReactMarkdown>{structureData?.structure || ''}</ReactMarkdown>
+            <ReactMarkdown>{summaryData.structure}</ReactMarkdown>
           </div>
         );
       case 'keyConcepts':
         return (
           <div className="space-y-4">
-            {Object.entries(keyConceptsData?.keyConcepts || {}).map(([concept, explanation], idx) => (
+            {Object.entries(summaryData.keyConcepts).map(([concept, explanation], idx) => (
               <div key={idx} className="border-l-2 border-primary pl-4">
                 <h3 className="font-semibold text-lg text-black">{concept}</h3>
                 <p className="text-gray-700 mt-1">{String(explanation)}</p>
@@ -129,7 +102,7 @@ const LectureSummary = () => {
       case 'mainIdeas':
         return (
           <div className="space-y-4">
-            {Object.entries(mainIdeasData?.mainIdeas || {}).map(([idea, explanation], idx) => (
+            {Object.entries(summaryData.mainIdeas).map(([idea, explanation], idx) => (
               <div key={idx} className="border-l-2 border-primary pl-4">
                 <h3 className="font-semibold text-lg text-black">{idea}</h3>
                 <p className="text-gray-700 mt-1">{String(explanation)}</p>
@@ -140,7 +113,7 @@ const LectureSummary = () => {
       case 'importantQuotes':
         return (
           <div className="space-y-6">
-            {Object.entries(importantQuotesData?.importantQuotes || {}).map(([context, quote], idx) => (
+            {Object.entries(summaryData.importantQuotes).map(([context, quote], idx) => (
               <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
                 <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{context}</h3>
                 <blockquote className="text-gray-700 mt-1 italic pl-4 border-l-4 border-primary/30">
@@ -153,7 +126,7 @@ const LectureSummary = () => {
       case 'relationships':
         return (
           <div className="space-y-6">
-            {Object.entries(relationshipsData?.relationships || {}).map(([connection, explanation], idx) => (
+            {Object.entries(summaryData.relationships).map(([connection, explanation], idx) => (
               <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
                 <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{connection}</h3>
                 <p className="text-gray-700 mt-1">{String(explanation)}</p>
@@ -164,7 +137,7 @@ const LectureSummary = () => {
       case 'supportingEvidence':
         return (
           <div className="space-y-6">
-            {Object.entries(evidenceData?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
+            {Object.entries(summaryData.supportingEvidence).map(([evidence, explanation], idx) => (
               <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
                 <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{evidence}</h3>
                 <p className="text-gray-700 mt-1">{String(explanation)}</p>
@@ -236,3 +209,4 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
+
