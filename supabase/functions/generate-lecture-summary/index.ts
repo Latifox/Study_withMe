@@ -23,47 +23,51 @@ serve(async (req) => {
     const { lectureId, part } = await req.json();
     console.log(`Generating summary for lecture ${lectureId}, part ${part}`);
 
-    // Get the lecture content
-    const { data: lectureData, error: lectureError } = await supabase
-      .from('lectures')
-      .select('content, title')
-      .eq('id', lectureId)
-      .single();
+    // Get the lecture content and AI config
+    const [lectureResult, aiConfigResult] = await Promise.all([
+      supabase
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single(),
+      supabase
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .maybeSingle()
+    ]);
 
-    if (lectureError) throw new Error(`Error fetching lecture: ${lectureError.message}`);
-    if (!lectureData?.content) throw new Error('No lecture content found');
-
-    // Get AI configuration
-    const { data: aiConfig, error: aiConfigError } = await supabase
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
-
-    if (aiConfigError) {
-      console.error('Error fetching AI config:', aiConfigError);
+    if (lectureResult.error) {
+      console.error('Error fetching lecture:', lectureResult.error);
+      throw new Error(`Error fetching lecture: ${lectureResult.error.message}`);
     }
 
-    // Use default values if no config exists
-    const temperature = aiConfig?.temperature ?? 0.7;
-    const creativityLevel = aiConfig?.creativity_level ?? 0.5;
-    const detailLevel = aiConfig?.detail_level ?? 0.6;
-    const customInstructions = aiConfig?.custom_instructions ?? '';
-    const targetLanguage = aiConfig?.content_language;
+    if (!lectureResult.data?.content) {
+      throw new Error('No lecture content found');
+    }
 
-    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content.
+    // Use AI config if available, otherwise use defaults
+    const aiConfig = aiConfigResult.data || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      content_language: null,
+      custom_instructions: null
+    };
+
+    const systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content.
 Format your responses using markdown syntax with clear section headers.
 Adjust your analysis based on:
-- Creativity Level: ${creativityLevel} (higher means more creative explanations)
-- Detail Level: ${detailLevel} (higher means more detailed analysis)
-${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
-${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}
+- Creativity Level: ${aiConfig.creativity_level} (higher means more creative explanations)
+- Detail Level: ${aiConfig.detail_level} (higher means more detailed analysis)
+${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
+${aiConfig.content_language ? `Please provide the response in ${aiConfig.content_language}.` : ''}
 
 Important: Always maintain proper markdown formatting for better readability.`;
 
     let userPrompt;
     if (part === 'part1') {
-      userPrompt = `Analyze this lecture content and provide exactly these three sections:
+      userPrompt = `Analyze this lecture content and provide exactly these three sections with markdown headers:
 
 ## Structure
 A clear outline of how the lecture content is organized.
@@ -74,10 +78,10 @@ The main terms, theories, or frameworks introduced.
 ## Main Ideas
 The central arguments or key points presented.
 
-Lecture: "${lectureData.title}"
-Content: ${lectureData.content}`;
+Lecture: "${lectureResult.data.title}"
+Content: ${lectureResult.data.content}`;
     } else if (part === 'part2') {
-      userPrompt = `Analyze this lecture content and provide exactly these three sections:
+      userPrompt = `Analyze this lecture content and provide exactly these three sections with markdown headers:
 
 ## Important Quotes
 The most significant statements or quotations.
@@ -88,17 +92,18 @@ Key connections between concepts.
 ## Supporting Evidence
 Examples, data, or evidence used to support main points.
 
-Lecture: "${lectureData.title}"
-Content: ${lectureData.content}`;
+Lecture: "${lectureResult.data.title}"
+Content: ${lectureResult.data.content}`;
     } else if (part === 'full') {
       userPrompt = `Provide a comprehensive summary of the entire lecture content, integrating all key points and maintaining clear organization.
 
-Lecture: "${lectureData.title}"
-Content: ${lectureData.content}`;
+Lecture: "${lectureResult.data.title}"
+Content: ${lectureResult.data.content}`;
     } else {
       throw new Error('Invalid part specified');
     }
 
+    console.log('Sending request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -106,16 +111,18 @@ Content: ${lectureData.content}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: temperature,
+        temperature: aiConfig.temperature,
       }),
     });
 
     if (!response.ok) {
+      const error = await response.text();
+      console.error('OpenAI API error:', error);
       throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 
@@ -132,49 +139,67 @@ Content: ${lectureData.content}`;
     const extractSection = (text: string, sectionName: string): string => {
       const regex = new RegExp(`##\\s*${sectionName}([^#]*)(##|$)`, 'i');
       const match = text.match(regex);
-      if (!match) {
-        console.warn(`Section ${sectionName} not found`);
-        return '';
-      }
-      return match[1].trim();
+      return match ? match[1].trim() : '';
     };
 
     let result;
+    let highlightsUpdate = {};
+
     if (part === 'part1') {
       result = {
         structure: extractSection(content, 'Structure'),
-        keyConcepts: extractSection(content, 'Key Concepts'),
-        mainIdeas: extractSection(content, 'Main Ideas')
+        key_concepts: extractSection(content, 'Key Concepts'),
+        main_ideas: extractSection(content, 'Main Ideas')
       };
+      highlightsUpdate = result;
     } else if (part === 'part2') {
       result = {
-        importantQuotes: extractSection(content, 'Important Quotes'),
+        important_quotes: extractSection(content, 'Important Quotes'),
         relationships: extractSection(content, 'Relationships'),
-        supportingEvidence: extractSection(content, 'Supporting Evidence')
+        supporting_evidence: extractSection(content, 'Supporting Evidence')
       };
+      highlightsUpdate = result;
     } else {
       result = {
         fullContent: content
       };
     }
 
-    console.log(`Successfully processed ${part}:`, result);
+    console.log(`Successfully processed ${part}`);
 
     // Store the generated content in lecture_highlights
     if (part === 'part1' || part === 'part2') {
-      const { error: upsertError } = await supabase
+      // First check if a record exists
+      const { data: existingHighlight } = await supabase
         .from('lecture_highlights')
-        .upsert(
-          {
-            lecture_id: lectureId,
-            ...result
-          },
-          { onConflict: 'lecture_id' }
-        );
+        .select('id')
+        .eq('lecture_id', lectureId)
+        .maybeSingle();
 
-      if (upsertError) {
-        console.error('Error storing highlights:', upsertError);
-        throw upsertError;
+      if (existingHighlight) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('lecture_highlights')
+          .update(highlightsUpdate)
+          .eq('lecture_id', lectureId);
+
+        if (updateError) {
+          console.error('Error updating highlights:', updateError);
+          throw updateError;
+        }
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('lecture_highlights')
+          .insert({
+            lecture_id: lectureId,
+            ...highlightsUpdate
+          });
+
+        if (insertError) {
+          console.error('Error inserting highlights:', insertError);
+          throw insertError;
+        }
       }
     }
 
