@@ -46,17 +46,6 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         throw userProgressError;
       }
 
-      // Delete any lecture highlights first
-      const { error: highlightsError } = await supabase
-        .from('lecture_highlights')
-        .delete()
-        .eq('lecture_id', lectureId);
-
-      if (highlightsError) {
-        console.error('Error deleting highlights:', highlightsError);
-        throw highlightsError;
-      }
-
       // Delete any segments content
       const { error: segmentsError } = await supabase
         .from('segments_content')
