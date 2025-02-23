@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +19,8 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { lectureId, sections } = await req.json();
+
+    console.log('Received request for lectureId:', lectureId, 'sections:', sections);
 
     // Fetch lecture AI configurations
     const { data: aiConfig, error: aiConfigError } = await supabase
@@ -55,12 +57,31 @@ serve(async (req) => {
     const config = aiConfig || defaultConfig;
     const targetLanguage = config.content_language || 'English';
     
-    const systemPrompt = `You are an expert educational content analyzer. ${
-      config.custom_instructions ? config.custom_instructions + ' ' : ''
-    }Generate a detailed analysis in ${targetLanguage} for multiple aspects. Maintain consistent language throughout the response. Always return a valid JSON object with the specified structure. Do not include any explanatory text outside the JSON structure.`;
+    // Create prompts for requested sections
+    const prompt = sections.map(section => {
+      switch(section) {
+        case 'structure':
+          return `Analyze and create a detailed structural outline for this lecture content in ${targetLanguage}.`;
+        case 'keyConcepts':
+          return `List and explain 4-5 key concepts from this lecture in ${targetLanguage}.`;
+        case 'mainIdeas':
+          return `Identify and elaborate on 4-5 main ideas from this lecture in ${targetLanguage}.`;
+        case 'importantQuotes':
+          return `Find 4-5 significant quotes or statements from this lecture in ${targetLanguage}.`;
+        case 'relationships':
+          return `Identify 4-5 key relationships or connections between concepts in ${targetLanguage}.`;
+        case 'supportingEvidence':
+          return `Present 4-5 pieces of supporting evidence from the lecture in ${targetLanguage}.`;
+        default:
+          return '';
+      }
+    }).join('\n\n');
 
-    // Generate a combined prompt for all requested sections
-    const combinedPrompt = sections.map(section => generatePromptForSection(section, lecture.content)).join('\n\n');
+    console.log('Sending request to OpenAI with configuration:', {
+      temperature: config.temperature,
+      targetLanguage,
+      sections
+    });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -71,12 +92,18 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze the following aspects simultaneously and provide a combined response:\n\n${combinedPrompt}` }
+          {
+            role: 'system',
+            content: `You are an expert educational content analyzer. ${
+              config.custom_instructions ? config.custom_instructions + ' ' : ''
+            }Analyze the content and provide detailed responses for each requested section. Always structure your response as a valid JSON object with the exact section names as keys.`
+          },
+          {
+            role: 'user',
+            content: `Analyze these aspects of the following lecture content:\n\n${prompt}\n\nLecture content: ${lecture.content}`
+          }
         ],
         temperature: config.temperature,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1,
         max_tokens: 2000,
       }),
     });
@@ -88,7 +115,8 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    
+    console.log('Received OpenAI response:', data);
+
     if (!data.choices?.[0]?.message?.content) {
       console.error('Invalid OpenAI response format:', data);
       throw new Error('Invalid response format from OpenAI');
@@ -102,12 +130,7 @@ serve(async (req) => {
       content = JSON.parse(cleanContent);
       
       // Validate the response structure
-      const expectedKeys = sections.reduce((acc: Record<string, boolean>, section: string) => {
-        acc[section] = true;
-        return acc;
-      }, {});
-
-      const missingKeys = Object.keys(expectedKeys).filter(key => !(key in content));
+      const missingKeys = sections.filter(key => !(key in content));
       if (missingKeys.length > 0) {
         console.error('Missing keys in response:', missingKeys);
         throw new Error(`Missing required sections: ${missingKeys.join(', ')}`);
@@ -129,33 +152,3 @@ serve(async (req) => {
     });
   }
 });
-
-function generatePromptForSection(section: string, content: string): string {
-  const prompts: Record<string, string> = {
-    structure: `Analyze this lecture content and create a detailed structural outline.
-    Content to analyze: ${content}
-    Return a valid JSON object: { "structure": "detailed structural analysis" }`,
-    
-    keyConcepts: `Analyze this lecture content and identify 4-5 key concepts with explanations.
-    Content to analyze: ${content}
-    Return a valid JSON object: { "keyConcepts": {"concept1": "explanation1", ...} }`,
-    
-    mainIdeas: `Analyze this lecture content and list 4-5 main ideas with elaborations.
-    Content to analyze: ${content}
-    Return a valid JSON object: { "mainIdeas": {"idea1": "explanation1", ...} }`,
-    
-    importantQuotes: `Find 4-5 significant quotes or statements from this lecture content.
-    Content to analyze: ${content}
-    Return a valid JSON object: { "importantQuotes": {"context1": "quote1", ...} }`,
-    
-    relationships: `Identify 4-5 key relationships or connections between concepts in this lecture.
-    Content to analyze: ${content}
-    Return a valid JSON object: { "relationships": {"connection1": "explanation1", ...} }`,
-    
-    supportingEvidence: `Present 4-5 pieces of supporting evidence or examples from this lecture.
-    Content to analyze: ${content}
-    Return a valid JSON object: { "supportingEvidence": {"evidence1": "explanation1", ...} }`
-  };
-
-  return prompts[section] || prompts.structure;
-}
