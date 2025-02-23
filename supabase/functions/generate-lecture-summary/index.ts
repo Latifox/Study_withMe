@@ -31,6 +31,7 @@ serve(async (req) => {
       .single();
 
     if (lectureError) throw new Error(`Error fetching lecture: ${lectureError.message}`);
+    if (!lectureData?.content) throw new Error('No lecture content found');
 
     // Get AI configuration
     const { data: aiConfig, error: aiConfigError } = await supabase
@@ -50,33 +51,42 @@ serve(async (req) => {
     const customInstructions = aiConfig?.custom_instructions ?? '';
     const targetLanguage = aiConfig?.content_language;
 
-    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content. 
+    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content with clear section headings.
+    Format your response using markdown with ## for section headers.
     Creativity Level: ${creativityLevel} - adjust your analysis style accordingly.
     Detail Level: ${detailLevel} - adjust the depth of your analysis.
     ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
     ${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}`;
 
-    let prompt = '';
+    let prompt;
     if (part === 'part1') {
-      prompt = `Analyze the following lecture content and provide these sections:
-      1. Structure: Outline the lecture's organization and flow
-      2. Key Concepts: List and briefly explain the main concepts
-      3. Main Ideas: Summarize the central arguments or points
+      prompt = `Analyze the following lecture content and provide a markdown-formatted analysis with exactly these sections:
 
-      Use markdown formatting for the response.
+## Structure
+[Outline the lecture's organization and flow]
 
-      Lecture Title: ${lectureData.title}
-      Content: ${lectureData.content}`;
+## Key Concepts
+[List and briefly explain the main concepts]
+
+## Main Ideas
+[Summarize the central arguments or points]
+
+Lecture Title: ${lectureData.title}
+Content: ${lectureData.content}`;
     } else if (part === 'part2') {
-      prompt = `Analyze the following lecture content and provide these sections:
-      1. Important Quotes: Highlight significant quotations or statements
-      2. Relationships: Explain connections between concepts
-      3. Supporting Evidence: List examples, data, or evidence used
+      prompt = `Analyze the following lecture content and provide a markdown-formatted analysis with exactly these sections:
 
-      Use markdown formatting for the response.
+## Important Quotes
+[Highlight significant quotations or statements]
 
-      Lecture Title: ${lectureData.title}
-      Content: ${lectureData.content}`;
+## Relationships
+[Explain connections between concepts]
+
+## Supporting Evidence
+[List examples, data, or evidence used]
+
+Lecture Title: ${lectureData.title}
+Content: ${lectureData.content}`;
     } else {
       throw new Error('Invalid part specified');
     }
@@ -97,34 +107,53 @@ serve(async (req) => {
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+
     const data = await response.json();
-    console.log('OpenAI response received');
+    const content = data.choices[0]?.message?.content;
 
-    const content = data.choices[0].message.content;
-    let result = {};
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
 
+    console.log('Received content from OpenAI:', content);
+
+    // Helper function to extract section content
+    const extractSection = (text: string, sectionName: string): string => {
+      const sections = text.split('##').filter(Boolean);
+      const section = sections.find(s => s.trim().toLowerCase().startsWith(sectionName.toLowerCase()));
+      if (!section) {
+        console.warn(`Section ${sectionName} not found`);
+        return '';
+      }
+      return section.replace(new RegExp(`^${sectionName}`, 'i'), '').trim();
+    };
+
+    let result;
     if (part === 'part1') {
-      const sections = content.split(/(?=## )/);
       result = {
-        structure: sections[0]?.trim() || '',
-        keyConcepts: sections[1]?.replace(/^## Key Concepts:?/i, '').trim() || '',
-        mainIdeas: sections[2]?.replace(/^## Main Ideas:?/i, '').trim() || ''
+        structure: extractSection(content, 'Structure'),
+        keyConcepts: extractSection(content, 'Key Concepts'),
+        mainIdeas: extractSection(content, 'Main Ideas')
       };
     } else {
-      const sections = content.split(/(?=## )/);
       result = {
-        importantQuotes: sections[0]?.trim() || '',
-        relationships: sections[1]?.replace(/^## Relationships:?/i, '').trim() || '',
-        supportingEvidence: sections[2]?.replace(/^## Supporting Evidence:?/i, '').trim() || ''
+        importantQuotes: extractSection(content, 'Important Quotes'),
+        relationships: extractSection(content, 'Relationships'),
+        supportingEvidence: extractSection(content, 'Supporting Evidence')
       };
     }
+
+    console.log(`Successfully processed ${part}:`, result);
 
     return new Response(JSON.stringify({ content: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in generate-lecture-summary:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
