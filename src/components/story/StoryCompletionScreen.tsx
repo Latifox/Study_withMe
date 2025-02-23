@@ -1,15 +1,19 @@
 
-import { Award, ArrowLeftCircle } from "lucide-react";
+import { Award, ArrowLeftCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import confetti from "canvas-confetti";
 import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface StoryCompletionScreenProps {
   onBack: () => void;
 }
 
 const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
+  const navigate = useNavigate();
+  const { courseId, lectureId, nodeId } = useParams();
+
   useEffect(() => {
     // Fire confetti from the left and right edges
     const duration = 3000;
@@ -47,6 +51,17 @@ const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleNextChapter = () => {
+    if (!nodeId) return;
+    
+    // Extract the current segment number from the nodeId (format: segment_X)
+    const currentSegment = parseInt(nodeId.split('_')[1]);
+    const nextSegment = currentSegment + 1;
+    
+    // Navigate to the next segment
+    navigate(`/course/${courseId}/lecture/${lectureId}/story/content/segment_${nextSegment}`);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <Card className="p-6 text-center space-y-6">
@@ -56,6 +71,13 @@ const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
           You've successfully completed this node with a perfect score!
         </p>
         <div className="space-y-4">
+          <Button 
+            onClick={handleNextChapter}
+            className="gap-2 w-full bg-emerald-600 hover:bg-emerald-700"
+          >
+            Go to Next Chapter
+            <ChevronRight className="w-4 h-4" />
+          </Button>
           <Button 
             onClick={onBack}
             className="gap-2 w-full"
@@ -71,3 +93,4 @@ const StoryCompletionScreen = ({ onBack }: StoryCompletionScreenProps) => {
 };
 
 export default StoryCompletionScreen;
+
