@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,9 +84,15 @@ const StudyPlan = () => {
     }
   ];
 
-  const { data: studyPlan, isLoading } = useQuery({
+  const { data: studyPlan, isLoading, error } = useQuery({
     queryKey: ['study-plan', lectureId],
     queryFn: async () => {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session?.session?.user) {
+        throw new Error("Authentication required");
+      }
+
       const { data: existingPlan, error: fetchError } = await supabase
         .from('study_plans')
         .select('*')
@@ -95,6 +100,7 @@ const StudyPlan = () => {
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Failed to fetch study plan:', fetchError);
         throw fetchError;
       }
 
@@ -110,6 +116,7 @@ const StudyPlan = () => {
       });
 
       if (genError) {
+        console.error('Failed to generate mindmap:', genError);
         toast({
           title: "Error",
           description: "Failed to generate learning journey. Please try again.",
@@ -118,7 +125,6 @@ const StudyPlan = () => {
         throw genError;
       }
 
-      // Convert defaultSteps to a plain object array that matches Json type
       const learningStepsJson = defaultSteps.map(step => ({
         ...step,
         benefits: step.benefits
@@ -136,6 +142,17 @@ const StudyPlan = () => {
 
       if (insertError) {
         console.error('Failed to store study plan:', insertError);
+        
+        if (insertError.code === 'PGRST301') {
+          toast({
+            title: "Authentication Error",
+            description: "Please log in to save your study plan.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          throw insertError;
+        }
+
         toast({
           title: "Warning",
           description: "Study plan generated but couldn't be saved for future use.",
@@ -147,6 +164,12 @@ const StudyPlan = () => {
         ...newPlan,
         learningSteps: defaultSteps
       };
+    },
+    retry: (failureCount, error) => {
+      if (error.message === "Authentication required") {
+        return false;
+      }
+      return failureCount < 3;
     },
   });
 
@@ -206,6 +229,30 @@ const StudyPlan = () => {
     hidden: { opacity: 0, x: -20 },
     show: { opacity: 1, x: 0 }
   };
+
+  if (error) {
+    if (error.message === "Authentication required") {
+      navigate('/auth', { state: { returnTo: `/course/${courseId}/lecture/${lectureId}/study-plan` }});
+      return null;
+    }
+    
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-white bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+        <Card className="p-6 text-center bg-white/10 backdrop-blur-md border-white/20">
+          <h2 className="text-2xl font-bold mb-4">Error Loading Study Plan</h2>
+          <p className="text-white/80 mb-4">
+            {error.message || "Failed to load the study plan. Please try again."}
+          </p>
+          <Button
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['study-plan', lectureId] })}
+            className="bg-white/20 hover:bg-white/30 text-white"
+          >
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <StudyPlanLoading />;
