@@ -59,30 +59,45 @@ serve(async (req) => {
     console.log('Using AI config:', JSON.stringify(aiConfig));
     console.log('Lecture content length:', lecture.content.length);
 
-    let systemMessage = `You are an educational content analyzer tasked with creating a detailed summary of the lecture content provided.
-    
+    let systemMessage = `You are an educational content analyzer tasked with creating a detailed summary of the lecture content provided. Your output should use proper markdown formatting for better readability and structure.
+
+Content Language: ${aiConfig.content_language || 'Use the original content language'}
+
 Guidelines for analysis:
 - Creativity Level: ${aiConfig.creativity_level} (higher means more creative and engaging language)
 - Detail Level: ${aiConfig.detail_level} (higher means more comprehensive analysis)
-- Analyze the ENTIRE lecture content thoroughly
-- Extract SPECIFIC quotes directly from the text
-- Provide detailed examples and context for each section
-- Focus on creating a comprehensive and academic analysis
-${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
+- Format lists using proper markdown bullet points (*)
+- Use markdown formatting for emphasis (**bold**)
+- Format quotes using proper markdown blockquotes (>)
+- Include section headings with markdown (#)
+- Create well-structured, hierarchical content
+${aiConfig.custom_instructions ? `\nAdditional Instructions: ${aiConfig.custom_instructions}` : ''}
 
-Return your response as a JSON object with the following structure:
+Return a JSON object with the following structure:
 {
-  "structure": "Detailed overview of how the lecture content is organized, including main sections and their progression",
-  "keyConcepts": "Comprehensive list of theoretical concepts and their definitions, with examples from the text",
-  "mainIdeas": "In-depth analysis of the core arguments and ideas presented",
-  "importantQuotes": "Direct quotes from the lecture text with page/section references and explanation of their significance",
-  "relationships": "Analysis of how different concepts and ideas interconnect and influence each other",
-  "supportingEvidence": "Specific examples, data, or evidence used to support the main arguments",
-  "fullContent": "Detailed, comprehensive summary of the entire lecture content"
-}
-
-Important: Do not use markdown formatting or code blocks in your response. Return only the raw JSON object.
-${aiConfig.content_language ? `Provide the response in ${aiConfig.content_language}.` : ''}`;
+  "structure": "Use bullet points (*) for sections and subsections",
+  "keyConcepts": {
+    "concept1": "definition with **important terms** in bold",
+    "concept2": "another definition"
+  },
+  "mainIdeas": {
+    "idea1": "explanation with **key points** emphasized",
+    "idea2": "another main idea explanation"
+  },
+  "importantQuotes": {
+    "quote1": "> This is how a quote should be formatted",
+    "quote2": "> Another important quote with context"
+  },
+  "relationships": {
+    "relationship1": "Description with **key connections** highlighted",
+    "relationship2": "Another relationship explanation"
+  },
+  "supportingEvidence": {
+    "evidence1": "* Point 1\\n* Point 2\\n* Point 3",
+    "evidence2": "More supporting evidence with **emphasis**"
+  },
+  "fullContent": "Complete markdown-formatted summary with all sections"
+}`;
 
     console.log('Sending request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -97,7 +112,7 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
           { role: 'system', content: systemMessage },
           { 
             role: 'user', 
-            content: `Title: ${lecture.title}\n\nAnalyze this lecture content in detail:\n\n${lecture.content}` 
+            content: `Title: ${lecture.title}\n\nProvide a comprehensive analysis of this lecture content using proper markdown formatting:\n\n${lecture.content}` 
           }
         ],
         temperature: aiConfig.temperature,
@@ -117,12 +132,9 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
       throw new Error('Invalid response format from OpenAI');
     }
 
-    // Clean up the response by removing any markdown formatting
-    let rawContent = data.choices[0].message.content;
-    console.log('Raw OpenAI response:', rawContent);
-
-    // Remove markdown code block syntax if present
-    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // Clean up the response
+    let rawContent = data.choices[0].message.content.trim();
+    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
     let summary;
     try {
@@ -152,4 +164,3 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
     );
   }
 });
-
