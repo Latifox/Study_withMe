@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from "@/components/ui/card";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 interface Part1Response {
   structure: string;
@@ -92,26 +91,26 @@ const LectureSummaryFull = () => {
   }
 
   return (
-    <BackgroundGradient>
-      <div className="container mx-auto p-4 space-y-6">
-        <div className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights`)}
-            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Summary
-          </Button>
-        </div>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights`)}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Summary
+        </Button>
+      </div>
 
-        <Card className="prose prose-sm max-w-none">
-          <CardContent className="p-6">
-            <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-              <BookOpen className="w-6 h-6" />
-              {lecture?.title} - Full Summary
-            </h1>
-            
+      <Card className="bg-white">
+        <CardContent className="p-6">
+          <h1 className="text-2xl font-bold mb-6 flex items-center gap-2 text-black">
+            <BookOpen className="w-6 h-6" />
+            {lecture?.title} - Full Summary
+          </h1>
+          
+          <div className="prose prose-sm max-w-none text-black">
             {/* Structure Section */}
             <h2 className="text-xl font-semibold mt-8">Structure</h2>
             <ReactMarkdown>{part1Data?.content?.structure || ''}</ReactMarkdown>
@@ -164,10 +163,10 @@ const LectureSummaryFull = () => {
             {/* Full Content Section */}
             <h2 className="text-xl font-semibold mt-8">Comprehensive Summary</h2>
             <ReactMarkdown>{fullContent?.content?.fullContent || ''}</ReactMarkdown>
-          </CardContent>
-        </Card>
-      </div>
-    </BackgroundGradient>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

@@ -30,49 +30,61 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const [lectureResult, configResult] = await Promise.all([
-      supabase.from('lectures').select('content, title').eq('id', parseInt(lectureId!)).single(),
-      supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
-    ]);
+    const { data: lecture, error: lectureError } = await supabase
+      .from('lectures')
+      .select('content, title')
+      .eq('id', parseInt(lectureId))
+      .single();
 
-    if (lectureResult.error) throw lectureResult.error;
-    if (!lectureResult.data?.content) throw new Error('No lecture content found');
+    if (lectureError) throw lectureError;
+    if (!lecture?.content) throw new Error('No lecture content found');
 
-    const lecture = lectureResult.data;
-    const aiConfig = configResult.data || {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.8,
-      content_language: 'Romanian',
-      custom_instructions: null
-    };
-
-    const analysisDepth = Math.ceil(aiConfig.detail_level * 8);
-    const maxExamples = Math.ceil(aiConfig.detail_level * 6);
-    
     let systemMessage = "";
-    let userMessage = "";
+    let responseFormat = "";
 
     switch(part) {
       case 'part1':
-        systemMessage = `You are an expert educational content analyzer. Create a JSON object with these exact keys: structure, keyConcepts, mainIdeas. Format the response as clean JSON without markdown formatting or code blocks. Do not include any text outside the JSON object.`;
+        systemMessage = `You are an expert educational content analyzer. Create a structured response with sections for lecture structure, key concepts, and main ideas. The response should be in valid JSON format but maintain markdown formatting within the text content.`;
+        responseFormat = `{
+          "structure": "markdown formatted overview",
+          "keyConcepts": {
+            "concept1": "explanation1",
+            "concept2": "explanation2"
+          },
+          "mainIdeas": {
+            "idea1": "explanation1",
+            "idea2": "explanation2"
+          }
+        }`;
         break;
 
       case 'part2':
-        systemMessage = `You are an expert educational content analyzer. Create a JSON object with these exact keys: importantQuotes, relationships, supportingEvidence. Format the response as clean JSON without markdown formatting or code blocks. Do not include any text outside the JSON object.`;
+        systemMessage = `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. The response should be in valid JSON format but maintain markdown formatting within the text content.`;
+        responseFormat = `{
+          "importantQuotes": {
+            "context1": "quote1",
+            "context2": "quote2"
+          },
+          "relationships": {
+            "connection1": "explanation1",
+            "connection2": "explanation2"
+          },
+          "supportingEvidence": {
+            "evidence1": "explanation1",
+            "evidence2": "explanation2"
+          }
+        }`;
         break;
 
       case 'full':
-        systemMessage = `You are an expert educational content summarizer. Create a JSON object with a single key: fullContent. Format the response as clean JSON without markdown formatting or code blocks. Do not include any text outside the JSON object.`;
+        systemMessage = `You are an expert educational content summarizer. Create a comprehensive summary with markdown formatting.`;
+        responseFormat = `{
+          "fullContent": "full markdown-formatted summary"
+        }`;
         break;
 
       default:
         throw new Error('Invalid part specified');
-    }
-
-    systemMessage += `\nAnalysis depth: ${analysisDepth}. Maximum examples per section: ${maxExamples}. Use ${aiConfig.content_language}.`;
-    if (aiConfig.custom_instructions) {
-      systemMessage += `\nAdditional requirements: ${aiConfig.custom_instructions}`;
     }
 
     console.log('Sending request to OpenAI...');
@@ -88,14 +100,14 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: systemMessage 
+            content: `${systemMessage}\nFormat the response exactly like this: ${responseFormat}`
           },
           { 
             role: 'user', 
             content: `Title: ${lecture.title}\n\nContent:\n${lecture.content}`
           }
         ],
-        temperature: aiConfig.temperature,
+        temperature: 0.7,
       }),
     });
 
@@ -113,9 +125,7 @@ serve(async (req) => {
     }
 
     let rawContent = data.choices[0].message.content.trim();
-    
-    // Remove any markdown or code block markers
-    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    console.log('Raw content:', rawContent);
     
     try {
       const parsedContent = JSON.parse(rawContent);
@@ -124,7 +134,20 @@ serve(async (req) => {
       });
     } catch (parseError) {
       console.error('Parse error:', parseError, '\nRaw content:', rawContent);
-      throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
+      // Try to clean the content before parsing again
+      const cleanedContent = rawContent
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*$/g, '')
+        .trim();
+      
+      try {
+        const parsedContent = JSON.parse(cleanedContent);
+        return new Response(JSON.stringify({ content: parsedContent }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (secondParseError) {
+        throw new Error(`Failed to parse OpenAI response: ${secondParseError.message}`);
+      }
     }
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
