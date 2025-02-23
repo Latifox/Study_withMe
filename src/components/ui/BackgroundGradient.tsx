@@ -22,12 +22,12 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
             <defs>
               <pattern 
                 id="smallGrid" 
-                width="8" 
-                height="8" 
+                width="4" 
+                height="4" 
                 patternUnits="userSpaceOnUse"
               >
                 <path 
-                  d="M 8 0 L 0 0 0 8" 
+                  d="M 4 0 L 0 0 0 4" 
                   fill="none" 
                   stroke="currentColor" 
                   strokeWidth="0.5"
@@ -35,13 +35,13 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
               </pattern>
               <pattern 
                 id="grid" 
-                width="32" 
-                height="32" 
+                width="20" 
+                height="20" 
                 patternUnits="userSpaceOnUse"
               >
-                <rect width="32" height="32" fill="url(#smallGrid)" />
+                <rect width="20" height="20" fill="url(#smallGrid)" />
                 <path 
-                  d="M 32 0 L 0 0 0 32" 
+                  d="M 20 0 L 0 0 0 20" 
                   fill="none" 
                   stroke="currentColor" 
                   strokeWidth="1"
