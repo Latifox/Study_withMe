@@ -1,7 +1,13 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,207 +21,108 @@ serve(async (req) => {
 
   try {
     const { lectureId, part } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'part:', part);
+    console.log(`Generating summary for lecture ${lectureId}, part ${part}`);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // First check if we already have highlights for this lecture
-    const { data: existingHighlights } = await supabase
-      .from('lecture_highlights')
-      .select('*')
-      .eq('lecture_id', lectureId)
+    // First, get the lecture content
+    const { data: lectureData, error: lectureError } = await supabase
+      .from('lectures')
+      .select('content, title')
+      .eq('id', lectureId)
       .single();
 
-    if (existingHighlights) {
-      console.log('Found existing highlights');
-      if (part === 'part1') {
-        return new Response(JSON.stringify({
-          content: {
-            structure: existingHighlights.structure || '',
-            keyConcepts: existingHighlights.key_concepts || '',
-            mainIdeas: existingHighlights.main_ideas || ''
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else if (part === 'part2') {
-        return new Response(JSON.stringify({
-          content: {
-            importantQuotes: existingHighlights.important_quotes || '',
-            relationships: existingHighlights.relationships || '',
-            supportingEvidence: existingHighlights.supporting_evidence || ''
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    if (lectureError) {
+      throw new Error(`Error fetching lecture: ${lectureError.message}`);
     }
 
-    // If no existing highlights, fetch lecture content and generate new ones
-    const { data: lecture, error: lectureError } = await supabase
-      .from('lectures')
-      .select('content')
-      .eq('id', lectureId)
+    // Get AI configuration
+    const { data: aiConfig, error: aiConfigError } = await supabase
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
       .maybeSingle();
 
-    if (lectureError || !lecture) {
-      console.error('Error fetching lecture:', lectureError);
-      throw new Error('Failed to fetch lecture content');
+    if (aiConfigError) {
+      console.error('Error fetching AI config:', aiConfigError);
     }
 
-    console.log('Successfully fetched lecture content');
+    // Use default values if no config exists
+    const temperature = aiConfig?.temperature ?? 0.7;
+    const creativityLevel = aiConfig?.creativity_level ?? 0.5;
+    const detailLevel = aiConfig?.detail_level ?? 0.6;
+    const customInstructions = aiConfig?.custom_instructions ?? '';
+    const targetLanguage = aiConfig?.content_language;
 
-    let systemPrompt, userPrompt;
-    
+    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content. 
+    Creativity Level: ${creativityLevel} - adjust your analysis style accordingly.
+    Detail Level: ${detailLevel} - adjust the depth of your analysis.
+    ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
+    ${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}
+    `;
+
+    let prompt = '';
     if (part === 'part1') {
-      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+      prompt = `Analyze the following lecture content and provide a markdown-formatted response with these sections:
+      1. Structure: Outline the lecture's organization and flow
+      2. Key Concepts: List and briefly explain the main concepts
+      3. Main Ideas: Summarize the central arguments or points
 
-      ## Structure
-      [Provide a clear outline of how the content is organized]
-
-      ## Key Concepts
-      [List and explain the main theoretical concepts]
-
-      ## Main Ideas
-      [Summarize the central arguments or themes]
-
-      Important: Ensure each section is detailed and properly formatted with the '##' header.`;
-    } else if (part === 'part2') {
-      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
-
-      ## Important Quotes
-      [Extract and explain significant quotations]
-
-      ## Relationships
-      [Analyze connections between concepts]
-
-      ## Supporting Evidence
-      [Detail the evidence used to support main arguments]
-
-      Important: Ensure each section is detailed and properly formatted with the '##' header.`;
+      Lecture Title: ${lectureData.title}
+      Content: ${lectureData.content}`;
     } else {
-      throw new Error('Invalid part specified');
+      prompt = `Analyze the following lecture content and provide a markdown-formatted response with these sections:
+      1. Important Quotes: Highlight significant quotations or statements
+      2. Relationships: Explain connections between concepts
+      3. Supporting Evidence: List examples, data, or evidence used
+
+      Lecture Title: ${lectureData.title}
+      Content: ${lectureData.content}`;
     }
 
-    userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
-
-    console.log(`Sending request to OpenAI for ${part}`);
-
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: prompt }
         ],
-        temperature: 0.7,
+        temperature: temperature,
       }),
     });
 
-    if (!openAIResponse.ok) {
-      const error = await openAIResponse.text();
-      console.error('OpenAI API Error:', error);
-      throw new Error('Failed to generate content from OpenAI');
-    }
+    const data = await response.json();
+    console.log('OpenAI response received');
 
-    const data = await openAIResponse.json();
-    console.log('Received response from OpenAI');
-
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid OpenAI response format:', JSON.stringify(data));
-      throw new Error('Invalid response format from OpenAI');
-    }
-
-    const content = data.choices[0].message.content.trim();
-
-    // Parse the markdown content into sections
-    const sections = content.split('##')
-      .filter(Boolean)
-      .map(s => s.trim());
-
-    console.log(`Found ${sections.length} sections in the response`);
-
-    // Validate that we have exactly 3 sections
-    if (sections.length !== 3) {
-      console.error('Invalid number of sections:', sections.length);
-      throw new Error('Invalid number of sections in response');
-    }
-
-    let response;
-    let dbUpdate;
+    const content = data.choices[0].message.content;
+    let result = {};
 
     if (part === 'part1') {
-      response = {
-        content: {
-          structure: sections[0],
-          keyConcepts: sections[1],
-          mainIdeas: sections[2]
-        }
+      result = {
+        structure: content.split('Key Concepts:')[0].replace('Structure:', '').trim(),
+        keyConcepts: content.split('Key Concepts:')[1].split('Main Ideas:')[0].trim(),
+        mainIdeas: content.split('Main Ideas:')[1].trim()
       };
-
-      dbUpdate = {
-        lecture_id: lectureId,
-        structure: sections[0],
-        key_concepts: sections[1],
-        main_ideas: sections[2],
-      };
-
-    } else if (part === 'part2') {
-      response = {
-        content: {
-          importantQuotes: sections[0],
-          relationships: sections[1],
-          supportingEvidence: sections[2]
-        }
-      };
-
-      dbUpdate = {
-        important_quotes: sections[0],
-        relationships: sections[1],
-        supporting_evidence: sections[2]
-      };
-    }
-
-    // For part1, create new record. For part2, update existing record
-    if (part === 'part1') {
-      const { error: insertError } = await supabase
-        .from('lecture_highlights')
-        .upsert(dbUpdate);
-
-      if (insertError) {
-        console.error('Error inserting highlights:', insertError);
-        throw new Error('Failed to store highlights in database');
-      }
     } else {
-      const { error: updateError } = await supabase
-        .from('lecture_highlights')
-        .update(dbUpdate)
-        .eq('lecture_id', lectureId);
-
-      if (updateError) {
-        console.error('Error updating highlights:', updateError);
-        throw new Error('Failed to update highlights in database');
-      }
+      result = {
+        importantQuotes: content.split('Relationships:')[0].replace('Important Quotes:', '').trim(),
+        relationships: content.split('Relationships:')[1].split('Supporting Evidence:')[0].trim(),
+        supportingEvidence: content.split('Supporting Evidence:')[1].trim()
+      };
     }
 
-    console.log('Successfully processed and stored content for', part);
+    console.log(`Successfully generated ${part}`);
 
-    return new Response(JSON.stringify(response), {
+    return new Response(JSON.stringify({ content: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
-    console.error('Error in generate-lecture-summary:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      details: 'Check the function logs for more information'
-    }), {
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
