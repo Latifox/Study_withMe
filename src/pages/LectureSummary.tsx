@@ -41,38 +41,24 @@ const sections: Section[] = [
 const formatContent = (content: any, key: string): string => {
   if (!content) return '';
   
-  if (key === 'keyConcepts' && typeof content === 'object' && !Array.isArray(content)) {
-    // Format object-style key concepts into markdown
+  if (typeof content === 'object' && !Array.isArray(content)) {
     return Object.entries(content)
-      .map(([concept, definition]) => `**${concept}**: ${definition}`)
-      .join('\n\n');
-  }
-  
-  if (key === 'mainIdeas' && typeof content === 'object' && !Array.isArray(content)) {
-    // Format object-style main ideas into markdown
-    return Object.entries(content)
-      .map(([topic, explanation]) => `**${topic}**: ${explanation}`)
-      .join('\n\n');
-  }
-  
-  if (key === 'importantQuotes' && typeof content === 'object' && !Array.isArray(content)) {
-    // Format object-style quotes into markdown
-    return Object.entries(content)
-      .map(([section, quote]) => `**Section ${section}**: ${quote}`)
-      .join('\n\n');
-  }
-  
-  if (key === 'relationships' && typeof content === 'object' && !Array.isArray(content)) {
-    // Format object-style relationships into markdown
-    return Object.entries(content)
-      .map(([relation, description]) => `**${relation}**: ${description}`)
-      .join('\n\n');
-  }
-  
-  if (key === 'supportingEvidence' && typeof content === 'object' && !Array.isArray(content)) {
-    // Format object-style evidence into markdown
-    return Object.entries(content)
-      .map(([evidence, details]) => `**${evidence}**: ${details}`)
+      .map(([title, details]) => {
+        switch (key) {
+          case 'keyConcepts':
+            return `### ${title}\n\n${details}`;
+          case 'mainIdeas':
+            return `### ${title}\n\n${details}`;
+          case 'importantQuotes':
+            return `### Quote from ${title}\n\n${details}`;
+          case 'relationships':
+            return `### ${title}\n\n${details}`;
+          case 'supportingEvidence':
+            return `### ${title}\n\n${details}`;
+          default:
+            return `**${title}**: ${details}`;
+        }
+      })
       .join('\n\n');
   }
   
@@ -85,7 +71,7 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedSection, setSelectedSection] = useState<string>("structure");
 
-  const { data: lecture } = useQuery({
+  const { data: lecture, isLoading: lectureLoading } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -99,7 +85,7 @@ const LectureSummary = () => {
     },
   });
 
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading, error } = useQuery({
     queryKey: ["lecture-summary", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
@@ -134,8 +120,31 @@ const LectureSummary = () => {
     }
   });
 
+  const isLoading = lectureLoading || summaryLoading;
+
   if (isLoading) {
     return <HighlightsLoading />;
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="text-xl font-semibold text-red-600">
+            Error generating summary
+          </div>
+          <p className="text-gray-600">{error.message}</p>
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/course/${courseId}`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Course
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const sectionsWithContent = sections.map(section => ({
@@ -225,4 +234,3 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
-

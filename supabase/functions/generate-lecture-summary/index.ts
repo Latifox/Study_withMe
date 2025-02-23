@@ -30,6 +30,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch lecture and AI config in parallel
     const [lectureResult, configResult] = await Promise.all([
       supabase.from('lectures').select('content, title').eq('id', lectureId).single(),
       supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
@@ -49,7 +50,7 @@ serve(async (req) => {
     const aiConfig = configResult.data || {
       temperature: 0.7,
       creativity_level: 0.5,
-      detail_level: 0.6,
+      detail_level: 0.8, // Increased default detail level
       content_language: null,
       custom_instructions: null
     };
@@ -57,85 +58,102 @@ serve(async (req) => {
     console.log('Using AI config:', JSON.stringify(aiConfig));
     console.log('Lecture content length:', lecture.content.length);
 
-    // Calculate depth of analysis based on detail level
-    const analysisDepth = Math.ceil(aiConfig.detail_level * 5); // 1-5 scale
-    const maxExamples = Math.ceil(aiConfig.detail_level * 4); // 1-4 examples
+    // Calculate depth of analysis based on detail level (increased)
+    const analysisDepth = Math.ceil(aiConfig.detail_level * 8); // 1-8 scale
+    const maxExamples = Math.ceil(aiConfig.detail_level * 6); // 1-6 examples
     
-    // Adjust creativity in language based on creativity level
     const languageStyle = aiConfig.creativity_level > 0.7 ? 'engaging and imaginative' :
                          aiConfig.creativity_level > 0.4 ? 'balanced and clear' : 'precise and academic';
 
-    let systemMessage = `You are an expert educational content analyzer tasked with creating a detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
+    let systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive and detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
 
-Guidelines for each section:
+For each section, provide extensive detail and analysis:
 
-1. STRUCTURE (Hierarchical Organization):
-   - Extract and list ALL titles and subtitles in their exact hierarchical order
-   - Use proper markdown heading levels (# for main titles, ## for subtitles)
-   - Maintain the exact numbering and structure from the lecture
+1. STRUCTURE (Detailed Outline):
+   - Create a comprehensive hierarchical outline with ALL headings and subheadings
+   - Use proper markdown heading levels (# for main, ## for sub)
+   - Include brief descriptions under each major section
+   - Maintain exact numbering and structure
 
-2. KEY CONCEPTS (Detailed Definitions):
-   - Identify and explain ${maxExamples} primary concepts from the lecture
+2. KEY CONCEPTS (In-Depth Analysis):
+   - Identify and thoroughly explain ${maxExamples} essential concepts
    - For each concept provide:
-     * Clear definition
-     * Practical examples
-     * Context within the broader topic
+     * Detailed definition with context
+     * Multiple real-world examples
+     * Practical applications
+     * Related theories or frameworks
+     * Common misconceptions
    - Format as a dictionary with concept names as keys
 
-3. MAIN IDEAS (Core Themes):
-   - Identify ${maxExamples} central themes or arguments
-   - For each idea provide:
-     * Detailed explanation
-     * Supporting points
-     * Implications or applications
+3. MAIN IDEAS (Comprehensive Analysis):
+   - Extract ${maxExamples} central themes
+   - For each main idea include:
+     * Detailed explanation with supporting evidence
+     * Historical context or background
+     * Practical implications
+     * Counter-arguments or limitations
+     * Future implications or developments
    - Format as a dictionary with theme titles as keys
 
-4. IMPORTANT QUOTES (Direct Citations):
-   - Extract ${maxExamples} significant quotes VERBATIM from the text
-   - Include section references for context
-   - Only use exact quotes, no paraphrasing
+4. IMPORTANT QUOTES (Critical Analysis):
+   - Select ${maxExamples} significant quotes
+   - For each quote provide:
+     * The exact quote and its context
+     * Detailed analysis of its significance
+     * Historical or theoretical background
+     * Connection to other concepts
+     * Modern-day relevance
+     * Alternative interpretations
    - Format as a dictionary with section references as keys
 
-5. RELATIONSHIPS (Concept Mapping):
-   - Analyze how different concepts interconnect
-   - Identify cause-effect relationships
-   - Explain hierarchical relationships
-   - Highlight dependencies between concepts
+5. RELATIONSHIPS (Complex Connections):
+   - Analyze interconnections between concepts
+   - Include:
+     * Direct and indirect relationships
+     * Cause-effect chains
+     * Hierarchical structures
+     * Cross-disciplinary connections
+     * Practical implications of relationships
    - Format as a dictionary with relationship types as keys
 
-6. SUPPORTING EVIDENCE (Quantifiable Data):
-   - Extract ALL numerical data, statistics, and metrics
-   - Include dates, percentages, measurements, etc.
-   - Provide specific figures and their context
+6. SUPPORTING EVIDENCE (Comprehensive Data):
+   - Extract and analyze ALL:
+     * Numerical data and statistics
+     * Research findings
+     * Case studies
+     * Historical examples
+     * Expert opinions
+     * Methodological details
    - Format as a dictionary with evidence types as keys
 
-CUSTOM REQUIREMENTS:
-${aiConfig.custom_instructions ? aiConfig.custom_instructions : 'Follow standard academic format'}
+${aiConfig.custom_instructions ? `\nADDITIONAL REQUIREMENTS:\n${aiConfig.custom_instructions}` : ''}
 
-Return a JSON object with the exact structure:
+Your goal is to create an exceptionally detailed and scholarly analysis that goes beyond surface-level summaries. Each section should provide deep insights and comprehensive understanding of the material.
+
+Return a JSON object with this structure:
 {
-  "structure": "Hierarchical list with proper markdown headings",
+  "structure": "Detailed hierarchical outline with descriptions",
   "keyConcepts": {
-    "[concept name]": "Detailed explanation with examples",
+    "[concept]": "Comprehensive explanation with examples and applications",
     ...
   },
   "mainIdeas": {
-    "[idea title]": "Comprehensive explanation with implications",
+    "[idea]": "In-depth analysis with context and implications",
     ...
   },
   "importantQuotes": {
-    "[section reference]": "Exact quote from the text",
+    "[section]": "Quote analysis with context and multiple interpretations",
     ...
   },
   "relationships": {
-    "[relationship type]": "Detailed connection analysis",
+    "[type]": "Detailed connection analysis with implications",
     ...
   },
   "supportingEvidence": {
-    "[evidence type]": "Specific numerical or factual data",
+    "[type]": "Comprehensive evidence analysis",
     ...
   },
-  "fullContent": "Complete markdown-formatted summary integrating all sections"
+  "fullContent": "Complete markdown-formatted comprehensive summary"
 }`;
 
     console.log('Sending request to OpenAI...');
@@ -158,20 +176,22 @@ Return a JSON object with the exact structure:
       }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+
     const data = await response.json();
     console.log('OpenAI Response Status:', response.status);
     
-    if (!response.ok) {
-      console.error('OpenAI API error:', data.error);
-      throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
-    }
-
     if (!data.choices?.[0]?.message?.content) {
       console.error('Unexpected OpenAI response format:', data);
       throw new Error('Invalid response format from OpenAI');
     }
 
     let rawContent = data.choices[0].message.content.trim();
+    // Clean up the response by removing JSON code block markers
     rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
     let summary;
@@ -180,7 +200,7 @@ Return a JSON object with the exact structure:
       console.log('Successfully parsed summary');
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
-      console.log('Cleaned response that failed to parse:', rawContent);
+      console.log('Raw content that failed to parse:', rawContent);
       throw new Error('Failed to parse AI response');
     }
 
@@ -202,4 +222,3 @@ Return a JSON object with the exact structure:
     );
   }
 });
-
