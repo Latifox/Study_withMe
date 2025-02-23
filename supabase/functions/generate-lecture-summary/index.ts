@@ -63,7 +63,7 @@ serve(async (req) => {
     const languageStyle = aiConfig.creativity_level > 0.7 ? 'engaging and imaginative' :
                          aiConfig.creativity_level > 0.4 ? 'balanced and clear' : 'precise and academic';
 
-    let systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive and detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
+    const systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive and detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
 
 Your response must be a valid JSON object with the following structure:
 {
@@ -95,11 +95,10 @@ Follow these requirements:
 1. Ensure all JSON property names use double quotes
 2. Ensure all string values use double quotes, not single quotes
 3. Escape any double quotes within string values
-4. Do not include any Markdown code block syntax (```) in your response
+4. Do not include any Markdown code block syntax (\`\`\`) in your response
 5. Do not include any line breaks within string values - use \\n instead
 6. Identify ${maxExamples} key items for each section
 7. Provide detailed analysis at depth level ${analysisDepth}
-
 ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}`;
 
     console.log('Sending request to OpenAI...');
@@ -111,7 +110,7 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemMessage },
           { 
@@ -139,32 +138,29 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
 
     let rawContent = data.choices[0].message.content.trim();
     
-    // Log the raw content for debugging
     console.log('Raw content before cleanup:', rawContent.substring(0, 100) + '...');
 
-    // Clean up the response
     rawContent = rawContent
-      .replace(/^[\s\n]*\{/, '{')  // Remove any whitespace/newlines before opening brace
-      .replace(/\}[\s\n]*$/, '}')  // Remove any whitespace/newlines after closing brace
-      .replace(/```(?:json)?\n?/g, '')  // Remove code block syntax
-      .replace(/(?<!\\)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')  // Ensure property names are double-quoted
-      .replace(/:\s*'([^']*?)'/g, ':"$1"')  // Convert single-quoted values to double-quoted
-      .replace(/([^\\])"/g, '$1\\"')  // Escape unescaped double quotes in values
-      .replace(/\n/g, '\\n')  // Replace newlines with \n
-      .replace(/\r/g, '')  // Remove carriage returns
-      .replace(/\t/g, '\\t')  // Replace tabs with \t
-      .replace(/\\/g, '\\\\')  // Escape backslashes
-      .replace(/\\\\/g, '\\')  // Fix double escaping
-      .replace(/\\"/g, '"')  // Fix double escaping of quotes
-      .replace(/"{/g, '{')  // Remove quotes around objects
-      .replace(/}"/g, '}');  // Remove quotes around objects
+      .replace(/^[\s\n]*\{/, '{')
+      .replace(/\}[\s\n]*$/, '}')
+      .replace(/```(?:json)?\n?/g, '')
+      .replace(/(?<!\\)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')
+      .replace(/:\s*'([^']*?)'/g, ':"$1"')
+      .replace(/([^\\])"/g, '$1\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '')
+      .replace(/\t/g, '\\t')
+      .replace(/\\/g, '\\\\')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\"/g, '"')
+      .replace(/"{/g, '{')
+      .replace(/}"/g, '}');
 
     console.log('Cleaned content:', rawContent.substring(0, 100) + '...');
 
     try {
       const summary = JSON.parse(rawContent);
 
-      // Validate the summary structure
       const requiredFields = ['structure', 'keyConcepts', 'mainIdeas', 'importantQuotes', 'relationships', 'supportingEvidence', 'fullContent'];
       const missingFields = requiredFields.filter(field => !summary[field]);
       
@@ -196,4 +192,3 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
     );
   }
 });
-
