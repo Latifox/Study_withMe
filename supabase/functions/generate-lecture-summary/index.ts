@@ -30,7 +30,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch lecture and AI config in parallel
     const [lectureResult, configResult] = await Promise.all([
       supabase.from('lectures').select('content, title').eq('id', lectureId).single(),
       supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
@@ -50,7 +49,7 @@ serve(async (req) => {
     const aiConfig = configResult.data || {
       temperature: 0.7,
       creativity_level: 0.5,
-      detail_level: 0.8, // Increased default detail level
+      detail_level: 0.8,
       content_language: null,
       custom_instructions: null
     };
@@ -58,103 +57,60 @@ serve(async (req) => {
     console.log('Using AI config:', JSON.stringify(aiConfig));
     console.log('Lecture content length:', lecture.content.length);
 
-    // Calculate depth of analysis based on detail level (increased)
-    const analysisDepth = Math.ceil(aiConfig.detail_level * 8); // 1-8 scale
-    const maxExamples = Math.ceil(aiConfig.detail_level * 6); // 1-6 examples
+    const analysisDepth = Math.ceil(aiConfig.detail_level * 8);
+    const maxExamples = Math.ceil(aiConfig.detail_level * 6);
     
     const languageStyle = aiConfig.creativity_level > 0.7 ? 'engaging and imaginative' :
                          aiConfig.creativity_level > 0.4 ? 'balanced and clear' : 'precise and academic';
 
     let systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive and detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
 
-For each section, provide extensive detail and analysis:
+Return a valid JSON object with the following properties (use double quotes for all property names and string values):
 
-1. STRUCTURE (Detailed Outline):
-   - Create a comprehensive hierarchical outline with ALL headings and subheadings
-   - Use proper markdown heading levels (# for main, ## for sub)
-   - Include brief descriptions under each major section
-   - Maintain exact numbering and structure
-
-2. KEY CONCEPTS (In-Depth Analysis):
-   - Identify and thoroughly explain ${maxExamples} essential concepts
-   - For each concept provide:
-     * Detailed definition with context
-     * Multiple real-world examples
-     * Practical applications
-     * Related theories or frameworks
-     * Common misconceptions
-   - Format as a dictionary with concept names as keys
-
-3. MAIN IDEAS (Comprehensive Analysis):
-   - Extract ${maxExamples} central themes
-   - For each main idea include:
-     * Detailed explanation with supporting evidence
-     * Historical context or background
-     * Practical implications
-     * Counter-arguments or limitations
-     * Future implications or developments
-   - Format as a dictionary with theme titles as keys
-
-4. IMPORTANT QUOTES (Critical Analysis):
-   - Select ${maxExamples} significant quotes
-   - For each quote provide:
-     * The exact quote and its context
-     * Detailed analysis of its significance
-     * Historical or theoretical background
-     * Connection to other concepts
-     * Modern-day relevance
-     * Alternative interpretations
-   - Format as a dictionary with section references as keys
-
-5. RELATIONSHIPS (Complex Connections):
-   - Analyze interconnections between concepts
-   - Include:
-     * Direct and indirect relationships
-     * Cause-effect chains
-     * Hierarchical structures
-     * Cross-disciplinary connections
-     * Practical implications of relationships
-   - Format as a dictionary with relationship types as keys
-
-6. SUPPORTING EVIDENCE (Comprehensive Data):
-   - Extract and analyze ALL:
-     * Numerical data and statistics
-     * Research findings
-     * Case studies
-     * Historical examples
-     * Expert opinions
-     * Methodological details
-   - Format as a dictionary with evidence types as keys
-
-${aiConfig.custom_instructions ? `\nADDITIONAL REQUIREMENTS:\n${aiConfig.custom_instructions}` : ''}
-
-Your goal is to create an exceptionally detailed and scholarly analysis that goes beyond surface-level summaries. Each section should provide deep insights and comprehensive understanding of the material.
-
-Return a JSON object with this structure:
 {
-  "structure": "Detailed hierarchical outline with descriptions",
+  "structure": "string",
   "keyConcepts": {
-    "[concept]": "Comprehensive explanation with examples and applications",
-    ...
+    "conceptName1": "string",
+    "conceptName2": "string"
   },
   "mainIdeas": {
-    "[idea]": "In-depth analysis with context and implications",
-    ...
+    "ideaTitle1": "string",
+    "ideaTitle2": "string"
   },
   "importantQuotes": {
-    "[section]": "Quote analysis with context and multiple interpretations",
-    ...
+    "section1": "string",
+    "section2": "string"
   },
   "relationships": {
-    "[type]": "Detailed connection analysis with implications",
-    ...
+    "type1": "string",
+    "type2": "string"
   },
   "supportingEvidence": {
-    "[type]": "Comprehensive evidence analysis",
-    ...
+    "type1": "string",
+    "type2": "string"
   },
-  "fullContent": "Complete markdown-formatted comprehensive summary"
-}`;
+  "fullContent": "string"
+}
+
+For each section:
+
+1. Structure: Create a hierarchical outline with all headings and subheadings, using markdown formatting.
+
+2. Key Concepts: Identify and explain ${maxExamples} essential concepts with definitions, examples, and applications.
+
+3. Main Ideas: Extract ${maxExamples} central themes with explanations, context, and implications.
+
+4. Important Quotes: Select ${maxExamples} significant quotes with analysis and context.
+
+5. Relationships: Analyze interconnections between concepts, including cause-effect and hierarchical structures.
+
+6. Supporting Evidence: Extract and analyze numerical data, research findings, and examples.
+
+7. Full Content: Provide a complete markdown-formatted comprehensive summary.
+
+${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}
+
+Important: Ensure all JSON property names and string values use double quotes, not single quotes.`;
 
     console.log('Sending request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -164,7 +120,7 @@ Return a JSON object with this structure:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemMessage },
           { 
@@ -191,8 +147,21 @@ Return a JSON object with this structure:
     }
 
     let rawContent = data.choices[0].message.content.trim();
-    // Clean up the response by removing JSON code block markers
-    rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    
+    // Clean up the response to ensure valid JSON
+    rawContent = rawContent
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .replace(/\n/g, ' ')
+      .replace(/\r/g, ' ')
+      .replace(/\t/g, ' ')
+      .replace(/\\/g, '\\\\')
+      .replace(/(?<!\\)"/g, '\\"')  // Escape unescaped double quotes
+      .replace(/^\s*{\s*/, '{')     // Clean up start of JSON
+      .replace(/\s*}\s*$/, '}');    // Clean up end of JSON
+
+    console.log('Cleaned content length:', rawContent.length);
+    console.log('First 100 characters:', rawContent.substring(0, 100));
 
     let summary;
     try {
@@ -201,7 +170,16 @@ Return a JSON object with this structure:
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
       console.log('Raw content that failed to parse:', rawContent);
-      throw new Error('Failed to parse AI response');
+      throw new Error(`Failed to parse AI response: ${parseError.message}`);
+    }
+
+    // Validate the summary structure
+    const requiredFields = ['structure', 'keyConcepts', 'mainIdeas', 'importantQuotes', 'relationships', 'supportingEvidence', 'fullContent'];
+    const missingFields = requiredFields.filter(field => !summary[field]);
+    
+    if (missingFields.length > 0) {
+      console.error('Missing required fields in summary:', missingFields);
+      throw new Error(`Invalid summary structure: missing fields ${missingFields.join(', ')}`);
     }
 
     return new Response(JSON.stringify({ summary }), {
