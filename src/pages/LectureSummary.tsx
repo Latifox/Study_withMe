@@ -8,29 +8,41 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
+interface Part1Response {
+  structure: string;
+  keyConcepts: Record<string, string>;
+  mainIdeas: Record<string, string>;
+}
+
+interface Part2Response {
+  importantQuotes: Record<string, string>;
+  relationships: Record<string, string>;
+  supportingEvidence: Record<string, string>;
+}
+
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
 
-  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery({
+  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery<{ content: Part1Response }>({
     queryKey: ["lecture-summary-part1", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { lectureId, part: 'part1' }
       });
       if (error) throw error;
-      return data.content;
+      return data;
     },
   });
 
-  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery({
+  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery<{ content: Part2Response }>({
     queryKey: ["lecture-summary-part2", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { lectureId, part: 'part2' }
       });
       if (error) throw error;
-      return data.content;
+      return data;
     },
   });
 
@@ -73,7 +85,7 @@ const LectureSummary = () => {
                 </div>
               ) : (
                 <div className="text-white/90">
-                  <ReactMarkdown>{part1Data?.structure || ''}</ReactMarkdown>
+                  <ReactMarkdown>{part1Data?.content?.structure || ''}</ReactMarkdown>
                 </div>
               )}
             </Card>
@@ -88,10 +100,10 @@ const LectureSummary = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(part1Data?.keyConcepts || {}).map(([concept, explanation], idx) => (
+                  {Object.entries(part1Data?.content?.keyConcepts || {}).map(([concept, explanation], idx) => (
                     <div key={idx} className="border-l-2 border-white/20 pl-4">
                       <h3 className="font-medium text-white/90">{concept}</h3>
-                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                      <p className="text-white/80 text-sm mt-1">{String(explanation)}</p>
                     </div>
                   ))}
                 </div>
@@ -108,10 +120,10 @@ const LectureSummary = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(part1Data?.mainIdeas || {}).map(([idea, explanation], idx) => (
+                  {Object.entries(part1Data?.content?.mainIdeas || {}).map(([idea, explanation], idx) => (
                     <div key={idx} className="border-l-2 border-white/20 pl-4">
                       <h3 className="font-medium text-white/90">{idea}</h3>
-                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                      <p className="text-white/80 text-sm mt-1">{String(explanation)}</p>
                     </div>
                   ))}
                 </div>
@@ -131,10 +143,10 @@ const LectureSummary = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(part2Data?.importantQuotes || {}).map(([context, quote], idx) => (
+                  {Object.entries(part2Data?.content?.importantQuotes || {}).map(([context, quote], idx) => (
                     <div key={idx} className="border-l-2 border-white/20 pl-4">
                       <h3 className="font-medium text-white/90">{context}</h3>
-                      <blockquote className="text-white/80 text-sm mt-1 italic">{quote}</blockquote>
+                      <blockquote className="text-white/80 text-sm mt-1 italic">{String(quote)}</blockquote>
                     </div>
                   ))}
                 </div>
@@ -151,10 +163,10 @@ const LectureSummary = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(part2Data?.relationships || {}).map(([connection, explanation], idx) => (
+                  {Object.entries(part2Data?.content?.relationships || {}).map(([connection, explanation], idx) => (
                     <div key={idx} className="border-l-2 border-white/20 pl-4">
                       <h3 className="font-medium text-white/90">{connection}</h3>
-                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                      <p className="text-white/80 text-sm mt-1">{String(explanation)}</p>
                     </div>
                   ))}
                 </div>
@@ -171,10 +183,10 @@ const LectureSummary = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(part2Data?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
+                  {Object.entries(part2Data?.content?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
                     <div key={idx} className="border-l-2 border-white/20 pl-4">
                       <h3 className="font-medium text-white/90">{evidence}</h3>
-                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                      <p className="text-white/80 text-sm mt-1">{String(explanation)}</p>
                     </div>
                   ))}
                 </div>
