@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,11 +42,13 @@ const StudyPlan = () => {
       if (existingPlan?.is_generated) {
         const learningSteps = ((existingPlan.learning_steps as Json) as unknown as LearningStep[]) || defaultSteps;
         const validatedSteps = learningSteps.every(isValidLearningStep) ? learningSteps : defaultSteps;
+        
+        console.log('Existing plan key_topics:', existingPlan.key_topics); // Debug log
 
         return {
           ...existingPlan,
           learning_steps: validatedSteps,
-          key_topics: existingPlan.key_topics || []
+          key_topics: Array.isArray(existingPlan.key_topics) ? existingPlan.key_topics : []
         };
       }
 
@@ -58,15 +59,19 @@ const StudyPlan = () => {
 
         if (genError) throw genError;
 
+        console.log('New plan key_topics:', newPlan.key_topics); // Debug log
+
         const learningStepsJson = defaultSteps.map(step => ({
           ...step,
           benefits: step.benefits
         })) as unknown as Json;
 
+        const keyTopicsArray = Array.isArray(newPlan.key_topics) ? newPlan.key_topics : [];
+
         const planToInsert = {
           lecture_id: Number(lectureId),
-          title: newPlan.title,
-          key_topics: newPlan.key_topics || [],
+          title: newPlan.title || 'Study Plan',
+          key_topics: keyTopicsArray,
           learning_steps: learningStepsJson,
           is_generated: true
         };
@@ -94,6 +99,7 @@ const StudyPlan = () => {
         return {
           ...insertedPlan,
           learning_steps: defaultSteps,
+          key_topics: keyTopicsArray
         };
 
       } catch (error) {
@@ -157,6 +163,8 @@ const StudyPlan = () => {
     return <StudyPlanLoading />;
   }
 
+  console.log('Rendered study plan key_topics:', studyPlan?.key_topics); // Debug log
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
@@ -200,9 +208,11 @@ const StudyPlan = () => {
             >
               <motion.div variants={item}>
                 <h1 className="text-4xl font-bold text-white mb-4">
-                  {studyPlan.title}
+                  {studyPlan.title || 'Study Plan'}
                 </h1>
-                <KeyTopicsCard topics={studyPlan.key_topics || []} />
+                {Array.isArray(studyPlan.key_topics) && studyPlan.key_topics.length > 0 && (
+                  <KeyTopicsCard topics={studyPlan.key_topics} />
+                )}
               </motion.div>
 
               <div className="space-y-6">
