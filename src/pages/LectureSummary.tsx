@@ -11,12 +11,6 @@ import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 type Section = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
 
-// Define types for our processed content
-type ProcessedItem = {
-  title: string;
-  content: string;
-};
-
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
@@ -30,7 +24,6 @@ const LectureSummary = () => {
         body: { lectureId, sections: ['structure', 'keyConcepts'] }
       });
       if (error) throw error;
-      console.log('Group 1 Data:', data.content);
       return data.content;
     },
   });
@@ -43,7 +36,6 @@ const LectureSummary = () => {
         body: { lectureId, sections: ['mainIdeas', 'importantQuotes'] }
       });
       if (error) throw error;
-      console.log('Group 2 Data:', data.content);
       return data.content;
     },
   });
@@ -56,41 +48,20 @@ const LectureSummary = () => {
         body: { lectureId, sections: ['relationships', 'supportingEvidence'] }
       });
       if (error) throw error;
-      console.log('Group 3 Data:', data.content);
       return data.content;
     },
   });
 
   const isLoading = isLoadingGroup1 || isLoadingGroup2 || isLoadingGroup3;
 
-  // Parse and format the data with proper typing
-  const processContent = (content: any): ProcessedItem[] | string => {
-    if (typeof content === 'string') {
-      return content;
-    }
-    if (Array.isArray(content)) {
-      return content.map((item, index) => ({
-        title: `Point ${index + 1}`,
-        content: item
-      }));
-    }
-    if (typeof content === 'object' && content !== null) {
-      return Object.entries(content).map(([key, value]) => ({
-        title: key,
-        content: String(value)
-      }));
-    }
-    return [];
-  };
-
   // Combine all data for easy access
   const summaryData = {
     structure: group1Data?.structure || '',
-    keyConcepts: group1Data?.keyConcepts || {},
-    mainIdeas: group2Data?.mainIdeas || {},
-    importantQuotes: group2Data?.importantQuotes || {},
-    relationships: group3Data?.relationships || {},
-    supportingEvidence: group3Data?.supportingEvidence || {}
+    keyConcepts: group1Data?.keyConcepts || '',
+    mainIdeas: group2Data?.mainIdeas || '',
+    importantQuotes: group2Data?.importantQuotes || '',
+    relationships: group3Data?.relationships || '',
+    supportingEvidence: group3Data?.supportingEvidence || ''
   };
 
   if (isLoading) {
@@ -108,58 +79,6 @@ const LectureSummary = () => {
       </BackgroundGradient>
     );
   }
-
-  const renderContent = () => {
-    const content = processContent(summaryData[selectedSection]);
-
-    switch (selectedSection) {
-      case 'structure':
-        return (
-          <div className="prose prose-sm max-w-none">
-            <ReactMarkdown>{summaryData.structure}</ReactMarkdown>
-          </div>
-        );
-      case 'keyConcepts':
-      case 'mainIdeas':
-        return (
-          <div className="space-y-4">
-            {typeof content !== 'string' && content.map((item, idx) => (
-              <div key={idx} className="border-l-2 border-primary pl-4">
-                <h3 className="font-semibold text-lg text-black">{item.title}</h3>
-                <p className="text-gray-700 mt-1">{item.content}</p>
-              </div>
-            ))}
-          </div>
-        );
-      case 'importantQuotes':
-        return (
-          <div className="space-y-6">
-            {typeof content !== 'string' && content.map((item, idx) => (
-              <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
-                <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{item.title}</h3>
-                <blockquote className="text-gray-700 mt-1 italic pl-4 border-l-4 border-primary/30">
-                  {item.content}
-                </blockquote>
-              </div>
-            ))}
-          </div>
-        );
-      case 'relationships':
-      case 'supportingEvidence':
-        return (
-          <div className="space-y-6">
-            {typeof content !== 'string' && content.map((item, idx) => (
-              <div key={idx} className="bg-white/50 rounded-lg p-4 shadow-sm">
-                <h3 className="font-bold text-lg text-black mb-2 pb-2 border-b border-primary/20">{item.title}</h3>
-                <p className="text-gray-700 mt-1">{item.content}</p>
-              </div>
-            ))}
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <BackgroundGradient>
@@ -208,8 +127,10 @@ const LectureSummary = () => {
           {/* Right Column - Content Display */}
           <div className="md:col-span-2">
             <Card className="p-6 bg-white/80 backdrop-blur-sm">
-              <div className="text-black">
-                {renderContent()}
+              <div className="prose prose-sm max-w-none text-black">
+                <ReactMarkdown>
+                  {summaryData[selectedSection]}
+                </ReactMarkdown>
               </div>
             </Card>
           </div>
