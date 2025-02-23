@@ -51,41 +51,49 @@ serve(async (req) => {
     const customInstructions = aiConfig?.custom_instructions ?? '';
     const targetLanguage = aiConfig?.content_language;
 
-    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content with clear section headings.
-    Format your response using markdown with ## for section headers.
-    Creativity Level: ${creativityLevel} - adjust your analysis style accordingly.
-    Detail Level: ${detailLevel} - adjust the depth of your analysis.
-    ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
-    ${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}`;
+    let systemPrompt = `You are an educational content analyzer. Generate a comprehensive summary of the lecture content.
+Format your responses using markdown syntax with clear section headers.
+Adjust your analysis based on:
+- Creativity Level: ${creativityLevel} (higher means more creative explanations)
+- Detail Level: ${detailLevel} (higher means more detailed analysis)
+${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}
+${targetLanguage ? `Please provide the response in ${targetLanguage}.` : ''}
 
-    let prompt;
+Important: Always maintain proper markdown formatting for better readability.`;
+
+    let userPrompt;
     if (part === 'part1') {
-      prompt = `Analyze the following lecture content and provide a markdown-formatted analysis with exactly these sections:
+      userPrompt = `Analyze this lecture content and provide exactly these three sections:
 
 ## Structure
-[Outline the lecture's organization and flow]
+A clear outline of how the lecture content is organized.
 
 ## Key Concepts
-[List and briefly explain the main concepts]
+The main terms, theories, or frameworks introduced.
 
 ## Main Ideas
-[Summarize the central arguments or points]
+The central arguments or key points presented.
 
-Lecture Title: ${lectureData.title}
+Lecture: "${lectureData.title}"
 Content: ${lectureData.content}`;
     } else if (part === 'part2') {
-      prompt = `Analyze the following lecture content and provide a markdown-formatted analysis with exactly these sections:
+      userPrompt = `Analyze this lecture content and provide exactly these three sections:
 
 ## Important Quotes
-[Highlight significant quotations or statements]
+The most significant statements or quotations.
 
 ## Relationships
-[Explain connections between concepts]
+Key connections between concepts.
 
 ## Supporting Evidence
-[List examples, data, or evidence used]
+Examples, data, or evidence used to support main points.
 
-Lecture Title: ${lectureData.title}
+Lecture: "${lectureData.title}"
+Content: ${lectureData.content}`;
+    } else if (part === 'full') {
+      userPrompt = `Provide a comprehensive summary of the entire lecture content, integrating all key points and maintaining clear organization.
+
+Lecture: "${lectureData.title}"
 Content: ${lectureData.content}`;
     } else {
       throw new Error('Invalid part specified');
@@ -101,7 +109,7 @@ Content: ${lectureData.content}`;
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
+          { role: 'user', content: userPrompt }
         ],
         temperature: temperature,
       }),
@@ -118,17 +126,17 @@ Content: ${lectureData.content}`;
       throw new Error('No content received from OpenAI');
     }
 
-    console.log('Received content from OpenAI:', content);
+    console.log('Received content from OpenAI, processing response...');
 
     // Helper function to extract section content
     const extractSection = (text: string, sectionName: string): string => {
-      const sections = text.split('##').filter(Boolean);
-      const section = sections.find(s => s.trim().toLowerCase().startsWith(sectionName.toLowerCase()));
-      if (!section) {
+      const regex = new RegExp(`##\\s*${sectionName}([^#]*)(##|$)`, 'i');
+      const match = text.match(regex);
+      if (!match) {
         console.warn(`Section ${sectionName} not found`);
         return '';
       }
-      return section.replace(new RegExp(`^${sectionName}`, 'i'), '').trim();
+      return match[1].trim();
     };
 
     let result;
@@ -138,15 +146,37 @@ Content: ${lectureData.content}`;
         keyConcepts: extractSection(content, 'Key Concepts'),
         mainIdeas: extractSection(content, 'Main Ideas')
       };
-    } else {
+    } else if (part === 'part2') {
       result = {
         importantQuotes: extractSection(content, 'Important Quotes'),
         relationships: extractSection(content, 'Relationships'),
         supportingEvidence: extractSection(content, 'Supporting Evidence')
       };
+    } else {
+      result = {
+        fullContent: content
+      };
     }
 
     console.log(`Successfully processed ${part}:`, result);
+
+    // Store the generated content in lecture_highlights
+    if (part === 'part1' || part === 'part2') {
+      const { error: upsertError } = await supabase
+        .from('lecture_highlights')
+        .upsert(
+          {
+            lecture_id: lectureId,
+            ...result
+          },
+          { onConflict: 'lecture_id' }
+        );
+
+      if (upsertError) {
+        console.error('Error storing highlights:', upsertError);
+        throw upsertError;
+      }
+    }
 
     return new Response(JSON.stringify({ content: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
