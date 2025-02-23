@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +31,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const [lectureResult, configResult] = await Promise.all([
-      supabase.from('lectures').select('content, title').eq('id', lectureId).single(),
+      supabase.from('lectures').select('content, title').eq('id', parseInt(lectureId!)).single(),
       supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
     ]);
 
@@ -106,7 +107,6 @@ Format your response as a clean JSON object with a single key: fullContent`;
         throw new Error('Invalid part specified');
     }
 
-    // Add common instructions
     systemMessage += `\n\nGuidelines:
 1. Use exactly this JSON structure
 2. Provide ${maxExamples} detailed items per section
@@ -152,19 +152,13 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
 
     let rawContent = data.choices[0].message.content.trim();
     
-    // Basic validation
-    if (!rawContent.startsWith('{') || !rawContent.endsWith('}')) {
-      console.error('Invalid JSON structure received:', rawContent);
-      throw new Error('Invalid JSON structure received from OpenAI');
-    }
-
     try {
       const parsedContent = JSON.parse(rawContent);
       return new Response(JSON.stringify({ content: parsedContent }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (parseError) {
-      console.error('Parse error:', parseError);
+      console.error('Parse error:', parseError, '\nRaw content:', rawContent);
       throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
     }
   } catch (error) {
