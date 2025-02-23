@@ -8,6 +8,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function formatTitle(title: string): string {
+  return title
+    // Replace underscores and hyphens with spaces
+    .replace(/[_-]/g, ' ')
+    // Capitalize first letter of each word
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function formatResponse(content: Record<string, any>): Record<string, any> {
+  const formattedContent: Record<string, any> = {};
+  
+  for (const [category, items] of Object.entries(content)) {
+    if (typeof items === 'object' && items !== null) {
+      const formattedItems: Record<string, string> = {};
+      for (const [key, value] of Object.entries(items)) {
+        formattedItems[formatTitle(key)] = value;
+      }
+      formattedContent[category] = formattedItems;
+    } else {
+      formattedContent[category] = items;
+    }
+  }
+  
+  return formattedContent;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -59,19 +87,19 @@ serve(async (req) => {
         break;
 
       case 'part2':
-        systemMessage = `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. The response should be in valid JSON format but maintain markdown formatting within the text content.`;
+        systemMessage = `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. Use descriptive titles for each item. The response should be in valid JSON format but maintain markdown formatting within the text content.`;
         responseFormat = `{
           "importantQuotes": {
-            "context1": "quote1",
-            "context2": "quote2"
+            "Key Definition of Energy Production": "quote1",
+            "Contrasting Production Methods": "quote2"
           },
           "relationships": {
-            "connection1": "explanation1",
-            "connection2": "explanation2"
+            "Centralized vs Distributed Production": "explanation1",
+            "Renewable vs Non-renewable Sources": "explanation2"
           },
           "supportingEvidence": {
-            "evidence1": "explanation1",
-            "evidence2": "explanation2"
+            "Historical Energy Consumption": "explanation1",
+            "Fossil Fuel Statistics": "explanation2"
           }
         }`;
         break;
@@ -100,7 +128,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `${systemMessage}\nFormat the response exactly like this: ${responseFormat}`
+            content: `${systemMessage}\nFormat the response exactly like this: ${responseFormat}. Use clear, descriptive titles that don't contain underscores or technical identifiers.`
           },
           { 
             role: 'user', 
@@ -129,7 +157,9 @@ serve(async (req) => {
     
     try {
       const parsedContent = JSON.parse(rawContent);
-      return new Response(JSON.stringify({ content: parsedContent }), {
+      // Format the response before sending it back
+      const formattedContent = formatResponse(parsedContent);
+      return new Response(JSON.stringify({ content: formattedContent }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (parseError) {
@@ -142,7 +172,9 @@ serve(async (req) => {
       
       try {
         const parsedContent = JSON.parse(cleanedContent);
-        return new Response(JSON.stringify({ content: parsedContent }), {
+        // Format the response before sending it back
+        const formattedContent = formatResponse(parsedContent);
+        return new Response(JSON.stringify({ content: formattedContent }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (secondParseError) {
@@ -157,3 +189,4 @@ serve(async (req) => {
     );
   }
 });
+
