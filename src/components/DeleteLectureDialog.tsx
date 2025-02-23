@@ -24,7 +24,40 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
     try {
       console.log('Deleting lecture:', lectureId);
       
-      // First, delete any related content
+      // Delete quiz progress
+      const { error: quizError } = await supabase
+        .from('quiz_progress')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (quizError) {
+        console.error('Error deleting quiz progress:', quizError);
+        throw quizError;
+      }
+
+      // Delete user progress
+      const { error: userProgressError } = await supabase
+        .from('user_progress')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (userProgressError) {
+        console.error('Error deleting user progress:', userProgressError);
+        throw userProgressError;
+      }
+
+      // Delete any lecture highlights first
+      const { error: highlightsError } = await supabase
+        .from('lecture_highlights')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (highlightsError) {
+        console.error('Error deleting highlights:', highlightsError);
+        throw highlightsError;
+      }
+
+      // Delete any segments content
       const { error: segmentsError } = await supabase
         .from('segments_content')
         .delete()
@@ -55,6 +88,17 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
       if (segmentInfoError) {
         console.error('Error deleting segment info:', segmentInfoError);
         throw segmentInfoError;
+      }
+
+      // Delete study plans
+      const { error: studyPlansError } = await supabase
+        .from('study_plans')
+        .delete()
+        .eq('lecture_id', lectureId);
+
+      if (studyPlansError) {
+        console.error('Error deleting study plans:', studyPlansError);
+        throw studyPlansError;
       }
 
       // Finally delete the lecture
