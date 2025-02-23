@@ -28,44 +28,40 @@ const LectureSummaryFull = () => {
     },
   });
 
-  const { data: summary, isLoading, error } = useQuery({
-    queryKey: ["lecture-summary", lectureId],
+  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery({
+    queryKey: ["lecture-summary-part1", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId }
+        body: { lectureId, part: 'part1' }
       });
-
-      if (error) {
-        // Check if it's a rate limit error
-        if (error.status === 429) {
-          throw new Error("Rate limit reached. Please wait a moment and try again.");
-        }
-        // Check if it's an OpenAI API error
-        if (error.status === 500 && error.message.includes("OpenAI API error")) {
-          throw new Error("Error generating summary. Please try again in a few moments.");
-        }
-        throw error;
-      }
-      return data.summary;
+      if (error) throw error;
+      return data.content;
     },
-    retry: (failureCount, error: any) => {
-      // Don't retry on rate limit errors or OpenAI errors
-      if (error?.message?.includes("Rate limit") || error?.message?.includes("OpenAI API error")) {
-        return false;
-      }
-      // Retry other errors up to 3 times
-      return failureCount < 3;
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast({
-          title: "Error generating summary",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    }
   });
+
+  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery({
+    queryKey: ["lecture-summary-part2", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId, part: 'part2' }
+      });
+      if (error) throw error;
+      return data.content;
+    },
+  });
+
+  const { data: fullContent, isLoading: isLoadingFull } = useQuery({
+    queryKey: ["lecture-summary-full", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId, part: 'full' }
+      });
+      if (error) throw error;
+      return data.content;
+    },
+  });
+
+  const isLoading = isLoadingPart1 || isLoadingPart2 || isLoadingFull;
 
   if (isLoading) {
     return (
@@ -81,31 +77,13 @@ const LectureSummaryFull = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="flex flex-col justify-center items-center h-[60vh] space-y-4">
-          <p className="text-destructive">{error.message}</p>
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary`)}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Summary
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <BackgroundGradient>
       <div className="container mx-auto p-4 space-y-6">
         <div className="flex justify-between items-center">
           <Button
             variant="outline"
-            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/summary`)}
+            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights`)}
             className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -119,7 +97,59 @@ const LectureSummaryFull = () => {
               <BookOpen className="w-6 h-6" />
               {lecture?.title} - Full Summary
             </h1>
-            <ReactMarkdown>{summary?.fullContent || ''}</ReactMarkdown>
+            
+            {/* Structure Section */}
+            <h2 className="text-xl font-semibold mt-8">Structure</h2>
+            <ReactMarkdown>{part1Data?.structure || ''}</ReactMarkdown>
+
+            {/* Key Concepts Section */}
+            <h2 className="text-xl font-semibold mt-8">Key Concepts</h2>
+            {Object.entries(part1Data?.keyConcepts || {}).map(([concept, explanation], idx) => (
+              <div key={idx} className="mb-4">
+                <h3 className="font-medium text-lg">{concept}</h3>
+                <p>{explanation}</p>
+              </div>
+            ))}
+
+            {/* Main Ideas Section */}
+            <h2 className="text-xl font-semibold mt-8">Main Ideas</h2>
+            {Object.entries(part1Data?.mainIdeas || {}).map(([idea, explanation], idx) => (
+              <div key={idx} className="mb-4">
+                <h3 className="font-medium text-lg">{idea}</h3>
+                <p>{explanation}</p>
+              </div>
+            ))}
+
+            {/* Important Quotes Section */}
+            <h2 className="text-xl font-semibold mt-8">Important Quotes</h2>
+            {Object.entries(part2Data?.importantQuotes || {}).map(([context, quote], idx) => (
+              <div key={idx} className="mb-4">
+                <h3 className="font-medium text-lg">{context}</h3>
+                <blockquote className="border-l-4 border-gray-200 pl-4 italic">{quote}</blockquote>
+              </div>
+            ))}
+
+            {/* Relationships Section */}
+            <h2 className="text-xl font-semibold mt-8">Relationships</h2>
+            {Object.entries(part2Data?.relationships || {}).map(([connection, explanation], idx) => (
+              <div key={idx} className="mb-4">
+                <h3 className="font-medium text-lg">{connection}</h3>
+                <p>{explanation}</p>
+              </div>
+            ))}
+
+            {/* Supporting Evidence Section */}
+            <h2 className="text-xl font-semibold mt-8">Supporting Evidence</h2>
+            {Object.entries(part2Data?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
+              <div key={idx} className="mb-4">
+                <h3 className="font-medium text-lg">{evidence}</h3>
+                <p>{explanation}</p>
+              </div>
+            ))}
+
+            {/* Full Content Section */}
+            <h2 className="text-xl font-semibold mt-8">Comprehensive Summary</h2>
+            <ReactMarkdown>{fullContent?.fullContent || ''}</ReactMarkdown>
           </CardContent>
         </Card>
       </div>

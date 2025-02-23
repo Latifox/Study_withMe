@@ -1,230 +1,184 @@
 
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  BookOpen, 
-  ExternalLink, 
-  LayoutTemplate,
-  Brain,
-  Lightbulb,
-  Quote,
-  Network,
-  ClipboardList,
-} from "lucide-react";
-import ReactMarkdown from 'react-markdown';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import ReactMarkdown from "react-markdown";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
-import { cn } from "@/lib/utils";
-import HighlightsLoading from "@/components/HighlightsLoading";
-
-interface Section {
-  icon: React.ElementType;
-  title: string;
-  content: string;
-  key: string;
-}
-
-const sections: Section[] = [
-  { icon: LayoutTemplate, title: "Structure", content: "", key: "structure" },
-  { icon: Brain, title: "Key Concepts", content: "", key: "keyConcepts" },
-  { icon: Lightbulb, title: "Main Ideas", content: "", key: "mainIdeas" },
-  { icon: Quote, title: "Important Quotes", content: "", key: "importantQuotes" },
-  { icon: Network, title: "Relationships", content: "", key: "relationships" },
-  { icon: ClipboardList, title: "Supporting Evidence", content: "", key: "supportingEvidence" }
-];
-
-const formatContent = (content: any, key: string): string => {
-  if (!content) return '';
-  
-  if (typeof content === 'object' && !Array.isArray(content)) {
-    return Object.entries(content)
-      .map(([title, details]) => {
-        switch (key) {
-          case 'keyConcepts':
-            return `### ${title}\n\n${details}`;
-          case 'mainIdeas':
-            return `### ${title}\n\n${details}`;
-          case 'importantQuotes':
-            return `### Quote from ${title}\n\n${details}`;
-          case 'relationships':
-            return `### ${title}\n\n${details}`;
-          case 'supportingEvidence':
-            return `### ${title}\n\n${details}`;
-          default:
-            return `**${title}**: ${details}`;
-        }
-      })
-      .join('\n\n');
-  }
-  
-  return content.toString();
-};
 
 const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const [selectedSection, setSelectedSection] = useState<string>("structure");
 
-  const { data: lecture, isLoading: lectureLoading } = useQuery({
-    queryKey: ["lecture", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lectures")
-        .select("*, courses(*)")
-        .eq("id", parseInt(lectureId!))
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: summary, isLoading: summaryLoading, error } = useQuery({
-    queryKey: ["lecture-summary", lectureId],
+  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery({
+    queryKey: ["lecture-summary-part1", lectureId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId }
+        body: { lectureId, part: 'part1' }
       });
-
-      if (error) {
-        if (error.status === 429) {
-          throw new Error("Rate limit reached. Please wait a moment and try again.");
-        }
-        if (error.status === 500 && error.message.includes("OpenAI API error")) {
-          throw new Error("Error generating summary. Please try again in a few moments.");
-        }
-        throw error;
-      }
-      return data.summary;
+      if (error) throw error;
+      return data.content;
     },
-    retry: (failureCount, error: any) => {
-      if (error?.message?.includes("Rate limit") || error?.message?.includes("OpenAI API error")) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast({
-          title: "Error generating summary",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    }
   });
 
-  const isLoading = lectureLoading || summaryLoading;
+  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery({
+    queryKey: ["lecture-summary-part2", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId, part: 'part2' }
+      });
+      if (error) throw error;
+      return data.content;
+    },
+  });
 
-  if (isLoading) {
-    return <HighlightsLoading />;
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="text-xl font-semibold text-red-600">
-            Error generating summary
-          </div>
-          <p className="text-gray-600">{error.message}</p>
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Course
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const sectionsWithContent = sections.map(section => ({
-    ...section,
-    content: formatContent(summary?.[section.key], section.key) || ''
-  }));
-
-  const selectedSectionContent = sectionsWithContent.find(s => s.key === selectedSection);
+  const isLoading = isLoadingPart1 || isLoadingPart2;
 
   return (
     <BackgroundGradient>
-      <div className="container mx-auto p-4 space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="container mx-auto p-4">
+        <div className="flex justify-between items-center mb-6">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
+            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
           </Button>
-          <Button
+          <Button 
             onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
-            className="gap-2"
+            className="gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold border-2 border-white/30"
           >
-            <ExternalLink className="w-4 h-4" />
             Get Full Summary
+            <ExternalLink className="w-4 h-4" />
           </Button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Left Column - Section List */}
-          <div className="w-full md:w-1/3 space-y-4">
-            <Card className="bg-white/20 backdrop-blur-sm border border-white/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-                    <BookOpen className="w-6 h-6 text-black" />
-                  </div>
-                  <h2 className="text-xl font-bold text-black">
-                    {lecture?.title} - Highlights
-                  </h2>
-                </CardTitle>
-              </CardHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column */}
+          <div className="space-y-6">
+            {/* Structure */}
+            <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-white">
+                <BookOpen className="w-5 h-5" />
+                Structure
+              </h2>
+              {isLoading ? (
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/20 rounded w-1/2"></div>
+                </div>
+              ) : (
+                <div className="text-white/90">
+                  <ReactMarkdown>{part1Data?.structure || ''}</ReactMarkdown>
+                </div>
+              )}
             </Card>
 
-            {sectionsWithContent.map((section) => (
-              <Card
-                key={section.key}
-                className={cn(
-                  "bg-white/20 backdrop-blur-sm border border-white/30 cursor-pointer transition-all duration-200",
-                  selectedSection === section.key ? "ring-2 ring-purple-500" : "hover:bg-white/30"
-                )}
-                onClick={() => setSelectedSection(section.key)}
-              >
-                <div className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm">
-                      <section.icon className="w-5 h-5 text-black" />
-                    </div>
-                    <h3 className="text-lg font-bold text-black">
-                      {section.title}
-                    </h3>
-                  </div>
+            {/* Key Concepts */}
+            <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20">
+              <h2 className="text-xl font-semibold mb-4 text-white">Key Concepts</h2>
+              {isLoading ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/20 rounded w-1/2"></div>
                 </div>
-              </Card>
-            ))}
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(part1Data?.keyConcepts || {}).map(([concept, explanation], idx) => (
+                    <div key={idx} className="border-l-2 border-white/20 pl-4">
+                      <h3 className="font-medium text-white/90">{concept}</h3>
+                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Main Ideas */}
+            <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20">
+              <h2 className="text-xl font-semibold mb-4 text-white">Main Ideas</h2>
+              {isLoading ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/20 rounded w-1/2"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(part1Data?.mainIdeas || {}).map(([idea, explanation], idx) => (
+                    <div key={idx} className="border-l-2 border-white/20 pl-4">
+                      <h3 className="font-medium text-white/90">{idea}</h3>
+                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
 
-          {/* Right Column - Content Display */}
-          <div className="w-full md:w-2/3">
-            <Card className="bg-white/20 backdrop-blur-sm border border-white/30">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-black">
-                  {selectedSectionContent?.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="prose prose-sm max-w-none prose-invert prose-p:text-gray-800 prose-strong:text-blue-700 prose-headings:text-blue-800">
-                <ReactMarkdown>{selectedSectionContent?.content || ''}</ReactMarkdown>
-              </CardContent>
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Important Quotes */}
+            <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20">
+              <h2 className="text-xl font-semibold mb-4 text-white">Important Quotes</h2>
+              {isLoading ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/20 rounded w-1/2"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(part2Data?.importantQuotes || {}).map(([context, quote], idx) => (
+                    <div key={idx} className="border-l-2 border-white/20 pl-4">
+                      <h3 className="font-medium text-white/90">{context}</h3>
+                      <blockquote className="text-white/80 text-sm mt-1 italic">{quote}</blockquote>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Relationships */}
+            <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20">
+              <h2 className="text-xl font-semibold mb-4 text-white">Relationships</h2>
+              {isLoading ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/20 rounded w-1/2"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(part2Data?.relationships || {}).map(([connection, explanation], idx) => (
+                    <div key={idx} className="border-l-2 border-white/20 pl-4">
+                      <h3 className="font-medium text-white/90">{connection}</h3>
+                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Supporting Evidence */}
+            <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20">
+              <h2 className="text-xl font-semibold mb-4 text-white">Supporting Evidence</h2>
+              {isLoading ? (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/20 rounded w-1/2"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(part2Data?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
+                    <div key={idx} className="border-l-2 border-white/20 pl-4">
+                      <h3 className="font-medium text-white/90">{evidence}</h3>
+                      <p className="text-white/80 text-sm mt-1">{explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
         </div>
