@@ -1,89 +1,24 @@
 
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, MessageSquare, Activity, Brain, Network, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import StudyPlanLoading from "@/components/story/StudyPlanLoading";
 import { Json } from "@/integrations/supabase/types";
-
-interface LearningStep {
-  step: number;
-  title: string;
-  description: string;
-  action: string;
-  timeEstimate: string;
-  benefits: string[];
-}
-
-interface StudyPlan {
-  id: number;
-  lecture_id: number;
-  title: string;
-  key_topics: string[];
-  learning_steps: LearningStep[];
-  is_generated: boolean;
-}
+import { StudyPlan as StudyPlanType, LearningStep } from "@/types/study-plan";
+import KeyTopicsCard from "@/components/study/KeyTopicsCard";
+import LearningStepCard from "@/components/study/LearningStepCard";
+import { defaultSteps } from "@/constants/defaultLearningSteps";
+import { isValidLearningStep } from "@/utils/studyPlanUtils";
 
 const StudyPlan = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const defaultSteps: LearningStep[] = [
-    {
-      step: 1,
-      title: "Get the Big Picture",
-      description: "Start with a comprehensive overview of the lecture material",
-      action: "summary",
-      timeEstimate: "5-10 minutes",
-      benefits: ["Quick understanding", "Main points highlighted", "Visual learning"]
-    },
-    {
-      step: 2,
-      title: "Interactive Story Mode",
-      description: "Experience the content through an engaging, interactive story",
-      action: "story",
-      timeEstimate: "15-20 minutes",
-      benefits: ["Immersive learning", "Better retention", "Fun and engaging"]
-    },
-    {
-      step: 3,
-      title: "Interactive Learning Session",
-      description: "Engage in a dynamic conversation about the lecture content",
-      action: "chat",
-      timeEstimate: "10-15 minutes",
-      benefits: ["Personalized explanations", "Clear doubts", "Deep understanding"]
-    },
-    {
-      step: 4,
-      title: "Quick Review",
-      description: "Test your knowledge with flashcards",
-      action: "flashcards",
-      timeEstimate: "5-10 minutes",
-      benefits: ["Active recall", "Spaced repetition", "Memory reinforcement"]
-    },
-    {
-      step: 5,
-      title: "Knowledge Check",
-      description: "Assess your understanding with a comprehensive quiz",
-      action: "quiz",
-      timeEstimate: "10-15 minutes",
-      benefits: ["Self-assessment", "Identify gaps", "Confidence building"]
-    },
-    {
-      step: 6,
-      title: "Explore Further",
-      description: "Access additional resources and related materials",
-      action: "resources",
-      timeEstimate: "5-10 minutes",
-      benefits: ["Deeper insights", "Extended learning", "Different perspectives"]
-    }
-  ];
 
   const { data: studyPlan, isLoading, error } = useQuery({
     queryKey: ['study-plan', lectureId],
@@ -106,22 +41,7 @@ const StudyPlan = () => {
       }
 
       if (existingPlan?.is_generated) {
-        // Safely convert the stored learning_steps to our LearningStep type
         const learningSteps = ((existingPlan.learning_steps as Json) as unknown as LearningStep[]) || defaultSteps;
-        
-        // Validate the structure of each learning step
-        const isValidLearningStep = (step: any): step is LearningStep => {
-          return typeof step === 'object' &&
-                 typeof step.step === 'number' &&
-                 typeof step.title === 'string' &&
-                 typeof step.description === 'string' &&
-                 typeof step.action === 'string' &&
-                 typeof step.timeEstimate === 'string' &&
-                 Array.isArray(step.benefits) &&
-                 step.benefits.every(b => typeof b === 'string');
-        };
-
-        // If any step is invalid, use defaultSteps instead
         const validatedSteps = learningSteps.every(isValidLearningStep) ? learningSteps : defaultSteps;
 
         return {
@@ -131,7 +51,7 @@ const StudyPlan = () => {
         };
       }
 
-      const { data: newPlan, error: genError } = await supabase.functions.invoke<StudyPlan>("generate-mindmap", {
+      const { data: newPlan, error: genError } = await supabase.functions.invoke<StudyPlanType>("generate-mindmap", {
         body: { lectureId: Number(lectureId) },
       });
 
@@ -194,48 +114,6 @@ const StudyPlan = () => {
     },
   });
 
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'summary':
-        return <FileText className="w-6 h-6" />;
-      case 'story':
-        return <BookOpen className="w-6 h-6" />;
-      case 'chat':
-        return <MessageSquare className="w-6 h-6" />;
-      case 'flashcards':
-        return <Activity className="w-6 h-6" />;
-      case 'quiz':
-        return <Brain className="w-6 h-6" />;
-      case 'resources':
-        return <Network className="w-6 h-6" />;
-      default:
-        return null;
-    }
-  };
-
-  const handleActionClick = (action: string) => {
-    switch (action) {
-      case 'summary':
-        navigate(`/course/${courseId}/lecture/${lectureId}/highlights`);
-        break;
-      case 'story':
-        navigate(`/course/${courseId}/lecture/${lectureId}/story`);
-        break;
-      case 'chat':
-        navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
-        break;
-      case 'flashcards':
-        navigate(`/course/${courseId}/lecture/${lectureId}/flashcards`);
-        break;
-      case 'quiz':
-        navigate(`/course/${courseId}/lecture/${lectureId}/take-quiz`);
-        break;
-      case 'resources':
-        navigate(`/course/${courseId}/lecture/${lectureId}/resources`);
-        break;
-    }
-  };
-
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -265,10 +143,10 @@ const StudyPlan = () => {
             {error.message || "Failed to load the study plan. Please try again."}
           </p>
           <Button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['study-plan', lectureId] })}
+            onClick={() => navigate(`/course/${courseId}`)}
             className="bg-white/20 hover:bg-white/30 text-white"
           >
-            Try Again
+            Return to Course
           </Button>
         </Card>
       </div>
@@ -313,7 +191,7 @@ const StudyPlan = () => {
             </Button>
           </div>
 
-          {studyPlan ? (
+          {studyPlan && (
             <motion.div
               variants={container}
               initial="hidden"
@@ -324,21 +202,7 @@ const StudyPlan = () => {
                 <h1 className="text-4xl font-bold text-white mb-4">
                   {studyPlan.title}
                 </h1>
-                <Card className="group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
-                  <div className="p-6">
-                    <h2 className="text-xl font-semibold mb-3 text-white">Key Topics</h2>
-                    <div className="flex flex-wrap gap-2">
-                      {studyPlan.key_topics?.map((topic, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-white/10 text-white/90 rounded-full text-sm backdrop-blur-xl border border-white/20"
-                        >
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
+                <KeyTopicsCard topics={studyPlan.key_topics} />
               </motion.div>
 
               <div className="space-y-6">
@@ -351,49 +215,15 @@ const StudyPlan = () => {
                     {index !== studyPlan.learningSteps.length - 1 && (
                       <div className="absolute left-8 top-[4.5rem] bottom-0 w-0.5 bg-white/20" />
                     )}
-                    
-                    <Card className="group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] bg-white/10 backdrop-blur-md border-white/20">
-                      <div className="p-6">
-                        <div className="flex items-start gap-6">
-                          <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
-                            {getActionIcon(step.action)}
-                          </div>
-                          <div className="flex-grow">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                              <span className="text-sm text-white/60">{step.timeEstimate}</span>
-                            </div>
-                            <p className="text-white/80 mb-4">{step.description}</p>
-                            <div className="space-y-3">
-                              <div className="flex flex-wrap gap-2">
-                                {step.benefits.map((benefit, i) => (
-                                  <span
-                                    key={i}
-                                    className="text-sm text-white/60 bg-white/5 px-2 py-1 rounded border border-white/10"
-                                  >
-                                    {benefit}
-                                  </span>
-                                ))}
-                              </div>
-                              <Button
-                                onClick={() => handleActionClick(step.action)}
-                                className="w-full sm:w-auto bg-white/20 hover:bg-white/30 text-white font-semibold border-2 border-white/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] shadow-[0_0_15px_rgba(255,255,255,0.2)] px-6 py-2"
-                              >
-                                Start This Step
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
+                    <LearningStepCard
+                      step={step}
+                      courseId={courseId || ""}
+                      lectureId={lectureId || ""}
+                    />
                   </motion.div>
                 ))}
               </div>
             </motion.div>
-          ) : (
-            <div className="text-center py-8 text-red-400">
-              Failed to generate learning journey. Please try again.
-            </div>
           )}
         </div>
       </div>
@@ -402,4 +232,3 @@ const StudyPlan = () => {
 };
 
 export default StudyPlan;
-
