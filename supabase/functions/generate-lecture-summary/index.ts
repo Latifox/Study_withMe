@@ -42,6 +42,29 @@ function formatResponse(content: Record<string, any>): Record<string, any> {
   }
 }
 
+async function getAIConfig(supabase: any, lectureId: number) {
+  console.log('Fetching AI config for lecture:', lectureId);
+  const { data, error } = await supabase
+    .from('lecture_ai_configs')
+    .select('*')
+    .eq('lecture_id', lectureId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching AI config:', error);
+    return null;
+  }
+
+  // If no config is found, return default values
+  return data || {
+    temperature: 0.7,
+    creativity_level: 0.5,
+    detail_level: 0.6,
+    content_language: 'English',
+    custom_instructions: ''
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -68,6 +91,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch AI configuration
+    const aiConfig = await getAIConfig(supabase, lectureId);
+    console.log('Using AI config:', aiConfig);
+
     const { data: lecture, error: lectureError } = await supabase
       .from('lectures')
       .select('content, title')
@@ -83,11 +110,23 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    const systemMessages = {
+    // Enhance system messages with AI configuration
+    const baseSystemMessage = {
       part1: `You are an expert educational content analyzer. Create a structured response with sections for lecture structure, key concepts, and main ideas. The response should be in valid JSON format but maintain markdown formatting within the text content. Use descriptive titles without underscores or technical identifiers.`,
       part2: `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. Use descriptive titles for each item. The response should be in valid JSON format but maintain markdown formatting within the text content.`,
       full: `You are an expert educational content summarizer. Create a comprehensive summary with markdown formatting.`
     };
+
+    // Add AI configuration context to system message
+    let systemMessage = baseSystemMessage[part as keyof typeof baseSystemMessage];
+    if (aiConfig.custom_instructions) {
+      systemMessage += `\n\nCustom Instructions: ${aiConfig.custom_instructions}`;
+    }
+    
+    // Add language preference if specified
+    if (aiConfig.content_language && aiConfig.content_language !== 'English') {
+      systemMessage += `\n\nPlease provide the response in ${aiConfig.content_language}.`;
+    }
 
     const responseFormats = {
       part1: {
@@ -120,12 +159,16 @@ serve(async (req) => {
       }
     };
 
-    if (!systemMessages[part as keyof typeof systemMessages]) {
+    if (!systemMessage) {
       console.error('Invalid part specified:', part);
       throw new Error('Invalid part specified');
     }
 
-    console.log('Sending request to OpenAI...');
+    console.log('Sending request to OpenAI with configuration:', {
+      temperature: aiConfig.temperature,
+      creativity: aiConfig.creativity_level,
+      detail: aiConfig.detail_level
+    });
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -138,14 +181,16 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `${systemMessages[part as keyof typeof systemMessages]}\nFormat the response exactly like this:\n${JSON.stringify(responseFormats[part as keyof typeof responseFormats], null, 2)}`
+            content: `${systemMessage}\nFormat the response exactly like this:\n${JSON.stringify(responseFormats[part as keyof typeof responseFormats], null, 2)}`
           },
           { 
             role: 'user', 
             content: `Title: ${lecture.title}\n\nContent:\n${lecture.content}`
           }
         ],
-        temperature: 0.7,
+        temperature: aiConfig.temperature,
+        presence_penalty: aiConfig.creativity_level * 0.5, // Scale creativity to presence penalty
+        frequency_penalty: aiConfig.detail_level * 0.5,    // Scale detail level to frequency penalty
       }),
     });
 
