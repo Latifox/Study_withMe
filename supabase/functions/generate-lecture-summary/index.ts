@@ -26,12 +26,10 @@ serve(async (req) => {
     const { lectureId } = await req.json();
     console.log('Processing lecture ID:', lectureId);
     
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get lecture content and AI config
     const [lectureResult, configResult] = await Promise.all([
       supabase.from('lectures').select('content, title').eq('id', lectureId).single(),
       supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
@@ -59,44 +57,62 @@ serve(async (req) => {
     console.log('Using AI config:', JSON.stringify(aiConfig));
     console.log('Lecture content length:', lecture.content.length);
 
-    let systemMessage = `You are an educational content analyzer tasked with creating a detailed summary of the lecture content provided. Your output should use proper markdown formatting for better readability and structure.
+    // Calculate depth of analysis based on detail level
+    const analysisDepth = Math.ceil(aiConfig.detail_level * 5); // 1-5 scale
+    const maxExamples = Math.ceil(aiConfig.detail_level * 4); // 1-4 examples
+    
+    // Adjust creativity in language based on creativity level
+    const languageStyle = aiConfig.creativity_level > 0.7 ? 'engaging and imaginative' :
+                         aiConfig.creativity_level > 0.4 ? 'balanced and clear' : 'precise and academic';
+
+    let systemMessage = `You are an expert educational content analyzer tasked with creating a highly detailed summary of lecture content. Your analysis should be ${languageStyle} in tone, with a depth level of ${analysisDepth}/5.
 
 Content Language: ${aiConfig.content_language || 'Use the original content language'}
 
 Guidelines for analysis:
-- Creativity Level: ${aiConfig.creativity_level} (higher means more creative and engaging language)
-- Detail Level: ${aiConfig.detail_level} (higher means more comprehensive analysis)
-- Format lists using proper markdown bullet points (*)
-- Use markdown formatting for emphasis (**bold**)
-- Format quotes using proper markdown blockquotes (>)
-- Include section headings with markdown (#)
-- Create well-structured, hierarchical content
-${aiConfig.custom_instructions ? `\nAdditional Instructions: ${aiConfig.custom_instructions}` : ''}
+1. DEPTH OF ANALYSIS (${analysisDepth}/5):
+   - Provide ${maxExamples} detailed examples for each key concept
+   - Include specific context and implications for each main idea
+   - Analyze interconnections between concepts thoroughly
+
+2. STYLE AND TONE (Creativity Level: ${aiConfig.creativity_level}):
+   - Use ${languageStyle} language
+   - Maintain academic rigor while adjusting engagement level
+   - Create clear, ${aiConfig.creativity_level > 0.5 ? 'engaging' : 'straightforward'} explanations
+
+3. MARKDOWN FORMATTING:
+   - Use bullet points (*) for structured lists
+   - Apply **bold** for key terms and important concepts
+   - Format quotes using proper blockquotes (>)
+   - Create clear section hierarchies with headings (#)
+
+4. CUSTOM REQUIREMENTS:
+${aiConfig.custom_instructions ? aiConfig.custom_instructions : 'Follow standard academic format'}
 
 Return a JSON object with the following structure:
 {
-  "structure": "Use bullet points (*) for sections and subsections",
+  "structure": "Detailed bullet-point breakdown of lecture organization",
   "keyConcepts": {
-    "concept1": "definition with **important terms** in bold",
-    "concept2": "another definition"
+    "[concept name]": "In-depth definition with **key terms** and ${maxExamples} examples",
+    // Include at least 5 key concepts
   },
   "mainIdeas": {
-    "idea1": "explanation with **key points** emphasized",
-    "idea2": "another main idea explanation"
+    "[idea title]": "Comprehensive explanation with supporting details and implications",
+    // Include at least 4 main ideas
   },
   "importantQuotes": {
-    "quote1": "> This is how a quote should be formatted",
-    "quote2": "> Another important quote with context"
+    "[section reference]": "> Direct quote with detailed context and significance",
+    // Include at least 3 relevant quotes
   },
   "relationships": {
-    "relationship1": "Description with **key connections** highlighted",
-    "relationship2": "Another relationship explanation"
+    "[relationship type]": "Analysis of concept interconnections with specific examples",
+    // Include at least 4 relationship analyses
   },
   "supportingEvidence": {
-    "evidence1": "* Point 1\\n* Point 2\\n* Point 3",
-    "evidence2": "More supporting evidence with **emphasis**"
+    "[evidence type]": "* Detailed point\\n* Supporting details\\n* Specific examples",
+    // Include at least 3 pieces of evidence
   },
-  "fullContent": "Complete markdown-formatted summary with all sections"
+  "fullContent": "Comprehensive markdown-formatted summary integrating all sections"
 }`;
 
     console.log('Sending request to OpenAI...');
@@ -107,12 +123,12 @@ Return a JSON object with the following structure:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemMessage },
           { 
             role: 'user', 
-            content: `Title: ${lecture.title}\n\nProvide a comprehensive analysis of this lecture content using proper markdown formatting:\n\n${lecture.content}` 
+            content: `Title: ${lecture.title}\n\nProvide a comprehensive analysis of this lecture content following the specified format and detail level:\n\n${lecture.content}` 
           }
         ],
         temperature: aiConfig.temperature,
@@ -132,7 +148,6 @@ Return a JSON object with the following structure:
       throw new Error('Invalid response format from OpenAI');
     }
 
-    // Clean up the response
     let rawContent = data.choices[0].message.content.trim();
     rawContent = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
