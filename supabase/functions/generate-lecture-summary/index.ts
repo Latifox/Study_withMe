@@ -65,54 +65,45 @@ serve(async (req) => {
 
     let systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive and detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
 
-Return a valid JSON object with the following properties (use double quotes for all property names and string values):
-
+Your response must be a valid JSON object with the following structure:
 {
-  "structure": "string",
+  "structure": "string containing hierarchical outline with markdown formatting",
   "keyConcepts": {
-    "conceptName1": "string",
-    "conceptName2": "string"
+    "concept1": "detailed explanation",
+    "concept2": "detailed explanation"
   },
   "mainIdeas": {
-    "ideaTitle1": "string",
-    "ideaTitle2": "string"
+    "idea1": "explanation with context",
+    "idea2": "explanation with context"
   },
   "importantQuotes": {
-    "section1": "string",
-    "section2": "string"
+    "quote1": "analysis and context",
+    "quote2": "analysis and context"
   },
   "relationships": {
-    "type1": "string",
-    "type2": "string"
+    "relationship1": "explanation",
+    "relationship2": "explanation"
   },
   "supportingEvidence": {
-    "type1": "string",
-    "type2": "string"
+    "evidence1": "analysis",
+    "evidence2": "analysis"
   },
-  "fullContent": "string"
+  "fullContent": "complete markdown-formatted summary"
 }
 
-For each section:
+Follow these requirements:
+1. Ensure all JSON property names use double quotes
+2. Ensure all string values use double quotes, not single quotes
+3. Escape any double quotes within string values
+4. Do not include any Markdown code block syntax (```) in your response
+5. Do not include any line breaks within string values - use \\n instead
+6. Identify ${maxExamples} key items for each section
+7. Provide detailed analysis at depth level ${analysisDepth}
 
-1. Structure: Create a hierarchical outline with all headings and subheadings, using markdown formatting.
-
-2. Key Concepts: Identify and explain ${maxExamples} essential concepts with definitions, examples, and applications.
-
-3. Main Ideas: Extract ${maxExamples} central themes with explanations, context, and implications.
-
-4. Important Quotes: Select ${maxExamples} significant quotes with analysis and context.
-
-5. Relationships: Analyze interconnections between concepts, including cause-effect and hierarchical structures.
-
-6. Supporting Evidence: Extract and analyze numerical data, research findings, and examples.
-
-7. Full Content: Provide a complete markdown-formatted comprehensive summary.
-
-${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}
-
-Important: Ensure all JSON property names and string values use double quotes, not single quotes.`;
+${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}`;
 
     console.log('Sending request to OpenAI...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -148,43 +139,48 @@ Important: Ensure all JSON property names and string values use double quotes, n
 
     let rawContent = data.choices[0].message.content.trim();
     
-    // Clean up the response to ensure valid JSON
+    // Log the raw content for debugging
+    console.log('Raw content before cleanup:', rawContent.substring(0, 100) + '...');
+
+    // Clean up the response
     rawContent = rawContent
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .replace(/\n/g, ' ')
-      .replace(/\r/g, ' ')
-      .replace(/\t/g, ' ')
-      .replace(/\\/g, '\\\\')
-      .replace(/(?<!\\)"/g, '\\"')  // Escape unescaped double quotes
-      .replace(/^\s*{\s*/, '{')     // Clean up start of JSON
-      .replace(/\s*}\s*$/, '}');    // Clean up end of JSON
+      .replace(/^[\s\n]*\{/, '{')  // Remove any whitespace/newlines before opening brace
+      .replace(/\}[\s\n]*$/, '}')  // Remove any whitespace/newlines after closing brace
+      .replace(/```(?:json)?\n?/g, '')  // Remove code block syntax
+      .replace(/(?<!\\)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')  // Ensure property names are double-quoted
+      .replace(/:\s*'([^']*?)'/g, ':"$1"')  // Convert single-quoted values to double-quoted
+      .replace(/([^\\])"/g, '$1\\"')  // Escape unescaped double quotes in values
+      .replace(/\n/g, '\\n')  // Replace newlines with \n
+      .replace(/\r/g, '')  // Remove carriage returns
+      .replace(/\t/g, '\\t')  // Replace tabs with \t
+      .replace(/\\/g, '\\\\')  // Escape backslashes
+      .replace(/\\\\/g, '\\')  // Fix double escaping
+      .replace(/\\"/g, '"')  // Fix double escaping of quotes
+      .replace(/"{/g, '{')  // Remove quotes around objects
+      .replace(/}"/g, '}');  // Remove quotes around objects
 
-    console.log('Cleaned content length:', rawContent.length);
-    console.log('First 100 characters:', rawContent.substring(0, 100));
+    console.log('Cleaned content:', rawContent.substring(0, 100) + '...');
 
-    let summary;
     try {
-      summary = JSON.parse(rawContent);
-      console.log('Successfully parsed summary');
+      const summary = JSON.parse(rawContent);
+
+      // Validate the summary structure
+      const requiredFields = ['structure', 'keyConcepts', 'mainIdeas', 'importantQuotes', 'relationships', 'supportingEvidence', 'fullContent'];
+      const missingFields = requiredFields.filter(field => !summary[field]);
+      
+      if (missingFields.length > 0) {
+        console.error('Missing required fields in summary:', missingFields);
+        throw new Error(`Invalid summary structure: missing fields ${missingFields.join(', ')}`);
+      }
+
+      return new Response(JSON.stringify({ summary }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
-      console.log('Raw content that failed to parse:', rawContent);
+      console.log('Content that failed to parse:', rawContent);
       throw new Error(`Failed to parse AI response: ${parseError.message}`);
     }
-
-    // Validate the summary structure
-    const requiredFields = ['structure', 'keyConcepts', 'mainIdeas', 'importantQuotes', 'relationships', 'supportingEvidence', 'fullContent'];
-    const missingFields = requiredFields.filter(field => !summary[field]);
-    
-    if (missingFields.length > 0) {
-      console.error('Missing required fields in summary:', missingFields);
-      throw new Error(`Invalid summary structure: missing fields ${missingFields.join(', ')}`);
-    }
-
-    return new Response(JSON.stringify({ summary }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
@@ -200,3 +196,4 @@ Important: Ensure all JSON property names and string values use double quotes, n
     );
   }
 });
+
