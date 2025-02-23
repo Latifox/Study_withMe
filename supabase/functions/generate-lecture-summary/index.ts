@@ -54,51 +54,49 @@ serve(async (req) => {
       custom_instructions: null
     };
 
-    console.log('Using AI config:', JSON.stringify(aiConfig));
-    console.log('Lecture content length:', lecture.content.length);
-
     const analysisDepth = Math.ceil(aiConfig.detail_level * 8);
     const maxExamples = Math.ceil(aiConfig.detail_level * 6);
     
     const languageStyle = aiConfig.creativity_level > 0.7 ? 'engaging and imaginative' :
                          aiConfig.creativity_level > 0.4 ? 'balanced and clear' : 'precise and academic';
 
-    const systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive and detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
+    const systemMessage = `You are an expert educational content analyzer tasked with creating a comprehensive summary of lecture content. Your response must be a valid JSON object without any markdown formatting or code blocks. Format all content with proper JSON escaping.
 
-Your response must be a valid JSON object with the following structure:
+Format your response exactly like this (replace example values with actual content):
 {
-  "structure": "string containing hierarchical outline with markdown formatting",
+  "structure": "Lecture outline with main points",
   "keyConcepts": {
-    "concept1": "detailed explanation",
-    "concept2": "detailed explanation"
+    "concept1": "explanation1",
+    "concept2": "explanation2"
   },
   "mainIdeas": {
-    "idea1": "explanation with context",
-    "idea2": "explanation with context"
+    "idea1": "explanation1",
+    "idea2": "explanation2"
   },
   "importantQuotes": {
-    "quote1": "analysis and context",
-    "quote2": "analysis and context"
+    "context1": "quote and analysis1",
+    "context2": "quote and analysis2"
   },
   "relationships": {
-    "relationship1": "explanation",
-    "relationship2": "explanation"
+    "connection1": "explanation1",
+    "connection2": "explanation2"
   },
   "supportingEvidence": {
-    "evidence1": "analysis",
-    "evidence2": "analysis"
+    "point1": "evidence1",
+    "point2": "evidence2"
   },
-  "fullContent": "complete markdown-formatted summary"
+  "fullContent": "complete detailed summary"
 }
 
-Follow these requirements:
-1. Your response must be a single JSON object, not a code block
-2. Use double quotes for all JSON property names and string values
-3. Do not include any markdown formatting like \`\`\`json
-4. Escape any double quotes within string values
-5. Use \\n for line breaks in strings
-6. Identify ${maxExamples} key items for each section
-7. Provide detailed analysis at depth level ${analysisDepth}
+Guidelines:
+1. Use exactly this JSON structure
+2. Do not include any markdown code blocks or \`\`\`json
+3. Always use double quotes for property names and string values
+4. Never use single quotes
+5. Escape special characters in strings properly (use \\" for quotes, \\n for newlines)
+6. Provide ${maxExamples} items per section
+7. Use analysis depth level ${analysisDepth}
+8. Use ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style
 ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}`;
 
     console.log('Sending request to OpenAI...');
@@ -115,7 +113,7 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
           { role: 'system', content: systemMessage },
           { 
             role: 'user', 
-            content: `Title: ${lecture.title}\n\nAnalyze this lecture content following the specified format and detail level:\n\n${lecture.content}` 
+            content: `Title: ${lecture.title}\n\nGenerate a structured summary following the exact JSON format specified:\n\n${lecture.content}` 
           }
         ],
         temperature: aiConfig.temperature,
@@ -137,40 +135,24 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
     }
 
     let rawContent = data.choices[0].message.content.trim();
-    
-    // Log the raw content for debugging
-    console.log('Raw content from OpenAI:', rawContent);
+    console.log('Raw content:', rawContent);
 
-    // Remove any markdown code block formatting
-    rawContent = rawContent.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-    console.log('Content after removing code blocks:', rawContent);
-
-    // Ensure the content starts with { and ends with }
+    // Basic validation check
     if (!rawContent.startsWith('{') || !rawContent.endsWith('}')) {
-      console.error('Invalid JSON structure. Content does not start with { and end with }');
+      console.error('Content is not a valid JSON object:', rawContent);
       throw new Error('Invalid JSON structure received from OpenAI');
     }
 
-    // Clean up JSON structure
-    rawContent = rawContent
-      .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes with straight quotes
-      .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes with straight double quotes
-      .replace(/(?<!\\)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":') // Ensure property names have double quotes
-      .replace(/:\s*'([^']*?)'/g, ':"$1"') // Replace single-quoted values with double-quoted values
-      .replace(/\n/g, '\\n') // Convert newlines to \n
-      .replace(/\r/g, '') // Remove carriage returns
-      .replace(/\t/g, '\\t'); // Convert tabs to \t
-
-    console.log('Content after cleanup:', rawContent);
-
     try {
+      // First parse attempt with raw content
       const summary = JSON.parse(rawContent);
-
+      
+      // Validate required fields
       const requiredFields = ['structure', 'keyConcepts', 'mainIdeas', 'importantQuotes', 'relationships', 'supportingEvidence', 'fullContent'];
       const missingFields = requiredFields.filter(field => !summary[field]);
       
       if (missingFields.length > 0) {
-        console.error('Missing required fields in summary:', missingFields);
+        console.error('Missing required fields:', missingFields);
         throw new Error(`Invalid summary structure: missing fields ${missingFields.join(', ')}`);
       }
 
@@ -179,11 +161,29 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      console.error('Content that failed to parse:', rawContent);
-      throw new Error(`Failed to parse AI response: ${parseError.message}`);
+      console.error('First parse attempt failed:', parseError);
+      
+      // Try minimal cleanup before second attempt
+      try {
+        const cleanContent = rawContent
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/\n/g, '\\n')
+          .replace(/\r/g, '')
+          .replace(/\t/g, '\\t');
+        
+        console.log('Attempting parse with cleaned content:', cleanContent);
+        const summary = JSON.parse(cleanContent);
+        
+        return new Response(JSON.stringify({ summary }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (secondError) {
+        console.error('Second parse attempt failed:', secondError);
+        console.error('Content that failed to parse:', rawContent);
+        throw new Error(`Failed to parse AI response after cleanup: ${secondError.message}`);
+      }
     }
-
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
     return new Response(
@@ -198,4 +198,3 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
     );
   }
 });
-
