@@ -1,197 +1,163 @@
 
-import { Database } from './types';
-import { OpenAI } from "openai";
+import { createClient } from '@supabase/supabase-js';
+import { Database } from './db';
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
 export async function generateSegmentContent(
-  openai: OpenAI,
   lectureId: number,
   segmentNumber: number,
   segmentTitle: string,
   segmentDescription: string,
   lectureContent: string,
-  aiConfig?: Database['public']['Tables']['lecture_ai_configs']['Row'] | null
 ) {
-  // Get AI configuration settings or use defaults
-  const temperature = aiConfig?.temperature ?? 0.7;
-  const creativityLevel = aiConfig?.creativity_level ?? 0.5;
-  const detailLevel = aiConfig?.detail_level ?? 0.6;
-  const contentLanguage = aiConfig?.content_language;
-  const customInstructions = aiConfig?.custom_instructions;
+  console.log('Generating content for segment:', { lectureId, segmentNumber, segmentTitle });
 
-  // Enhanced system prompt for better content generation
-  const systemPrompt = `You are an expert educational content creator.
-Generate detailed educational content following these guidelines:
+  const systemPrompt = `You are a knowledgeable instructor creating educational content. Follow these guidelines strictly:
 
-Content Requirements:
-- Write between 150-350 words per theory slide
-- Use clear, concise language while maintaining depth
-- Focus on factual content without citing external sources
-- Adapt detail level based on the provided configuration (current: ${detailLevel})
-${contentLanguage ? `- Write content in ${contentLanguage}` : ''}
+1. Create theory slides between 150-350 words.
+2. Present detailed, accurate information without citing external sources.
+3. Use proper Markdown formatting:
+   - Use bullet points and numbered lists for clarity
+   - Use **bold text** for important concepts
+   - Break content into clear sections with headers
+   - Use paragraphs for better readability
+4. Make content engaging and direct.
+5. Focus on explaining concepts clearly without mentioning textbooks or studies.`;
 
-Formatting Requirements:
-- Use Markdown formatting extensively
-- Utilize bullet points and numbered lists for clear organization
-- Use **bold text** for important concepts and key terms
-- Create clear section headings with ## and ### 
-- Use tables where appropriate (using markdown syntax)
-- Break content into logical paragraphs
-- Add emphasis using *italic text* for supplementary information
+  const theoryPrompt = `Create two theory slides about "${segmentTitle}" based on this description: "${segmentDescription}".
+Context from lecture: "${lectureContent}"
 
-${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}`;
+Follow these requirements strictly:
+- Each slide should be 150-350 words
+- Use proper Markdown formatting (lists, bullet points, **bold text**)
+- Be detailed but don't cite external sources
+- Break down complex concepts into digestible points
+- Use headers to organize content
+- Focus on clear, direct explanations`;
 
-  // Enhanced prompt for theory slides
-  const theoryPrompt = `Create two comprehensive theory slides about "${segmentTitle}".
-Focus on: ${segmentDescription}
+  const quizPrompt = `Create two quiz questions about "${segmentTitle}" based on the content you just generated.
 
-Source content context: ${lectureContent}
+For Quiz 1:
+- Create a multiple-choice question with 4 options
+- Make it challenging but fair
+- Include a clear explanation for the correct answer
 
-Create well-structured content with proper markdown formatting, ensuring each slide:
-1. Has a clear introduction
-2. Uses bullet points and lists effectively
-3. Highlights key concepts in **bold**
-4. Includes practical examples where relevant
-5. Maintains flow between paragraphs
-
-Do not include phrases like "In this slide" or references to other materials.`;
-
-  // Enhanced prompt for quiz questions
-  const quizPrompt = `Based on the theory content for "${segmentTitle}", create two quiz questions:
-
-1. A multiple-choice question that tests understanding of key concepts
-2. A true/false question that challenges application of knowledge
-
-Each question must include:
-- Clear question text
-- For multiple choice: 4 plausible options
-- Correct answer
-- Detailed explanation of why the answer is correct`;
+For Quiz 2:
+- Create a true/false question
+- Make it test understanding, not just memorization
+- Include a detailed explanation for the answer`;
 
   try {
-    console.log('Generating content with temperature:', temperature);
-    console.log('Creativity level:', creativityLevel);
-    console.log('Detail level:', detailLevel);
+    console.log('Generating theory content...');
 
-    // Generate theory slides
-    const theoryResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: theoryPrompt }
-      ],
-      temperature: temperature,
+    // Call LLM to generate theory content
+    const theoryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: theoryPrompt }
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    // Generate quiz content
-    const quizResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: quizPrompt }
-      ],
-      temperature: temperature * 0.8, // Slightly lower temperature for quiz generation
+    if (!theoryResponse.ok) {
+      throw new Error(`Theory generation failed: ${theoryResponse.statusText}`);
+    }
+
+    const theoryData = await theoryResponse.json();
+    const theoryContent = theoryData.choices[0].message.content;
+    const [slide1, slide2] = theoryContent.split('\n\n---\n\n');
+
+    console.log('Generating quiz content...');
+
+    // Call LLM to generate quiz content
+    const quizResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: theoryPrompt },
+          { role: 'assistant', content: theoryContent },
+          { role: 'user', content: quizPrompt }
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    // Process theory slides (split the content into two slides)
-    const theoryContent = theoryResponse.choices[0].message.content;
-    const slides = theoryContent.split(/(?=##\s*Slide\s*2)|(?=##\s*Part\s*2)/i);
-    const [slide1, slide2] = slides.length === 2 ? slides : [theoryContent, ""];
+    if (!quizResponse.ok) {
+      throw new Error(`Quiz generation failed: ${quizResponse.statusText}`);
+    }
 
-    // Process quiz content
-    const quizContent = quizResponse.choices[0].message.content;
-    const quizParts = quizContent.split(/(?=Question 2:)|(?=2\.)/);
-    
-    // Extract multiple choice question
-    const mcQuestion = parseMultipleChoiceQuestion(quizParts[0]);
-    
-    // Extract true/false question
-    const tfQuestion = parseTrueFalseQuestion(quizParts[1]);
+    const quizData = await quizResponse.json();
+    const quizContent = quizData.choices[0].message.content;
 
-    return {
-      theory_slide_1: slide1.trim(),
-      theory_slide_2: slide2.trim(),
-      quiz_1_type: "multiple_choice",
-      quiz_1_question: mcQuestion.question,
-      quiz_1_options: mcQuestion.options,
-      quiz_1_correct_answer: mcQuestion.correctAnswer,
-      quiz_1_explanation: mcQuestion.explanation,
-      quiz_2_type: "true_false",
-      quiz_2_question: tfQuestion.question,
-      quiz_2_correct_answer: tfQuestion.correctAnswer,
-      quiz_2_explanation: tfQuestion.explanation,
-    };
+    // Extract quiz content
+    const quiz1Match = quizContent.match(/Q1:[\s\S]*?Explanation:([\s\S]*?)(?=\n\nQ2:|$)/i);
+    const quiz2Match = quizContent.match(/Q2:[\s\S]*?Explanation:([\s\S]*?)$/i);
+
+    if (!quiz1Match || !quiz2Match) {
+      throw new Error('Failed to parse quiz content');
+    }
+
+    // Process quiz 1 (multiple choice)
+    const quiz1Full = quiz1Match[0];
+    const quiz1Question = quiz1Full.match(/Q1:(.*?)(?=\nA\)|Options:)/s)?.[1]?.trim() || '';
+    const quiz1Options = [...quiz1Full.matchAll(/[A-D]\)(.*?)(?=\n[A-D]\)|\nCorrect|$)/gs)]
+      .map(match => match[1].trim());
+    const quiz1Answer = quiz1Full.match(/Correct Answer:[^A-D]*([A-D])/)?.[1] || '';
+    const quiz1Explanation = quiz1Match[1].trim();
+
+    // Process quiz 2 (true/false)
+    const quiz2Full = quiz2Match[0];
+    const quiz2Question = quiz2Full.match(/Q2:(.*?)(?=\nTrue|False|Correct)/s)?.[1]?.trim() || '';
+    const quiz2Answer = quiz2Full.match(/Correct Answer:.*?(True|False)/i)?.[1] || '';
+    const quiz2Explanation = quiz2Match[1].trim();
+
+    // Save to database
+    const { error: insertError } = await supabase
+      .from('segments_content')
+      .insert({
+        lecture_id: lectureId,
+        sequence_number: segmentNumber,
+        theory_slide_1: slide1,
+        theory_slide_2: slide2,
+        quiz_1_type: 'multiple_choice',
+        quiz_1_question: quiz1Question,
+        quiz_1_options: quiz1Options,
+        quiz_1_correct_answer: quiz1Answer,
+        quiz_1_explanation: quiz1Explanation,
+        quiz_2_type: 'true_false',
+        quiz_2_question: quiz2Question,
+        quiz_2_correct_answer: quiz2Answer,
+        quiz_2_explanation: quiz2Explanation,
+      });
+
+    if (insertError) {
+      console.error('Error inserting content:', insertError);
+      throw insertError;
+    }
+
+    console.log('Successfully generated and saved content for segment:', segmentNumber);
+    return { success: true };
+
   } catch (error) {
-    console.error('Error generating content:', error);
+    console.error('Error in generateSegmentContent:', error);
     throw error;
-  }
-}
-
-function parseMultipleChoiceQuestion(content: string) {
-  // Default structure if parsing fails
-  const defaultQuestion = {
-    question: "Question needs to be regenerated",
-    options: ["Option A", "Option B", "Option C", "Option D"],
-    correctAnswer: "Option A",
-    explanation: "Please try regenerating the content",
-  };
-
-  try {
-    // Extract question text
-    const questionMatch = content.match(/(?:Question:|1\.|Multiple choice:)\s*(.+?)(?=\s*(?:Options:|A\)|A\.))/is);
-    const question = questionMatch ? questionMatch[1].trim() : defaultQuestion.question;
-
-    // Extract options
-    const optionsMatch = content.match(/(?:A[\).]\s*(.+?)\s*(?=B[\).])|B[\).]\s*(.+?)\s*(?=C[\).])|C[\).]\s*(.+?)\s*(?=D[\).])|D[\).]\s*(.+?))\s*(?=Correct|Answer|$)/gis);
-    const options = optionsMatch 
-      ? optionsMatch.map(opt => opt.replace(/^[A-D][\).]/, '').trim())
-      : defaultQuestion.options;
-
-    // Extract correct answer and explanation
-    const answerMatch = content.match(/(?:Correct Answer:|Answer:)\s*([A-D])/i);
-    const correctAnswer = answerMatch 
-      ? options[answerMatch[1].charCodeAt(0) - 65]
-      : defaultQuestion.correctAnswer;
-
-    const explanationMatch = content.match(/(?:Explanation:|Reasoning:)\s*(.+?)(?=\s*$)/is);
-    const explanation = explanationMatch 
-      ? explanationMatch[1].trim()
-      : defaultQuestion.explanation;
-
-    return { question, options, correctAnswer, explanation };
-  } catch (error) {
-    console.error('Error parsing multiple choice question:', error);
-    return defaultQuestion;
-  }
-}
-
-function parseTrueFalseQuestion(content: string) {
-  // Default structure if parsing fails
-  const defaultQuestion = {
-    question: "Question needs to be regenerated",
-    correctAnswer: true,
-    explanation: "Please try regenerating the content",
-  };
-
-  try {
-    // Extract question text
-    const questionMatch = content.match(/(?:Question:|2\.|True\/False:)\s*(.+?)(?=\s*(?:Answer:|Correct Answer:|$))/is);
-    const question = questionMatch ? questionMatch[1].trim() : defaultQuestion.question;
-
-    // Extract correct answer
-    const answerMatch = content.match(/(?:Correct Answer:|Answer:)\s*(true|false)/i);
-    const correctAnswer = answerMatch 
-      ? answerMatch[1].toLowerCase() === 'true'
-      : defaultQuestion.correctAnswer;
-
-    // Extract explanation
-    const explanationMatch = content.match(/(?:Explanation:|Reasoning:)\s*(.+?)(?=\s*$)/is);
-    const explanation = explanationMatch 
-      ? explanationMatch[1].trim()
-      : defaultQuestion.explanation;
-
-    return { question, correctAnswer, explanation };
-  } catch (error) {
-    console.error('Error parsing true/false question:', error);
-    return defaultQuestion;
   }
 }
