@@ -84,7 +84,7 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemMessage },
           { 
@@ -103,7 +103,14 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
       throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
     }
 
-    const summary = JSON.parse(data.choices[0].message.content);
+    let summary;
+    try {
+      summary = JSON.parse(data.choices[0].message.content);
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      console.log('Raw response:', data.choices[0].message.content);
+      throw new Error('Failed to parse AI response');
+    }
 
     return new Response(JSON.stringify({ summary }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -117,3 +124,4 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
     );
   }
 });
+
