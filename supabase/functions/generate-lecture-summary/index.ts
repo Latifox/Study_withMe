@@ -92,11 +92,11 @@ Your response must be a valid JSON object with the following structure:
 }
 
 Follow these requirements:
-1. Ensure all JSON property names use double quotes
-2. Ensure all string values use double quotes, not single quotes
-3. Escape any double quotes within string values
-4. Do not include any Markdown code block syntax (\`\`\`) in your response
-5. Do not include any line breaks within string values - use \\n instead
+1. Your response must be a single JSON object, not a code block
+2. Use double quotes for all JSON property names and string values
+3. Do not include any markdown formatting like \`\`\`json
+4. Escape any double quotes within string values
+5. Use \\n for line breaks in strings
 6. Identify ${maxExamples} key items for each section
 7. Provide detailed analysis at depth level ${analysisDepth}
 ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_instructions}` : ''}`;
@@ -138,25 +138,30 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
 
     let rawContent = data.choices[0].message.content.trim();
     
-    console.log('Raw content before cleanup:', rawContent.substring(0, 100) + '...');
+    // Log the raw content for debugging
+    console.log('Raw content from OpenAI:', rawContent);
 
+    // Remove any markdown code block formatting
+    rawContent = rawContent.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+    console.log('Content after removing code blocks:', rawContent);
+
+    // Ensure the content starts with { and ends with }
+    if (!rawContent.startsWith('{') || !rawContent.endsWith('}')) {
+      console.error('Invalid JSON structure. Content does not start with { and end with }');
+      throw new Error('Invalid JSON structure received from OpenAI');
+    }
+
+    // Clean up JSON structure
     rawContent = rawContent
-      .replace(/^[\s\n]*\{/, '{')
-      .replace(/\}[\s\n]*$/, '}')
-      .replace(/```(?:json)?\n?/g, '')
-      .replace(/(?<!\\)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')
-      .replace(/:\s*'([^']*?)'/g, ':"$1"')
-      .replace(/([^\\])"/g, '$1\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '')
-      .replace(/\t/g, '\\t')
-      .replace(/\\/g, '\\\\')
-      .replace(/\\\\/g, '\\')
-      .replace(/\\"/g, '"')
-      .replace(/"{/g, '{')
-      .replace(/}"/g, '}');
+      .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes with straight quotes
+      .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes with straight double quotes
+      .replace(/(?<!\\)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":') // Ensure property names have double quotes
+      .replace(/:\s*'([^']*?)'/g, ':"$1"') // Replace single-quoted values with double-quoted values
+      .replace(/\n/g, '\\n') // Convert newlines to \n
+      .replace(/\r/g, '') // Remove carriage returns
+      .replace(/\t/g, '\\t'); // Convert tabs to \t
 
-    console.log('Cleaned content:', rawContent.substring(0, 100) + '...');
+    console.log('Content after cleanup:', rawContent);
 
     try {
       const summary = JSON.parse(rawContent);
@@ -169,12 +174,13 @@ ${aiConfig.custom_instructions ? `\nAdditional Requirements:\n${aiConfig.custom_
         throw new Error(`Invalid summary structure: missing fields ${missingFields.join(', ')}`);
       }
 
+      console.log('Successfully parsed JSON');
       return new Response(JSON.stringify({ summary }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
-      console.log('Content that failed to parse:', rawContent);
+      console.error('Content that failed to parse:', rawContent);
       throw new Error(`Failed to parse AI response: ${parseError.message}`);
     }
 
