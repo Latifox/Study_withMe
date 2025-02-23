@@ -21,6 +21,18 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Fetch the AI configuration for this lecture
+    const { data: aiConfig, error: aiConfigError } = await supabase
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .maybeSingle();
+
+    if (aiConfigError) {
+      console.error('Error fetching AI config:', aiConfigError);
+      throw new Error('Failed to fetch AI configuration');
+    }
+
     // First check if we already have highlights for this lecture
     const { data: existingHighlights } = await supabase
       .from('lecture_highlights')
@@ -81,7 +93,10 @@ serve(async (req) => {
       ## Main Ideas
       [Summarize the central arguments or themes]
 
-      Important: Ensure each section is detailed and properly formatted with the '##' header.`;
+      Important: Ensure each section is detailed and properly formatted with the '##' header.
+      
+      ${aiConfig?.custom_instructions ? `Additional instructions: ${aiConfig.custom_instructions}` : ''}
+      ${aiConfig?.content_language ? `Please provide the content in: ${aiConfig.content_language}` : ''}`;
     } else if (part === 'part2') {
       systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
 
@@ -94,7 +109,10 @@ serve(async (req) => {
       ## Supporting Evidence
       [Detail the evidence used to support main arguments]
 
-      Important: Ensure each section is detailed and properly formatted with the '##' header.`;
+      Important: Ensure each section is detailed and properly formatted with the '##' header.
+      
+      ${aiConfig?.custom_instructions ? `Additional instructions: ${aiConfig.custom_instructions}` : ''}
+      ${aiConfig?.content_language ? `Please provide the content in: ${aiConfig.content_language}` : ''}`;
     } else {
       throw new Error('Invalid part specified');
     }
@@ -115,7 +133,9 @@ serve(async (req) => {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
+        temperature: aiConfig?.temperature ?? 0.7,
+        presence_penalty: aiConfig?.creativity_level ?? 0.5,
+        frequency_penalty: aiConfig?.detail_level ?? 0.6,
       }),
     });
 
