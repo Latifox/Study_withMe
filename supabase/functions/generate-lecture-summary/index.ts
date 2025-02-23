@@ -3,9 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -17,9 +14,12 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, part } = await req.json();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
+
+    const { lectureId, part } = await req.json();
+
     // Fetch lecture AI configurations
     const { data: aiConfig, error: aiConfigError } = await supabase
       .from('lecture_ai_configs')
@@ -70,6 +70,13 @@ serve(async (req) => {
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('OpenAI API Error:', error);
+        throw new Error('Failed to generate content');
+      }
+
+      console.log('OpenAI Response Status:', response.status);
       const data = await response.json();
       return JSON.parse(data.choices[0].message.content);
     };
@@ -112,6 +119,21 @@ serve(async (req) => {
             "importantQuotes": {"context1": "quote1", ...},
             "relationships": {"connection1": "explanation1", ...},
             "supportingEvidence": {"evidence1": "explanation1", ...}
+          }`
+        }
+      ]);
+    } else if (part === 'full') {
+      content = await generateSection([
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `Generate a comprehensive summary of the lecture content.
+          
+          Content to analyze: ${lecture.content}
+          
+          Return the response as a JSON object with this exact key:
+          {
+            "fullContent": "comprehensive summary"
           }`
         }
       ]);
