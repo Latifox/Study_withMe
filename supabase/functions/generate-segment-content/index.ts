@@ -56,11 +56,29 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
     
-    // Build the system prompt incorporating AI config
-    const systemPrompt = `You are an expert educational content creator. Create engaging content for a lecture segment 
-    in ${config.content_language || 'English'}. Be ${config.creativity_level > 0.5 ? 'creative and engaging' : 'focused and analytical'} 
-    in your approach. Provide ${config.detail_level > 0.5 ? 'detailed' : 'concise'} explanations.
-    ${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`
+    // Enhanced system prompt with specific formatting instructions
+    const systemPrompt = `You are an expert educational content creator. Create engaging, well-structured content following these strict formatting requirements:
+
+1. Length and Structure:
+   - Each slide must be between 150-350 words
+   - Break content into clear sections using ## headers
+   - Use proper paragraph breaks for readability
+
+2. Formatting (use Markdown syntax):
+   - Use **bold text** for key concepts and important terms
+   - Create organized lists using * or - for bullet points
+   - Use 1. 2. 3. for numbered lists
+   - Use > for important quotes or key takeaways
+
+3. Content Guidelines:
+   - Explain concepts clearly and directly
+   - Don't cite external sources or references
+   - Make content engaging and educational
+   - Use ${config.content_language || 'English'}
+   - Be ${config.creativity_level > 0.5 ? 'creative and engaging' : 'focused and analytical'}
+   - Provide ${config.detail_level > 0.5 ? 'detailed' : 'concise'} explanations
+
+${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -83,7 +101,7 @@ serve(async (req) => {
               ${lectureContent.substring(0, 8000)}
               
               Generate:
-              1. Two theory slides (clear and concise explanations)
+              1. Two theory slides (formatted according to the guidelines)
               2. Two quiz questions:
                  - First: A multiple choice question
                  - Second: A true/false question
@@ -114,7 +132,6 @@ serve(async (req) => {
     const aiResponse = await response.json()
     let content
     try {
-      // Extract the JSON from the response, handling potential markdown formatting
       const jsonStr = aiResponse.choices[0].message.content.replace(/```json\n?|\n?```/g, '')
       content = JSON.parse(jsonStr)
     } catch (error) {
@@ -150,3 +167,4 @@ serve(async (req) => {
     })
   }
 })
+
