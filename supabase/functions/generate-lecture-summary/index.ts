@@ -19,6 +19,7 @@ function formatTitle(title: string): string {
 }
 
 function formatResponse(content: Record<string, any>): Record<string, any> {
+  console.log('Formatting response content:', JSON.stringify(content));
   const formattedContent: Record<string, any> = {};
   
   for (const [category, items] of Object.entries(content)) {
@@ -33,6 +34,7 @@ function formatResponse(content: Record<string, any>): Record<string, any> {
     }
   }
   
+  console.log('Formatted content:', JSON.stringify(formattedContent));
   return formattedContent;
 }
 
@@ -64,8 +66,14 @@ serve(async (req) => {
       .eq('id', parseInt(lectureId))
       .single();
 
-    if (lectureError) throw lectureError;
-    if (!lecture?.content) throw new Error('No lecture content found');
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
+      throw lectureError;
+    }
+    if (!lecture?.content) {
+      console.error('No lecture content found for ID:', lectureId);
+      throw new Error('No lecture content found');
+    }
 
     let systemMessage = "";
     let responseFormat = "";
@@ -112,6 +120,7 @@ serve(async (req) => {
         break;
 
       default:
+        console.error('Invalid part specified:', part);
         throw new Error('Invalid part specified');
     }
 
@@ -149,6 +158,7 @@ serve(async (req) => {
     console.log('OpenAI Response Status:', response.status);
     
     if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid response format from OpenAI:', data);
       throw new Error('Invalid response format from OpenAI');
     }
 
@@ -157,7 +167,7 @@ serve(async (req) => {
     
     try {
       const parsedContent = JSON.parse(rawContent);
-      // Format the response before sending it back
+      console.log('Successfully parsed content');
       const formattedContent = formatResponse(parsedContent);
       return new Response(JSON.stringify({ content: formattedContent }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -170,14 +180,17 @@ serve(async (req) => {
         .replace(/```\s*$/g, '')
         .trim();
       
+      console.log('Attempting to parse cleaned content:', cleanedContent);
+      
       try {
         const parsedContent = JSON.parse(cleanedContent);
-        // Format the response before sending it back
+        console.log('Successfully parsed cleaned content');
         const formattedContent = formatResponse(parsedContent);
         return new Response(JSON.stringify({ content: formattedContent }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (secondParseError) {
+        console.error('Second parse error:', secondParseError, '\nCleaned content:', cleanedContent);
         throw new Error(`Failed to parse OpenAI response: ${secondParseError.message}`);
       }
     }
@@ -189,4 +202,3 @@ serve(async (req) => {
     );
   }
 });
-
