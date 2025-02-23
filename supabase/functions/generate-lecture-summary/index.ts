@@ -15,6 +15,7 @@ serve(async (req) => {
 
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openAIApiKey) {
+    console.error('OpenAI API key not configured');
     return new Response(
       JSON.stringify({ error: 'OpenAI API key not configured' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -23,6 +24,7 @@ serve(async (req) => {
 
   try {
     const { lectureId } = await req.json();
+    console.log('Processing lecture ID:', lectureId);
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -40,6 +42,11 @@ serve(async (req) => {
       throw lectureResult.error;
     }
     
+    if (!lectureResult.data?.content) {
+      console.error('No content found for lecture:', lectureId);
+      throw new Error('No lecture content found');
+    }
+
     const lecture = lectureResult.data;
     const aiConfig = configResult.data || {
       temperature: 0.7,
@@ -49,10 +56,9 @@ serve(async (req) => {
       custom_instructions: null
     };
 
-    console.log('Using AI config:', aiConfig);
-    console.log('Lecture content length:', lecture.content?.length || 0);
+    console.log('Using AI config:', JSON.stringify(aiConfig));
+    console.log('Lecture content length:', lecture.content.length);
 
-    // Prepare system message based on AI config
     let systemMessage = `You are an educational content analyzer tasked with creating a detailed summary of the lecture content provided.
     
 Guidelines for analysis:
@@ -77,6 +83,7 @@ Format the response in the following JSON structure:
 
 ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_language}.` : ''}`;
 
+    console.log('Sending request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -98,14 +105,22 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
 
     const data = await response.json();
     console.log('OpenAI Response Status:', response.status);
+    console.log('OpenAI Response:', JSON.stringify(data));
     
     if (!response.ok) {
+      console.error('OpenAI API error:', data.error);
       throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
+    }
+
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Unexpected OpenAI response format:', data);
+      throw new Error('Invalid response format from OpenAI');
     }
 
     let summary;
     try {
       summary = JSON.parse(data.choices[0].message.content);
+      console.log('Successfully parsed summary');
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
       console.log('Raw response:', data.choices[0].message.content);
@@ -119,9 +134,14 @@ ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_langua
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
-
