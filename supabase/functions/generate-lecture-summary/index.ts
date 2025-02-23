@@ -10,32 +10,36 @@ const corsHeaders = {
 
 function formatTitle(title: string): string {
   return title
-    // Replace underscores and hyphens with spaces
     .replace(/[_-]/g, ' ')
-    // Capitalize first letter of each word
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
 function formatResponse(content: Record<string, any>): Record<string, any> {
-  console.log('Formatting response content:', JSON.stringify(content));
-  const formattedContent: Record<string, any> = {};
-  
-  for (const [category, items] of Object.entries(content)) {
-    if (typeof items === 'object' && items !== null) {
-      const formattedItems: Record<string, string> = {};
-      for (const [key, value] of Object.entries(items)) {
-        formattedItems[formatTitle(key)] = value;
+  try {
+    console.log('Input content to formatResponse:', JSON.stringify(content));
+    const formattedContent: Record<string, any> = {};
+    
+    for (const [category, items] of Object.entries(content)) {
+      if (typeof items === 'object' && items !== null) {
+        const formattedItems: Record<string, string> = {};
+        for (const [key, value] of Object.entries(items)) {
+          const formattedKey = formatTitle(key);
+          formattedItems[formattedKey] = String(value);
+        }
+        formattedContent[category] = formattedItems;
+      } else {
+        formattedContent[category] = String(items);
       }
-      formattedContent[category] = formattedItems;
-    } else {
-      formattedContent[category] = items;
     }
+    
+    console.log('Formatted content:', JSON.stringify(formattedContent));
+    return formattedContent;
+  } catch (error) {
+    console.error('Error in formatResponse:', error);
+    throw error;
   }
-  
-  console.log('Formatted content:', JSON.stringify(formattedContent));
-  return formattedContent;
 }
 
 serve(async (req) => {
@@ -56,6 +60,10 @@ serve(async (req) => {
     const { lectureId, part } = await req.json();
     console.log('Processing lecture ID:', lectureId, 'part:', part);
     
+    if (!lectureId || !part) {
+      throw new Error('Missing required parameters: lectureId or part');
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -75,53 +83,46 @@ serve(async (req) => {
       throw new Error('No lecture content found');
     }
 
-    let systemMessage = "";
-    let responseFormat = "";
+    const systemMessages = {
+      part1: `You are an expert educational content analyzer. Create a structured response with sections for lecture structure, key concepts, and main ideas. The response should be in valid JSON format but maintain markdown formatting within the text content. Use descriptive titles without underscores or technical identifiers.`,
+      part2: `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. Use descriptive titles for each item. The response should be in valid JSON format but maintain markdown formatting within the text content.`,
+      full: `You are an expert educational content summarizer. Create a comprehensive summary with markdown formatting.`
+    };
 
-    switch(part) {
-      case 'part1':
-        systemMessage = `You are an expert educational content analyzer. Create a structured response with sections for lecture structure, key concepts, and main ideas. The response should be in valid JSON format but maintain markdown formatting within the text content.`;
-        responseFormat = `{
-          "structure": "markdown formatted overview",
-          "keyConcepts": {
-            "concept1": "explanation1",
-            "concept2": "explanation2"
-          },
-          "mainIdeas": {
-            "idea1": "explanation1",
-            "idea2": "explanation2"
-          }
-        }`;
-        break;
+    const responseFormats = {
+      part1: {
+        structure: "markdown formatted overview",
+        keyConcepts: {
+          "Concept Title 1": "explanation1",
+          "Concept Title 2": "explanation2"
+        },
+        mainIdeas: {
+          "Main Idea Title 1": "explanation1",
+          "Main Idea Title 2": "explanation2"
+        }
+      },
+      part2: {
+        importantQuotes: {
+          "Quote Context 1": "quote1",
+          "Quote Context 2": "quote2"
+        },
+        relationships: {
+          "Relationship Title 1": "explanation1",
+          "Relationship Title 2": "explanation2"
+        },
+        supportingEvidence: {
+          "Evidence Title 1": "evidence1",
+          "Evidence Title 2": "evidence2"
+        }
+      },
+      full: {
+        fullContent: "full markdown-formatted summary"
+      }
+    };
 
-      case 'part2':
-        systemMessage = `You are an expert educational content analyzer. Create a structured response with important quotes, relationships between concepts, and supporting evidence. Use descriptive titles for each item. The response should be in valid JSON format but maintain markdown formatting within the text content.`;
-        responseFormat = `{
-          "importantQuotes": {
-            "Key Definition of Energy Production": "quote1",
-            "Contrasting Production Methods": "quote2"
-          },
-          "relationships": {
-            "Centralized vs Distributed Production": "explanation1",
-            "Renewable vs Non-renewable Sources": "explanation2"
-          },
-          "supportingEvidence": {
-            "Historical Energy Consumption": "explanation1",
-            "Fossil Fuel Statistics": "explanation2"
-          }
-        }`;
-        break;
-
-      case 'full':
-        systemMessage = `You are an expert educational content summarizer. Create a comprehensive summary with markdown formatting.`;
-        responseFormat = `{
-          "fullContent": "full markdown-formatted summary"
-        }`;
-        break;
-
-      default:
-        console.error('Invalid part specified:', part);
-        throw new Error('Invalid part specified');
+    if (!systemMessages[part as keyof typeof systemMessages]) {
+      console.error('Invalid part specified:', part);
+      throw new Error('Invalid part specified');
     }
 
     console.log('Sending request to OpenAI...');
@@ -137,7 +138,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `${systemMessage}\nFormat the response exactly like this: ${responseFormat}. Use clear, descriptive titles that don't contain underscores or technical identifiers.`
+            content: `${systemMessages[part as keyof typeof systemMessages]}\nFormat the response exactly like this:\n${JSON.stringify(responseFormats[part as keyof typeof responseFormats], null, 2)}`
           },
           { 
             role: 'user', 
@@ -163,7 +164,7 @@ serve(async (req) => {
     }
 
     let rawContent = data.choices[0].message.content.trim();
-    console.log('Raw content:', rawContent);
+    console.log('Raw content from OpenAI:', rawContent);
     
     try {
       const parsedContent = JSON.parse(rawContent);
@@ -173,14 +174,13 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (parseError) {
-      console.error('Parse error:', parseError, '\nRaw content:', rawContent);
-      // Try to clean the content before parsing again
+      console.error('Initial parse error:', parseError);
+      console.log('Attempting to clean content before parsing again...');
+      
       const cleanedContent = rawContent
         .replace(/```json\s*/g, '')
         .replace(/```\s*$/g, '')
         .trim();
-      
-      console.log('Attempting to parse cleaned content:', cleanedContent);
       
       try {
         const parsedContent = JSON.parse(cleanedContent);
@@ -190,7 +190,8 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (secondParseError) {
-        console.error('Second parse error:', secondParseError, '\nCleaned content:', cleanedContent);
+        console.error('Second parse error:', secondParseError);
+        console.log('Cleaned content that failed to parse:', cleanedContent);
         throw new Error(`Failed to parse OpenAI response: ${secondParseError.message}`);
       }
     }
