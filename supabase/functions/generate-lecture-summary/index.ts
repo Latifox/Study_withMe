@@ -13,151 +13,94 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openAIApiKey) {
+    return new Response(
+      JSON.stringify({ error: 'OpenAI API key not configured' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const { lectureId } = await req.json();
-    console.log('Generating detailed summary for lecture:', lectureId);
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Fetch lecture content and AI config
-    const [{ data: lecture, error: lectureError }, { data: config }] = await Promise.all([
-      supabaseClient
-        .from('lectures')
-        .select('content')
-        .eq('id', lectureId)
-        .single(),
-      supabaseClient
-        .from('lecture_ai_configs')
-        .select('*')
-        .eq('lecture_id', lectureId)
-        .single()
+    // Get lecture content and AI config
+    const [lectureResult, configResult] = await Promise.all([
+      supabase.from('lectures').select('content, title').eq('id', lectureId).single(),
+      supabase.from('lecture_ai_configs').select('*').eq('lecture_id', lectureId).maybeSingle()
     ]);
 
-    if (lectureError || !lecture?.content) {
-      console.error('Error fetching lecture:', lectureError);
-      throw new Error('Failed to fetch lecture content');
-    }
-
-    const aiConfig = config || {
+    if (lectureResult.error) throw lectureResult.error;
+    
+    const lecture = lectureResult.data;
+    const aiConfig = configResult.data || {
       temperature: 0.7,
       creativity_level: 0.5,
       detail_level: 0.6,
-      custom_instructions: ''
+      content_language: null,
+      custom_instructions: null
     };
 
-    console.log('Fetched lecture content and AI config, generating comprehensive summary...');
+    console.log('Using AI config:', aiConfig);
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
+    // Prepare system message based on AI config
+    let systemMessage = `You are an educational content analyzer. Your task is to analyze lecture content and provide a structured summary.
+    Creativity Level: ${aiConfig.creativity_level} (higher means more creative and engaging language)
+    Detail Level: ${aiConfig.detail_level} (higher means more comprehensive analysis)
+    ${aiConfig.custom_instructions ? `Additional Instructions: ${aiConfig.custom_instructions}` : ''}
+    
+    Format the response in the following JSON structure:
+    {
+      "structure": "Overview of main topics and organization",
+      "keyConcepts": "Key theoretical concepts and definitions",
+      "mainIdeas": "Main arguments and ideas",
+      "importantQuotes": "Notable quotes and statements",
+      "relationships": "Connections between concepts",
+      "supportingEvidence": "Examples and evidence used",
+      "fullContent": "Detailed comprehensive summary"
+    }
+    
+    ${aiConfig.content_language ? `Provide the response in ${aiConfig.content_language}.` : ''}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
-        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
       },
       body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{
-              text: `Create a comprehensive, well-structured summary of this lecture content:\n\n${lecture.content}\n\n` +
-                    `Follow these guidelines:\n` +
-                    `1. Structure the summary into these specific sections:\n\n` +
-                    `# Structure\n` +
-                    `- Outline the organizational structure\n` +
-                    `- Identify major sections and subsections\n` +
-                    `- Note patterns in information presentation\n` +
-                    `- Highlight idea flow\n\n` +
-                    `# Key Concepts\n` +
-                    `- Break down 4-6 important concepts\n` +
-                    `- Include clear definitions\n` +
-                    `- Use examples where relevant\n` +
-                    `- Highlight important terms in **bold**\n\n` +
-                    `# Main Ideas\n` +
-                    `- List central arguments/themes\n` +
-                    `- Explain core principles\n` +
-                    `- Identify key takeaways\n` +
-                    `- Connect to broader context\n\n` +
-                    `# Important Quotes\n` +
-                    `- Select 2-3 significant quotes\n` +
-                    `- Use proper ">" quote formatting\n` +
-                    `- Add brief context\n` +
-                    `- Attribute quotes when possible\n\n` +
-                    `# Relationships and Connections\n` +
-                    `- Identify links between concepts\n` +
-                    `- Show how ideas build\n` +
-                    `- Note external connections\n` +
-                    `- Highlight cause-effect relationships\n\n` +
-                    `# Supporting Evidence & Examples\n` +
-                    `- List key examples\n` +
-                    `- Describe supporting evidence\n` +
-                    `- Include relevant data\n` +
-                    `- Note case studies\n\n` +
-                    `# Full Content\n` +
-                    `Provide comprehensive summary including:\n` +
-                    `- In-depth concept explanations\n` +
-                    `- Extended examples\n` +
-                    `- Detailed analysis\n` +
-                    `- Topic connections\n` +
-                    `- Study recommendations\n\n` +
-                    `Adjust based on:\n` +
-                    `- Creativity Level: ${aiConfig.creativity_level}\n` +
-                    `- Detail Level: ${aiConfig.detail_level}\n` +
-                    `${aiConfig.custom_instructions ? `\nCustom Instructions:\n${aiConfig.custom_instructions}` : ''}`
-            }]
-          }
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: `Title: ${lecture.title}\n\nContent:\n${lecture.content}` }
         ],
-        generationConfig: {
-          temperature: aiConfig.temperature,
-          maxOutputTokens: 2500,
-        }
+        temperature: aiConfig.temperature,
       }),
     });
 
+    const data = await response.json();
+    console.log('OpenAI Response Status:', response.status);
+    
     if (!response.ok) {
-      console.error('Google API error:', response.status);
-      const errorText = await response.text();
-      console.error('Google API error details:', errorText);
-      throw new Error(`Google API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
     }
 
-    const data = await response.json();
-    const fullSummary = data.candidates[0].content.parts[0].text;
-    
-    const sections = {
-      structure: extractSection(fullSummary, "Structure"),
-      keyConcepts: extractSection(fullSummary, "Key Concepts"),
-      mainIdeas: extractSection(fullSummary, "Main Ideas"),
-      importantQuotes: extractSection(fullSummary, "Important Quotes"),
-      relationships: extractSection(fullSummary, "Relationships and Connections"),
-      supportingEvidence: extractSection(fullSummary, "Supporting Evidence & Examples"),
-      fullContent: extractSection(fullSummary, "Full Content"),
-    };
+    const summary = JSON.parse(data.choices[0].message.content);
 
-    console.log('Successfully generated structured summary');
+    return new Response(JSON.stringify({ summary }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
-    return new Response(
-      JSON.stringify({ summary: sections }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error) {
-    console.error('Error generating summary:', error);
+    console.error('Error in generate-lecture-summary:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: 'Please try again in a few moments or contact support if the issue persists.'
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-function extractSection(markdown: string, sectionTitle: string): string {
-  const regex = new RegExp(`# ${sectionTitle}([^#]*)`);
-  const match = markdown.match(regex);
-  return match ? match[1].trim() : '';
-}
