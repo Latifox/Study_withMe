@@ -65,54 +65,77 @@ serve(async (req) => {
     const languageStyle = aiConfig.creativity_level > 0.7 ? 'engaging and imaginative' :
                          aiConfig.creativity_level > 0.4 ? 'balanced and clear' : 'precise and academic';
 
-    let systemMessage = `You are an expert educational content analyzer tasked with creating a highly detailed summary of lecture content. Your analysis should be ${languageStyle} in tone, with a depth level of ${analysisDepth}/5.
+    let systemMessage = `You are an expert educational content analyzer tasked with creating a detailed summary of lecture content. Generate content in ${aiConfig.content_language || 'the original content language'} with a ${languageStyle} style.
 
-Content Language: ${aiConfig.content_language || 'Use the original content language'}
+Guidelines for each section:
 
-Guidelines for analysis:
-1. DEPTH OF ANALYSIS (${analysisDepth}/5):
-   - Provide ${maxExamples} detailed examples for each key concept
-   - Include specific context and implications for each main idea
-   - Analyze interconnections between concepts thoroughly
+1. STRUCTURE (Hierarchical Organization):
+   - Extract and list ALL titles and subtitles in their exact hierarchical order
+   - Use proper markdown heading levels (# for main titles, ## for subtitles)
+   - Maintain the exact numbering and structure from the lecture
 
-2. STYLE AND TONE (Creativity Level: ${aiConfig.creativity_level}):
-   - Use ${languageStyle} language
-   - Maintain academic rigor while adjusting engagement level
-   - Create clear, ${aiConfig.creativity_level > 0.5 ? 'engaging' : 'straightforward'} explanations
+2. KEY CONCEPTS (Detailed Definitions):
+   - Identify and explain ${maxExamples} primary concepts from the lecture
+   - For each concept provide:
+     * Clear definition
+     * Practical examples
+     * Context within the broader topic
+   - Format as a dictionary with concept names as keys
 
-3. MARKDOWN FORMATTING:
-   - Use bullet points (*) for structured lists
-   - Apply **bold** for key terms and important concepts
-   - Format quotes using proper blockquotes (>)
-   - Create clear section hierarchies with headings (#)
+3. MAIN IDEAS (Core Themes):
+   - Identify ${maxExamples} central themes or arguments
+   - For each idea provide:
+     * Detailed explanation
+     * Supporting points
+     * Implications or applications
+   - Format as a dictionary with theme titles as keys
 
-4. CUSTOM REQUIREMENTS:
+4. IMPORTANT QUOTES (Direct Citations):
+   - Extract ${maxExamples} significant quotes VERBATIM from the text
+   - Include section references for context
+   - Only use exact quotes, no paraphrasing
+   - Format as a dictionary with section references as keys
+
+5. RELATIONSHIPS (Concept Mapping):
+   - Analyze how different concepts interconnect
+   - Identify cause-effect relationships
+   - Explain hierarchical relationships
+   - Highlight dependencies between concepts
+   - Format as a dictionary with relationship types as keys
+
+6. SUPPORTING EVIDENCE (Quantifiable Data):
+   - Extract ALL numerical data, statistics, and metrics
+   - Include dates, percentages, measurements, etc.
+   - Provide specific figures and their context
+   - Format as a dictionary with evidence types as keys
+
+CUSTOM REQUIREMENTS:
 ${aiConfig.custom_instructions ? aiConfig.custom_instructions : 'Follow standard academic format'}
 
-Return a JSON object with the following structure:
+Return a JSON object with the exact structure:
 {
-  "structure": "Detailed bullet-point breakdown of lecture organization",
+  "structure": "Hierarchical list with proper markdown headings",
   "keyConcepts": {
-    "[concept name]": "In-depth definition with **key terms** and ${maxExamples} examples",
-    // Include at least 5 key concepts
+    "[concept name]": "Detailed explanation with examples",
+    ...
   },
   "mainIdeas": {
-    "[idea title]": "Comprehensive explanation with supporting details and implications",
-    // Include at least 4 main ideas
+    "[idea title]": "Comprehensive explanation with implications",
+    ...
   },
   "importantQuotes": {
-    "[section reference]": "> Direct quote with detailed context and significance",
-    // Include at least 3 relevant quotes
+    "[section reference]": "Exact quote from the text",
+    ...
   },
   "relationships": {
-    "[relationship type]": "Analysis of concept interconnections with specific examples",
-    // Include at least 4 relationship analyses
+    "[relationship type]": "Detailed connection analysis",
+    ...
   },
   "supportingEvidence": {
-    "[evidence type]": "* Detailed point\\n* Supporting details\\n* Specific examples",
-    // Include at least 3 pieces of evidence
+    "[evidence type]": "Specific numerical or factual data",
+    ...
   },
-  "fullContent": "Comprehensive markdown-formatted summary integrating all sections"
+  "fullContent": "Complete markdown-formatted summary integrating all sections"
 }`;
 
     console.log('Sending request to OpenAI...');
@@ -128,7 +151,7 @@ Return a JSON object with the following structure:
           { role: 'system', content: systemMessage },
           { 
             role: 'user', 
-            content: `Title: ${lecture.title}\n\nProvide a comprehensive analysis of this lecture content following the specified format and detail level:\n\n${lecture.content}` 
+            content: `Title: ${lecture.title}\n\nAnalyze this lecture content following the specified format and detail level:\n\n${lecture.content}` 
           }
         ],
         temperature: aiConfig.temperature,
@@ -179,3 +202,4 @@ Return a JSON object with the following structure:
     );
   }
 });
+
