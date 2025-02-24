@@ -136,7 +136,7 @@ const LectureSummary = () => {
 
           {/* Right Column - Content Display */}
           <div className="md:col-span-2">
-            <Card className="p-6 bg-white/80 backdrop-blur-sm">
+            <Card className="p-6 bg-white/30 backdrop-blur-md border border-white/20">
               <div className="prose prose-sm max-w-none text-black">
                 <ReactMarkdown>
                   {summaryData[selectedCategory]}
@@ -151,3 +151,4 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
+
