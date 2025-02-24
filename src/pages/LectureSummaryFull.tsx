@@ -6,26 +6,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from "@/components/ui/card";
-
-interface Part1Response {
-  structure: string;
-  keyConcepts: Record<string, string>;
-  mainIdeas: Record<string, string>;
-}
-
-interface Part2Response {
-  importantQuotes: Record<string, string>;
-  relationships: Record<string, string>;
-  supportingEvidence: Record<string, string>;
-}
-
-interface FullResponse {
-  fullContent: string;
-}
+import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import { useToast } from "@/components/ui/use-toast";
 
 const LectureSummaryFull = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
@@ -41,132 +28,75 @@ const LectureSummaryFull = () => {
     },
   });
 
-  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery<{ content: Part1Response }>({
-    queryKey: ["lecture-summary-part1", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, part: 'part1' }
-      });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery<{ content: Part2Response }>({
-    queryKey: ["lecture-summary-part2", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, part: 'part2' }
-      });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: fullContent, isLoading: isLoadingFull } = useQuery<{ content: FullResponse }>({
+  const { data: fullSummary, isLoading } = useQuery({
     queryKey: ["lecture-summary-full", lectureId],
     queryFn: async () => {
+      console.log('Fetching full lecture summary...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { lectureId, part: 'full' }
       });
-      if (error) throw error;
-      return data;
+      
+      if (error) {
+        console.error('Error fetching full summary:', error);
+        toast({
+          title: "Error loading summary",
+          description: "There was a problem loading the full lecture summary. Please try again.",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      console.log('Full summary received:', data);
+      return data.content;
     },
   });
 
-  const isLoading = isLoadingPart1 || isLoadingPart2 || isLoadingFull;
-
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center h-[60vh]">
-          <div className="text-center space-y-4">
-            <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-            <p className="text-lg">Generating comprehensive summary...</p>
-            <p className="text-sm text-muted-foreground">This might take a moment as we analyze the lecture content.</p>
+      <BackgroundGradient>
+        <div className="container mx-auto p-4">
+          <div className="flex justify-center items-center h-[60vh]">
+            <div className="text-center space-y-4">
+              <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
+              <p className="text-lg text-black">Generating comprehensive summary...</p>
+              <p className="text-sm text-muted-foreground">This might take a moment as we analyze the lecture content.</p>
+            </div>
           </div>
         </div>
-      </div>
+      </BackgroundGradient>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights`)}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Summary
-        </Button>
+    <BackgroundGradient>
+      <div className="container mx-auto p-4 space-y-6">
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights`)}
+            className="gap-2 bg-white/80 hover:bg-white"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Summary
+          </Button>
+        </div>
+
+        <Card className="bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <h1 className="text-2xl font-bold mb-6 flex items-center gap-2 text-black">
+              <BookOpen className="w-6 h-6" />
+              {lecture?.title} - Full Summary
+            </h1>
+            
+            <div className="prose prose-sm max-w-none text-black">
+              <ReactMarkdown>
+                {fullSummary?.fullContent || ''}
+              </ReactMarkdown>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      <Card className="bg-white">
-        <CardContent className="p-6">
-          <h1 className="text-2xl font-bold mb-6 flex items-center gap-2 text-black">
-            <BookOpen className="w-6 h-6" />
-            {lecture?.title} - Full Summary
-          </h1>
-          
-          <div className="prose prose-sm max-w-none text-black">
-            {/* Structure Section */}
-            <h2 className="text-xl font-semibold mt-8">Structure</h2>
-            <ReactMarkdown>{part1Data?.content?.structure || ''}</ReactMarkdown>
-
-            {/* Key Concepts Section */}
-            <h2 className="text-xl font-semibold mt-8">Key Concepts</h2>
-            {Object.entries(part1Data?.content?.keyConcepts || {}).map(([concept, explanation], idx) => (
-              <div key={idx} className="mb-4">
-                <h3 className="font-medium text-lg">{concept}</h3>
-                <p>{String(explanation)}</p>
-              </div>
-            ))}
-
-            {/* Main Ideas Section */}
-            <h2 className="text-xl font-semibold mt-8">Main Ideas</h2>
-            {Object.entries(part1Data?.content?.mainIdeas || {}).map(([idea, explanation], idx) => (
-              <div key={idx} className="mb-4">
-                <h3 className="font-medium text-lg">{idea}</h3>
-                <p>{String(explanation)}</p>
-              </div>
-            ))}
-
-            {/* Important Quotes Section */}
-            <h2 className="text-xl font-semibold mt-8">Important Quotes</h2>
-            {Object.entries(part2Data?.content?.importantQuotes || {}).map(([context, quote], idx) => (
-              <div key={idx} className="mb-4">
-                <h3 className="font-medium text-lg">{context}</h3>
-                <blockquote className="border-l-4 border-gray-200 pl-4 italic">{String(quote)}</blockquote>
-              </div>
-            ))}
-
-            {/* Relationships Section */}
-            <h2 className="text-xl font-semibold mt-8">Relationships</h2>
-            {Object.entries(part2Data?.content?.relationships || {}).map(([connection, explanation], idx) => (
-              <div key={idx} className="mb-4">
-                <h3 className="font-medium text-lg">{connection}</h3>
-                <p>{String(explanation)}</p>
-              </div>
-            ))}
-
-            {/* Supporting Evidence Section */}
-            <h2 className="text-xl font-semibold mt-8">Supporting Evidence</h2>
-            {Object.entries(part2Data?.content?.supportingEvidence || {}).map(([evidence, explanation], idx) => (
-              <div key={idx} className="mb-4">
-                <h3 className="font-medium text-lg">{evidence}</h3>
-                <p>{String(explanation)}</p>
-              </div>
-            ))}
-
-            {/* Full Content Section */}
-            <h2 className="text-xl font-semibold mt-8">Comprehensive Summary</h2>
-            <ReactMarkdown>{fullContent?.content?.fullContent || ''}</ReactMarkdown>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </BackgroundGradient>
   );
 };
 

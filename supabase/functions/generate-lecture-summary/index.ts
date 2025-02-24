@@ -1,6 +1,5 @@
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
@@ -14,37 +13,128 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId } = await req.json();
-    console.log('Processing request for lecture:', lectureId);
+    const { lectureId, part } = await req.json();
+    console.log('Processing request for lecture:', lectureId, 'part:', part);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the AI configuration for this lecture
-    const { data: aiConfig, error: aiConfigError } = await supabase
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
+    // Fetch the lecture content and AI configuration
+    const [lectureResult, aiConfigResult] = await Promise.all([
+      supabase
+        .from('lectures')
+        .select('content, title')
+        .eq('id', lectureId)
+        .single(),
+      supabase
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .maybeSingle()
+    ]);
 
-    if (aiConfigError) {
-      console.error('Error fetching AI config:', aiConfigError);
-      throw new Error('Failed to fetch AI configuration');
+    if (lectureResult.error) {
+      console.error('Error fetching lecture:', lectureResult.error);
+      throw new Error('Failed to fetch lecture content');
     }
 
-    // First check if we already have highlights for this lecture
+    const lecture = lectureResult.data;
+    const aiConfig = aiConfigResult.data || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      content_language: null,
+      custom_instructions: null
+    };
+
+    // Check if we already have highlights for this lecture
     const { data: existingHighlights, error: highlightsError } = await supabase
       .from('lecture_highlights')
       .select('*')
       .eq('lecture_id', lectureId)
-      .single();
+      .maybeSingle();
 
     if (highlightsError && highlightsError.code !== 'PGRST116') {
       console.error('Error fetching highlights:', highlightsError);
       throw new Error('Failed to fetch existing highlights');
     }
 
+    // If part is 'full', generate and store the full summary
+    if (part === 'full') {
+      console.log('Generating full summary');
+      
+      const fullSummaryPrompt = `You are an expert educational content analyzer. Your task is to provide a comprehensive, detailed summary of the following lecture content. 
+      ${aiConfig.custom_instructions ? `\nSpecific instructions: ${aiConfig.custom_instructions}` : ''}
+      ${aiConfig.content_language ? `\nPlease provide the content in: ${aiConfig.content_language}` : ''}
+      
+      Lecture Title: ${lecture.title}
+      
+      Please analyze and summarize the content, paying special attention to:
+      1. Main arguments and key points
+      2. Supporting evidence and examples
+      3. Theoretical frameworks and concepts
+      4. Practical applications and implications
+      5. Connections to broader themes or other topics
+      
+      Lecture Content:
+      ${lecture.content}`;
+
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are an expert educational content summarizer.' },
+            { role: 'user', content: fullSummaryPrompt }
+          ],
+          temperature: aiConfig.temperature,
+          presence_penalty: aiConfig.creativity_level,
+          frequency_penalty: aiConfig.detail_level,
+        }),
+      });
+
+      if (!openAIResponse.ok) {
+        const error = await openAIResponse.text();
+        console.error('OpenAI API Error:', error);
+        throw new Error('Failed to generate content from OpenAI');
+      }
+
+      const data = await openAIResponse.json();
+      const fullContent = data.choices[0]?.message?.content?.trim();
+
+      if (!fullContent) {
+        throw new Error('Invalid response format from OpenAI');
+      }
+
+      // Update or insert the full content in the lecture_highlights table
+      const { error: upsertError } = await supabase
+        .from('lecture_highlights')
+        .upsert({
+          lecture_id: lectureId,
+          full_content: fullContent,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'lecture_id'
+        });
+
+      if (upsertError) {
+        console.error('Error storing full summary:', upsertError);
+        throw new Error('Failed to store full summary');
+      }
+
+      return new Response(JSON.stringify({
+        content: { fullContent }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Return existing data if available
     if (existingHighlights) {
       console.log('Found existing highlights');
       return new Response(JSON.stringify({
@@ -159,4 +249,3 @@ serve(async (req) => {
     });
   }
 });
-
