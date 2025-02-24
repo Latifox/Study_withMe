@@ -28,16 +28,15 @@ const LectureSummary = () => {
       console.log('Summary data received:', data);
       return data.content;
     },
+    retry: false,
+    onError: () => {
+      toast({
+        title: "Error loading summary",
+        description: "There was a problem loading the lecture summary. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
-
-  // Show errors if any
-  if (error) {
-    toast({
-      title: "Error loading summary",
-      description: "There was a problem loading the lecture summary. Please try again.",
-      variant: "destructive",
-    });
-  }
 
   if (isLoading) {
     return (
@@ -50,6 +49,31 @@ const LectureSummary = () => {
               <p className="text-sm text-muted-foreground">Please wait while we process your request.</p>
             </div>
           </div>
+        </div>
+      </BackgroundGradient>
+    );
+  }
+
+  if (error) {
+    return (
+      <BackgroundGradient>
+        <div className="container mx-auto p-4">
+          <div className="flex justify-between items-center mb-6">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2 bg-white/80 hover:bg-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Lectures
+            </Button>
+          </div>
+          <Card className="p-6 bg-white/80 backdrop-blur-sm">
+            <div className="text-center space-y-4">
+              <p className="text-lg text-black">Unable to load lecture summary</p>
+              <p className="text-sm text-muted-foreground">Please try again later or contact support if the issue persists.</p>
+            </div>
+          </Card>
         </div>
       </BackgroundGradient>
     );
@@ -89,3 +113,4 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
+
