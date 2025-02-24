@@ -21,8 +21,23 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const { data: highlights, isLoading, error } = useQuery({
+  const { data: lecture } = useQuery({
+    queryKey: ["lecture", lectureId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lectures")
+        .select("*")
+        .eq("id", parseInt(lectureId!))
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: highlights, isLoading, error, refetch } = useQuery({
     queryKey: ["lecture-highlights", lectureId],
     queryFn: async () => {
       console.log('Fetching lecture highlights...');
@@ -35,6 +50,34 @@ const LectureSummary = () => {
       if (error) {
         console.error('Error fetching highlights:', error);
         throw error;
+      }
+      
+      // If no highlights exist, generate them
+      if (!data) {
+        console.log('No highlights found, generating...');
+        setIsGenerating(true);
+        try {
+          const response = await supabase.functions.invoke('generate-lecture-summary', {
+            body: { lectureId, part: 'highlights' }
+          });
+          
+          if (response.error) throw response.error;
+          
+          // Fetch the newly generated highlights
+          const { data: newHighlights, error: fetchError } = await supabase
+            .from("lecture_highlights")
+            .select("*")
+            .eq("lecture_id", parseInt(lectureId!))
+            .single();
+            
+          if (fetchError) throw fetchError;
+          return newHighlights;
+        } catch (err) {
+          console.error('Error generating highlights:', err);
+          throw err;
+        } finally {
+          setIsGenerating(false);
+        }
       }
       
       console.log('Highlights received:', data);
@@ -60,15 +103,19 @@ const LectureSummary = () => {
     supportingEvidence: highlights?.supporting_evidence || ''
   };
 
-  if (isLoading) {
+  if (isLoading || isGenerating) {
     return (
       <BackgroundGradient>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-              <p className="text-lg text-black">Analyzing lecture content...</p>
-              <p className="text-sm text-muted-foreground">Please wait while we process your request.</p>
+              <p className="text-lg text-black">
+                {isGenerating ? "Generating highlights..." : "Loading highlights..."}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isGenerating ? "This may take a moment as we analyze the lecture content." : "Please wait while we load the content."}
+              </p>
             </div>
           </div>
         </div>
