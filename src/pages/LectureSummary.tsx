@@ -23,7 +23,7 @@ const LectureSummary = () => {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const { data: highlights, isLoading, error, refetch } = useQuery({
+  const { data: highlights, isLoading, error } = useQuery({
     queryKey: ["lecture-highlights", lectureId],
     queryFn: async () => {
       console.log('Fetching lecture highlights...');
@@ -119,22 +119,13 @@ const LectureSummary = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
           </Button>
-          <div className="space-x-4">
-            <Button 
-              variant="outline"
-              onClick={() => refetch()}
-              className="gap-2 bg-white/80 hover:bg-white"
-            >
-              Regenerate Highlights
-            </Button>
-            <Button 
-              onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
-              className="gap-2 bg-white/80 hover:bg-white"
-            >
-              Get Full Summary
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button 
+            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
+            className="gap-2 bg-white/80 hover:bg-white"
+          >
+            Get Full Summary
+            <ExternalLink className="w-4 h-4" />
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -177,3 +168,4 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
+
