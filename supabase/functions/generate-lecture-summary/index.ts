@@ -79,55 +79,32 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt = `You are an expert educational content analyzer. Your task is to provide a comprehensive, well-structured analysis of the lecture content using clear markdown formatting. Your analysis should be thorough and academically rigorous.`;
+    let systemPrompt = `You are an expert educational content analyzer. Your task is to provide a comprehensive, well-structured analysis of the lecture content. IMPORTANT: You must provide exactly three sections in your response, clearly separated by '## ' markdown headers. Each section must be non-empty and properly formatted with markdown.`;
 
     if (part === 'part1') {
       systemPrompt += `
-      For each section, use extensive markdown formatting to ensure clarity and readability:
+      Provide these exact three sections with these exact titles:
 
       ## Structure
-      - Provide a detailed hierarchical outline of the content
-      - Use nested bullet points to show relationships between topics
-      - Include section numbers and subsections
-      - Highlight key organizational elements
+      Provide a detailed hierarchical outline of the content using bullet points and numbering.
 
       ## Key Concepts
-      - Define and explain each concept thoroughly
-      - Use bullet points for clarity
-      - Include relevant examples or applications
-      - Highlight relationships between concepts
-      - Use bold text for important terms
+      Define and explain key concepts using bullet points and bold text for important terms.
 
       ## Main Ideas
-      - Present each main idea with supporting details
-      - Use numbered lists for primary points
-      - Include relevant context and implications
-      - Connect ideas to broader themes
-      - Use markdown formatting to emphasize critical points`;
+      Present main ideas with supporting details using bullet points and numbered lists.`;
     } else if (part === 'part2') {
       systemPrompt += `
-      Use rich markdown formatting for each section:
+      Provide these exact three sections with these exact titles:
 
       ## Important Quotes
-      - Use proper blockquote formatting (>)
-      - Provide context for each quote
-      - Explain significance and implications
-      - Connect quotes to main themes
-      - Include page/section references when possible
+      Use proper blockquote formatting (>) for quotes with explanations.
 
       ## Relationships
-      - Detail connections between concepts
-      - Use bullet points for clarity
-      - Explain cause-and-effect relationships
-      - Identify patterns and themes
-      - Use formatting to highlight key relationships
+      Detail connections between concepts using bullet points.
 
       ## Supporting Evidence
-      - List and analyze evidence thoroughly
-      - Include specific examples
-      - Explain how evidence supports main ideas
-      - Use bullet points for clear organization
-      - Connect evidence to conclusions`;
+      List and analyze evidence using bullet points and numbered lists.`;
     }
 
     if (aiConfig?.custom_instructions) {
@@ -137,7 +114,7 @@ serve(async (req) => {
       systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
     }
 
-    console.log(`Sending request to OpenAI for ${part}`);
+    console.log('Sending request to OpenAI');
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -174,16 +151,16 @@ serve(async (req) => {
     const content = data.choices[0].message.content.trim();
     console.log('Generated content:', content.substring(0, 200) + '...');
 
-    // Parse the markdown content into sections
-    const sections = content.split('##')
-      .filter(Boolean)
-      .map(s => s.trim());
+    // Parse the markdown content into sections, ensuring we get exactly 3
+    const sections = content.split(/(?=## )/g)
+      .filter(section => section.trim())
+      .map(section => section.replace(/^## /, '').trim());
 
     console.log(`Found ${sections.length} sections in the response`);
 
     if (sections.length !== 3) {
-      console.error('Invalid number of sections:', sections);
-      throw new Error('Invalid number of sections in response');
+      console.error('Invalid sections:', sections);
+      throw new Error(`Invalid number of sections in response. Expected 3, got ${sections.length}.`);
     }
 
     let dbUpdate = {};
