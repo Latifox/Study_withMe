@@ -80,6 +80,7 @@ export type Database = {
       lecture_highlights: {
         Row: {
           created_at: string | null
+          full_content: string | null
           id: number
           important_quotes: string | null
           key_concepts: string | null
@@ -92,6 +93,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          full_content?: string | null
           id?: number
           important_quotes?: string | null
           key_concepts?: string | null
@@ -104,6 +106,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          full_content?: string | null
           id?: number
           important_quotes?: string | null
           key_concepts?: string | null

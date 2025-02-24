@@ -26,15 +26,19 @@ const LectureSummary = () => {
     queryKey: ["lecture-highlights", lectureId],
     queryFn: async () => {
       console.log('Fetching lecture highlights...');
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId }
-      });
+      const { data, error } = await supabase
+        .from("lecture_highlights")
+        .select("*")
+        .eq("lecture_id", parseInt(lectureId!))
+        .maybeSingle();
+
       if (error) {
         console.error('Error fetching highlights:', error);
         throw error;
       }
+      
       console.log('Highlights received:', data);
-      return data.content;
+      return data;
     },
   });
 
@@ -133,4 +137,3 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
-

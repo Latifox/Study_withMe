@@ -90,7 +90,7 @@ const LectureSummaryFull = () => {
             
             <div className="prose prose-sm max-w-none text-black">
               <ReactMarkdown>
-                {fullSummary?.fullContent || ''}
+                {fullSummary?.full_content || ''}
               </ReactMarkdown>
             </div>
           </CardContent>
