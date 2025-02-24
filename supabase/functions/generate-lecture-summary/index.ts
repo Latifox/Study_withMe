@@ -19,154 +19,132 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the lecture content and AI configuration
-    const [lectureResult, aiConfigResult] = await Promise.all([
-      supabase
-        .from('lectures')
-        .select('content, title')
-        .eq('id', lectureId)
-        .single(),
-      supabase
-        .from('lecture_ai_configs')
-        .select('*')
-        .eq('lecture_id', lectureId)
-        .maybeSingle()
-    ]);
+    // Fetch the lecture content
+    const { data: lecture, error: lectureError } = await supabase
+      .from('lectures')
+      .select('content, title')
+      .eq('id', lectureId)
+      .single();
 
-    if (lectureResult.error) {
-      console.error('Error fetching lecture:', lectureResult.error);
+    if (lectureError) {
+      console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
-    const lectureData = lectureResult.data;
-    const aiConfig = aiConfigResult.data || {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.6,
-      content_language: null,
-      custom_instructions: null
-    };
+    console.log('Lecture title:', lecture.title);
+    console.log('Content length:', lecture.content?.length ?? 0);
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    
-    if (part === 'full') {
-      // Generate full summary
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'You are an expert educational content analyzer.' },
-            { 
-              role: 'user', 
-              content: `Provide a comprehensive, detailed summary of the following lecture content:
-                ${aiConfig.custom_instructions ? `\nSpecific instructions: ${aiConfig.custom_instructions}` : ''}
-                ${aiConfig.content_language ? `\nPlease provide the content in: ${aiConfig.content_language}` : ''}
-                
-                Title: ${lectureData.title}
-                Content: ${lectureData.content}`
-            }
-          ],
-          temperature: aiConfig.temperature,
-          presence_penalty: aiConfig.creativity_level,
-          frequency_penalty: aiConfig.detail_level,
-        }),
-      });
+    if (!lecture.content) {
+      throw new Error('No lecture content found');
+    }
 
-      const data = await response.json();
-      const fullContent = data.choices[0].message.content.trim();
+    // Generate highlights
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert educational content analyzer. Your task is to analyze the lecture content and provide a detailed analysis in exactly 6 sections. Each section MUST start with its title followed by a colon and a line break. The sections MUST be in this exact order:
 
-      // Store the full summary
-      await supabase
-        .from('lecture_highlights')
-        .upsert({
-          lecture_id: lectureId,
-          full_content: fullContent,
-          updated_at: new Date().toISOString()
-        });
+1. Structure: Analyze how the content is organized and structured
+2. Key Concepts: List and explain the most important concepts
+3. Main Ideas: Analyze the central themes and main points
+4. Important Quotes: Extract and list notable quotes
+5. Relationships: Analyze connections between different concepts
+6. Supporting Evidence: Analyze the evidence used to support main points
 
-      return new Response(JSON.stringify({ content: { full_content: fullContent } }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else {
-      // Generate highlights
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert educational content analyzer. Analyze the lecture content and provide a detailed analysis in 6 sections. Format your response exactly like this, using these exact section names:
+Format your response exactly like this:
 
 Structure:
-[Your analysis of the document's structure]
+[Your detailed analysis of the structure]
 
 Key Concepts:
-[List and explanation of key concepts]
+[Your detailed list and explanation of key concepts]
 
 Main Ideas:
-[Analysis of main ideas]
+[Your detailed analysis of main ideas]
 
 Important Quotes:
-[Notable quotes from the text]
+[Your detailed list of notable quotes]
 
 Relationships:
-[Analysis of relationships between concepts]
+[Your detailed analysis of relationships]
 
 Supporting Evidence:
-[Analysis of supporting evidence used]
+[Your detailed analysis of supporting evidence]
 
-${aiConfig.custom_instructions ? `\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}
-${aiConfig.content_language ? `\nProvide the content in: ${aiConfig.content_language}` : ''}`
-            },
-            {
-              role: 'user',
-              content: `Title: ${lectureData.title}\n\nContent: ${lectureData.content}`
-            }
-          ],
-          temperature: aiConfig.temperature,
-          presence_penalty: aiConfig.creativity_level,
-          frequency_penalty: aiConfig.detail_level,
-        }),
-      });
+IMPORTANT: Make sure each section is substantial and not empty.`
+          },
+          {
+            role: 'user',
+            content: `Title: ${lecture.title}\n\nContent: ${lecture.content}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
 
-      const data = await response.json();
-      const content = data.choices[0].message.content.trim();
-
-      // Parse the sections
-      const sections = {
-        structure: content.match(/Structure:([\s\S]*?)(?=Key Concepts:|$)/)?.[1]?.trim() || '',
-        key_concepts: content.match(/Key Concepts:([\s\S]*?)(?=Main Ideas:|$)/)?.[1]?.trim() || '',
-        main_ideas: content.match(/Main Ideas:([\s\S]*?)(?=Important Quotes:|$)/)?.[1]?.trim() || '',
-        important_quotes: content.match(/Important Quotes:([\s\S]*?)(?=Relationships:|$)/)?.[1]?.trim() || '',
-        relationships: content.match(/Relationships:([\s\S]*?)(?=Supporting Evidence:|$)/)?.[1]?.trim() || '',
-        supporting_evidence: content.match(/Supporting Evidence:([\s\S]*?)(?=$)/)?.[1]?.trim() || ''
-      };
-
-      // Store the highlights
-      await supabase
-        .from('lecture_highlights')
-        .upsert({
-          lecture_id: lectureId,
-          ...sections,
-          updated_at: new Date().toISOString()
-        });
-
-      return new Response(JSON.stringify({ content: sections }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!response.ok) {
+      console.error('OpenAI API error:', await response.text());
+      throw new Error('Failed to generate highlights');
     }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content.trim();
+
+    console.log('Generated content length:', content.length);
+
+    // Parse the sections using more precise regex
+    const sections = {
+      structure: content.match(/Structure:\n([\s\S]*?)(?=\n\nKey Concepts:)/)?.[1]?.trim() || '',
+      key_concepts: content.match(/Key Concepts:\n([\s\S]*?)(?=\n\nMain Ideas:)/)?.[1]?.trim() || '',
+      main_ideas: content.match(/Main Ideas:\n([\s\S]*?)(?=\n\nImportant Quotes:)/)?.[1]?.trim() || '',
+      important_quotes: content.match(/Important Quotes:\n([\s\S]*?)(?=\n\nRelationships:)/)?.[1]?.trim() || '',
+      relationships: content.match(/Relationships:\n([\s\S]*?)(?=\n\nSupporting Evidence:)/)?.[1]?.trim() || '',
+      supporting_evidence: content.match(/Supporting Evidence:\n([\s\S]*?)$/)?.[1]?.trim() || ''
+    };
+
+    // Log the parsed sections
+    console.log('Parsed sections:', Object.keys(sections).map(key => `${key}: ${sections[key].length} chars`));
+
+    // Verify that no section is empty
+    const emptySections = Object.entries(sections)
+      .filter(([_, content]) => !content)
+      .map(([key]) => key);
+
+    if (emptySections.length > 0) {
+      console.error('Empty sections detected:', emptySections);
+      throw new Error(`Generation failed: Empty sections detected: ${emptySections.join(', ')}`);
+    }
+
+    // Store the highlights
+    const { error: upsertError } = await supabase
+      .from('lecture_highlights')
+      .upsert({
+        lecture_id: lectureId,
+        ...sections,
+        updated_at: new Date().toISOString()
+      });
+
+    if (upsertError) {
+      console.error('Error upserting highlights:', upsertError);
+      throw new Error('Failed to store highlights');
+    }
+
+    return new Response(JSON.stringify({ content: sections }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   } catch (error) {
     console.error('Error in generate-lecture-summary:', error);
     return new Response(JSON.stringify({ 
