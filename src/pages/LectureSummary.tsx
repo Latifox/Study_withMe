@@ -29,14 +29,23 @@ const LectureSummary = () => {
       return data.content;
     },
     retry: false,
-    onError: () => {
+    meta: {
+      errorMessage: "There was a problem loading the lecture summary. Please try again."
+    },
+    gcTime: 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Use a separate useEffect to handle errors
+  React.useEffect(() => {
+    if (error) {
       toast({
         title: "Error loading summary",
         description: "There was a problem loading the lecture summary. Please try again.",
         variant: "destructive",
       });
-    },
-  });
+    }
+  }, [error, toast]);
 
   if (isLoading) {
     return (
@@ -113,4 +122,3 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
-
