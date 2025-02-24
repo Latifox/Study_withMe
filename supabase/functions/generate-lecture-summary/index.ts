@@ -20,6 +20,12 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
+      throw new Error('OpenAI API key is not configured');
+    }
 
     // Fetch the AI configuration for this lecture
     const { data: aiConfig, error: aiConfigError } = await supabase
@@ -70,65 +76,56 @@ serve(async (req) => {
       }
     }
 
-    // If no existing highlights, fetch lecture content and generate new ones
+    // If no existing highlights, fetch lecture content
     const { data: lecture, error: lectureError } = await supabase
       .from('lectures')
       .select('content')
       .eq('id', lectureId)
-      .maybeSingle();
+      .single();
 
     if (lectureError || !lecture) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
+    if (!lecture.content) {
+      throw new Error('Lecture content is empty');
+    }
+
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt = `You are an expert educational content analyst with a deep understanding of academic material. 
-Your task is to provide a thorough and insightful analysis of the lecture content.
-Use rich markdown formatting to structure your response, including:
-- Bullet points for lists and key points
-- Headers (##) for main sections
-- Bold text (**) for emphasis
-- Blockquotes (>) for important quotes
-- Proper indentation and spacing for readability
+    const systemPrompt = `You are an expert educational content analyst. Your task is to analyze and summarize lecture content with rich detail. Provide clear, structured insights using markdown formatting.
 
-Make your analysis detailed and comprehensive, focusing on depth rather than breadth. 
-Each insight should be well-explained with specific examples from the text.`;
+${part === 'part1' ? `Focus on:
+- Overall structure and organization
+- Key theoretical concepts and definitions
+- Main ideas and themes` :
+`Focus on:
+- Important quotes and their context
+- Relationships between concepts
+- Evidence supporting main arguments`}
 
-    if (part === 'part1') {
-      systemPrompt += `\n\nProvide a detailed analysis covering the lecture's overall structure, its key theoretical concepts, and the main ideas presented.
-Focus on providing a rich, well-organized breakdown that will help students understand the material deeply.
-Include examples and explanations that demonstrate the relationships between concepts.`;
-    } else if (part === 'part2') {
-      systemPrompt += `\n\nAnalyze the lecture's use of evidence and argumentation. 
-Extract and contextualize significant quotes, examine relationships between different concepts, 
-and evaluate the supporting evidence presented in the lecture.
-Make sure to explain why each piece of evidence is significant and how it supports the lecture's main arguments.`;
-    }
+Use markdown formatting including:
+- Lists and bullet points
+- Bold text for emphasis
+- Blockquotes for important text
+- Clear section headers (##)
+- Proper spacing and organization
 
-    if (aiConfig?.custom_instructions) {
-      systemPrompt += `\n\nAdditional instructions: ${aiConfig.custom_instructions}`;
-    }
-    if (aiConfig?.content_language) {
-      systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
-    }
-
-    const userPrompt = `Please provide a detailed analysis of this lecture content:\n\n${lecture.content}`;
-
-    console.log(`Sending request to OpenAI for ${part}`);
+${aiConfig?.custom_instructions ? `\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}
+${aiConfig?.content_language ? `\nProvide content in: ${aiConfig.content_language}` : ''}`;
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: lecture.content }
         ],
         temperature: aiConfig?.temperature ?? 0.7,
         presence_penalty: aiConfig?.creativity_level ?? 0.5,
@@ -137,61 +134,65 @@ Make sure to explain why each piece of evidence is significant and how it suppor
     });
 
     if (!openAIResponse.ok) {
-      const error = await openAIResponse.text();
-      console.error('OpenAI API Error:', error);
-      throw new Error('Failed to generate content from OpenAI');
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API Error:', errorText);
+      throw new Error('Failed to generate content: OpenAI API error');
     }
 
     const data = await openAIResponse.json();
-    console.log('Received response from OpenAI');
-
+    
     if (!data.choices?.[0]?.message?.content) {
       console.error('Invalid OpenAI response format:', data);
       throw new Error('Invalid response format from OpenAI');
     }
 
     const content = data.choices[0].message.content.trim();
-    console.log('Generated content:', content.substring(0, 200) + '...');
+    console.log('Generated content length:', content.length);
 
-    // Parse the markdown content into sections
-    const sections = content.split('##')
+    // Split content into sections
+    const sections = content
+      .split('##')
       .filter(Boolean)
       .map(s => s.trim());
 
     console.log(`Found ${sections.length} sections in the response`);
 
-    let response;
-    let dbUpdate;
+    const section1 = sections[0] || '';
+    const section2 = sections[1] || '';
+    const section3 = sections[2] || '';
+
+    // Prepare response and database update based on part
+    let responseData, dbUpdate;
 
     if (part === 'part1') {
-      response = {
+      responseData = {
         content: {
-          structure: sections[0] || '',
-          keyConcepts: sections[1] || '',
-          mainIdeas: sections[2] || ''
+          structure: section1,
+          keyConcepts: section2,
+          mainIdeas: section3
         }
       };
 
       dbUpdate = {
         lecture_id: lectureId,
-        structure: sections[0] || '',
-        key_concepts: sections[1] || '',
-        main_ideas: sections[2] || ''
+        structure: section1,
+        key_concepts: section2,
+        main_ideas: section3
       };
-    } else if (part === 'part2') {
-      response = {
+    } else {
+      responseData = {
         content: {
-          importantQuotes: sections[0] || '',
-          relationships: sections[1] || '',
-          supportingEvidence: sections[2] || ''
+          importantQuotes: section1,
+          relationships: section2,
+          supportingEvidence: section3
         }
       };
 
       dbUpdate = {
         lecture_id: lectureId,
-        important_quotes: sections[0] || '',
-        relationships: sections[1] || '',
-        supporting_evidence: sections[2] || ''
+        important_quotes: section1,
+        relationships: section2,
+        supporting_evidence: section3
       };
     }
 
@@ -217,9 +218,7 @@ Make sure to explain why each piece of evidence is significant and how it suppor
       }
     }
 
-    console.log(`Successfully processed and stored content for ${part}`);
-
-    return new Response(JSON.stringify(response), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
