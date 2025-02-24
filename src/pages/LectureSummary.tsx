@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import { useToast } from "@/components/ui/use-toast";
 
 type Category = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
 
@@ -19,34 +20,58 @@ const LectureSummary = () => {
   const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
+  const { toast } = useToast();
 
-  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery({
+  const { data: part1Data, isLoading: isLoadingPart1, error: part1Error } = useQuery({
     queryKey: ["lecture-summary-part1", lectureId],
     queryFn: async () => {
+      console.log('Fetching part1 data...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { lectureId, part: 'part1' }
       });
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching part1:', error);
+        throw error;
+      }
+      console.log('Part1 data received:', data);
       return data.content;
     },
   });
 
-  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery({
+  const { data: part2Data, isLoading: isLoadingPart2, error: part2Error } = useQuery({
     queryKey: ["lecture-summary-part2", lectureId],
     queryFn: async () => {
+      console.log('Fetching part2 data...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { lectureId, part: 'part2' }
       });
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching part2:', error);
+        throw error;
+      }
+      console.log('Part2 data received:', data);
       return data.content;
     },
   });
 
+  // Show errors if any
+  if (part1Error || part2Error) {
+    toast({
+      title: "Error loading summary",
+      description: "There was a problem loading the lecture summary. Please try again.",
+      variant: "destructive",
+    });
+  }
+
   const isLoading = isLoadingPart1 || isLoadingPart2;
   
-  const summaryData = {
-    ...part1Data,
-    ...part2Data
+  const summaryData: SummaryContent = {
+    structure: part1Data?.structure || '',
+    keyConcepts: part1Data?.keyConcepts || '',
+    mainIdeas: part1Data?.mainIdeas || '',
+    importantQuotes: part2Data?.importantQuotes || '',
+    relationships: part2Data?.relationships || '',
+    supportingEvidence: part2Data?.supportingEvidence || ''
   };
 
   if (isLoading) {
@@ -114,7 +139,7 @@ const LectureSummary = () => {
             <Card className="p-6 bg-white/80 backdrop-blur-sm">
               <div className="prose prose-sm max-w-none text-black">
                 <ReactMarkdown>
-                  {summaryData?.[selectedCategory] || ''}
+                  {summaryData[selectedCategory]}
                 </ReactMarkdown>
               </div>
             </Card>

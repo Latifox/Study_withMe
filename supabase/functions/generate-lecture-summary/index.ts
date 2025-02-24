@@ -34,11 +34,16 @@ serve(async (req) => {
     }
 
     // First check if we already have highlights for this lecture
-    const { data: existingHighlights } = await supabase
+    const { data: existingHighlights, error: highlightsError } = await supabase
       .from('lecture_highlights')
       .select('*')
       .eq('lecture_id', lectureId)
       .single();
+
+    if (highlightsError && highlightsError.code !== 'PGRST116') {
+      console.error('Error fetching highlights:', highlightsError);
+      throw new Error('Failed to fetch existing highlights');
+    }
 
     if (existingHighlights) {
       console.log('Found existing highlights');
@@ -79,45 +84,42 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt, userPrompt;
-    
+    let systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown. Each section must be preceded by '##' and properly formatted in markdown.`;
+
     if (part === 'part1') {
-      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+      systemPrompt += `
+      Include these specific sections:
 
       ## Structure
-      [Provide a clear outline of how the content is organized]
+      [Provide a clear outline of how the content is organized using bullet points]
 
       ## Key Concepts
-      [List and explain the main theoretical concepts]
+      [List and explain the main theoretical concepts using markdown formatting]
 
       ## Main Ideas
-      [Summarize the central arguments or themes]
-
-      Important: Ensure each section is detailed and properly formatted with the '##' header.
-      
-      ${aiConfig?.custom_instructions ? `Additional instructions: ${aiConfig.custom_instructions}` : ''}
-      ${aiConfig?.content_language ? `Please provide the content in: ${aiConfig.content_language}` : ''}`;
+      [Summarize the central arguments or themes with bullet points and emphasis]`;
     } else if (part === 'part2') {
-      systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown in three specific sections. Each section should be preceded by its header in markdown format (##). Follow this exact structure:
+      systemPrompt += `
+      Include these specific sections:
 
       ## Important Quotes
-      [Extract and explain significant quotations]
+      [Extract and explain significant quotations using blockquote formatting]
 
       ## Relationships
-      [Analyze connections between concepts]
+      [Analyze connections between concepts with clear formatting]
 
       ## Supporting Evidence
-      [Detail the evidence used to support main arguments]
-
-      Important: Ensure each section is detailed and properly formatted with the '##' header.
-      
-      ${aiConfig?.custom_instructions ? `Additional instructions: ${aiConfig.custom_instructions}` : ''}
-      ${aiConfig?.content_language ? `Please provide the content in: ${aiConfig.content_language}` : ''}`;
-    } else {
-      throw new Error('Invalid part specified');
+      [Detail the evidence used to support main arguments with proper lists]`;
     }
 
-    userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
+    if (aiConfig?.custom_instructions) {
+      systemPrompt += `\n\nAdditional instructions: ${aiConfig.custom_instructions}`;
+    }
+    if (aiConfig?.content_language) {
+      systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
+    }
+
+    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
 
     console.log(`Sending request to OpenAI for ${part}`);
 
@@ -149,11 +151,12 @@ serve(async (req) => {
     console.log('Received response from OpenAI');
 
     if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid OpenAI response format:', JSON.stringify(data));
+      console.error('Invalid OpenAI response format:', data);
       throw new Error('Invalid response format from OpenAI');
     }
 
     const content = data.choices[0].message.content.trim();
+    console.log('Generated content:', content.substring(0, 200) + '...');
 
     // Parse the markdown content into sections
     const sections = content.split('##')
@@ -162,9 +165,9 @@ serve(async (req) => {
 
     console.log(`Found ${sections.length} sections in the response`);
 
-    // Validate that we have exactly 3 sections
+    // Make sure we have exactly 3 sections
     if (sections.length !== 3) {
-      console.error('Invalid number of sections:', sections.length);
+      console.error('Invalid number of sections:', sections);
       throw new Error('Invalid number of sections in response');
     }
 
@@ -184,9 +187,8 @@ serve(async (req) => {
         lecture_id: lectureId,
         structure: sections[0],
         key_concepts: sections[1],
-        main_ideas: sections[2],
+        main_ideas: sections[2]
       };
-
     } else if (part === 'part2') {
       response = {
         content: {
@@ -197,23 +199,15 @@ serve(async (req) => {
       };
 
       dbUpdate = {
+        lecture_id: lectureId,
         important_quotes: sections[0],
         relationships: sections[1],
         supporting_evidence: sections[2]
       };
     }
 
-    // For part1, create new record. For part2, update existing record
-    if (part === 'part1') {
-      const { error: insertError } = await supabase
-        .from('lecture_highlights')
-        .upsert(dbUpdate);
-
-      if (insertError) {
-        console.error('Error inserting highlights:', insertError);
-        throw new Error('Failed to store highlights in database');
-      }
-    } else {
+    // Store the highlights
+    if (existingHighlights) {
       const { error: updateError } = await supabase
         .from('lecture_highlights')
         .update(dbUpdate)
@@ -223,9 +217,18 @@ serve(async (req) => {
         console.error('Error updating highlights:', updateError);
         throw new Error('Failed to update highlights in database');
       }
+    } else {
+      const { error: insertError } = await supabase
+        .from('lecture_highlights')
+        .insert([dbUpdate]);
+
+      if (insertError) {
+        console.error('Error inserting highlights:', insertError);
+        throw new Error('Failed to store highlights in database');
+      }
     }
 
-    console.log('Successfully processed and stored content for', part);
+    console.log(`Successfully processed and stored content for ${part}`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
