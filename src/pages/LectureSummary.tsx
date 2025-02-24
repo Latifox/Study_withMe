@@ -1,6 +1,6 @@
 
 import { useParams, useNavigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
@@ -21,7 +21,6 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: highlights, isLoading, error } = useQuery({
     queryKey: ["lecture-highlights", lectureId],
@@ -39,59 +38,18 @@ const LectureSummary = () => {
       }
       
       console.log('Highlights received:', data);
-
-      if (!data) {
-        console.log('No highlights found, generating...');
-        setIsGenerating(true);
-        
-        try {
-          const { data: generatedData, error: generateError } = await supabase.functions.invoke(
-            'generate-lecture-summary',
-            {
-              body: { lectureId: parseInt(lectureId!), part: 'highlights' }
-            }
-          );
-
-          if (generateError) {
-            console.error('Error generating highlights:', generateError);
-            throw generateError;
-          }
-
-          // After generation, fetch the newly created highlights
-          const { data: newHighlights, error: fetchError } = await supabase
-            .from("lecture_highlights")
-            .select("*")
-            .eq("lecture_id", parseInt(lectureId!))
-            .maybeSingle();
-
-          if (fetchError) {
-            console.error('Error fetching new highlights:', fetchError);
-            throw fetchError;
-          }
-
-          setIsGenerating(false);
-          return newHighlights;
-        } catch (err) {
-          setIsGenerating(false);
-          throw err;
-        }
-      }
-
       return data;
     },
-    retry: 1
   });
 
-  // Handle errors with useEffect
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error loading summary",
-        description: "There was a problem loading the lecture summary. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
+  // Show errors if any
+  if (error) {
+    toast({
+      title: "Error loading summary",
+      description: "There was a problem loading the lecture summary. Please try again.",
+      variant: "destructive",
+    });
+  }
 
   const summaryData: SummaryContent = {
     structure: highlights?.structure || '',
@@ -102,21 +60,15 @@ const LectureSummary = () => {
     supportingEvidence: highlights?.supporting_evidence || ''
   };
 
-  if (isLoading || isGenerating) {
+  if (isLoading) {
     return (
       <BackgroundGradient>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-              <p className="text-lg text-black">
-                {isGenerating ? "Generating highlights..." : "Loading highlights..."}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {isGenerating 
-                  ? "Please wait while we analyze the lecture content."
-                  : "Please wait while we load your request."}
-              </p>
+              <p className="text-lg text-black">Analyzing lecture content...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we process your request.</p>
             </div>
           </div>
         </div>
