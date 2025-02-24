@@ -21,6 +21,18 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Fetch the AI configuration for this lecture
+    const { data: aiConfig, error: aiConfigError } = await supabase
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .maybeSingle();
+
+    if (aiConfigError) {
+      console.error('Error fetching AI config:', aiConfigError);
+      throw new Error('Failed to fetch AI configuration');
+    }
+
     // First check if we already have highlights for this lecture
     const { data: existingHighlights, error: highlightsError } = await supabase
       .from('lecture_highlights')
@@ -58,53 +70,46 @@ serve(async (req) => {
       }
     }
 
-    // If no existing highlights, fetch lecture content and AI config
+    // If no existing highlights, fetch lecture content and generate new ones
     const { data: lecture, error: lectureError } = await supabase
       .from('lectures')
       .select('content')
       .eq('id', lectureId)
-      .single();
+      .maybeSingle();
 
     if (lectureError || !lecture) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
-    // Get AI configuration
-    const { data: aiConfig } = await supabase
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .single();
-
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt = `You are an expert educational content analyzer. Your task is to provide a comprehensive, well-structured analysis of the lecture content. IMPORTANT: You must provide exactly three sections in your response, clearly separated by '## ' markdown headers. Each section must be non-empty and properly formatted with markdown.`;
+    let systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown. Each section must be preceded by '##' and properly formatted in markdown.`;
 
     if (part === 'part1') {
       systemPrompt += `
-      Provide these exact three sections with these exact titles:
+      Include these specific sections:
 
       ## Structure
-      Provide a detailed hierarchical outline of the content using bullet points and numbering.
+      [Provide a clear outline of how the content is organized using bullet points]
 
       ## Key Concepts
-      Define and explain key concepts using bullet points and bold text for important terms.
+      [List and explain the main theoretical concepts using markdown formatting]
 
       ## Main Ideas
-      Present main ideas with supporting details using bullet points and numbered lists.`;
+      [Summarize the central arguments or themes with bullet points and emphasis]`;
     } else if (part === 'part2') {
       systemPrompt += `
-      Provide these exact three sections with these exact titles:
+      Include these specific sections:
 
       ## Important Quotes
-      Use proper blockquote formatting (>) for quotes with explanations.
+      [Extract and explain significant quotations using blockquote formatting]
 
       ## Relationships
-      Detail connections between concepts using bullet points.
+      [Analyze connections between concepts with clear formatting]
 
       ## Supporting Evidence
-      List and analyze evidence using bullet points and numbered lists.`;
+      [Detail the evidence used to support main arguments with proper lists]`;
     }
 
     if (aiConfig?.custom_instructions) {
@@ -114,7 +119,9 @@ serve(async (req) => {
       systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
     }
 
-    console.log('Sending request to OpenAI');
+    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
+
+    console.log(`Sending request to OpenAI for ${part}`);
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -126,7 +133,7 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: lecture.content }
+          { role: 'user', content: userPrompt }
         ],
         temperature: aiConfig?.temperature ?? 0.7,
         presence_penalty: aiConfig?.creativity_level ?? 0.5,
@@ -151,26 +158,29 @@ serve(async (req) => {
     const content = data.choices[0].message.content.trim();
     console.log('Generated content:', content.substring(0, 200) + '...');
 
-    // Parse the markdown content into sections, ensuring we get exactly 3
-    const sections = content.split(/(?=## )/g)
-      .filter(section => section.trim())
-      .map(section => section.replace(/^## /, '').trim());
+    // Parse the markdown content into sections
+    const sections = content.split('##')
+      .filter(Boolean)
+      .map(s => s.trim());
 
     console.log(`Found ${sections.length} sections in the response`);
 
+    // Make sure we have exactly 3 sections
     if (sections.length !== 3) {
-      console.error('Invalid sections:', sections);
-      throw new Error(`Invalid number of sections in response. Expected 3, got ${sections.length}.`);
+      console.error('Invalid number of sections:', sections);
+      throw new Error('Invalid number of sections in response');
     }
 
-    let dbUpdate = {};
-    let response = { content: {} };
+    let response;
+    let dbUpdate;
 
     if (part === 'part1') {
-      response.content = {
-        structure: sections[0],
-        keyConcepts: sections[1],
-        mainIdeas: sections[2]
+      response = {
+        content: {
+          structure: sections[0],
+          keyConcepts: sections[1],
+          mainIdeas: sections[2]
+        }
       };
 
       dbUpdate = {
@@ -180,10 +190,12 @@ serve(async (req) => {
         main_ideas: sections[2]
       };
     } else if (part === 'part2') {
-      response.content = {
-        importantQuotes: sections[0],
-        relationships: sections[1],
-        supportingEvidence: sections[2]
+      response = {
+        content: {
+          importantQuotes: sections[0],
+          relationships: sections[1],
+          supportingEvidence: sections[2]
+        }
       };
 
       dbUpdate = {
@@ -194,7 +206,7 @@ serve(async (req) => {
       };
     }
 
-    // Store or update the highlights
+    // Store the highlights
     if (existingHighlights) {
       const { error: updateError } = await supabase
         .from('lecture_highlights')

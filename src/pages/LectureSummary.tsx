@@ -22,34 +22,12 @@ const LectureSummary = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
 
-  // Convert lectureId from string to number
-  const lectureIdNumber = lectureId ? parseInt(lectureId, 10) : undefined;
-
-  // First, try to get existing highlights from the database
-  const { data: existingHighlights, isLoading: isLoadingHighlights } = useQuery({
-    queryKey: ["lecture-highlights", lectureIdNumber],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lecture_highlights')
-        .select('*')
-        .eq('lecture_id', lectureIdNumber)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-      return data;
-    },
-    enabled: !!lectureIdNumber, // Only run if lectureIdNumber exists
-  });
-
-  // Only fetch part1 if we don't have existing highlights
-  const { data: part1Data, isLoading: isLoadingPart1 } = useQuery({
-    queryKey: ["lecture-summary-part1", lectureIdNumber],
+  const { data: part1Data, isLoading: isLoadingPart1, error: part1Error } = useQuery({
+    queryKey: ["lecture-summary-part1", lectureId],
     queryFn: async () => {
       console.log('Fetching part1 data...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId: lectureIdNumber, part: 'part1' }
+        body: { lectureId, part: 'part1' }
       });
       if (error) {
         console.error('Error fetching part1:', error);
@@ -58,16 +36,14 @@ const LectureSummary = () => {
       console.log('Part1 data received:', data);
       return data.content;
     },
-    enabled: !!lectureIdNumber && !existingHighlights,
   });
 
-  // Only fetch part2 if we don't have existing highlights
-  const { data: part2Data, isLoading: isLoadingPart2 } = useQuery({
-    queryKey: ["lecture-summary-part2", lectureIdNumber],
+  const { data: part2Data, isLoading: isLoadingPart2, error: part2Error } = useQuery({
+    queryKey: ["lecture-summary-part2", lectureId],
     queryFn: async () => {
       console.log('Fetching part2 data...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId: lectureIdNumber, part: 'part2' }
+        body: { lectureId, part: 'part2' }
       });
       if (error) {
         console.error('Error fetching part2:', error);
@@ -76,29 +52,27 @@ const LectureSummary = () => {
       console.log('Part2 data received:', data);
       return data.content;
     },
-    enabled: !!lectureIdNumber && !existingHighlights,
   });
 
-  const isLoading = isLoadingHighlights || (!existingHighlights && (isLoadingPart1 || isLoadingPart2));
+  // Show errors if any
+  if (part1Error || part2Error) {
+    toast({
+      title: "Error loading summary",
+      description: "There was a problem loading the lecture summary. Please try again.",
+      variant: "destructive",
+    });
+  }
 
-  // Combine data from either existing highlights or newly generated content
-  const summaryData: SummaryContent = existingHighlights
-    ? {
-        structure: existingHighlights.structure || '',
-        keyConcepts: existingHighlights.key_concepts || '',
-        mainIdeas: existingHighlights.main_ideas || '',
-        importantQuotes: existingHighlights.important_quotes || '',
-        relationships: existingHighlights.relationships || '',
-        supportingEvidence: existingHighlights.supporting_evidence || ''
-      }
-    : {
-        structure: part1Data?.structure || '',
-        keyConcepts: part1Data?.keyConcepts || '',
-        mainIdeas: part1Data?.mainIdeas || '',
-        importantQuotes: part2Data?.importantQuotes || '',
-        relationships: part2Data?.relationships || '',
-        supportingEvidence: part2Data?.supportingEvidence || ''
-      };
+  const isLoading = isLoadingPart1 || isLoadingPart2;
+  
+  const summaryData: SummaryContent = {
+    structure: part1Data?.structure || '',
+    keyConcepts: part1Data?.keyConcepts || '',
+    mainIdeas: part1Data?.mainIdeas || '',
+    importantQuotes: part2Data?.importantQuotes || '',
+    relationships: part2Data?.relationships || '',
+    supportingEvidence: part2Data?.supportingEvidence || ''
+  };
 
   if (isLoading) {
     return (
@@ -177,4 +151,3 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
-
