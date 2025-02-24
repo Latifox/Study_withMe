@@ -34,19 +34,34 @@ serve(async (req) => {
       throw new Error('Lecture content not found');
     }
 
-    const { data: aiConfig } = await supabaseClient
+    // Fetch AI configuration
+    const { data: aiConfig, error: aiConfigError } = await supabaseClient
       .from('lecture_ai_configs')
       .select('*')
       .eq('lecture_id', lectureId)
       .single();
 
-    console.log('AI Config:', aiConfig);
+    if (aiConfigError) {
+      console.log('No AI config found, using defaults');
+    }
 
+    // Use AI config values or defaults
     const temperature = aiConfig?.temperature ?? 0.7;
-    const content = lecture.content;
+    const creativityLevel = aiConfig?.creativity_level ?? 0.5;
+    const detailLevel = aiConfig?.detail_level ?? 0.6;
+    const customInstructions = aiConfig?.custom_instructions || '';
+    const contentLanguage = aiConfig?.content_language || 'English';
 
-    // Prepare the system prompt based on the part requested
-    const systemPrompt = part === 'highlights' 
+    console.log('Using AI config:', {
+      temperature,
+      creativityLevel,
+      detailLevel,
+      contentLanguage,
+      hasCustomInstructions: !!customInstructions
+    });
+
+    // Adjust system prompt based on AI settings
+    const baseSystemPrompt = part === 'highlights' 
       ? `You are an expert academic content analyzer. Your task is to analyze the provided lecture content and generate comprehensive highlights in the following six categories. Format each section clearly with Markdown headers:
 
 1. Structure: Analyze and describe the overall organization and flow of the content.
@@ -66,6 +81,16 @@ Important guidelines:
 - Include relevant examples and explanations
 - Maintain a logical flow throughout the summary`;
 
+    // Adjust the system prompt based on AI configuration
+    let systemPrompt = `${baseSystemPrompt}\n\nAdditional Instructions:
+- Creativity Level: ${creativityLevel > 0.7 ? 'Be creative and innovative in your analysis' : 'Stay factual and precise'}
+- Detail Level: ${detailLevel > 0.7 ? 'Provide comprehensive and detailed explanations' : 'Keep explanations concise but informative'}
+- Language: Write in ${contentLanguage}`;
+
+    if (customInstructions) {
+      systemPrompt += `\n\nCustom Instructions:\n${customInstructions}`;
+    }
+
     // Make OpenAI API request
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -77,7 +102,7 @@ Important guidelines:
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content }
+          { role: 'user', content: lecture.content }
         ],
         temperature,
       }),
