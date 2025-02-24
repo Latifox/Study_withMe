@@ -1,12 +1,21 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+const supabaseClient = createClient(
+  supabaseUrl!,
+  supabaseServiceRoleKey!
+);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,31 +23,32 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, part } = await req.json();
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    const { lectureId, part, lectureContent } = await req.json();
+
+    console.log(`Generating ${part} summary for lecture ${lectureId}`);
     
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not found');
+    if (!lectureId) {
+      throw new Error('Lecture ID is required');
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Get lecture details if content wasn't provided
+    let lecture;
+    if (!lectureContent) {
+      const { data, error } = await supabaseClient
+        .from('lectures')
+        .select('*')
+        .eq('id', lectureId)
+        .single();
 
-    // Fetch lecture content
-    const { data: lecture, error: lectureError } = await supabaseClient
-      .from('lectures')
-      .select('*')
-      .eq('id', lectureId)
-      .single();
+      if (error) {
+        console.error('Error fetching lecture:', error);
+        throw error;
+      }
 
-    if (lectureError || !lecture?.content) {
-      console.error('Error fetching lecture:', lectureError);
-      throw new Error('Lecture content not found');
+      lecture = data;
     }
 
-    // Fetch AI configuration
+    // Get AI config for the lecture
     const { data: aiConfig, error: aiConfigError } = await supabaseClient
       .from('lecture_ai_configs')
       .select('*')
@@ -46,54 +56,48 @@ serve(async (req) => {
       .single();
 
     if (aiConfigError) {
-      console.log('No AI config found, using defaults');
+      console.error('Error fetching AI config:', aiConfigError);
+      throw aiConfigError;
     }
 
-    // Use AI config values or defaults
-    const temperature = aiConfig?.temperature ?? 0.7;
-    const creativityLevel = aiConfig?.creativity_level ?? 0.5;
-    const detailLevel = aiConfig?.detail_level ?? 0.6;
-    const customInstructions = aiConfig?.custom_instructions || '';
-    const contentLanguage = aiConfig?.content_language || 'English';
+    console.log('AI config:', aiConfig);
 
-    console.log('Using AI config:', {
-      temperature,
-      creativityLevel,
-      detailLevel,
-      contentLanguage,
-      hasCustomInstructions: !!customInstructions
-    });
-
-    // Prepare system prompt
-    const baseSystemPrompt = part === 'highlights' 
-      ? `You are an expert academic content analyzer. Your task is to analyze the provided lecture content and generate comprehensive highlights by providing content for exactly these six sections with EXACT markdown headers:
-
-## Structure
-
-## Key Concepts
-
-## Main Ideas
-
-## Important Quotes
-
-## Relationships
-
-## Supporting Evidence
-
-IMPORTANT: Use these exact headers and maintain this exact order. Each section MUST have content.`
-      : `You are an expert academic content summarizer. Generate a comprehensive summary of the lecture content.`;
-
-    // Adjust the system prompt based on AI configuration
-    let systemPrompt = `${baseSystemPrompt}\n\nAdditional Instructions:
-- Creativity Level: ${creativityLevel > 0.7 ? 'Be creative and innovative in your analysis' : 'Stay factual and precise'}
-- Detail Level: ${detailLevel > 0.7 ? 'Provide comprehensive and detailed explanations' : 'Keep explanations concise but informative'}
-- Language: Write in ${contentLanguage}`;
-
-    if (customInstructions) {
-      systemPrompt += `\n\nCustom Instructions:\n${customInstructions}`;
+    // Use passed content or fallback to fetched content
+    const contentToAnalyze = lectureContent || lecture?.content;
+    
+    if (!contentToAnalyze) {
+      throw new Error('No lecture content available to analyze');
     }
 
-    // Make OpenAI API request
+    let systemPrompt = '';
+    let userPrompt = contentToAnalyze;
+
+    if (part === 'highlights') {
+      systemPrompt = `You are a helpful AI that analyzes lecture content and organizes it into clear sections. Please analyze the following lecture and provide a structured response with these sections:
+
+Structure: Explain how the lecture content is organized.
+Key Concepts: List and explain the main concepts covered.
+Main Ideas: Summarize the principal arguments or points.
+Important Quotes: Include relevant quotes from the lecture.
+Relationships: Describe how different concepts connect.
+Supporting Evidence: Note any evidence, examples, or data used.
+
+Keep each section clear and concise. Use the lecture's original language where appropriate.
+
+Temperature: ${aiConfig.temperature}
+Creativity Level: ${aiConfig.creativity_level}
+Detail Level: ${aiConfig.detail_level}`;
+    } else {
+      systemPrompt = `You are a helpful AI that generates comprehensive lecture summaries. Please analyze the provided lecture content and create a detailed summary that captures all key points, arguments, and examples.
+
+Make the summary clear, well-structured, and thorough while maintaining readability. Use original text where appropriate.
+
+Temperature: ${aiConfig.temperature}
+Creativity Level: ${aiConfig.creativity_level}
+Detail Level: ${aiConfig.detail_level}`;
+    }
+
+    console.log('Sending request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -101,64 +105,35 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: lecture.content }
+          { role: 'user', content: userPrompt }
         ],
-        temperature,
+        temperature: aiConfig.temperature,
       }),
     });
 
-    const data = await response.json();
-    
-    if (!data.choices || !data.choices[0]?.message?.content) {
-      throw new Error('No content generated by OpenAI');
+    const completion = await response.json();
+    console.log('Received response from OpenAI');
+
+    if (!completion.choices || completion.choices.length === 0) {
+      console.error('Invalid response from OpenAI:', completion);
+      throw new Error('Failed to generate summary');
     }
 
-    const content = data.choices[0].message.content;
-    console.log('Generated content:', content);
+    const generatedContent = completion.choices[0].message.content;
+    console.log('Generated content:', generatedContent);
 
     if (part === 'highlights') {
-      // Parse the markdown content into sections
-      const sections = {
-        structure: '',
-        key_concepts: '',
-        main_ideas: '',
-        important_quotes: '',
-        relationships: '',
-        supporting_evidence: ''
-      };
+      // Parse the sections from the generated content
+      const sections: Record<string, string> = {};
+      const sectionRegex = /^(Structure|Key Concepts|Main Ideas|Important Quotes|Relationships|Supporting Evidence):\s*([\s\S]*?)(?=\n\n(?:Structure|Key Concepts|Main Ideas|Important Quotes|Relationships|Supporting Evidence):|$)/gm;
 
-      const contentSections = content.split('##').filter(Boolean);
-      
-      contentSections.forEach(section => {
-        const trimmedSection = section.trim();
-        const firstLineBreak = trimmedSection.indexOf('\n');
-        const title = trimmedSection.substring(0, firstLineBreak).trim().toLowerCase();
-        const content = trimmedSection.substring(firstLineBreak).trim();
-
-        switch (title) {
-          case 'structure':
-            sections.structure = content;
-            break;
-          case 'key concepts':
-            sections.key_concepts = content;
-            break;
-          case 'main ideas':
-            sections.main_ideas = content;
-            break;
-          case 'important quotes':
-            sections.important_quotes = content;
-            break;
-          case 'relationships':
-            sections.relationships = content;
-            break;
-          case 'supporting evidence':
-            sections.supporting_evidence = content;
-            break;
-        }
-      });
+      let match;
+      while ((match = sectionRegex.exec(generatedContent)) !== null) {
+        sections[match[1].toLowerCase().replace(' ', '_')] = match[2].trim();
+      }
 
       console.log('Parsed sections:', sections);
 
@@ -177,7 +152,7 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
         throw new Error('Failed to store highlights');
       }
 
-      return new Response(JSON.stringify(sections), {
+      return new Response(JSON.stringify({ content: sections }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
@@ -186,7 +161,7 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
         .from('lecture_highlights')
         .upsert({
           lecture_id: lectureId,
-          full_content: content,
+          full_content: generatedContent,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -196,16 +171,17 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
         throw new Error('Failed to store full summary');
       }
 
-      return new Response(JSON.stringify({ content }), {
+      return new Response(JSON.stringify({ content: { full_content: generatedContent } }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
   } catch (error) {
-    console.error('Error in generate-lecture-summary:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });

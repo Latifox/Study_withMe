@@ -14,6 +14,7 @@ const LectureSummaryFull = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // First, fetch the lecture data
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
@@ -28,12 +29,19 @@ const LectureSummaryFull = () => {
     },
   });
 
+  // Then use the lecture data to generate the full summary
   const { data: fullSummary, isLoading } = useQuery({
     queryKey: ["lecture-summary-full", lectureId],
     queryFn: async () => {
       console.log('Fetching full lecture summary...');
+      console.log('Lecture content available:', !!lecture?.content);
+      
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, part: 'full' }
+        body: { 
+          lectureId,
+          part: 'full',
+          lectureContent: lecture?.content // Pass the lecture content to the Edge Function
+        }
       });
       
       if (error) {
@@ -49,6 +57,7 @@ const LectureSummaryFull = () => {
       console.log('Full summary received:', data);
       return data.content;
     },
+    enabled: !!lecture, // Only run this query when lecture data is available
   });
 
   if (isLoading) {
@@ -101,3 +110,4 @@ const LectureSummaryFull = () => {
 };
 
 export default LectureSummaryFull;
+
