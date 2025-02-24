@@ -1,6 +1,6 @@
 
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
@@ -21,8 +21,9 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const { data: highlights, isLoading, error } = useQuery({
+  const { data: highlights, isLoading, error, refetch } = useQuery({
     queryKey: ["lecture-highlights", lectureId],
     queryFn: async () => {
       console.log('Fetching lecture highlights...');
@@ -38,18 +39,42 @@ const LectureSummary = () => {
       }
       
       console.log('Highlights received:', data);
+
+      if (!data) {
+        // If no highlights exist, generate them
+        console.log('No highlights found, generating...');
+        setIsGenerating(true);
+        const { data: generatedData, error: generateError } = await supabase.functions.invoke(
+          'generate-lecture-summary',
+          {
+            body: { lectureId: parseInt(lectureId!), part: 'highlights' }
+          }
+        );
+
+        if (generateError) {
+          console.error('Error generating highlights:', generateError);
+          throw generateError;
+        }
+
+        setIsGenerating(false);
+        return generatedData.content;
+      }
+
       return data;
     },
+    retry: 1,
   });
 
   // Show errors if any
-  if (error) {
-    toast({
-      title: "Error loading summary",
-      description: "There was a problem loading the lecture summary. Please try again.",
-      variant: "destructive",
-    });
-  }
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error loading summary",
+        description: "There was a problem loading the lecture summary. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   const summaryData: SummaryContent = {
     structure: highlights?.structure || '',
@@ -60,15 +85,21 @@ const LectureSummary = () => {
     supportingEvidence: highlights?.supporting_evidence || ''
   };
 
-  if (isLoading) {
+  if (isLoading || isGenerating) {
     return (
       <BackgroundGradient>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-              <p className="text-lg text-black">Analyzing lecture content...</p>
-              <p className="text-sm text-muted-foreground">Please wait while we process your request.</p>
+              <p className="text-lg text-black">
+                {isGenerating ? "Generating highlights..." : "Loading highlights..."}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isGenerating 
+                  ? "Please wait while we analyze the lecture content."
+                  : "Please wait while we load your request."}
+              </p>
             </div>
           </div>
         </div>
@@ -88,13 +119,22 @@ const LectureSummary = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
           </Button>
-          <Button 
-            onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
-            className="gap-2 bg-white/80 hover:bg-white"
-          >
-            Get Full Summary
-            <ExternalLink className="w-4 h-4" />
-          </Button>
+          <div className="space-x-4">
+            <Button 
+              variant="outline"
+              onClick={() => refetch()}
+              className="gap-2 bg-white/80 hover:bg-white"
+            >
+              Regenerate Highlights
+            </Button>
+            <Button 
+              onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
+              className="gap-2 bg-white/80 hover:bg-white"
+            >
+              Get Full Summary
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
