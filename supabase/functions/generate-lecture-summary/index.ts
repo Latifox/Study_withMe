@@ -94,26 +94,21 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    const systemPrompt = `You are an expert educational content analyst. Your task is to analyze and summarize lecture content with rich detail. Provide clear, structured insights using markdown formatting.
+    const systemPrompt = `You are an expert educational content analyst focused on creating comprehensive, detailed summaries of lecture content. Your goal is to help students understand and retain the material better.
 
-${part === 'part1' ? `Focus on:
-- Overall structure and organization
-- Key theoretical concepts and definitions
-- Main ideas and themes` :
-`Focus on:
-- Important quotes and their context
-- Relationships between concepts
-- Evidence supporting main arguments`}
+${part === 'part1' ? `Provide an in-depth analysis covering:
+The lecture's overall structure and flow
+Key theoretical concepts with thorough explanations
+Main ideas and central themes, including their significance` : 
+`Provide a detailed exploration of:
+Notable quotes and their contextual significance
+How concepts and ideas interconnect
+Evidence and examples that support the main arguments`}
 
-Use markdown formatting including:
-- Lists and bullet points
-- Bold text for emphasis
-- Blockquotes for important text
-- Clear section headers (##)
-- Proper spacing and organization
+Your analysis should be thorough and nuanced, providing clear explanations and relevant context. Feel free to use markdown formatting where it enhances readability, but focus primarily on providing rich, meaningful content.
 
-${aiConfig?.custom_instructions ? `\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}
-${aiConfig?.content_language ? `\nProvide content in: ${aiConfig.content_language}` : ''}`;
+${aiConfig?.custom_instructions ? `\nAdditional analysis requirements: ${aiConfig.custom_instructions}` : ''}
+${aiConfig?.content_language ? `\nProvide analysis in: ${aiConfig.content_language}` : ''}`;
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -122,7 +117,7 @@ ${aiConfig?.content_language ? `\nProvide content in: ${aiConfig.content_languag
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: lecture.content }
