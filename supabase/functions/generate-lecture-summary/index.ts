@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -39,7 +40,7 @@ serve(async (req) => {
       throw new Error('Failed to fetch lecture content');
     }
 
-    const lecture = lectureResult.data;
+    const lectureData = lectureResult.data;
     const aiConfig = aiConfigResult.data || {
       temperature: 0.7,
       creativity_level: 0.5,
@@ -47,18 +48,6 @@ serve(async (req) => {
       content_language: null,
       custom_instructions: null
     };
-
-    // Check if we already have highlights for this lecture
-    const { data: existingHighlights, error: highlightsError } = await supabase
-      .from('lecture_highlights')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
-
-    if (highlightsError && highlightsError.code !== 'PGRST116') {
-      console.error('Error fetching highlights:', highlightsError);
-      throw new Error('Failed to fetch existing highlights');
-    }
 
     // If part is 'full', generate and store the full summary
     if (part === 'full') {
@@ -68,7 +57,7 @@ serve(async (req) => {
       ${aiConfig.custom_instructions ? `\nSpecific instructions: ${aiConfig.custom_instructions}` : ''}
       ${aiConfig.content_language ? `\nPlease provide the content in: ${aiConfig.content_language}` : ''}
       
-      Lecture Title: ${lecture.title}
+      Lecture Title: ${lectureData.title}
       
       Please analyze and summarize the content, paying special attention to:
       1. Main arguments and key points
@@ -78,7 +67,7 @@ serve(async (req) => {
       5. Connections to broader themes or other topics
       
       Lecture Content:
-      ${lecture.content}`;
+      ${lectureData.content}`;
 
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -111,32 +100,68 @@ serve(async (req) => {
         throw new Error('Invalid response format from OpenAI');
       }
 
-      // Update or insert the full content in the lecture_highlights table
-      const { error: upsertError } = await supabase
+      // Check if highlights exist and update or insert accordingly
+      const { data: existingHighlights, error: checkError } = await supabase
         .from('lecture_highlights')
-        .upsert({
-          lecture_id: lectureId,
-          full_content: fullContent,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'lecture_id'
-        });
+        .select('id')
+        .eq('lecture_id', lectureId)
+        .maybeSingle();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking highlights:', checkError);
+        throw new Error('Failed to check existing highlights');
+      }
 
-      if (upsertError) {
-        console.error('Error storing full summary:', upsertError);
-        throw new Error('Failed to store full summary');
+      // If highlights exist, only update full_content
+      if (existingHighlights) {
+        const { error: updateError } = await supabase
+          .from('lecture_highlights')
+          .update({ 
+            full_content: fullContent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('lecture_id', lectureId);
+
+        if (updateError) {
+          console.error('Error updating full summary:', updateError);
+          throw new Error('Failed to update full summary');
+        }
+      } else {
+        // If no highlights exist, create a new row
+        const { error: insertError } = await supabase
+          .from('lecture_highlights')
+          .insert({
+            lecture_id: lectureId,
+            full_content: fullContent,
+          });
+
+        if (insertError) {
+          console.error('Error inserting full summary:', insertError);
+          throw new Error('Failed to store full summary');
+        }
       }
 
       return new Response(JSON.stringify({
-        content: { fullContent }
+        content: { full_content: fullContent }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Return existing data if available
+    // For regular highlights, fetch existing data
+    const { data: existingHighlights, error: highlightsError } = await supabase
+      .from('lecture_highlights')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .maybeSingle();
+
+    if (highlightsError && highlightsError.code !== 'PGRST116') {
+      console.error('Error fetching highlights:', highlightsError);
+      throw new Error('Failed to fetch existing highlights');
+    }
+
+    // Return existing highlights if available
     if (existingHighlights) {
-      console.log('Found existing highlights');
       return new Response(JSON.stringify({
         content: existingHighlights
       }), {
@@ -144,19 +169,8 @@ serve(async (req) => {
       });
     }
 
-    // If no existing highlights, fetch lecture content and generate new ones
-    const { data: lecture, error: lectureError } = await supabase
-      .from('lectures')
-      .select('content')
-      .eq('id', lectureId)
-      .maybeSingle();
-
-    if (lectureError || !lecture) {
-      console.error('Error fetching lecture:', lectureError);
-      throw new Error('Failed to fetch lecture content');
-    }
-
-    console.log('Successfully fetched lecture content');
+    // If no highlights exist, generate new ones
+    console.log('No existing highlights found, generating new ones');
 
     const systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a comprehensive analysis organized into six distinct sections, each properly formatted in markdown:
 
@@ -170,9 +184,9 @@ serve(async (req) => {
     ${aiConfig?.custom_instructions ? `\n\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}
     ${aiConfig?.content_language ? `\n\nPlease provide the content in: ${aiConfig.content_language}` : ''}`;
 
-    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified sections:\n\n${lecture.content}`;
+    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified sections:\n\n${lectureData.content}`;
 
-    console.log('Sending request to OpenAI');
+    console.log('Sending request to OpenAI for highlights');
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -181,7 +195,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -231,7 +245,7 @@ serve(async (req) => {
       throw new Error('Failed to store highlights in database');
     }
 
-    console.log('Successfully processed and stored content');
+    console.log('Successfully processed and stored highlights');
 
     return new Response(JSON.stringify({
       content: sections
@@ -249,3 +263,4 @@ serve(async (req) => {
     });
   }
 });
+
