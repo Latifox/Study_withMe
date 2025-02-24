@@ -14,8 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, part } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'part:', part);
+    const { lectureId } = await req.json();
+    console.log('Processing request for lecture:', lectureId);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -51,29 +51,13 @@ serve(async (req) => {
       throw new Error('Failed to fetch existing highlights');
     }
 
-    if (existingHighlights) {
+    if (existingHighlights?.content) {
       console.log('Found existing highlights');
-      if (part === 'part1') {
-        return new Response(JSON.stringify({
-          content: {
-            structure: existingHighlights.structure || '',
-            keyConcepts: existingHighlights.key_concepts || '',
-            mainIdeas: existingHighlights.main_ideas || ''
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else if (part === 'part2') {
-        return new Response(JSON.stringify({
-          content: {
-            importantQuotes: existingHighlights.important_quotes || '',
-            relationships: existingHighlights.relationships || '',
-            supportingEvidence: existingHighlights.supporting_evidence || ''
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      return new Response(JSON.stringify({
+        content: existingHighlights.content
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // If no existing highlights, fetch lecture content
@@ -94,18 +78,17 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    const systemPrompt = `You are an expert educational content analyst focused on creating comprehensive, detailed summaries of lecture content. Your goal is to help students understand and retain the material better.
+    const systemPrompt = `You are an expert educational content analyst focused on creating comprehensive, detailed summaries of lecture content. Your task is to analyze the lecture content and create a thorough, well-structured summary that will help students understand and retain the material better.
 
-${part === 'part1' ? `Provide an in-depth analysis covering:
-The lecture's overall structure and flow
-Key theoretical concepts with thorough explanations
-Main ideas and central themes, including their significance` : 
-`Provide a detailed exploration of:
-Notable quotes and their contextual significance
-How concepts and ideas interconnect
-Evidence and examples that support the main arguments`}
+Please provide a detailed analysis that includes:
+- Key concepts and their explanations
+- Main ideas and their significance
+- Important relationships between concepts
+- Supporting evidence and examples
+- Notable quotes and their context
+- Any other relevant aspects you identify as important
 
-Your analysis should be thorough and nuanced, providing clear explanations and relevant context. Feel free to use markdown formatting where it enhances readability, but focus primarily on providing rich, meaningful content.
+Use markdown formatting to structure your response in a clear, readable way. Feel free to organize the content in the most logical way for the specific material - don't feel constrained to follow a specific format.
 
 ${aiConfig?.custom_instructions ? `\nAdditional analysis requirements: ${aiConfig.custom_instructions}` : ''}
 ${aiConfig?.content_language ? `\nProvide analysis in: ${aiConfig.content_language}` : ''}`;
@@ -144,76 +127,22 @@ ${aiConfig?.content_language ? `\nProvide analysis in: ${aiConfig.content_langua
     const content = data.choices[0].message.content.trim();
     console.log('Generated content length:', content.length);
 
-    // Split content into sections
-    const sections = content
-      .split('##')
-      .filter(Boolean)
-      .map(s => s.trim());
-
-    console.log(`Found ${sections.length} sections in the response`);
-
-    const section1 = sections[0] || '';
-    const section2 = sections[1] || '';
-    const section3 = sections[2] || '';
-
-    // Prepare response and database update based on part
-    let responseData, dbUpdate;
-
-    if (part === 'part1') {
-      responseData = {
-        content: {
-          structure: section1,
-          keyConcepts: section2,
-          mainIdeas: section3
-        }
-      };
-
-      dbUpdate = {
+    // Store the content in the database
+    const { error: insertError } = await supabase
+      .from('lecture_highlights')
+      .insert([{
         lecture_id: lectureId,
-        structure: section1,
-        key_concepts: section2,
-        main_ideas: section3
-      };
-    } else {
-      responseData = {
-        content: {
-          importantQuotes: section1,
-          relationships: section2,
-          supportingEvidence: section3
-        }
-      };
+        content: content
+      }]);
 
-      dbUpdate = {
-        lecture_id: lectureId,
-        important_quotes: section1,
-        relationships: section2,
-        supporting_evidence: section3
-      };
+    if (insertError) {
+      console.error('Error storing highlights:', insertError);
+      throw new Error('Failed to store highlights in database');
     }
 
-    // Store the highlights
-    if (existingHighlights) {
-      const { error: updateError } = await supabase
-        .from('lecture_highlights')
-        .update(dbUpdate)
-        .eq('lecture_id', lectureId);
-
-      if (updateError) {
-        console.error('Error updating highlights:', updateError);
-        throw new Error('Failed to update highlights in database');
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('lecture_highlights')
-        .insert([dbUpdate]);
-
-      if (insertError) {
-        console.error('Error inserting highlights:', insertError);
-        throw new Error('Failed to store highlights in database');
-      }
-    }
-
-    return new Response(JSON.stringify(responseData), {
+    return new Response(JSON.stringify({
+      content: content
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
@@ -227,4 +156,3 @@ ${aiConfig?.content_language ? `\nProvide analysis in: ${aiConfig.content_langua
     });
   }
 });
-
