@@ -49,94 +49,113 @@ serve(async (req) => {
       custom_instructions: null
     };
 
-    // Initialize OpenAI API configuration
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: part === 'full' ? [
-          { role: 'system', content: 'You are an expert educational content analyzer.' },
-          { 
-            role: 'user', 
-            content: `Provide a comprehensive, detailed summary of the following lecture content:
-              ${aiConfig.custom_instructions ? `\nSpecific instructions: ${aiConfig.custom_instructions}` : ''}
-              ${aiConfig.content_language ? `\nPlease provide the content in: ${aiConfig.content_language}` : ''}
-              
-              Title: ${lectureData.title}
-              Content: ${lectureData.content}`
-          }
-        ] : [
-          {
-            role: 'system',
-            content: `You are an expert educational content analyzer. Analyze the lecture content and provide detailed analysis in 6 sections: Structure, Key Concepts, Main Ideas, Important Quotes, Relationships, and Supporting Evidence. Format each section properly in markdown.
-              ${aiConfig.custom_instructions ? `\nSpecific instructions: ${aiConfig.custom_instructions}` : ''}
-              ${aiConfig.content_language ? `\nProvide the content in: ${aiConfig.content_language}` : ''}`
-          },
-          {
-            role: 'user',
-            content: lectureData.content
-          }
-        ],
-        temperature: aiConfig.temperature,
-        presence_penalty: aiConfig.creativity_level,
-        frequency_penalty: aiConfig.detail_level,
-      }),
-    });
-
-    if (!openAIResponse.ok) {
-      const error = await openAIResponse.text();
-      console.error('OpenAI API Error:', error);
-      throw new Error('Failed to generate content from OpenAI');
-    }
-
-    const data = await openAIResponse.json();
-    console.log('Received response from OpenAI');
-
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid OpenAI response format:', data);
-      throw new Error('Invalid response format from OpenAI');
-    }
-
-    const content = data.choices[0].message.content.trim();
-
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    
     if (part === 'full') {
-      // Handle full summary
-      const { error: upsertError } = await supabase
+      // Generate full summary
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are an expert educational content analyzer.' },
+            { 
+              role: 'user', 
+              content: `Provide a comprehensive, detailed summary of the following lecture content:
+                ${aiConfig.custom_instructions ? `\nSpecific instructions: ${aiConfig.custom_instructions}` : ''}
+                ${aiConfig.content_language ? `\nPlease provide the content in: ${aiConfig.content_language}` : ''}
+                
+                Title: ${lectureData.title}
+                Content: ${lectureData.content}`
+            }
+          ],
+          temperature: aiConfig.temperature,
+          presence_penalty: aiConfig.creativity_level,
+          frequency_penalty: aiConfig.detail_level,
+        }),
+      });
+
+      const data = await response.json();
+      const fullContent = data.choices[0].message.content.trim();
+
+      // Store the full summary
+      await supabase
         .from('lecture_highlights')
         .upsert({
           lecture_id: lectureId,
-          full_content: content,
+          full_content: fullContent,
           updated_at: new Date().toISOString()
         });
 
-      if (upsertError) {
-        console.error('Error upserting full summary:', upsertError);
-        throw new Error('Failed to store full summary');
-      }
-
-      return new Response(JSON.stringify({
-        content: { full_content: content }
-      }), {
+      return new Response(JSON.stringify({ content: { full_content: fullContent } }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
-      // Handle regular highlights
-      // Extract sections using regex
+      // Generate highlights
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert educational content analyzer. Analyze the lecture content and provide a detailed analysis in 6 sections. Format your response exactly like this, using these exact section names:
+
+Structure:
+[Your analysis of the document's structure]
+
+Key Concepts:
+[List and explanation of key concepts]
+
+Main Ideas:
+[Analysis of main ideas]
+
+Important Quotes:
+[Notable quotes from the text]
+
+Relationships:
+[Analysis of relationships between concepts]
+
+Supporting Evidence:
+[Analysis of supporting evidence used]
+
+${aiConfig.custom_instructions ? `\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}
+${aiConfig.content_language ? `\nProvide the content in: ${aiConfig.content_language}` : ''}`
+            },
+            {
+              role: 'user',
+              content: `Title: ${lectureData.title}\n\nContent: ${lectureData.content}`
+            }
+          ],
+          temperature: aiConfig.temperature,
+          presence_penalty: aiConfig.creativity_level,
+          frequency_penalty: aiConfig.detail_level,
+        }),
+      });
+
+      const data = await response.json();
+      const content = data.choices[0].message.content.trim();
+
+      // Parse the sections
       const sections = {
-        structure: content.match(/Structure:([^#]*)/s)?.[1]?.trim() || '',
-        key_concepts: content.match(/Key Concepts:([^#]*)/s)?.[1]?.trim() || '',
-        main_ideas: content.match(/Main Ideas:([^#]*)/s)?.[1]?.trim() || '',
-        important_quotes: content.match(/Important Quotes:([^#]*)/s)?.[1]?.trim() || '',
-        relationships: content.match(/Relationships:([^#]*)/s)?.[1]?.trim() || '',
-        supporting_evidence: content.match(/Supporting Evidence:([^#]*)/s)?.[1]?.trim() || ''
+        structure: content.match(/Structure:([\s\S]*?)(?=Key Concepts:|$)/)?.[1]?.trim() || '',
+        key_concepts: content.match(/Key Concepts:([\s\S]*?)(?=Main Ideas:|$)/)?.[1]?.trim() || '',
+        main_ideas: content.match(/Main Ideas:([\s\S]*?)(?=Important Quotes:|$)/)?.[1]?.trim() || '',
+        important_quotes: content.match(/Important Quotes:([\s\S]*?)(?=Relationships:|$)/)?.[1]?.trim() || '',
+        relationships: content.match(/Relationships:([\s\S]*?)(?=Supporting Evidence:|$)/)?.[1]?.trim() || '',
+        supporting_evidence: content.match(/Supporting Evidence:([\s\S]*?)(?=$)/)?.[1]?.trim() || ''
       };
 
-      // Store or update the highlights
-      const { error: upsertError } = await supabase
+      // Store the highlights
+      await supabase
         .from('lecture_highlights')
         .upsert({
           lecture_id: lectureId,
@@ -144,14 +163,7 @@ serve(async (req) => {
           updated_at: new Date().toISOString()
         });
 
-      if (upsertError) {
-        console.error('Error upserting highlights:', upsertError);
-        throw new Error('Failed to store highlights');
-      }
-
-      return new Response(JSON.stringify({
-        content: sections
-      }), {
+      return new Response(JSON.stringify({ content: sections }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
