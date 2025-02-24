@@ -41,40 +41,53 @@ const LectureSummary = () => {
       console.log('Highlights received:', data);
 
       if (!data) {
-        // If no highlights exist, generate them
         console.log('No highlights found, generating...');
         setIsGenerating(true);
-        const { data: generatedData, error: generateError } = await supabase.functions.invoke(
-          'generate-lecture-summary',
-          {
-            body: { lectureId: parseInt(lectureId!), part: 'highlights' }
+        
+        try {
+          const { data: generatedData, error: generateError } = await supabase.functions.invoke(
+            'generate-lecture-summary',
+            {
+              body: { lectureId: parseInt(lectureId!), part: 'highlights' }
+            }
+          );
+
+          if (generateError) {
+            console.error('Error generating highlights:', generateError);
+            throw generateError;
           }
-        );
 
-        if (generateError) {
-          console.error('Error generating highlights:', generateError);
-          throw generateError;
+          // After generation, fetch the newly created highlights
+          const { data: newHighlights, error: fetchError } = await supabase
+            .from("lecture_highlights")
+            .select("*")
+            .eq("lecture_id", parseInt(lectureId!))
+            .maybeSingle();
+
+          if (fetchError) {
+            console.error('Error fetching new highlights:', fetchError);
+            throw fetchError;
+          }
+
+          setIsGenerating(false);
+          return newHighlights;
+        } catch (err) {
+          setIsGenerating(false);
+          throw err;
         }
-
-        setIsGenerating(false);
-        return generatedData.content;
       }
 
       return data;
     },
     retry: 1,
-  });
-
-  // Show errors if any
-  useEffect(() => {
-    if (error) {
+    onError: (err) => {
       toast({
         title: "Error loading summary",
         description: "There was a problem loading the lecture summary. Please try again.",
         variant: "destructive",
       });
     }
-  }, [error, toast]);
+  });
 
   const summaryData: SummaryContent = {
     structure: highlights?.structure || '',
@@ -168,4 +181,3 @@ const LectureSummary = () => {
 };
 
 export default LectureSummary;
-
