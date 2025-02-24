@@ -21,18 +21,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the AI configuration for this lecture
-    const { data: aiConfig, error: aiConfigError } = await supabase
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
-
-    if (aiConfigError) {
-      console.error('Error fetching AI config:', aiConfigError);
-      throw new Error('Failed to fetch AI configuration');
-    }
-
     // First check if we already have highlights for this lecture
     const { data: existingHighlights, error: highlightsError } = await supabase
       .from('lecture_highlights')
@@ -70,46 +58,76 @@ serve(async (req) => {
       }
     }
 
-    // If no existing highlights, fetch lecture content and generate new ones
+    // If no existing highlights, fetch lecture content and AI config
     const { data: lecture, error: lectureError } = await supabase
       .from('lectures')
       .select('content')
       .eq('id', lectureId)
-      .maybeSingle();
+      .single();
 
     if (lectureError || !lecture) {
       console.error('Error fetching lecture:', lectureError);
       throw new Error('Failed to fetch lecture content');
     }
 
+    // Get AI configuration
+    const { data: aiConfig } = await supabase
+      .from('lecture_ai_configs')
+      .select('*')
+      .eq('lecture_id', lectureId)
+      .single();
+
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown. Each section must be preceded by '##' and properly formatted in markdown.`;
+    let systemPrompt = `You are an expert educational content analyzer. Your task is to provide a comprehensive, well-structured analysis of the lecture content using clear markdown formatting. Your analysis should be thorough and academically rigorous.`;
 
     if (part === 'part1') {
       systemPrompt += `
-      Include these specific sections:
+      For each section, use extensive markdown formatting to ensure clarity and readability:
 
       ## Structure
-      [Provide a clear outline of how the content is organized using bullet points]
+      - Provide a detailed hierarchical outline of the content
+      - Use nested bullet points to show relationships between topics
+      - Include section numbers and subsections
+      - Highlight key organizational elements
 
       ## Key Concepts
-      [List and explain the main theoretical concepts using markdown formatting]
+      - Define and explain each concept thoroughly
+      - Use bullet points for clarity
+      - Include relevant examples or applications
+      - Highlight relationships between concepts
+      - Use bold text for important terms
 
       ## Main Ideas
-      [Summarize the central arguments or themes with bullet points and emphasis]`;
+      - Present each main idea with supporting details
+      - Use numbered lists for primary points
+      - Include relevant context and implications
+      - Connect ideas to broader themes
+      - Use markdown formatting to emphasize critical points`;
     } else if (part === 'part2') {
       systemPrompt += `
-      Include these specific sections:
+      Use rich markdown formatting for each section:
 
       ## Important Quotes
-      [Extract and explain significant quotations using blockquote formatting]
+      - Use proper blockquote formatting (>)
+      - Provide context for each quote
+      - Explain significance and implications
+      - Connect quotes to main themes
+      - Include page/section references when possible
 
       ## Relationships
-      [Analyze connections between concepts with clear formatting]
+      - Detail connections between concepts
+      - Use bullet points for clarity
+      - Explain cause-and-effect relationships
+      - Identify patterns and themes
+      - Use formatting to highlight key relationships
 
       ## Supporting Evidence
-      [Detail the evidence used to support main arguments with proper lists]`;
+      - List and analyze evidence thoroughly
+      - Include specific examples
+      - Explain how evidence supports main ideas
+      - Use bullet points for clear organization
+      - Connect evidence to conclusions`;
     }
 
     if (aiConfig?.custom_instructions) {
@@ -118,8 +136,6 @@ serve(async (req) => {
     if (aiConfig?.content_language) {
       systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
     }
-
-    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
 
     console.log(`Sending request to OpenAI for ${part}`);
 
@@ -133,7 +149,7 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: lecture.content }
         ],
         temperature: aiConfig?.temperature ?? 0.7,
         presence_penalty: aiConfig?.creativity_level ?? 0.5,
@@ -165,22 +181,19 @@ serve(async (req) => {
 
     console.log(`Found ${sections.length} sections in the response`);
 
-    // Make sure we have exactly 3 sections
     if (sections.length !== 3) {
       console.error('Invalid number of sections:', sections);
       throw new Error('Invalid number of sections in response');
     }
 
-    let response;
-    let dbUpdate;
+    let dbUpdate = {};
+    let response = { content: {} };
 
     if (part === 'part1') {
-      response = {
-        content: {
-          structure: sections[0],
-          keyConcepts: sections[1],
-          mainIdeas: sections[2]
-        }
+      response.content = {
+        structure: sections[0],
+        keyConcepts: sections[1],
+        mainIdeas: sections[2]
       };
 
       dbUpdate = {
@@ -190,12 +203,10 @@ serve(async (req) => {
         main_ideas: sections[2]
       };
     } else if (part === 'part2') {
-      response = {
-        content: {
-          importantQuotes: sections[0],
-          relationships: sections[1],
-          supportingEvidence: sections[2]
-        }
+      response.content = {
+        importantQuotes: sections[0],
+        relationships: sections[1],
+        supportingEvidence: sections[2]
       };
 
       dbUpdate = {
@@ -206,7 +217,7 @@ serve(async (req) => {
       };
     }
 
-    // Store the highlights
+    // Store or update the highlights
     if (existingHighlights) {
       const { error: updateError } = await supabase
         .from('lecture_highlights')
