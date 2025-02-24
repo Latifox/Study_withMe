@@ -24,13 +24,13 @@ serve(async (req) => {
     );
 
     // Fetch lecture content and AI configuration
-    const { data: lecture } = await supabaseClient
+    const { data: lecture, error: lectureError } = await supabaseClient
       .from('lectures')
       .select('content, title')
       .eq('id', lectureId)
       .single();
 
-    if (!lecture || !lecture.content) {
+    if (lectureError || !lecture?.content) {
       throw new Error('Lecture content not found');
     }
 
@@ -42,19 +42,29 @@ serve(async (req) => {
 
     console.log('AI Config:', aiConfig);
 
+    const temperature = aiConfig?.temperature ?? 0.7;
+    const content = lecture.content;
+
     // Prepare the system prompt based on the part requested
     const systemPrompt = part === 'highlights' 
-      ? `You are an expert at analyzing academic content and extracting key information. Format your response in markdown.
-         Analyze the following lecture content and provide:
-         1. Structure: Overall organization and flow of the content
-         2. Key Concepts: Main theoretical or practical concepts introduced
-         3. Main Ideas: Core arguments or central themes
-         4. Important Quotes: Notable or significant statements
-         5. Relationships: Connections between different concepts or ideas
-         6. Supporting Evidence: Examples, data, or references used
-         
-         Use markdown formatting for better readability.`
-      : `You are an expert at creating comprehensive lecture summaries. Create a detailed summary of the lecture that covers all major points, arguments, and examples. Use markdown formatting for better readability.`;
+      ? `You are an expert academic content analyzer. Your task is to analyze the provided lecture content and generate comprehensive highlights in the following six categories. Format each section clearly with Markdown headers:
+
+1. Structure: Analyze and describe the overall organization and flow of the content.
+2. Key Concepts: Identify and explain the main theoretical or practical concepts introduced.
+3. Main Ideas: Extract and summarize the core arguments or central themes.
+4. Important Quotes: Select and highlight notable or significant statements from the content.
+5. Relationships: Identify connections between different concepts or ideas presented.
+6. Supporting Evidence: List examples, data, or references used to support the main points.
+
+Present each section with a clear heading. Be thorough and specific in your analysis.`
+      : `You are an expert at creating comprehensive lecture summaries. Create a detailed, well-structured summary of this lecture that covers all major points, arguments, and examples. Use markdown formatting for better readability. Focus solely on the lecture content provided, without any pre-existing assumptions or structures.
+
+Important guidelines:
+- Start with a brief overview
+- Break down main topics into clear sections
+- Use bullet points for key details
+- Include relevant examples and explanations
+- Maintain a logical flow throughout the summary`;
 
     // Make OpenAI API request
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -67,9 +77,9 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: lecture.content }
+          { role: 'user', content }
         ],
-        temperature: aiConfig?.temperature ?? 0.7,
+        temperature,
       }),
     });
 
@@ -83,39 +93,40 @@ serve(async (req) => {
     const generatedContent = completion.choices[0].message.content;
     console.log('Generated content length:', generatedContent.length);
 
-    // Parse the response for highlights
     if (part === 'highlights') {
       const sections = {
         structure: '',
-        keyConcepts: '',
-        mainIdeas: '',
-        importantQuotes: '',
+        key_concepts: '',
+        main_ideas: '',
+        important_quotes: '',
         relationships: '',
-        supportingEvidence: '',
+        supporting_evidence: '',
       };
 
-      // Extract sections using markdown headers
-      const content = generatedContent.split('\n');
+      // Extract sections using regex patterns
+      const contentLines = generatedContent.split('\n');
       let currentSection = '';
-
-      for (const line of content) {
-        if (line.toLowerCase().includes('structure:')) {
+      
+      for (const line of contentLines) {
+        const lowercaseLine = line.toLowerCase();
+        
+        if (lowercaseLine.includes('structure:') || lowercaseLine.includes('# structure')) {
           currentSection = 'structure';
           continue;
-        } else if (line.toLowerCase().includes('key concepts:')) {
-          currentSection = 'keyConcepts';
+        } else if (lowercaseLine.includes('key concepts:') || lowercaseLine.includes('# key concepts')) {
+          currentSection = 'key_concepts';
           continue;
-        } else if (line.toLowerCase().includes('main ideas:')) {
-          currentSection = 'mainIdeas';
+        } else if (lowercaseLine.includes('main ideas:') || lowercaseLine.includes('# main ideas')) {
+          currentSection = 'main_ideas';
           continue;
-        } else if (line.toLowerCase().includes('important quotes:')) {
-          currentSection = 'importantQuotes';
+        } else if (lowercaseLine.includes('important quotes:') || lowercaseLine.includes('# important quotes')) {
+          currentSection = 'important_quotes';
           continue;
-        } else if (line.toLowerCase().includes('relationships:')) {
+        } else if (lowercaseLine.includes('relationships:') || lowercaseLine.includes('# relationships')) {
           currentSection = 'relationships';
           continue;
-        } else if (line.toLowerCase().includes('supporting evidence:')) {
-          currentSection = 'supportingEvidence';
+        } else if (lowercaseLine.includes('supporting evidence:') || lowercaseLine.includes('# supporting evidence')) {
+          currentSection = 'supporting_evidence';
           continue;
         }
 
@@ -123,6 +134,13 @@ serve(async (req) => {
           sections[currentSection] += line + '\n';
         }
       }
+
+      // Clean up sections and ensure none are empty
+      Object.keys(sections).forEach((key) => {
+        sections[key] = sections[key].trim() || 'Content for this section is being generated...';
+      });
+
+      console.log('Processed sections:', sections);
 
       // Update or insert highlights in the database
       const { data: existingHighlights } = await supabaseClient
@@ -132,39 +150,42 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingHighlights) {
-        await supabaseClient
+        const { error: updateError } = await supabaseClient
           .from('lecture_highlights')
           .update({
-            structure: sections.structure.trim(),
-            key_concepts: sections.keyConcepts.trim(),
-            main_ideas: sections.mainIdeas.trim(),
-            important_quotes: sections.importantQuotes.trim(),
-            relationships: sections.relationships.trim(),
-            supporting_evidence: sections.supportingEvidence.trim(),
+            structure: sections.structure,
+            key_concepts: sections.key_concepts,
+            main_ideas: sections.main_ideas,
+            important_quotes: sections.important_quotes,
+            relationships: sections.relationships,
+            supporting_evidence: sections.supporting_evidence,
             updated_at: new Date().toISOString(),
           })
           .eq('lecture_id', lectureId);
+
+        if (updateError) throw updateError;
       } else {
-        await supabaseClient
+        const { error: insertError } = await supabaseClient
           .from('lecture_highlights')
           .insert({
             lecture_id: lectureId,
-            structure: sections.structure.trim(),
-            key_concepts: sections.keyConcepts.trim(),
-            main_ideas: sections.mainIdeas.trim(),
-            important_quotes: sections.importantQuotes.trim(),
-            relationships: sections.relationships.trim(),
-            supporting_evidence: sections.supportingEvidence.trim(),
+            structure: sections.structure,
+            key_concepts: sections.key_concepts,
+            main_ideas: sections.main_ideas,
+            important_quotes: sections.important_quotes,
+            relationships: sections.relationships,
+            supporting_evidence: sections.supporting_evidence,
           });
+
+        if (insertError) throw insertError;
       }
 
-      console.log('Highlights saved successfully');
       return new Response(JSON.stringify({ sections }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
       // Handle full summary
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('lecture_highlights')
         .upsert({
           lecture_id: lectureId,
@@ -174,8 +195,9 @@ serve(async (req) => {
           onConflict: 'lecture_id'
         });
 
-      console.log('Full summary saved successfully');
-      return new Response(JSON.stringify({ content: generatedContent }), {
+      if (updateError) throw updateError;
+
+      return new Response(JSON.stringify({ content: { full_content: generatedContent } }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
