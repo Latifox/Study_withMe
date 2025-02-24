@@ -22,40 +22,24 @@ const LectureSummary = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
 
-  const { data: part1Data, isLoading: isLoadingPart1, error: part1Error } = useQuery({
-    queryKey: ["lecture-summary-part1", lectureId],
+  const { data: highlights, isLoading, error } = useQuery({
+    queryKey: ["lecture-highlights", lectureId],
     queryFn: async () => {
-      console.log('Fetching part1 data...');
+      console.log('Fetching lecture highlights...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, part: 'part1' }
+        body: { lectureId }
       });
       if (error) {
-        console.error('Error fetching part1:', error);
+        console.error('Error fetching highlights:', error);
         throw error;
       }
-      console.log('Part1 data received:', data);
-      return data.content;
-    },
-  });
-
-  const { data: part2Data, isLoading: isLoadingPart2, error: part2Error } = useQuery({
-    queryKey: ["lecture-summary-part2", lectureId],
-    queryFn: async () => {
-      console.log('Fetching part2 data...');
-      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
-        body: { lectureId, part: 'part2' }
-      });
-      if (error) {
-        console.error('Error fetching part2:', error);
-        throw error;
-      }
-      console.log('Part2 data received:', data);
+      console.log('Highlights received:', data);
       return data.content;
     },
   });
 
   // Show errors if any
-  if (part1Error || part2Error) {
+  if (error) {
     toast({
       title: "Error loading summary",
       description: "There was a problem loading the lecture summary. Please try again.",
@@ -63,15 +47,13 @@ const LectureSummary = () => {
     });
   }
 
-  const isLoading = isLoadingPart1 || isLoadingPart2;
-  
   const summaryData: SummaryContent = {
-    structure: part1Data?.structure || '',
-    keyConcepts: part1Data?.keyConcepts || '',
-    mainIdeas: part1Data?.mainIdeas || '',
-    importantQuotes: part2Data?.importantQuotes || '',
-    relationships: part2Data?.relationships || '',
-    supportingEvidence: part2Data?.supportingEvidence || ''
+    structure: highlights?.structure || '',
+    keyConcepts: highlights?.key_concepts || '',
+    mainIdeas: highlights?.main_ideas || '',
+    importantQuotes: highlights?.important_quotes || '',
+    relationships: highlights?.relationships || '',
+    supportingEvidence: highlights?.supporting_evidence || ''
   };
 
   if (isLoading) {

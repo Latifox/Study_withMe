@@ -14,8 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, part } = await req.json();
-    console.log('Processing request for lecture:', lectureId, 'part:', part);
+    const { lectureId } = await req.json();
+    console.log('Processing request for lecture:', lectureId);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -47,27 +47,11 @@ serve(async (req) => {
 
     if (existingHighlights) {
       console.log('Found existing highlights');
-      if (part === 'part1') {
-        return new Response(JSON.stringify({
-          content: {
-            structure: existingHighlights.structure || '',
-            keyConcepts: existingHighlights.key_concepts || '',
-            mainIdeas: existingHighlights.main_ideas || ''
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else if (part === 'part2') {
-        return new Response(JSON.stringify({
-          content: {
-            importantQuotes: existingHighlights.important_quotes || '',
-            relationships: existingHighlights.relationships || '',
-            supportingEvidence: existingHighlights.supporting_evidence || ''
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      return new Response(JSON.stringify({
+        content: existingHighlights
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // If no existing highlights, fetch lecture content and generate new ones
@@ -84,44 +68,21 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown. Each section must be preceded by '##' and properly formatted in markdown.`;
+    const systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a comprehensive analysis organized into six distinct sections, each properly formatted in markdown:
 
-    if (part === 'part1') {
-      systemPrompt += `
-      Include these specific sections:
+    1. Structure: Provide a clear outline of the content organization
+    2. Key Concepts: List and explain the main theoretical concepts
+    3. Main Ideas: Summarize the central arguments or themes
+    4. Important Quotes: Extract and explain significant quotations
+    5. Relationships: Analyze connections between concepts
+    6. Supporting Evidence: Detail the evidence used to support main arguments
 
-      ## Structure
-      [Provide a clear outline of how the content is organized using bullet points]
+    ${aiConfig?.custom_instructions ? `\n\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}
+    ${aiConfig?.content_language ? `\n\nPlease provide the content in: ${aiConfig.content_language}` : ''}`;
 
-      ## Key Concepts
-      [List and explain the main theoretical concepts using markdown formatting]
+    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified sections:\n\n${lecture.content}`;
 
-      ## Main Ideas
-      [Summarize the central arguments or themes with bullet points and emphasis]`;
-    } else if (part === 'part2') {
-      systemPrompt += `
-      Include these specific sections:
-
-      ## Important Quotes
-      [Extract and explain significant quotations using blockquote formatting]
-
-      ## Relationships
-      [Analyze connections between concepts with clear formatting]
-
-      ## Supporting Evidence
-      [Detail the evidence used to support main arguments with proper lists]`;
-    }
-
-    if (aiConfig?.custom_instructions) {
-      systemPrompt += `\n\nAdditional instructions: ${aiConfig.custom_instructions}`;
-    }
-    if (aiConfig?.content_language) {
-      systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
-    }
-
-    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
-
-    console.log(`Sending request to OpenAI for ${part}`);
+    console.log('Sending request to OpenAI');
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -130,7 +91,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -156,81 +117,35 @@ serve(async (req) => {
     }
 
     const content = data.choices[0].message.content.trim();
-    console.log('Generated content:', content.substring(0, 200) + '...');
 
-    // Parse the markdown content into sections
-    const sections = content.split('##')
-      .filter(Boolean)
-      .map(s => s.trim());
-
-    console.log(`Found ${sections.length} sections in the response`);
-
-    // Make sure we have exactly 3 sections
-    if (sections.length !== 3) {
-      console.error('Invalid number of sections:', sections);
-      throw new Error('Invalid number of sections in response');
-    }
-
-    let response;
-    let dbUpdate;
-
-    if (part === 'part1') {
-      response = {
-        content: {
-          structure: sections[0],
-          keyConcepts: sections[1],
-          mainIdeas: sections[2]
-        }
-      };
-
-      dbUpdate = {
-        lecture_id: lectureId,
-        structure: sections[0],
-        key_concepts: sections[1],
-        main_ideas: sections[2]
-      };
-    } else if (part === 'part2') {
-      response = {
-        content: {
-          importantQuotes: sections[0],
-          relationships: sections[1],
-          supportingEvidence: sections[2]
-        }
-      };
-
-      dbUpdate = {
-        lecture_id: lectureId,
-        important_quotes: sections[0],
-        relationships: sections[1],
-        supporting_evidence: sections[2]
-      };
-    }
+    // Extract sections using regex
+    const sections = {
+      structure: content.match(/Structure:([^#]*)/s)?.[1]?.trim() || '',
+      key_concepts: content.match(/Key Concepts:([^#]*)/s)?.[1]?.trim() || '',
+      main_ideas: content.match(/Main Ideas:([^#]*)/s)?.[1]?.trim() || '',
+      important_quotes: content.match(/Important Quotes:([^#]*)/s)?.[1]?.trim() || '',
+      relationships: content.match(/Relationships:([^#]*)/s)?.[1]?.trim() || '',
+      supporting_evidence: content.match(/Supporting Evidence:([^#]*)/s)?.[1]?.trim() || ''
+    };
 
     // Store the highlights
-    if (existingHighlights) {
-      const { error: updateError } = await supabase
-        .from('lecture_highlights')
-        .update(dbUpdate)
-        .eq('lecture_id', lectureId);
+    const { error: insertError } = await supabase
+      .from('lecture_highlights')
+      .insert([{
+        lecture_id: lectureId,
+        ...sections
+      }]);
 
-      if (updateError) {
-        console.error('Error updating highlights:', updateError);
-        throw new Error('Failed to update highlights in database');
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('lecture_highlights')
-        .insert([dbUpdate]);
-
-      if (insertError) {
-        console.error('Error inserting highlights:', insertError);
-        throw new Error('Failed to store highlights in database');
-      }
+    if (insertError) {
+      console.error('Error inserting highlights:', insertError);
+      throw new Error('Failed to store highlights in database');
     }
 
-    console.log(`Successfully processed and stored content for ${part}`);
+    console.log('Successfully processed and stored content');
 
-    return new Response(JSON.stringify(response), {
+    return new Response(JSON.stringify({
+      content: sections
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
@@ -244,3 +159,4 @@ serve(async (req) => {
     });
   }
 });
+
