@@ -117,7 +117,7 @@ ${aiConfig?.content_language ? `\nProvide analysis in: ${aiConfig.content_langua
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: lecture.content }
@@ -227,3 +227,4 @@ ${aiConfig?.content_language ? `\nProvide analysis in: ${aiConfig.content_langua
     });
   }
 });
+
