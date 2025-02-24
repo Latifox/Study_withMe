@@ -101,7 +101,7 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: lecture.content }
@@ -162,8 +162,8 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
 
       console.log('Parsed sections:', sections);
 
-      // Store the highlights in the database
-      const { error: insertError } = await supabaseClient
+      // Store the highlights in the database using upsert
+      const { error: upsertError } = await supabaseClient
         .from('lecture_highlights')
         .upsert({
           lecture_id: lectureId,
@@ -172,8 +172,8 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
           updated_at: new Date().toISOString()
         });
 
-      if (insertError) {
-        console.error('Error storing highlights:', insertError);
+      if (upsertError) {
+        console.error('Error storing highlights:', upsertError);
         throw new Error('Failed to store highlights');
       }
 
@@ -181,8 +181,8 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
-      // For full summary, store and return the complete content
-      const { error: insertError } = await supabaseClient
+      // For full summary, store and return the complete content using upsert
+      const { error: upsertError } = await supabaseClient
         .from('lecture_highlights')
         .upsert({
           lecture_id: lectureId,
@@ -191,8 +191,8 @@ IMPORTANT: Use these exact headers and maintain this exact order. Each section M
           updated_at: new Date().toISOString()
         });
 
-      if (insertError) {
-        console.error('Error storing full summary:', insertError);
+      if (upsertError) {
+        console.error('Error storing full summary:', upsertError);
         throw new Error('Failed to store full summary');
       }
 
