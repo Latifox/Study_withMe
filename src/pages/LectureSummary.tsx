@@ -79,15 +79,19 @@ const LectureSummary = () => {
 
       return data;
     },
-    retry: 1,
-    onError: (err) => {
+    retry: 1
+  });
+
+  // Handle errors with useEffect
+  useEffect(() => {
+    if (error) {
       toast({
         title: "Error loading summary",
         description: "There was a problem loading the lecture summary. Please try again.",
         variant: "destructive",
       });
     }
-  });
+  }, [error, toast]);
 
   const summaryData: SummaryContent = {
     structure: highlights?.structure || '',
