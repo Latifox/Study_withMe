@@ -84,32 +84,27 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content');
 
-    let systemPrompt = `You are an expert educational content analyzer. Your task is to analyze lecture content and provide a detailed breakdown. Each section must be preceded by '##' and properly formatted in markdown.`;
+    let systemPrompt = `You are an expert educational content analyst with a deep understanding of academic material. 
+Your task is to provide a thorough and insightful analysis of the lecture content.
+Use rich markdown formatting to structure your response, including:
+- Bullet points for lists and key points
+- Headers (##) for main sections
+- Bold text (**) for emphasis
+- Blockquotes (>) for important quotes
+- Proper indentation and spacing for readability
+
+Make your analysis detailed and comprehensive, focusing on depth rather than breadth. 
+Each insight should be well-explained with specific examples from the text.`;
 
     if (part === 'part1') {
-      systemPrompt += `
-      Include these specific sections:
-
-      ## Structure
-      [Provide a clear outline of how the content is organized using bullet points]
-
-      ## Key Concepts
-      [List and explain the main theoretical concepts using markdown formatting]
-
-      ## Main Ideas
-      [Summarize the central arguments or themes with bullet points and emphasis]`;
+      systemPrompt += `\n\nProvide a detailed analysis covering the lecture's overall structure, its key theoretical concepts, and the main ideas presented.
+Focus on providing a rich, well-organized breakdown that will help students understand the material deeply.
+Include examples and explanations that demonstrate the relationships between concepts.`;
     } else if (part === 'part2') {
-      systemPrompt += `
-      Include these specific sections:
-
-      ## Important Quotes
-      [Extract and explain significant quotations using blockquote formatting]
-
-      ## Relationships
-      [Analyze connections between concepts with clear formatting]
-
-      ## Supporting Evidence
-      [Detail the evidence used to support main arguments with proper lists]`;
+      systemPrompt += `\n\nAnalyze the lecture's use of evidence and argumentation. 
+Extract and contextualize significant quotes, examine relationships between different concepts, 
+and evaluate the supporting evidence presented in the lecture.
+Make sure to explain why each piece of evidence is significant and how it supports the lecture's main arguments.`;
     }
 
     if (aiConfig?.custom_instructions) {
@@ -119,7 +114,7 @@ serve(async (req) => {
       systemPrompt += `\n\nPlease provide the content in: ${aiConfig.content_language}`;
     }
 
-    const userPrompt = `Analyze this lecture content and provide a detailed analysis following the specified format:\n\n${lecture.content}`;
+    const userPrompt = `Please provide a detailed analysis of this lecture content:\n\n${lecture.content}`;
 
     console.log(`Sending request to OpenAI for ${part}`);
 
@@ -165,44 +160,38 @@ serve(async (req) => {
 
     console.log(`Found ${sections.length} sections in the response`);
 
-    // Make sure we have exactly 3 sections
-    if (sections.length !== 3) {
-      console.error('Invalid number of sections:', sections);
-      throw new Error('Invalid number of sections in response');
-    }
-
     let response;
     let dbUpdate;
 
     if (part === 'part1') {
       response = {
         content: {
-          structure: sections[0],
-          keyConcepts: sections[1],
-          mainIdeas: sections[2]
+          structure: sections[0] || '',
+          keyConcepts: sections[1] || '',
+          mainIdeas: sections[2] || ''
         }
       };
 
       dbUpdate = {
         lecture_id: lectureId,
-        structure: sections[0],
-        key_concepts: sections[1],
-        main_ideas: sections[2]
+        structure: sections[0] || '',
+        key_concepts: sections[1] || '',
+        main_ideas: sections[2] || ''
       };
     } else if (part === 'part2') {
       response = {
         content: {
-          importantQuotes: sections[0],
-          relationships: sections[1],
-          supportingEvidence: sections[2]
+          importantQuotes: sections[0] || '',
+          relationships: sections[1] || '',
+          supportingEvidence: sections[2] || ''
         }
       };
 
       dbUpdate = {
         lecture_id: lectureId,
-        important_quotes: sections[0],
-        relationships: sections[1],
-        supporting_evidence: sections[2]
+        important_quotes: sections[0] || '',
+        relationships: sections[1] || '',
+        supporting_evidence: sections[2] || ''
       };
     }
 
