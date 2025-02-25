@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -29,13 +28,18 @@ function sanitizeJSON(content: string): string {
   // Step 3: Remove any markdown code block syntax
   jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
   
-  // Step 4: Fix common JSON formatting issues
+  // Step 4: Fix all types of quotes in property names and values
   jsonStr = jsonStr
-    .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes
-    .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+    // First, standardize all quotes to single quotes
+    .replace(/[\u2018\u2019\u201C\u201D"]/g, "'")
+    // Then, ensure property names use double quotes (matches 'property': or 'property' :)
+    .replace(/'([^']+)'(\s*:)/g, '"$1"$2')
+    // Keep string values in single quotes
+    .replace(/:\s*'([^']*?)'/g, ': "$1"')
     .replace(/\\/g, '\\\\') // Escape backslashes
     .trim();
 
+  console.log('Sanitized JSON:', jsonStr);
   return jsonStr;
 }
 
@@ -82,7 +86,7 @@ async function generateResources(topic: string, language: string = 'english'): P
           5. URLs must be real and start with http:// or https://
           6. Resources must be relevant to: ${topic}
           
-          IMPORTANT: Your ENTIRE response must be ONLY a JSON array in this format:
+          IMPORTANT: Your ENTIRE response must be ONLY a JSON array with double quotes for property names:
           [{"type": "video","title": "Example","url": "https://...","description": "Text"}]`
         },
         {
@@ -90,7 +94,7 @@ async function generateResources(topic: string, language: string = 'english'): P
           content: `Generate a JSON array of 9 educational resources about: ${topic}`
         }
       ],
-      temperature: 0.1, // Reduced temperature for more consistent formatting
+      temperature: 0.1,
       max_tokens: 1000,
       top_p: 0.9,
       frequency_penalty: 1,
@@ -198,4 +202,3 @@ serve(async (req) => {
     );
   }
 });
-
