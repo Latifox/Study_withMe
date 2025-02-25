@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}. 
+    const systemPrompt = `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}. You MUST SEARCH THE WEB and provide the resources found.
 
 Context about the topic:
 ${description}
@@ -123,4 +123,3 @@ Response Format:
     );
   }
 });
-
