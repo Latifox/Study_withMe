@@ -29,24 +29,25 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         console.log('Found existing resources:', existingResources);
         
         // Group resources by segment number
-        const groupedBySegment = existingResources.reduce((acc, resource) => {
+        const groupedBySegment = existingResources.reduce((acc: Record<number, { content: string }>, resource) => {
           const segNum = resource.segment_number;
-          if (!acc[segNum]) acc[segNum] = { markdown: '' };
-          const markdownResource = `
+          if (!acc[segNum]) acc[segNum] = { content: '' };
+          
+          const resourceMarkdown = `
 ## ${resource.resource_type === 'video' ? 'Video Resources' : 
        resource.resource_type === 'article' ? 'Article Resources' : 
        'Research Papers'}
 1. [${resource.title}](${resource.url})
    Description: ${resource.description}
 `;
-          acc[segNum].markdown += markdownResource;
+          acc[segNum].content += resourceMarkdown;
           return acc;
         }, {});
 
         return {
           segments: Object.entries(groupedBySegment).map(([segmentNumber, content]) => ({
             id: `segment_${segmentNumber}`,
-            content: content.markdown
+            content: content.content
           }))
         };
       }
@@ -84,27 +85,35 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           throw generationError;
         }
 
-        const content = generatedContent.content;
-        
-        // Store the markdown content in the database
-        const { error: insertError } = await supabase
-          .from('lecture_additional_resources')
-          .insert({
-            lecture_id: numericLectureId,
-            segment_number: segment.sequence_number,
-            content: content,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+        // Parse the generated content and store each resource
+        if (generatedContent && generatedContent.resources) {
+          await Promise.all(generatedContent.resources.map(async (resource: { 
+            title: string; 
+            url: string; 
+            description: string;
+            type: string;
+          }) => {
+            const { error: insertError } = await supabase
+              .from('lecture_additional_resources')
+              .insert({
+                lecture_id: numericLectureId,
+                segment_number: segment.sequence_number,
+                title: resource.title,
+                url: resource.url,
+                description: resource.description,
+                resource_type: resource.type,
+              });
 
-        if (insertError) {
-          console.error('Error storing generated content:', insertError);
-          throw insertError;
+            if (insertError) {
+              console.error('Error storing resource:', insertError);
+              throw insertError;
+            }
+          }));
         }
 
         return {
           id: `segment_${segment.sequence_number}`,
-          content: content
+          content: generatedContent?.markdown || ''
         };
       }));
 
