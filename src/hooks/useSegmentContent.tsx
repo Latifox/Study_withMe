@@ -30,7 +30,6 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       if (existingResources && existingResources.length > 0) {
         console.log('Found existing resources:', existingResources);
         
-        // Group resources by sequence number
         const groupedBySegment = existingResources.reduce((acc: Record<number, { title: string, content: string }>, resource) => {
           const seqNum = resource.sequence_number;
           if (!acc[seqNum]) {
@@ -40,7 +39,6 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             };
           }
           
-          // Determine section header based on resource type
           let sectionHeader = '';
           switch (resource.resource_type) {
             case 'video':
@@ -76,7 +74,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         };
       }
 
-      // Fetch the AI configuration for the lecture to get the language setting
+      // Fetch the AI configuration for the lecture
       console.log('Fetching AI configuration for lecture:', numericLectureId);
       const { data: aiConfig, error: aiConfigError } = await supabase
         .from('lecture_ai_configs')
@@ -89,9 +87,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw aiConfigError;
       }
 
-      // If no resources exist, fetch all segment titles and generate resources for each
+      // Fetch all segment titles
       console.log('No existing resources found, fetching segment titles...');
-
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('sequence_number, title')
@@ -110,7 +107,6 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Retrieved segments for processing:', segmentData);
 
-      // Process segments sequentially to ensure all get processed
       const processSegment = async (segment: { sequence_number: number; title: string }, retryCount = 0) => {
         const maxRetries = 3;
         const retryDelay = (retryCount: number) => Math.min(2000 * Math.pow(2, retryCount), 10000);
@@ -133,38 +129,46 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             throw new Error('No content generated');
           }
 
-          // Parse the markdown into sections and extract resources
-          const sections = generatedContent.markdown.split('\n## ');
-          const resources = [];
-          let currentType = '';
+          console.log('Generated content:', generatedContent.markdown);
 
+          // More flexible resource extraction
+          const sections = generatedContent.markdown.split(/##\s+/);
+          const resources = [];
+          
           for (const section of sections) {
-            if (section.includes('Video Resources')) {
+            let currentType = '';
+            
+            if (section.toLowerCase().includes('video')) {
               currentType = 'video';
-            } else if (section.includes('Article Resources')) {
+            } else if (section.toLowerCase().includes('article')) {
               currentType = 'article';
-            } else if (section.includes('Research Papers')) {
+            } else if (section.toLowerCase().includes('research')) {
               currentType = 'research_paper';
             }
 
-            // Extract resources from the section using regex
-            const resourceMatches = section.matchAll(/\d\.\s+\[(.*?)\]\((.*?)\)\s+Description:\s+(.*?)(?=\n|$)/g);
-            for (const match of resourceMatches) {
-              resources.push({
-                title: match[1],
-                url: match[2],
-                description: match[3],
-                type: currentType
-              });
+            if (currentType) {
+              // More flexible regex pattern
+              const resourceMatches = section.matchAll(/\d*\.*\s*\[([^\]]+)\]\(([^)]+)\)(?:[\s\n]*(?:Description|description)?:?\s*([^\n]+))?/g);
+              
+              for (const match of Array.from(resourceMatches)) {
+                const [_, title, url, description = ''] = match;
+                if (title && url) {
+                  resources.push({
+                    title: title.trim(),
+                    url: url.trim(),
+                    description: description.trim() || `Resource about ${segment.title}`,
+                    type: currentType
+                  });
+                }
+              }
             }
           }
 
           if (resources.length === 0) {
-            throw new Error('No resources extracted from generated content');
+            throw new Error('No valid resources found in generated content');
           }
 
-          // Store resources in the database
-          console.log(`Storing ${resources.length} resources for segment ${segment.sequence_number}`);
+          console.log(`Found ${resources.length} resources to store`);
           
           for (const resource of resources) {
             const { error: insertError } = await supabase
@@ -179,7 +183,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
               });
 
             if (insertError) {
-              console.error(`Error storing resource for segment ${segment.sequence_number}:`, insertError);
+              console.error(`Error storing resource:`, insertError);
               throw insertError;
             }
           }
@@ -209,17 +213,16 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         }
       };
 
+      // Process segments sequentially
       try {
-        // Process segments one at a time to ensure all get processed
-        const segmentContents = [];
+        const results = [];
         for (const segment of segmentData) {
           const content = await processSegment(segment);
-          segmentContents.push(content);
+          results.push(content);
         }
         
-        console.log('Finished processing all segments:', segmentContents);
-        return { segments: segmentContents };
-        
+        console.log('Finished processing all segments:', results);
+        return { segments: results };
       } catch (error) {
         console.error('Error processing segments:', error);
         throw error;
