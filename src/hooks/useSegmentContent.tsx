@@ -70,8 +70,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       // Create a mutable variable to store our resources
       let resourcesData = initialResources;
 
-      // If no resources exist, generate them
-      if (!resourcesError && (!resourcesData || resourcesData.length === 0)) {
+      // If no resources exist AND there was no error, generate them
+      if (!resourcesError && (!initialResources || initialResources.length === 0)) {
         console.log('No resources found, generating new ones...');
         try {
           const { data: generatedData, error: generationError } = await supabase.functions.invoke('generate-resources', {
@@ -167,7 +167,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         }]
       };
     },
-    retry: 10,
+    retry: 1, // Reduce retries to make error detection easier
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+
