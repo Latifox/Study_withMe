@@ -20,6 +20,41 @@ interface Resource {
   description: string;
 }
 
+// Function to validate URLs by actually checking if they exist
+async function validateUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.status === 200;
+  } catch (error) {
+    console.error(`Error validating URL ${url}:`, error);
+    return false;
+  }
+}
+
+// Function to clean markdown code blocks from LLM response
+function cleanMarkdownCodeBlock(content: string): string {
+  return content
+    .replace(/```json\n?/g, '')
+    .replace(/```\n?/g, '')
+    .trim();
+}
+
+// Function to validate resource structure
+function isValidResource(resource: any): resource is Resource {
+  return (
+    resource &&
+    typeof resource === 'object' &&
+    ['video', 'article', 'research'].includes(resource.type) &&
+    typeof resource.title === 'string' &&
+    typeof resource.url === 'string' &&
+    typeof resource.description === 'string' &&
+    resource.title.length > 0 &&
+    resource.url.length > 0 &&
+    resource.description.length > 0 &&
+    (resource.url.startsWith('http://') || resource.url.startsWith('https://'))
+  );
+}
+
 async function generateResources(topic: string): Promise<Resource[]> {
   console.log('Generating resources for topic:', topic);
   
@@ -37,29 +72,29 @@ async function generateResources(topic: string): Promise<Resource[]> {
             role: 'system',
             content: `You are a helpful assistant that provides educational resources. Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
             
+            RULES for generating URLs:
+            1. DO NOT generate mock or placeholder URLs
+            2. For videos: ONLY use existing YouTube URLs (youtube.com/watch?v=)
+            3. For articles: ONLY use URLs from reputable educational websites (.edu domains preferred)
+            4. For research: ONLY use URLs from established academic repositories
+            5. VERIFY that each URL actually exists before including it
+            6. DO NOT include search result pages
+            7. ALL content must be in English
+            
             Provide your response in this exact JSON format:
             [
               {"type": "video", "title": "title1", "url": "url1", "description": "desc1"},
               ...
             ]
             
-            Guidelines:
-            1. ONLY provide direct links to specific resources (no search pages)
-            2. Resources must be in English
-            3. Only include working, accessible URLs
-            4. Focus on educational content from reputable sources
-            5. For videos: prefer content from Khan Academy, MIT OpenCourseWare, Crash Course
-            6. For articles: use educational websites and digital libraries
-            7. For research: use papers from reputable journals
-            
-            Important: Reply ONLY with the JSON array. No markdown, no extra text.`
+            IMPORTANT: Reply ONLY with the JSON array. NO markdown formatting, NO extra text.`
           },
           {
             role: 'user',
             content: `Generate educational resources about: ${topic}`
           }
         ],
-        temperature: 0.3, // Lower temperature for more consistent output
+        temperature: 0.3,
         max_tokens: 2000,
       }),
     });
@@ -76,7 +111,7 @@ async function generateResources(topic: string): Promise<Resource[]> {
 
     let resources: Resource[];
     try {
-      const content = data.choices[0].message.content.trim();
+      const content = cleanMarkdownCodeBlock(data.choices[0].message.content);
       resources = JSON.parse(content);
     } catch (error) {
       console.error('Failed to parse OpenAI response:', error);
@@ -84,19 +119,33 @@ async function generateResources(topic: string): Promise<Resource[]> {
     }
 
     // Validate resources format
-    if (!Array.isArray(resources) || resources.length === 0) {
-      throw new Error('Invalid resources format: expected non-empty array');
+    if (!Array.isArray(resources)) {
+      throw new Error('Invalid resources format: expected array');
     }
 
-    // Basic validation of each resource
-    resources.forEach((resource, index) => {
-      if (!resource.type || !resource.title || !resource.url || !resource.description) {
-        throw new Error(`Invalid resource at index ${index}: missing required fields`);
+    // Validate each resource and filter out invalid ones
+    const validatedResources: Resource[] = [];
+    
+    for (const resource of resources) {
+      if (isValidResource(resource)) {
+        // Check if URL is actually accessible
+        const isUrlValid = await validateUrl(resource.url);
+        if (isUrlValid) {
+          validatedResources.push(resource);
+        } else {
+          console.warn(`Skipping resource with invalid URL: ${resource.url}`);
+        }
+      } else {
+        console.warn('Invalid resource structure:', resource);
       }
-    });
+    }
 
-    console.log('Successfully generated resources:', resources);
-    return resources;
+    if (validatedResources.length === 0) {
+      throw new Error('No valid resources generated');
+    }
+
+    console.log('Successfully generated resources:', validatedResources);
+    return validatedResources;
   } catch (error) {
     console.error('Error in generateResources:', error);
     throw error;
