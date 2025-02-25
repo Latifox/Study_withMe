@@ -15,14 +15,17 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, language = 'english' } = await req.json();
-    console.log(`Generating resources for topic: "${topic}" in ${language}`);
+    const { topic, description = '', language = 'english' } = await req.json();
+    console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
 
     if (!perplexityApiKey) {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about "${topic}" in ${language}.
+    const systemPrompt = `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}. 
+
+Context about the topic:
+${description}
 
 STRICT REQUIREMENTS:
 
@@ -35,14 +38,14 @@ STRICT REQUIREMENTS:
    Videos (MUST follow ALL these rules):
    - ONLY from educational channels (university channels, educational platforms)
    - NO entertainment videos, music, or non-educational content
-   - MUST be directly related to "${topic}"
+   - MUST be directly related to "${topic}" and its description
    - MUST be from: youtube.com (educational channels only), coursera.org, edx.org, or university domains
    - Each URL must be unique and functional
    
    Articles (MUST follow ALL these rules):
    - ONLY from academic or educational institutions
    - MUST be from .edu domains or established academic platforms
-   - MUST be directly related to "${topic}"
+   - MUST be directly related to "${topic}" and its description
    - MUST be accessible without subscription
    - NO opinion pieces or blog posts
    - Each URL must be unique and functional
@@ -50,7 +53,7 @@ STRICT REQUIREMENTS:
    Research Papers (MUST follow ALL these rules):
    - ONLY from academic journals or research repositories
    - MUST be from: researchgate.net, sciencedirect.com, or respected academic journals
-   - MUST be directly related to "${topic}"
+   - MUST be directly related to "${topic}" and its description
    - Prefer open-access papers
    - MUST be peer-reviewed research
    - Each URL must be unique and functional
@@ -94,7 +97,7 @@ Response Format:
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate strictly educational resources about "${topic}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources.` }
+          { role: 'user', content: `Generate strictly educational resources about "${topic}" with context: "${description}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources.` }
         ],
         temperature: 0.1,
         max_tokens: 2000,
@@ -125,4 +128,3 @@ Response Format:
     );
   }
 });
-

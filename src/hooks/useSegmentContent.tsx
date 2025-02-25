@@ -17,7 +17,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       // First check if resources already exist
       const { data: existingResources, error: resourcesError } = await supabase
         .from('lecture_additional_resources')
-        .select('*, lecture_segments!inner(title)')
+        .select('*, lecture_segments!inner(title, segment_description)')
         .eq('lecture_id', numericLectureId)
         .order('sequence_number, resource_type');
 
@@ -87,11 +87,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw aiConfigError;
       }
 
-      // Fetch all segment titles
-      console.log('No existing resources found, fetching segment titles...');
+      // Fetch all segment titles and descriptions
+      console.log('No existing resources found, fetching segment details...');
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
-        .select('sequence_number, title')
+        .select('sequence_number, title, segment_description')
         .eq('lecture_id', numericLectureId)
         .order('sequence_number');
 
@@ -107,7 +107,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Retrieved segments for processing:', segmentData);
 
-      const processSegment = async (segment: { sequence_number: number; title: string }, retryCount = 0) => {
+      const processSegment = async (segment: { sequence_number: number; title: string; segment_description: string }, retryCount = 0) => {
         const maxRetries = 3;
         const retryDelay = (retryCount: number) => Math.min(2000 * Math.pow(2, retryCount), 10000);
 
@@ -116,7 +116,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
             body: { 
-              topic: segment.title, 
+              topic: segment.title,
+              description: segment.segment_description,
               language: aiConfig?.content_language || 'english'
             }
           });
