@@ -24,13 +24,15 @@ const Resources = () => {
 
   console.log('Resources page params:', { courseId, lectureId, segmentId });
 
-  // Parse the numeric values from URL params
+  // Parse the numeric values from URL params and ensure they are numbers
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
-  const numericSegmentId = segmentId ? parseInt(segmentId) : null;
+  const sequenceNumber = segmentId ? parseInt(segmentId) : null;
+
+  console.log('Parsed numeric params:', { numericLectureId, sequenceNumber });
 
   const { data: segmentContent, isLoading, error } = useSegmentContent(
     numericLectureId,
-    numericSegmentId
+    sequenceNumber
   );
 
   console.log('Segment content result:', { data: segmentContent, isLoading, error });
