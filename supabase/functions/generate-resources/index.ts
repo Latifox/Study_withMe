@@ -120,6 +120,15 @@ Format your response in this EXACT markdown structure:
       throw new Error('Invalid resource count in generated content');
     }
 
+    // Check for duplicate URLs
+    const urls = new Set();
+    for (const resource of resources) {
+      if (urls.has(resource.url)) {
+        throw new Error('Duplicate URLs detected in generated content');
+      }
+      urls.add(resource.url);
+    }
+
     return new Response(
       JSON.stringify({ 
         resources,

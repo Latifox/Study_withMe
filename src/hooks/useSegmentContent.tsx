@@ -37,12 +37,22 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           
           // Determine section header based on resource type
           let sectionHeader = '';
-          if (resource.resource_type === 'video' && !acc[segNum].content.includes('Video Resources')) {
-            sectionHeader = '\n## Video Resources\n';
-          } else if (resource.resource_type === 'article' && !acc[segNum].content.includes('Article Resources')) {
-            sectionHeader = '\n## Article Resources\n';
-          } else if (resource.resource_type === 'research_paper' && !acc[segNum].content.includes('Research Papers')) {
-            sectionHeader = '\n## Research Papers\n';
+          switch (resource.resource_type) {
+            case 'video':
+              if (!acc[segNum].content.includes('Video Resources')) {
+                sectionHeader = '\n## Video Resources\n';
+              }
+              break;
+            case 'article':
+              if (!acc[segNum].content.includes('Article Resources')) {
+                sectionHeader = '\n## Article Resources\n';
+              }
+              break;
+            case 'research_paper':
+              if (!acc[segNum].content.includes('Research Papers')) {
+                sectionHeader = '\n## Research Papers\n';
+              }
+              break;
           }
           
           const resourceMarkdown = `${sectionHeader}${!sectionHeader ? '' : ''}1. [${resource.title}](${resource.url})
@@ -81,71 +91,79 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Retrieved segments for processing:', segmentData);
 
-      // Process all segments in parallel
-      try {
-        const segmentProcessingPromises = segmentData.map(async (segment) => {
+      // Process all segments in parallel with retry logic
+      const processSegment = async (segment: { sequence_number: number; title: string }, retryCount = 0) => {
+        const maxRetries = 3;
+        try {
           console.log(`Starting resource generation for segment ${segment.sequence_number}: ${segment.title}`);
           
-          try {
-            // Generate resources using the edge function
-            const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
-              body: { topic: segment.title, language: 'spanish' }
-            });
+          const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
+            body: { topic: segment.title, language: 'spanish' }
+          });
 
-            if (generationError) {
-              console.error(`Error generating resources for segment ${segment.sequence_number}:`, generationError);
-              throw generationError;
-            }
+          if (generationError) {
+            throw generationError;
+          }
 
-            console.log(`Generated content for segment ${segment.sequence_number}:`, generatedContent);
+          if (!generatedContent?.resources || generatedContent.resources.length !== 6) {
+            throw new Error('Invalid resource count returned from generation');
+          }
 
-            // Store resources if generation was successful
-            if (generatedContent?.resources) {
-              const resources = generatedContent.resources;
-              const insertPromises = resources.map(async (resource: {
-                title: string;
-                url: string;
-                description: string;
-                type: string;
-              }) => {
-                const { error: insertError } = await supabase
-                  .from('lecture_additional_resources')
-                  .insert({
-                    lecture_id: numericLectureId,
-                    segment_number: segment.sequence_number,
-                    title: resource.title,
-                    url: resource.url,
-                    description: resource.description,
-                    resource_type: resource.type,
-                  });
+          console.log(`Generated content for segment ${segment.sequence_number}:`, generatedContent);
 
-                if (insertError) {
-                  console.error(`Error storing resource for segment ${segment.sequence_number}:`, insertError);
-                  throw insertError;
-                }
+          // Store resources if generation was successful
+          const resources = generatedContent.resources;
+          await Promise.all(resources.map(async (resource: {
+            title: string;
+            url: string;
+            description: string;
+            type: string;
+          }) => {
+            const { error: insertError } = await supabase
+              .from('lecture_additional_resources')
+              .insert({
+                lecture_id: numericLectureId,
+                segment_number: segment.sequence_number,
+                title: resource.title,
+                url: resource.url,
+                description: resource.description,
+                resource_type: resource.type,
               });
 
-              await Promise.all(insertPromises);
-              console.log(`Successfully stored all resources for segment ${segment.sequence_number}`);
+            if (insertError) {
+              console.error(`Error storing resource for segment ${segment.sequence_number}:`, insertError);
+              throw insertError;
             }
+          }));
 
-            return {
-              id: `segment_${segment.sequence_number}`,
-              content: generatedContent?.markdown || ''
-            };
-          } catch (error) {
-            console.error(`Error processing segment ${segment.sequence_number}:`, error);
-            toast({
-              title: `Error generating resources for segment ${segment.sequence_number}`,
-              description: "Please try again later",
-              variant: "destructive",
-            });
-            throw error;
+          console.log(`Successfully stored all resources for segment ${segment.sequence_number}`);
+          
+          return {
+            id: `segment_${segment.sequence_number}`,
+            content: generatedContent.markdown
+          };
+        } catch (error) {
+          console.error(`Error processing segment ${segment.sequence_number}:`, error);
+          
+          if (retryCount < maxRetries) {
+            console.log(`Retrying segment ${segment.sequence_number} (attempt ${retryCount + 1}/${maxRetries})`);
+            return processSegment(segment, retryCount + 1);
           }
-        });
+          
+          toast({
+            title: `Error generating resources for segment ${segment.sequence_number}`,
+            description: "Please try again later",
+            variant: "destructive",
+          });
+          throw error;
+        }
+      };
 
+      try {
         console.log('Processing all segments in parallel...');
-        const segmentContents = await Promise.all(segmentProcessingPromises);
+        const segmentContents = await Promise.all(
+          segmentData.map(segment => processSegment(segment))
+        );
         console.log('Finished processing all segments:', segmentContents);
         
         return { segments: segmentContents };
