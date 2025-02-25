@@ -26,6 +26,7 @@ const Resources = () => {
 
   // Parse the numeric values from URL params and ensure they are numbers
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
+  // Extract just the number from segmentId if it exists
   const sequenceNumber = segmentId ? parseInt(segmentId) : null;
 
   console.log('Parsed numeric params:', { numericLectureId, sequenceNumber });

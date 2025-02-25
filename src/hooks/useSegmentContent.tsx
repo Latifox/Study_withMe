@@ -15,14 +15,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     queryFn: async () => {
       console.log('useSegmentContent: Starting fetch with params:', { numericLectureId, sequenceNumber });
 
-      // Validate both parameters are present and are valid numbers
-      if (!numericLectureId || typeof sequenceNumber !== 'number') {
-        console.error('Invalid parameters (type check):', {
-          numericLectureId,
-          sequenceNumber,
-          lectureIdType: typeof numericLectureId,
-          sequenceNumberType: typeof sequenceNumber
-        });
+      if (!numericLectureId || !sequenceNumber) {
+        console.error('Missing or invalid parameters:', { numericLectureId, sequenceNumber });
         throw new Error('Invalid parameters');
       }
 
@@ -195,3 +189,4 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+
