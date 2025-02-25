@@ -42,17 +42,29 @@ serve(async (req) => {
     const lectureContent = lectureResult.data.content;
     const aiConfig = aiConfigResult.data || {
       temperature: 0.7,
-      creativityLevel: 0.5,
-      detailLevel: 0.6,
-      contentLanguage: null,
-      hasCustomInstructions: false
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      content_language: null,
+      custom_instructions: ""
     };
 
     console.log('Using AI config:', JSON.stringify(aiConfig, null, 2));
 
-    // Function to generate content using OpenAI
+    // Function to generate content using OpenAI with proper language handling
     async function generateWithAI(prompt: string) {
       const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+      
+      // Create the system message with language instruction
+      let systemInstruction = 'You are an expert at analyzing and summarizing lecture content.';
+      if (aiConfig.content_language) {
+        systemInstruction += ` You MUST generate all content in ${aiConfig.content_language} language only.`;
+      }
+      if (aiConfig.custom_instructions) {
+        systemInstruction += ' ' + aiConfig.custom_instructions;
+      }
+
+      console.log('System instruction:', systemInstruction);
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -62,19 +74,23 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            {
-              role: 'system',
-              content: `You are an expert at analyzing and summarizing lecture content. ${
-                aiConfig.contentLanguage ? `Please provide the response in ${aiConfig.contentLanguage}.` : ''
-              } ${aiConfig.custom_instructions || ''}`
-            },
-            { role: 'user', content: prompt }
+            { role: 'system', content: systemInstruction },
+            { 
+              role: 'user', 
+              content: aiConfig.content_language 
+                ? `Generate the following content in ${aiConfig.content_language} language:\n\n${prompt}`
+                : prompt
+            }
           ],
           temperature: aiConfig.temperature,
         }),
       });
 
       const data = await response.json();
+      if (!data.choices?.[0]?.message?.content) {
+        console.error('Invalid response from OpenAI:', data);
+        throw new Error('Invalid response from AI service');
+      }
       return data.choices[0].message.content;
     }
 
