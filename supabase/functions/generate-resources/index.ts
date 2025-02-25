@@ -36,6 +36,109 @@ function cleanMarkdownCodeBlocks(text: string): string {
   return cleaned.trim();
 }
 
+// Helper function to generate resources for a single segment
+async function generateResourcesForSegment(title: string, aiConfig: any): Promise<ConceptResources> {
+  console.log('Starting resource generation for segment:', title);
+  
+  const prompt = `Based on the lecture content about "${title}", generate 9 high-quality educational resources:
+    3 video resources (primarily from YouTube),
+    3 article resources (from reputable educational websites),
+    and 3 research papers or academic resources.
+    
+    Return ONLY valid JSON with NO markdown formatting, following this structure:
+    {
+      "concept": "${title}",
+      "resources": [
+        {
+          "type": "video"|"article"|"research",
+          "title": "Resource Title",
+          "url": "Resource URL",
+          "description": "Brief description of what this resource covers"
+        }
+      ]
+    }
+    
+    Requirements:
+    1. Return ONLY the JSON with NO markdown or code block formatting
+    2. All fields must be strings
+    3. "type" must be exactly "video", "article", or "research"
+    4. Generate exactly 3 resources of each type
+    5. Make sure all URLs are properly formatted
+    6. DO NOT include any text before or after the JSON`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert at finding relevant educational resources. Your responses must be in pure JSON format with no markdown or code block formatting. ${
+            aiConfig?.content_language ? 
+            `Generate all content in ${aiConfig.content_language} language.` : 
+            'Generate content in English.'
+          }${
+            aiConfig?.custom_instructions ? 
+            ' ' + aiConfig.custom_instructions : 
+            ''
+          }`
+        },
+        { role: 'user', content: prompt }
+      ],
+      temperature: aiConfig?.temperature || 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('OpenAI API error for segment:', title, errorText);
+    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.choices?.[0]?.message?.content) {
+    console.error('Invalid OpenAI response structure for segment:', title, data);
+    throw new Error('Invalid response structure from OpenAI');
+  }
+
+  // Clean any markdown formatting from the response
+  const cleanedText = cleanMarkdownCodeBlocks(data.choices[0].message.content);
+  console.log('Cleaned response text for segment:', title, cleanedText);
+  
+  try {
+    const parsedResources = JSON.parse(cleanedText);
+    
+    // Validate the parsed structure
+    if (!parsedResources.concept || !Array.isArray(parsedResources.resources)) {
+      console.error('Invalid resource structure for segment:', title, parsedResources);
+      throw new Error('Invalid resource structure in AI response');
+    }
+
+    // Validate each resource
+    parsedResources.resources.forEach((resource: Resource, index: number) => {
+      if (!resource.type || !resource.title || !resource.url || !resource.description) {
+        console.error(`Invalid resource at index ${index} for segment:`, title, resource);
+        throw new Error(`Missing required fields in resource at index ${index}`);
+      }
+      if (!['video', 'article', 'research'].includes(resource.type)) {
+        throw new Error(`Invalid resource type "${resource.type}" at index ${index}`);
+      }
+    });
+
+    return parsedResources;
+    
+  } catch (error) {
+    console.error('Error parsing AI response for segment:', title, error);
+    console.error('Raw response:', cleanedText);
+    throw new Error(`Failed to parse AI response: ${error.message}`);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -59,109 +162,14 @@ serve(async (req) => {
       throw new Error('Invalid or empty segment titles');
     }
 
-    const allResources: ConceptResources[] = [];
-
-    for (const title of segmentTitles) {
-      console.log('Generating resources for segment:', title);
-      
-      const prompt = `Based on the lecture content about "${title}", generate 9 high-quality educational resources:
-      3 video resources (primarily from YouTube),
-      3 article resources (from reputable educational websites),
-      and 3 research papers or academic resources.
-      
-      Return ONLY valid JSON with NO markdown formatting, following this structure:
-      {
-        "concept": "${title}",
-        "resources": [
-          {
-            "type": "video"|"article"|"research",
-            "title": "Resource Title",
-            "url": "Resource URL",
-            "description": "Brief description of what this resource covers"
-          }
-        ]
-      }
-      
-      Requirements:
-      1. Return ONLY the JSON with NO markdown or code block formatting
-      2. All fields must be strings
-      3. "type" must be exactly "video", "article", or "research"
-      4. Generate exactly 3 resources of each type
-      5. Make sure all URLs are properly formatted
-      6. DO NOT include any text before or after the JSON`;
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert at finding relevant educational resources. Your responses must be in pure JSON format with no markdown or code block formatting. ${
-                aiConfig?.content_language ? 
-                `Generate all content in ${aiConfig.content_language} language.` : 
-                'Generate content in English.'
-              }${
-                aiConfig?.custom_instructions ? 
-                ' ' + aiConfig.custom_instructions : 
-                ''
-              }`
-            },
-            { role: 'user', content: prompt }
-          ],
-          temperature: aiConfig?.temperature || 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenAI API error:', errorText);
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.choices?.[0]?.message?.content) {
-        console.error('Invalid OpenAI response structure:', data);
-        throw new Error('Invalid response structure from OpenAI');
-      }
-
-      // Clean any markdown formatting from the response
-      const cleanedText = cleanMarkdownCodeBlocks(data.choices[0].message.content);
-      console.log('Cleaned response text:', cleanedText);
-      
-      try {
-        const parsedResources = JSON.parse(cleanedText);
-        
-        // Validate the parsed structure
-        if (!parsedResources.concept || !Array.isArray(parsedResources.resources)) {
-          console.error('Invalid resource structure:', parsedResources);
-          throw new Error('Invalid resource structure in AI response');
-        }
-
-        // Validate each resource
-        parsedResources.resources.forEach((resource: Resource, index: number) => {
-          if (!resource.type || !resource.title || !resource.url || !resource.description) {
-            console.error(`Invalid resource at index ${index}:`, resource);
-            throw new Error(`Missing required fields in resource at index ${index}`);
-          }
-          if (!['video', 'article', 'research'].includes(resource.type)) {
-            throw new Error(`Invalid resource type "${resource.type}" at index ${index}`);
-          }
-        });
-
-        allResources.push(parsedResources);
-        
-      } catch (error) {
-        console.error('Error parsing AI response:', error);
-        console.error('Raw response:', cleanedText);
-        throw new Error(`Failed to parse AI response: ${error.message}`);
-      }
-    }
+    // Generate resources for all segments simultaneously
+    console.log('Starting parallel resource generation for all segments');
+    const resourcePromises = segmentTitles.map(title => 
+      generateResourcesForSegment(title, aiConfig)
+    );
+    
+    const allResources = await Promise.all(resourcePromises);
+    console.log('Completed resource generation for all segments');
 
     return new Response(JSON.stringify(allResources), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -182,4 +190,3 @@ serve(async (req) => {
     );
   }
 });
-
