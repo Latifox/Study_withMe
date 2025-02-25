@@ -2,7 +2,9 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+const searchApiKey = Deno.env.get('GOOGLE_SEARCH_API_KEY');
+const searchEngineId = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,14 +21,34 @@ serve(async (req) => {
     const { topic, description = '', language = 'english' } = await req.json();
     console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
 
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    if (!googleApiKey || !searchApiKey || !searchEngineId) {
+      throw new Error('Google API credentials not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator specializing in academic content. Search the web to generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}.
+    // First, use Google Search to find relevant resources
+    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(`${topic} ${description} educational resources`)}&num=10`;
+    const searchResponse = await fetch(searchUrl);
+    const searchData = await searchResponse.json();
+
+    if (!searchResponse.ok) {
+      console.error('Google Search API error:', searchData);
+      throw new Error(`Google Search API error: ${searchResponse.status}`);
+    }
+
+    // Prepare search results for Gemini
+    const searchResults = searchData.items?.map((item: any) => ({
+      title: item.title,
+      link: item.link,
+      snippet: item.snippet
+    })) || [];
+
+    const prompt = `You are an educational resource curator specializing in academic content. Based on the following search results and requirements, generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}.
 
 Context about the topic:
 ${description}
+
+Search Results:
+${JSON.stringify(searchResults, null, 2)}
 
 STRICT REQUIREMENTS:
 
@@ -60,7 +82,7 @@ STRICT REQUIREMENTS:
    - URLs MUST be real and functional
    - Descriptions MUST explain the specific relevance to "${topic}"
 
-Response Format:
+Please format your response exactly as shown below:
 
 ## Video Resources
 1. [Complete Video Title](video_url)
@@ -83,30 +105,53 @@ Response Format:
 2. [Complete Paper Title](paper_url)
    Description: Clear explanation of how this paper specifically addresses ${topic}`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call Gemini API
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${googleApiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate strictly educational resources about "${topic}" with context: "${description}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources, and verify all URLs are functional.` }
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-      }),
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        tools: [{
+          function_declarations: [{
+            name: "search",
+            description: "Search for information",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The search query"
+                }
+              },
+              required: ["query"]
+            }
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          topK: 1,
+          topP: 1,
+          maxOutputTokens: 2048,
+        },
+      })
     });
 
-    if (!response.ok) {
-      console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
-      throw new Error(`OpenAI API error: ${response.status}`);
+    if (!geminiResponse.ok) {
+      console.error(`Gemini API error: ${geminiResponse.status}`);
+      const errorData = await geminiResponse.json();
+      console.error('Gemini API error details:', errorData);
+      throw new Error(`Gemini API error: ${geminiResponse.status}`);
     }
 
-    const data = await response.json();
-    const markdown = data.choices[0].message.content;
+    const geminiData = await geminiResponse.json();
+    const markdown = geminiData.candidates[0].content.parts[0].text;
     
     return new Response(
       JSON.stringify({ markdown }), 
@@ -124,4 +169,3 @@ Response Format:
     );
   }
 });
-
