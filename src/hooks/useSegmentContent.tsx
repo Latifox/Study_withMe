@@ -20,7 +20,47 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         throw new Error('Invalid parameters');
       }
 
-      // First get the lecture content and segment titles to guide the LLM
+      // First check if resources already exist
+      const { data: existingResources, error: resourcesError } = await supabase
+        .from('lecture_additional_resources')
+        .select('*')
+        .eq('lecture_id', numericLectureId)
+        .eq('segment_number', sequenceNumber);
+
+      if (resourcesError) {
+        console.error('Error fetching existing resources:', resourcesError);
+        throw resourcesError;
+      }
+
+      // If resources exist, return them grouped by type
+      if (existingResources && existingResources.length > 0) {
+        console.log('Found existing resources:', existingResources);
+        const groupedResources = existingResources.reduce((acc: { [key: string]: Resource[] }, resource) => {
+          const type = resource.resource_type as 'video' | 'article' | 'research';
+          if (!acc[type]) acc[type] = [];
+          acc[type].push({
+            type,
+            title: resource.title,
+            url: resource.url,
+            description: resource.description
+          });
+          return acc;
+        }, {});
+
+        return {
+          segments: [{
+            id: `segment_${sequenceNumber}`,
+            title: 'Additional Learning Resources',
+            description: 'Curated resources to enhance your understanding',
+            resources: groupedResources
+          }]
+        };
+      }
+
+      // If no resources exist, we need to generate them
+      console.log('No existing resources found, fetching lecture content and segment titles...');
+
+      // Get the lecture content and segment titles to guide the LLM
       const { data: lecture, error: lectureError } = await supabase
         .from('lectures')
         .select('content')
@@ -43,86 +83,72 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         throw segmentsError;
       }
 
-      // Fetch existing resources
-      const { data: resources, error: resourcesError } = await supabase
-        .from('lecture_additional_resources')
-        .select('*')
-        .eq('lecture_id', numericLectureId);
+      console.log('Generating resources with lecture content and segment titles:', {
+        contentLength: lecture.content?.length,
+        segmentCount: segments?.length
+      });
 
-      if (resourcesError) {
-        console.error('Error fetching resources:', resourcesError);
-        throw resourcesError;
-      }
-
-      // If no resources exist, generate them
-      if (!resources || resources.length === 0) {
-        console.log('No resources found, generating new ones...');
-        try {
-          const { data: generatedData, error: generationError } = await supabase.functions.invoke('generate-resources', {
-            body: {
-              lectureContent: lecture.content,
-              segmentTitles: segments.map(s => s.title),
-              aiConfig: { content_language: 'english' }
-            }
-          });
-
-          console.log('Generate resources response:', { generatedData, generationError });
-
-          if (generationError) {
-            console.error('Error generating resources:', generationError);
-            throw generationError;
+      // Generate resources using the edge function
+      try {
+        const { data: generatedData, error: generationError } = await supabase.functions.invoke('generate-resources', {
+          body: {
+            lectureContent: lecture.content,
+            segmentTitles: segments.map(s => s.title),
+            aiConfig: { content_language: 'english' }
           }
-
-          if (generatedData && generatedData[0]?.resources) {
-            // Store the generated resources
-            const { error: insertError } = await supabase
-              .from('lecture_additional_resources')
-              .insert(
-                generatedData[0].resources.map((resource: Resource) => ({
-                  lecture_id: numericLectureId,
-                  segment_number: sequenceNumber,
-                  resource_type: resource.type,
-                  title: resource.title,
-                  url: resource.url,
-                  description: resource.description
-                }))
-              );
-
-            if (insertError) {
-              console.error('Error storing generated resources:', insertError);
-              throw insertError;
-            }
-
-            resources.push(...generatedData[0].resources);
-            console.log('Successfully generated and stored resources:', resources);
-          }
-        } catch (error) {
-          console.error('Error in generate-resources function:', error);
-          throw error;
-        }
-      }
-
-      // Group resources by type
-      const groupedResources = (resources || []).reduce((acc: { [key: string]: Resource[] }, resource) => {
-        const type = resource.resource_type as 'video' | 'article' | 'research';
-        if (!acc[type]) acc[type] = [];
-        acc[type].push({
-          type,
-          title: resource.title,
-          url: resource.url,
-          description: resource.description
         });
-        return acc;
-      }, {});
 
-      return {
-        segments: [{
-          id: `segment_${sequenceNumber}`,
-          title: segments[0]?.title || 'Lecture Resources',
-          description: 'Additional learning resources for this lecture',
-          resources: groupedResources
-        }]
-      };
+        if (generationError) {
+          console.error('Error generating resources:', generationError);
+          throw generationError;
+        }
+
+        console.log('Resources generated successfully:', generatedData);
+
+        if (generatedData && generatedData[0]?.resources) {
+          // Store the generated resources
+          const { error: insertError } = await supabase
+            .from('lecture_additional_resources')
+            .insert(
+              generatedData[0].resources.map((resource: Resource) => ({
+                lecture_id: numericLectureId,
+                segment_number: sequenceNumber,
+                resource_type: resource.type,
+                title: resource.title,
+                url: resource.url,
+                description: resource.description
+              }))
+            );
+
+          if (insertError) {
+            console.error('Error storing generated resources:', insertError);
+            throw insertError;
+          }
+
+          console.log('Resources stored successfully');
+
+          // Group the resources by type for display
+          const groupedResources = generatedData[0].resources.reduce((acc: { [key: string]: Resource[] }, resource: Resource) => {
+            if (!acc[resource.type]) acc[resource.type] = [];
+            acc[resource.type].push(resource);
+            return acc;
+          }, {});
+
+          return {
+            segments: [{
+              id: `segment_${sequenceNumber}`,
+              title: 'Additional Learning Resources',
+              description: 'Curated resources to enhance your understanding',
+              resources: groupedResources
+            }]
+          };
+        }
+
+        throw new Error('No resources were generated');
+      } catch (error) {
+        console.error('Error in generate-resources function:', error);
+        throw error;
+      }
     },
     retry: 1,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
