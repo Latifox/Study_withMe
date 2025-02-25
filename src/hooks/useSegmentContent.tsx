@@ -60,9 +60,34 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         .eq('lecture_id', numericLectureId)
         .eq('segment_number', sequenceNumber);
 
-      if (resourcesError) {
+      // If no resources exist, generate them
+      if (!resourcesError && (!resources || resources.length === 0)) {
+        console.log('No resources found, generating new ones...');
+        try {
+          const { data: generatedData, error: generationError } = await supabase.functions.invoke('generate-resources', {
+            body: {
+              lectureContent: segment.lectures.content,
+              segmentTitles: [segment.title],
+              aiConfig: { content_language: 'english' } // Default to English if not specified
+            }
+          });
+
+          if (generationError) {
+            console.error('Error generating resources:', generationError);
+            throw generationError;
+          }
+
+          if (generatedData && generatedData[0]?.resources) {
+            // Resources were generated successfully
+            resources = generatedData[0].resources;
+          }
+        } catch (error) {
+          console.error('Error in generate-resources function:', error);
+          // Don't throw here - we'll continue with empty resources
+        }
+      } else if (resourcesError) {
         console.error('Error fetching resources:', resourcesError);
-        throw resourcesError;
+        // Don't throw here - we'll continue with empty resources
       }
 
       // Group resources by type for easier consumption
@@ -134,3 +159,4 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+
