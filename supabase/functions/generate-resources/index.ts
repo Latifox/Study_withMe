@@ -89,7 +89,7 @@ Response Format:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'llama-3.1-sonar-huge-128k-online',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Generate strictly educational resources about "${topic}" with context: "${description}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources.` }
