@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +10,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -18,11 +19,11 @@ serve(async (req) => {
     const { topic, description = '', language = 'english' } = await req.json();
     console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
 
-    if (!perplexityApiKey) {
-      throw new Error('Perplexity API key not configured');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}. You MUST SEARCH THE WEB and provide the resources found.
+    const systemPrompt = `You are an educational resource curator specializing in academic content. Search the web to generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}.
 
 Context about the topic:
 ${description}
@@ -36,7 +37,7 @@ STRICT REQUIREMENTS:
 
 2. Resource Quality Requirements:
    Videos (MUST follow ALL these rules):
-    - NO entertainment videos, music, or non-educational content
+   - NO entertainment videos, music, or non-educational content
    - MUST be directly related to "${topic}" and its description
    - MUST be from: youtube.com 
    - Each URL must be unique and functional
@@ -82,17 +83,17 @@ Response Format:
 2. [Complete Paper Title](paper_url)
    Description: Clear explanation of how this paper specifically addresses ${topic}`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-huge-128k-online',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate strictly educational resources about "${topic}" with context: "${description}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources.` }
+          { role: 'user', content: `Generate strictly educational resources about "${topic}" with context: "${description}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources, and verify all URLs are functional.` }
         ],
         temperature: 0.1,
         max_tokens: 2000,
@@ -100,8 +101,8 @@ Response Format:
     });
 
     if (!response.ok) {
-      console.error(`Perplexity API error: ${response.status} ${response.statusText}`);
-      throw new Error(`Perplexity API error: ${response.status}`);
+      console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -123,3 +124,4 @@ Response Format:
     );
   }
 });
+
