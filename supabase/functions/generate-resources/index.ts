@@ -111,24 +111,6 @@ Format your response in this EXACT markdown structure:
       }
     }
 
-    // Validate resource count and order
-    const videoResources = resources.filter(r => r.type === 'video');
-    const articleResources = resources.filter(r => r.type === 'article');
-    const paperResources = resources.filter(r => r.type === 'research_paper');
-
-    if (videoResources.length !== 2 || articleResources.length !== 2 || paperResources.length !== 2) {
-      throw new Error('Invalid resource count in generated content');
-    }
-
-    // Check for duplicate URLs
-    const urls = new Set();
-    for (const resource of resources) {
-      if (urls.has(resource.url)) {
-        throw new Error('Duplicate URLs detected in generated content');
-      }
-      urls.add(resource.url);
-    }
-
     return new Response(
       JSON.stringify({ 
         resources,
