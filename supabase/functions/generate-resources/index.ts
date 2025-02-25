@@ -31,31 +31,26 @@ STRICT REQUIREMENTS:
 
 1. Resource Distribution (EXACTLY):
    - 2 video lectures/tutorials from reputable educational sources
-   - 2 academic articles/educational materials
+   - 2 academic articles/press material
    - 2 research papers or academic publications
 
 2. Resource Quality Requirements:
    Videos (MUST follow ALL these rules):
-   - ONLY from educational channels (university channels, educational platforms)
-   - NO entertainment videos, music, or non-educational content
+    - NO entertainment videos, music, or non-educational content
    - MUST be directly related to "${topic}" and its description
-   - MUST be from: youtube.com (educational channels only), coursera.org, edx.org, or university domains
+   - MUST be from: youtube.com 
    - Each URL must be unique and functional
    
-   Articles (MUST follow ALL these rules):
-   - ONLY from academic or educational institutions
-   - MUST be from .edu domains or established academic platforms
+   Articles (MUST follow ALL these rules)
    - MUST be directly related to "${topic}" and its description
    - MUST be accessible without subscription
    - NO opinion pieces or blog posts
    - Each URL must be unique and functional
    
    Research Papers (MUST follow ALL these rules):
-   - ONLY from academic journals or research repositories
-   - MUST be from: researchgate.net, sciencedirect.com, or respected academic journals
+   - ONLY links to Google Scholar
    - MUST be directly related to "${topic}" and its description
    - Prefer open-access papers
-   - MUST be peer-reviewed research
    - Each URL must be unique and functional
 
 3. Format Requirements:
@@ -128,3 +123,4 @@ Response Format:
     );
   }
 });
+
