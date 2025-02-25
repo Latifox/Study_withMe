@@ -15,66 +15,74 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, language = 'spanish' } = await req.json();
+    const { topic, language = 'english' } = await req.json();
     console.log(`Generating resources for topic: "${topic}" in ${language}`);
 
     if (!perplexityApiKey) {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `As an educational resource curator, generate EXACTLY 6 educational resources about "${topic}" in ${language}.
+    const systemPrompt = `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about "${topic}" in ${language}.
 
-STRICT FORMAT AND CONTENT REQUIREMENTS:
+STRICT REQUIREMENTS:
 
-1. You MUST provide EXACTLY:
-   - 2 video resources (from YouTube, Coursera, or edX)
-   - 2 article resources (from .edu domains or reputable educational sites)
-   - 2 research papers (from ResearchGate, ScienceDirect, or academic journals)
+1. Resource Distribution (EXACTLY):
+   - 2 video lectures/tutorials from reputable educational sources
+   - 2 academic articles/educational materials
+   - 2 research papers or academic publications
 
-2. CRUCIAL: Each resource MUST be formatted as a markdown list item with:
-   - The title as a clickable hyperlink using markdown [title](url) format
-   - A brief but informative description on the next line indented with three spaces
-   - URLs must be unique and working links
-   - No placeholder or example URLs
-
-3. Content Guidelines:
-   Videos:
-   - Prefer educational channels and course content
-   - Must be from: youtube.com, coursera.org, or edx.org
-   - Each URL must be unique and actually exist
+2. Resource Quality Requirements:
+   Videos (MUST follow ALL these rules):
+   - ONLY from educational channels (university channels, educational platforms)
+   - NO entertainment videos, music, or non-educational content
+   - MUST be directly related to "${topic}"
+   - MUST be from: youtube.com (educational channels only), coursera.org, edx.org, or university domains
+   - Each URL must be unique and functional
    
-   Articles:
-   - Must be from reputable educational websites
-   - Prefer .edu domains or established educational platforms
-   - Each URL must be unique and lead to actual content
+   Articles (MUST follow ALL these rules):
+   - ONLY from academic or educational institutions
+   - MUST be from .edu domains or established academic platforms
+   - MUST be directly related to "${topic}"
+   - MUST be accessible without subscription
+   - NO opinion pieces or blog posts
+   - Each URL must be unique and functional
    
-   Research Papers:
-   - Must be from: researchgate.net, sciencedirect.com, or academic journals
-   - Papers should be accessible (prefer open access)
-   - Each URL must be unique and lead to the actual paper
+   Research Papers (MUST follow ALL these rules):
+   - ONLY from academic journals or research repositories
+   - MUST be from: researchgate.net, sciencedirect.com, or respected academic journals
+   - MUST be directly related to "${topic}"
+   - Prefer open-access papers
+   - MUST be peer-reviewed research
+   - Each URL must be unique and functional
 
-Format your response EXACTLY like this:
+3. Format Requirements:
+   - Use markdown list format
+   - Each resource MUST have a clear, descriptive title
+   - URLs MUST be real and functional
+   - Descriptions MUST explain the specific relevance to "${topic}"
+
+Response Format:
 
 ## Video Resources
-1. [Complete Video Title](video_url_1)
-   Description: Clear, specific description of the video content
+1. [Complete Video Title](video_url)
+   Description: Clear explanation of how this video specifically addresses ${topic}
 
-2. [Complete Video Title](video_url_2)
-   Description: Clear, specific description of the video content
+2. [Complete Video Title](video_url)
+   Description: Clear explanation of how this video specifically addresses ${topic}
 
 ## Article Resources
-1. [Complete Article Title](article_url_1)
-   Description: Clear, specific description of the article content
+1. [Complete Article Title](article_url)
+   Description: Clear explanation of how this article specifically addresses ${topic}
 
-2. [Complete Article Title](article_url_2)
-   Description: Clear, specific description of the article content
+2. [Complete Article Title](article_url)
+   Description: Clear explanation of how this article specifically addresses ${topic}
 
 ## Research Papers
-1. [Complete Paper Title](paper_url_1)
-   Description: Clear, specific description of the paper content
+1. [Complete Paper Title](paper_url)
+   Description: Clear explanation of how this paper specifically addresses ${topic}
 
-2. [Complete Paper Title](paper_url_2)
-   Description: Clear, specific description of the paper content`;
+2. [Complete Paper Title](paper_url)
+   Description: Clear explanation of how this paper specifically addresses ${topic}`;
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -86,7 +94,7 @@ Format your response EXACTLY like this:
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate educational resources about "${topic}" in ${language}. Remember to provide REAL, WORKING URLs for each resource.` }
+          { role: 'user', content: `Generate strictly educational resources about "${topic}" in ${language}. Remember: ONLY educational content, NO entertainment or non-academic sources.` }
         ],
         temperature: 0.1,
         max_tokens: 2000,

@@ -110,21 +110,27 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Retrieved segments for processing:', segmentData);
 
-      // Process all segments in parallel with retry logic
+      // Process segments sequentially to ensure all get processed
       const processSegment = async (segment: { sequence_number: number; title: string }, retryCount = 0) => {
         const maxRetries = 3;
+        const retryDelay = (retryCount: number) => Math.min(2000 * Math.pow(2, retryCount), 10000);
+
         try {
           console.log(`Starting resource generation for segment ${segment.sequence_number}: ${segment.title}`);
           
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
             body: { 
               topic: segment.title, 
-              language: aiConfig?.content_language || 'english' // Use configured language or default to English
+              language: aiConfig?.content_language || 'english'
             }
           });
 
           if (generationError) {
             throw generationError;
+          }
+
+          if (!generatedContent?.markdown) {
+            throw new Error('No content generated');
           }
 
           // Parse the markdown into sections and extract resources
@@ -153,10 +159,14 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             }
           }
 
+          if (resources.length === 0) {
+            throw new Error('No resources extracted from generated content');
+          }
+
           // Store resources in the database
           console.log(`Storing ${resources.length} resources for segment ${segment.sequence_number}`);
           
-          await Promise.all(resources.map(async (resource) => {
+          for (const resource of resources) {
             const { error: insertError } = await supabase
               .from('lecture_additional_resources')
               .insert({
@@ -172,7 +182,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
               console.error(`Error storing resource for segment ${segment.sequence_number}:`, insertError);
               throw insertError;
             }
-          }));
+          }
 
           console.log(`Successfully stored resources for segment ${segment.sequence_number}`);
           
@@ -186,7 +196,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           
           if (retryCount < maxRetries) {
             console.log(`Retrying segment ${segment.sequence_number} (attempt ${retryCount + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
+            await new Promise(resolve => setTimeout(resolve, retryDelay(retryCount)));
             return processSegment(segment, retryCount + 1);
           }
           
@@ -200,12 +210,14 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       };
 
       try {
-        console.log('Processing all segments in parallel...');
-        const segmentContents = await Promise.all(
-          segmentData.map(segment => processSegment(segment))
-        );
-        console.log('Finished processing all segments:', segmentContents);
+        // Process segments one at a time to ensure all get processed
+        const segmentContents = [];
+        for (const segment of segmentData) {
+          const content = await processSegment(segment);
+          segmentContents.push(content);
+        }
         
+        console.log('Finished processing all segments:', segmentContents);
         return { segments: segmentContents };
         
       } catch (error) {
@@ -217,4 +229,3 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-
