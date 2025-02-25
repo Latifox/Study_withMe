@@ -14,33 +14,33 @@ const LectureSummaryFull = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // First, fetch the lecture data
-  const { data: lecture } = useQuery({
-    queryKey: ["lecture", lectureId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lectures")
-        .select("*, courses(*)")
-        .eq("id", parseInt(lectureId!))
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Then use the lecture data to generate the full summary
+  // First, check if we have an existing full summary
   const { data: fullSummary, isLoading } = useQuery({
     queryKey: ["lecture-summary-full", lectureId],
     queryFn: async () => {
       console.log('Fetching full lecture summary...');
-      console.log('Lecture content available:', !!lecture?.content);
       
+      // Check for existing summary
+      const { data: existingHighlight } = await supabase
+        .from("lecture_highlights")
+        .select("full_content, lectures(title)")
+        .eq("lecture_id", parseInt(lectureId!))
+        .maybeSingle();
+
+      if (existingHighlight?.full_content) {
+        console.log('Found existing full summary');
+        return {
+          full_content: existingHighlight.full_content,
+          lecture_title: existingHighlight.lectures?.title
+        };
+      }
+
+      // Generate new summary
+      console.log('Generating new full summary...');
       const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
         body: { 
           lectureId,
-          part: 'full',
-          lectureContent: lecture?.content // Pass the lecture content to the Edge Function
+          part: 'full'
         }
       });
       
@@ -54,10 +54,18 @@ const LectureSummaryFull = () => {
         throw error;
       }
       
-      console.log('Full summary received:', data);
-      return data.content;
+      // Fetch the lecture title
+      const { data: lecture } = await supabase
+        .from("lectures")
+        .select("title")
+        .eq("id", parseInt(lectureId!))
+        .single();
+      
+      return {
+        full_content: data.content.full_content,
+        lecture_title: lecture?.title
+      };
     },
-    enabled: !!lecture, // Only run this query when lecture data is available
   });
 
   if (isLoading) {
@@ -94,7 +102,7 @@ const LectureSummaryFull = () => {
           <CardContent className="p-6">
             <h1 className="text-2xl font-bold mb-6 flex items-center gap-2 text-black">
               <BookOpen className="w-6 h-6" />
-              {lecture?.title} - Full Summary
+              {fullSummary?.lecture_title} - Full Summary
             </h1>
             
             <div className="prose prose-sm max-w-none text-black">
@@ -110,4 +118,3 @@ const LectureSummaryFull = () => {
 };
 
 export default LectureSummaryFull;
-

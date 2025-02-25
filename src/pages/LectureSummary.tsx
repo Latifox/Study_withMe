@@ -21,8 +21,8 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
 
+  // Fetch lecture data to ensure we have access to it
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
@@ -37,84 +37,82 @@ const LectureSummary = () => {
     },
   });
 
-  const { data: highlights, isLoading, error, refetch } = useQuery({
-    queryKey: ["lecture-highlights", lectureId],
+  // First set of highlights (first three cards)
+  const { data: firstHighlights, isLoading: isLoadingFirst } = useQuery({
+    queryKey: ["lecture-highlights-first", lectureId],
     queryFn: async () => {
-      console.log('Fetching lecture highlights...');
-      const { data, error } = await supabase
+      console.log('Generating first set of highlights...');
+      const { data: existingHighlights } = await supabase
         .from("lecture_highlights")
-        .select("*")
+        .select("structure, key_concepts, main_ideas")
         .eq("lecture_id", parseInt(lectureId!))
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching highlights:', error);
-        throw error;
+      if (existingHighlights?.structure) {
+        console.log('Found existing first highlights');
+        return existingHighlights;
       }
-      
-      // If no highlights exist, generate them
-      if (!data) {
-        console.log('No highlights found, generating...');
-        setIsGenerating(true);
-        try {
-          const response = await supabase.functions.invoke('generate-lecture-summary', {
-            body: { lectureId, part: 'highlights' }
-          });
-          
-          if (response.error) throw response.error;
-          
-          // Fetch the newly generated highlights
-          const { data: newHighlights, error: fetchError } = await supabase
-            .from("lecture_highlights")
-            .select("*")
-            .eq("lecture_id", parseInt(lectureId!))
-            .single();
-            
-          if (fetchError) throw fetchError;
-          return newHighlights;
-        } catch (err) {
-          console.error('Error generating highlights:', err);
-          throw err;
-        } finally {
-          setIsGenerating(false);
-        }
-      }
-      
-      console.log('Highlights received:', data);
-      return data;
+
+      console.log('Generating new first highlights...');
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId, part: 'first-cards' }
+      });
+
+      if (error) throw error;
+      return data.content;
     },
+    enabled: !!lecture
   });
 
-  // Show errors if any
-  if (error) {
-    toast({
-      title: "Error loading summary",
-      description: "There was a problem loading the lecture summary. Please try again.",
-      variant: "destructive",
-    });
-  }
+  // Second set of highlights (last three cards)
+  const { data: secondHighlights, isLoading: isLoadingSecond } = useQuery({
+    queryKey: ["lecture-highlights-second", lectureId],
+    queryFn: async () => {
+      console.log('Generating second set of highlights...');
+      const { data: existingHighlights } = await supabase
+        .from("lecture_highlights")
+        .select("important_quotes, relationships, supporting_evidence")
+        .eq("lecture_id", parseInt(lectureId!))
+        .maybeSingle();
 
+      if (existingHighlights?.important_quotes) {
+        console.log('Found existing second highlights');
+        return existingHighlights;
+      }
+
+      console.log('Generating new second highlights...');
+      const { data, error } = await supabase.functions.invoke('generate-lecture-summary', {
+        body: { lectureId, part: 'second-cards' }
+      });
+
+      if (error) throw error;
+      return data.content;
+    },
+    enabled: !!lecture
+  });
+
+  const isLoading = isLoadingFirst || isLoadingSecond;
+
+  // Combine both sets of highlights
   const summaryData: SummaryContent = {
-    structure: highlights?.structure || '',
-    keyConcepts: highlights?.key_concepts || '',
-    mainIdeas: highlights?.main_ideas || '',
-    importantQuotes: highlights?.important_quotes || '',
-    relationships: highlights?.relationships || '',
-    supportingEvidence: highlights?.supporting_evidence || ''
+    structure: firstHighlights?.structure || '',
+    keyConcepts: firstHighlights?.key_concepts || '',
+    mainIdeas: firstHighlights?.main_ideas || '',
+    importantQuotes: secondHighlights?.important_quotes || '',
+    relationships: secondHighlights?.relationships || '',
+    supportingEvidence: secondHighlights?.supporting_evidence || ''
   };
 
-  if (isLoading || isGenerating) {
+  if (isLoading) {
     return (
       <BackgroundGradient>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
-              <p className="text-lg text-black">
-                {isGenerating ? "Generating highlights..." : "Loading highlights..."}
-              </p>
+              <p className="text-lg text-black">Generating highlights...</p>
               <p className="text-sm text-muted-foreground">
-                {isGenerating ? "This may take a moment as we analyze the lecture content." : "Please wait while we load the content."}
+                This may take a moment as we analyze the lecture content.
               </p>
             </div>
           </div>

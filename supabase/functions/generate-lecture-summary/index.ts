@@ -1,21 +1,12 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-const supabaseClient = createClient(
-  supabaseUrl!,
-  supabaseServiceRoleKey!
-);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,165 +14,137 @@ serve(async (req) => {
   }
 
   try {
-    const { lectureId, part, lectureContent } = await req.json();
-
-    console.log(`Generating ${part} summary for lecture ${lectureId}`);
+    const { lectureId, part } = await req.json();
     
-    if (!lectureId) {
-      throw new Error('Lecture ID is required');
-    }
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get lecture details if content wasn't provided
-    let lecture;
-    if (!lectureContent) {
-      const { data, error } = await supabaseClient
+    // Fetch lecture content and AI config
+    console.log('Fetching lecture and AI config data...');
+    const [lectureResult, aiConfigResult] = await Promise.all([
+      supabase
         .from('lectures')
-        .select('*')
+        .select('content')
         .eq('id', lectureId)
-        .single();
+        .single(),
+      supabase
+        .from('lecture_ai_configs')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .maybeSingle()
+    ]);
 
-      if (error) {
-        console.error('Error fetching lecture:', error);
-        throw error;
-      }
+    if (lectureResult.error) throw lectureResult.error;
+    if (!lectureResult.data?.content) throw new Error('No lecture content found');
 
-      lecture = data;
+    const lectureContent = lectureResult.data.content;
+    const aiConfig = aiConfigResult.data || {
+      temperature: 0.7,
+      creativityLevel: 0.5,
+      detailLevel: 0.6,
+      contentLanguage: null,
+      hasCustomInstructions: false
+    };
+
+    console.log('Using AI config:', JSON.stringify(aiConfig, null, 2));
+
+    // Function to generate content using OpenAI
+    async function generateWithAI(prompt: string) {
+      const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert at analyzing and summarizing lecture content. ${
+                aiConfig.contentLanguage ? `Please provide the response in ${aiConfig.contentLanguage}.` : ''
+              } ${aiConfig.custom_instructions || ''}`
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: aiConfig.temperature,
+        }),
+      });
+
+      const data = await response.json();
+      return data.choices[0].message.content;
     }
 
-    // Get AI config for the lecture
-    const { data: aiConfig, error: aiConfigError } = await supabaseClient
-      .from('lecture_ai_configs')
-      .select('*')
+    let content;
+    if (part === 'first-cards') {
+      // Generate first three sections
+      const [structure, keyConcepts, mainIdeas] = await Promise.all([
+        generateWithAI(`Analyze the following lecture content and provide a clear outline of its structure:
+          ${lectureContent}`),
+        generateWithAI(`Identify and explain the key concepts from this lecture content:
+          ${lectureContent}`),
+        generateWithAI(`Summarize the main ideas and arguments presented in this lecture:
+          ${lectureContent}`)
+      ]);
+
+      content = { structure, key_concepts: keyConcepts, main_ideas: mainIdeas };
+    } 
+    else if (part === 'second-cards') {
+      // Generate last three sections
+      const [quotes, relationships, evidence] = await Promise.all([
+        generateWithAI(`Extract and list the most important quotes from this lecture:
+          ${lectureContent}`),
+        generateWithAI(`Analyze the relationships between different concepts in this lecture:
+          ${lectureContent}`),
+        generateWithAI(`Identify and explain the supporting evidence used in this lecture:
+          ${lectureContent}`)
+      ]);
+
+      content = { 
+        important_quotes: quotes,
+        relationships,
+        supporting_evidence: evidence
+      };
+    }
+    else if (part === 'full') {
+      const fullSummary = await generateWithAI(`Provide a comprehensive summary of this lecture content:
+        ${lectureContent}`);
+      
+      content = { full_content: fullSummary };
+    }
+
+    // Update or insert the content in the database
+    const { data: existingHighlight } = await supabase
+      .from('lecture_highlights')
+      .select('id')
       .eq('lecture_id', lectureId)
-      .single();
+      .maybeSingle();
 
-    if (aiConfigError) {
-      console.error('Error fetching AI config:', aiConfigError);
-      throw aiConfigError;
-    }
-
-    console.log('AI config:', aiConfig);
-
-    // Use passed content or fallback to fetched content
-    const contentToAnalyze = lectureContent || lecture?.content;
-    
-    if (!contentToAnalyze) {
-      throw new Error('No lecture content available to analyze');
-    }
-
-    let systemPrompt = '';
-    let userPrompt = contentToAnalyze;
-
-    if (part === 'highlights') {
-      systemPrompt = `You are a helpful AI that analyzes lecture content and organizes it into clear sections. Please analyze the following lecture and provide a structured response with these sections:
-
-Structure: Explain how the lecture content is organized.
-Key Concepts: List and explain the main concepts covered.
-Main Ideas: Summarize the principal arguments or points.
-Important Quotes: Include relevant quotes from the lecture.
-Relationships: Describe how different concepts connect.
-Supporting Evidence: Note any evidence, examples, or data used.
-
-Keep each section clear and concise. Use the lecture's original language where appropriate.
-
-Temperature: ${aiConfig.temperature}
-Creativity Level: ${aiConfig.creativity_level}
-Detail Level: ${aiConfig.detail_level}`;
+    if (existingHighlight) {
+      await supabase
+        .from('lecture_highlights')
+        .update(content)
+        .eq('id', existingHighlight.id);
     } else {
-      systemPrompt = `You are a helpful AI that generates comprehensive lecture summaries. Please analyze the provided lecture content and create a detailed summary that captures all key points, arguments, and examples.
-
-Make the summary clear, well-structured, and thorough while maintaining readability. Use original text where appropriate.
-
-Temperature: ${aiConfig.temperature}
-Creativity Level: ${aiConfig.creativity_level}
-Detail Level: ${aiConfig.detail_level}`;
+      await supabase
+        .from('lecture_highlights')
+        .insert({
+          ...content,
+          lecture_id: lectureId
+        });
     }
 
-    console.log('Sending request to OpenAI...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: aiConfig.temperature,
-      }),
+    return new Response(JSON.stringify({ content }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
-    const completion = await response.json();
-    console.log('Received response from OpenAI');
-
-    if (!completion.choices || completion.choices.length === 0) {
-      console.error('Invalid response from OpenAI:', completion);
-      throw new Error('Failed to generate summary');
-    }
-
-    const generatedContent = completion.choices[0].message.content;
-    console.log('Generated content:', generatedContent);
-
-    if (part === 'highlights') {
-      // Parse the sections from the generated content
-      const sections: Record<string, string> = {};
-      const sectionRegex = /^(Structure|Key Concepts|Main Ideas|Important Quotes|Relationships|Supporting Evidence):\s*([\s\S]*?)(?=\n\n(?:Structure|Key Concepts|Main Ideas|Important Quotes|Relationships|Supporting Evidence):|$)/gm;
-
-      let match;
-      while ((match = sectionRegex.exec(generatedContent)) !== null) {
-        sections[match[1].toLowerCase().replace(' ', '_')] = match[2].trim();
-      }
-
-      console.log('Parsed sections:', sections);
-
-      // Store the highlights in the database using upsert
-      const { error: upsertError } = await supabaseClient
-        .from('lecture_highlights')
-        .upsert({
-          lecture_id: lectureId,
-          ...sections,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (upsertError) {
-        console.error('Error storing highlights:', upsertError);
-        throw new Error('Failed to store highlights');
-      }
-
-      return new Response(JSON.stringify({ content: sections }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else {
-      // For full summary, store and return the complete content using upsert
-      const { error: upsertError } = await supabaseClient
-        .from('lecture_highlights')
-        .upsert({
-          lecture_id: lectureId,
-          full_content: generatedContent,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (upsertError) {
-        console.error('Error storing full summary:', upsertError);
-        throw new Error('Failed to store full summary');
-      }
-
-      return new Response(JSON.stringify({ content: { full_content: generatedContent } }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
   } catch (error) {
     console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
