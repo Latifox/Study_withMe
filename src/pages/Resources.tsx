@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
 import { useSegmentContent } from "@/hooks/useSegmentContent";
+import { toast } from "@/components/ui/use-toast";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -23,9 +24,13 @@ const Resources = () => {
 
   console.log('Resources page params:', { courseId, lectureId, segmentId });
 
+  // Parse the numeric values from URL params
+  const numericLectureId = lectureId ? parseInt(lectureId) : null;
+  const numericSegmentId = segmentId ? parseInt(segmentId) : null;
+
   const { data: segmentContent, isLoading, error } = useSegmentContent(
-    lectureId ? parseInt(lectureId) : null,
-    segmentId ? parseInt(segmentId) : null
+    numericLectureId,
+    numericSegmentId
   );
 
   console.log('Segment content result:', { data: segmentContent, isLoading, error });
@@ -47,6 +52,11 @@ const Resources = () => {
 
   if (error) {
     console.error('Error loading resources:', error);
+    toast({
+      title: "Error loading resources",
+      description: "Please try again later",
+      variant: "destructive",
+    });
   }
 
   if (!segmentContent?.segments[0]?.resources) {
@@ -67,7 +77,9 @@ const Resources = () => {
               </div>
               <Card className="bg-white/10 backdrop-blur-md border-white/20">
                 <CardContent className="p-6">
-                  <p className="text-center text-black/80">No resources available for this segment yet.</p>
+                  <p className="text-center text-black/80">
+                    Generating resources for this segment...
+                  </p>
                 </CardContent>
               </Card>
             </div>

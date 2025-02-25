@@ -15,7 +15,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     queryFn: async () => {
       console.log('useSegmentContent: Starting fetch with params:', { numericLectureId, sequenceNumber });
 
-      if (!numericLectureId || !sequenceNumber) {
+      if (!numericLectureId || sequenceNumber === null) {
         console.error('Invalid parameters:', { numericLectureId, sequenceNumber });
         throw new Error('Invalid parameters');
       }
@@ -67,7 +67,6 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
 
       console.log('Initial resources fetch result:', { initialResources, resourcesError });
 
-      // Create a mutable variable to store our resources
       let resourcesData = initialResources;
 
       // If no resources exist AND there was no error, generate them
@@ -90,16 +89,35 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
           }
 
           if (generatedData && generatedData[0]?.resources) {
+            // Store the generated resources in the database
+            const { error: insertError } = await supabase
+              .from('lecture_additional_resources')
+              .insert(
+                generatedData[0].resources.map((resource: Resource) => ({
+                  lecture_id: numericLectureId,
+                  segment_number: sequenceNumber,
+                  resource_type: resource.type,
+                  title: resource.title,
+                  url: resource.url,
+                  description: resource.description
+                }))
+              );
+
+            if (insertError) {
+              console.error('Error storing generated resources:', insertError);
+              throw insertError;
+            }
+
             resourcesData = generatedData[0].resources;
-            console.log('Successfully generated resources:', resourcesData);
+            console.log('Successfully generated and stored resources:', resourcesData);
           }
         } catch (error) {
           console.error('Error in generate-resources function:', error);
-          // Don't throw here - we'll continue with empty resources
+          throw error; // Throw the error to trigger a retry
         }
       } else if (resourcesError) {
         console.error('Error fetching resources:', resourcesError);
-        // Don't throw here - we'll continue with empty resources
+        throw resourcesError;
       }
 
       // Group resources by type for easier consumption
@@ -167,8 +185,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         }]
       };
     },
-    retry: 1, // Reduce retries to make error detection easier
+    retry: 1,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-
