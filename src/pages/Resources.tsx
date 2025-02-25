@@ -29,12 +29,22 @@ const Resources = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Fetch lecture content and AI config
   const { data: lecture } = useQuery({
     queryKey: ['lecture', lectureId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lectures')
-        .select('*')
+        .select(`
+          *,
+          lecture_ai_configs (
+            temperature,
+            creativity_level,
+            detail_level,
+            content_language,
+            custom_instructions
+          )
+        `)
         .eq('id', parseInt(lectureId as string))
         .single();
       
@@ -51,13 +61,43 @@ const Resources = () => {
     }
   });
 
-  const { data: resources, isLoading } = useQuery({
-    queryKey: ['lecture-resources', lectureId],
+  // Fetch segment titles
+  const { data: segments } = useQuery({
+    queryKey: ['lecture-segments', lectureId],
     queryFn: async () => {
-      console.log('Fetching resources for lecture content:', lecture?.content?.substring(0, 100));
+      const { data, error } = await supabase
+        .from('lecture_segments')
+        .select('title')
+        .eq('lecture_id', parseInt(lectureId as string))
+        .order('sequence_number', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching segments:', error);
+        throw error;
+      }
+      return data;
+    },
+    enabled: !!lecture
+  });
+
+  // Generate resources using the edge function
+  const { data: resources, isLoading } = useQuery({
+    queryKey: ['lecture-resources', lectureId, lecture?.lecture_ai_configs],
+    queryFn: async () => {
+      if (!segments || !lecture) return null;
+      
+      console.log('Generating resources with AI config:', lecture.lecture_ai_configs);
       
       const { data, error } = await supabase.functions.invoke('generate-resources', {
-        body: { lectureContent: lecture?.content },
+        body: {
+          lectureContent: lecture.content,
+          aiConfig: lecture.lecture_ai_configs?.[0] || {
+            temperature: 0.7,
+            creativity_level: 0.5,
+            detail_level: 0.6
+          },
+          segmentTitles: segments.map(s => s.title)
+        },
       });
       
       if (error) {
@@ -76,7 +116,7 @@ const Resources = () => {
       
       return data;
     },
-    enabled: !!lecture?.content,
+    enabled: !!lecture?.content && !!segments,
   });
 
   const getResourceIcon = (type: Resource['type']) => {
