@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
@@ -47,6 +47,10 @@ const Resources = () => {
                 <ArrowLeft className="w-4 h-4" />
                 Back to Lectures
               </Button>
+              <h1 className="text-2xl font-bold text-black flex items-center gap-2">
+                <BookOpen className="w-6 h-6" />
+                Additional Resources
+              </h1>
             </div>
 
             {isLoading ? (
@@ -62,14 +66,44 @@ const Resources = () => {
             ) : (
               <div className="space-y-8">
                 {segmentContent.segments.map((segment) => (
-                  <Card key={segment.id} className="mb-6 group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
+                  <Card 
+                    key={segment.id} 
+                    className="mb-6 transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20 hover:shadow-xl hover:bg-white/20"
+                  >
                     <CardHeader>
-                      <CardTitle className="text-black">Resources for segment: {segment.title}</CardTitle>
+                      <CardTitle className="text-xl text-black flex items-center gap-2">
+                        Resources for: {segment.title}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ScrollArea className="h-[400px]">
-                        <div className="prose prose-lg prose-slate dark:prose-invert max-w-none">
-                          <ReactMarkdown>{segment.content}</ReactMarkdown>
+                      <ScrollArea className="h-[400px] px-4">
+                        <div className="prose prose-lg prose-slate max-w-none">
+                          <ReactMarkdown 
+                            components={{
+                              h2: ({ children }) => (
+                                <h2 className="text-lg font-semibold text-black/80 border-b border-black/10 pb-2 mb-4">
+                                  {children}
+                                </h2>
+                              ),
+                              a: ({ children, href }) => (
+                                <a 
+                                  href={href} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 transition-colors no-underline hover:underline"
+                                >
+                                  {children}
+                                </a>
+                              ),
+                              li: ({ children }) => (
+                                <li className="mb-4 text-black/80">
+                                  {children}
+                                </li>
+                              )
+                            }}
+                          >
+                            {segment.content}
+                          </ReactMarkdown>
                         </div>
                       </ScrollArea>
                     </CardContent>
@@ -85,4 +119,3 @@ const Resources = () => {
 };
 
 export default Resources;
-
