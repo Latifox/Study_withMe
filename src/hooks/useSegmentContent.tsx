@@ -17,7 +17,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       const { data: existingResources, error: resourcesError } = await supabase
         .from('lecture_additional_resources')
         .select('*')
-        .eq('lecture_id', numericLectureId);
+        .eq('lecture_id', numericLectureId)
+        .order('segment_number');
 
       if (resourcesError) {
         console.error('Error fetching existing resources:', resourcesError);
@@ -52,10 +53,9 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         };
       }
 
-      // If no resources exist, we need to generate them
+      // If no resources exist, fetch all segment titles and generate resources for each
       console.log('No existing resources found, fetching segment titles...');
 
-      // First get all segment titles for this lecture
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('sequence_number, title')
@@ -74,7 +74,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Generating resources for segments:', segmentData);
 
-      const segmentContents = await Promise.all(segmentData.map(async (segment) => {
+      // Process segments sequentially to avoid race conditions
+      const segmentContents = [];
+      for (const segment of segmentData) {
+        console.log(`Generating resources for segment ${segment.sequence_number}: ${segment.title}`);
+        
         // Generate resources using the edge function with the segment title
         const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
           body: { topic: segment.title, language: 'spanish' }
@@ -85,7 +89,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           throw generationError;
         }
 
-        // Parse the generated content and store each resource
+        // Store each resource if generation was successful
         if (generatedContent && generatedContent.resources) {
           await Promise.all(generatedContent.resources.map(async (resource: { 
             title: string; 
@@ -111,11 +115,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           }));
         }
 
-        return {
+        segmentContents.push({
           id: `segment_${segment.sequence_number}`,
           content: generatedContent?.markdown || ''
-        };
-      }));
+        });
+      }
 
       return { segments: segmentContents };
     },
@@ -123,3 +127,4 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+

@@ -23,34 +23,35 @@ serve(async (req) => {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator who MUST generate EXACTLY 6 high-quality educational resources about "${topic}" in ${language}:
+    const systemPrompt = `You are an educational resource curator. Generate EXACTLY 6 high-quality and UNIQUE educational resources about "${topic}" in ${language}.
 
-STRICT REQUIREMENTS:
-- Generate EXACTLY 2 video resources from YouTube or educational platforms
-- Generate EXACTLY 2 article resources from educational websites
-- Generate EXACTLY 2 research papers from academic repositories
-- All resources must be in ${language}
-- All resources must have valid URLs
-- Include a brief description for each resource
+REQUIREMENTS:
+- You MUST provide EXACTLY 2 DIFFERENT video resources (each from unique URLs)
+- You MUST provide EXACTLY 2 DIFFERENT article resources (each from unique URLs)
+- You MUST provide EXACTLY 2 DIFFERENT research papers (each from unique URLs)
+- All resources MUST be in ${language}
+- Each resource MUST have a DIFFERENT URL - no duplicate URLs allowed
+- NEVER use placeholder URLs like example.com
+- Include a brief but informative description for each resource
 
-Format your response in markdown using this EXACT structure:
+Format your response in markdown EXACTLY like this:
 
 ## Video Resources
-1. [Title of Video 1](url1)
+1. [Title of First Video](url1)
    Description: Brief description here
-2. [Title of Video 2](url2)
+2. [Title of Second Video](url2)
    Description: Brief description here
 
 ## Article Resources
-1. [Title of Article 1](url1)
+1. [Title of First Article](url1)
    Description: Brief description here
-2. [Title of Article 2](url2)
+2. [Title of Second Article](url2)
    Description: Brief description here
 
 ## Research Papers
-1. [Title of Paper 1](url1)
+1. [Title of First Paper](url1)
    Description: Brief description here
-2. [Title of Paper 2](url2)
+2. [Title of Second Paper](url2)
    Description: Brief description here`;
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -63,13 +64,12 @@ Format your response in markdown using this EXACT structure:
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate exactly 6 educational resources about: ${topic}` }
+          { role: 'user', content: `Based on the given format, provide exactly 6 UNIQUE educational resources about: ${topic}` }
         ],
         temperature: 0.1,
         max_tokens: 2000,
-        top_p: 0.9,
         frequency_penalty: 1,
-        presence_penalty: 0
+        presence_penalty: 0.8
       }),
     });
 
@@ -85,11 +85,40 @@ Format your response in markdown using this EXACT structure:
       throw new Error('Invalid response format from Perplexity');
     }
 
-    const generatedContent = data.choices[0].message.content;
-    console.log('Generated content:', generatedContent);
+    const markdown = data.choices[0].message.content;
+    console.log('Generated markdown:', markdown);
+
+    // Parse the markdown to extract resources
+    const lines = markdown.split('\n');
+    const resources = [];
+    let currentType = '';
+
+    for (const line of lines) {
+      if (line.startsWith('## ')) {
+        currentType = line.includes('Video') ? 'video' : 
+                     line.includes('Article') ? 'article' : 
+                     'research_paper';
+      } else if (line.match(/^\d\.\s+\[.*\]\(.*\)/)) {
+        const [, title, url] = line.match(/^\d\.\s+\[(.*)\]\((.*)\)/) || [];
+        const descLine = lines[lines.indexOf(line) + 1];
+        const description = descLine ? descLine.replace(/^\s*Description:\s*/, '') : '';
+        
+        if (title && url) {
+          resources.push({
+            title,
+            url,
+            description,
+            type: currentType
+          });
+        }
+      }
+    }
 
     return new Response(
-      JSON.stringify({ content: generatedContent }),
+      JSON.stringify({ 
+        resources,
+        markdown 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -104,3 +133,4 @@ Format your response in markdown using this EXACT structure:
     );
   }
 });
+
