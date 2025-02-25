@@ -2,11 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
-if (!openAIApiKey) {
-  throw new Error('OPENAI_API_KEY is required');
-}
+const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,10 +16,8 @@ interface Resource {
   description: string;
 }
 
-// Function to validate URLs by actually checking if they exist
 async function validateUrl(url: string): Promise<boolean> {
   try {
-    // Only allow specific domains for each resource type
     const validDomains = {
       video: ['youtube.com', 'youtu.be'],
       article: ['medium.com', 'dev.to', 'wikipedia.org', 'edx.org', 'coursera.org'],
@@ -33,21 +27,17 @@ async function validateUrl(url: string): Promise<boolean> {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace('www.', '');
 
-    // Check if it's a search results page
     if (urlObj.pathname.includes('search') || urlObj.pathname.includes('results')) {
       console.warn('Rejecting search results page:', url);
       return false;
     }
 
-    // Validate domain based on resource type
     for (const [type, domains] of Object.entries(validDomains)) {
       if (domains.some(d => domain.includes(d))) {
-        // For YouTube links, ensure they're direct video links
         if (type === 'video' && !url.includes('watch?v=') && !url.includes('youtu.be/')) {
           console.warn('Rejecting non-video YouTube URL:', url);
           return false;
         }
-        // Actually check if URL exists
         const response = await fetch(url, { method: 'HEAD' });
         return response.status === 200;
       }
@@ -61,7 +51,7 @@ async function validateUrl(url: string): Promise<boolean> {
   }
 }
 
-function cleanMarkdownCodeBlock(content: string): string {
+function cleanLLMResponse(content: string): string {
   return content
     .replace(/```json\n?/g, '')
     .replace(/```\n?/g, '')
@@ -87,14 +77,14 @@ async function generateResources(topic: string): Promise<Resource[]> {
   console.log('Generating resources for topic:', topic);
   
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${perplexityApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           {
             role: 'system',
@@ -131,40 +121,41 @@ async function generateResources(topic: string): Promise<Resource[]> {
             content: `Generate verified educational resources about: ${topic}`
           }
         ],
-        temperature: 0.3,
-        max_tokens: 2000,
+        temperature: 0.2,
+        max_tokens: 1000,
+        top_p: 0.9,
+        frequency_penalty: 1,
+        presence_penalty: 0
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Perplexity API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     
     if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response format from OpenAI');
+      throw new Error('Invalid response format from Perplexity');
     }
 
     let resources: Resource[];
     try {
-      const content = cleanMarkdownCodeBlock(data.choices[0].message.content);
+      const content = cleanLLMResponse(data.choices[0].message.content);
       resources = JSON.parse(content);
     } catch (error) {
-      console.error('Failed to parse OpenAI response:', error);
-      throw new Error('Failed to parse resources from OpenAI response');
+      console.error('Failed to parse Perplexity response:', error);
+      throw new Error('Failed to parse resources from Perplexity response');
     }
 
     if (!Array.isArray(resources)) {
       throw new Error('Invalid resources format: expected array');
     }
 
-    // Validate each resource and filter out invalid ones
     const validatedResources: Resource[] = [];
     
     for (const resource of resources) {
       if (isValidResource(resource)) {
-        // Check if URL is actually accessible
         const isUrlValid = await validateUrl(resource.url);
         if (isUrlValid) {
           validatedResources.push(resource);
@@ -176,10 +167,9 @@ async function generateResources(topic: string): Promise<Resource[]> {
       }
     }
 
-    // If we don't have enough valid resources, try one more time
     if (validatedResources.length < 3) {
       console.log('Not enough valid resources, retrying...');
-      return generateResources(topic); // Recursive retry
+      return generateResources(topic);
     }
 
     console.log('Successfully generated resources:', validatedResources);
@@ -211,21 +201,20 @@ serve(async (req) => {
       throw new Error('Invalid or empty segment titles');
     }
 
-    // Generate resources for each segment
     const resourcePromises = segmentTitles.map(async (title) => {
       try {
         const resources = await generateResources(title);
         
         // Translate descriptions if needed
         if (aiConfig?.content_language && aiConfig.content_language !== 'english') {
-          const translationResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          const translationResponse = await fetch('https://api.perplexity.ai/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${openAIApiKey}`,
+              'Authorization': `Bearer ${perplexityApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-4o-mini',
+              model: 'llama-3.1-sonar-small-128k-online',
               messages: [
                 {
                   role: 'system',
@@ -236,7 +225,8 @@ serve(async (req) => {
                   content: JSON.stringify(resources.map(r => r.description))
                 }
               ],
-              temperature: 0.3,
+              temperature: 0.2,
+              max_tokens: 1000
             }),
           });
 
@@ -284,4 +274,3 @@ serve(async (req) => {
     );
   }
 });
-
