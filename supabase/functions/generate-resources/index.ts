@@ -23,15 +23,44 @@ interface Resource {
 // Function to validate URLs by actually checking if they exist
 async function validateUrl(url: string): Promise<boolean> {
   try {
-    const response = await fetch(url, { method: 'HEAD' });
-    return response.status === 200;
+    // Only allow specific domains for each resource type
+    const validDomains = {
+      video: ['youtube.com', 'youtu.be'],
+      article: ['medium.com', 'dev.to', 'wikipedia.org', 'edx.org', 'coursera.org'],
+      research: ['arxiv.org', 'researchgate.net', 'sciencedirect.com', 'springer.com']
+    };
+
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace('www.', '');
+
+    // Check if it's a search results page
+    if (urlObj.pathname.includes('search') || urlObj.pathname.includes('results')) {
+      console.warn('Rejecting search results page:', url);
+      return false;
+    }
+
+    // Validate domain based on resource type
+    for (const [type, domains] of Object.entries(validDomains)) {
+      if (domains.some(d => domain.includes(d))) {
+        // For YouTube links, ensure they're direct video links
+        if (type === 'video' && !url.includes('watch?v=') && !url.includes('youtu.be/')) {
+          console.warn('Rejecting non-video YouTube URL:', url);
+          return false;
+        }
+        // Actually check if URL exists
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.status === 200;
+      }
+    }
+
+    console.warn('Domain not in whitelist:', domain);
+    return false;
   } catch (error) {
     console.error(`Error validating URL ${url}:`, error);
     return false;
   }
 }
 
-// Function to clean markdown code blocks from LLM response
 function cleanMarkdownCodeBlock(content: string): string {
   return content
     .replace(/```json\n?/g, '')
@@ -39,7 +68,6 @@ function cleanMarkdownCodeBlock(content: string): string {
     .trim();
 }
 
-// Function to validate resource structure
 function isValidResource(resource: any): resource is Resource {
   return (
     resource &&
@@ -72,14 +100,23 @@ async function generateResources(topic: string): Promise<Resource[]> {
             role: 'system',
             content: `You are a helpful assistant that provides educational resources. Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
             
-            RULES for generating URLs:
-            1. DO NOT generate mock or placeholder URLs
-            2. For videos: ONLY use existing YouTube URLs (youtube.com/watch?v=)
-            3. For articles: ONLY use URLs from reputable educational websites (.edu domains preferred)
-            4. For research: ONLY use URLs from established academic repositories
-            5. VERIFY that each URL actually exists before including it
-            6. DO NOT include search result pages
-            7. ALL content must be in English
+            STRICT RULES for generating URLs:
+            1. For videos: ONLY use real YouTube video URLs in format youtube.com/watch?v= or youtu.be/
+            2. For articles: ONLY use URLs from:
+               - medium.com (technical articles)
+               - dev.to (programming tutorials)
+               - wikipedia.org (general knowledge)
+               - edx.org (course pages)
+               - coursera.org (course pages)
+            3. For research: ONLY use URLs from:
+               - arxiv.org (direct PDF or abstract pages)
+               - researchgate.net (direct paper pages)
+               - sciencedirect.com (direct paper pages)
+               - springer.com (direct paper pages)
+            4. NO search result pages or category pages
+            5. ALL content must be in English
+            6. Use REAL, EXISTING URLs only - do not generate fake ones
+            7. Ensure URLs point to actual content pages, not homepages
             
             Provide your response in this exact JSON format:
             [
@@ -91,7 +128,7 @@ async function generateResources(topic: string): Promise<Resource[]> {
           },
           {
             role: 'user',
-            content: `Generate educational resources about: ${topic}`
+            content: `Generate verified educational resources about: ${topic}`
           }
         ],
         temperature: 0.3,
@@ -118,7 +155,6 @@ async function generateResources(topic: string): Promise<Resource[]> {
       throw new Error('Failed to parse resources from OpenAI response');
     }
 
-    // Validate resources format
     if (!Array.isArray(resources)) {
       throw new Error('Invalid resources format: expected array');
     }
@@ -140,8 +176,10 @@ async function generateResources(topic: string): Promise<Resource[]> {
       }
     }
 
-    if (validatedResources.length === 0) {
-      throw new Error('No valid resources generated');
+    // If we don't have enough valid resources, try one more time
+    if (validatedResources.length < 3) {
+      console.log('Not enough valid resources, retrying...');
+      return generateResources(topic); // Recursive retry
     }
 
     console.log('Successfully generated resources:', validatedResources);
@@ -246,3 +284,4 @@ serve(async (req) => {
     );
   }
 });
+
