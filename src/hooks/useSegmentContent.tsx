@@ -54,14 +54,17 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       }
 
       // Fetch additional resources
-      const { data: resources, error: resourcesError } = await supabase
+      const { data: initialResources, error: resourcesError } = await supabase
         .from('lecture_additional_resources')
         .select('*')
         .eq('lecture_id', numericLectureId)
         .eq('segment_number', sequenceNumber);
 
+      // Create a mutable variable to store our resources
+      let resourcesData = initialResources;
+
       // If no resources exist, generate them
-      if (!resourcesError && (!resources || resources.length === 0)) {
+      if (!resourcesError && (!resourcesData || resourcesData.length === 0)) {
         console.log('No resources found, generating new ones...');
         try {
           const { data: generatedData, error: generationError } = await supabase.functions.invoke('generate-resources', {
@@ -79,7 +82,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
 
           if (generatedData && generatedData[0]?.resources) {
             // Resources were generated successfully
-            resources = generatedData[0].resources;
+            resourcesData = generatedData[0].resources;
           }
         } catch (error) {
           console.error('Error in generate-resources function:', error);
@@ -91,7 +94,7 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       }
 
       // Group resources by type for easier consumption
-      const groupedResources = (resources || []).reduce((acc: { [key: string]: Resource[] }, resource) => {
+      const groupedResources = (resourcesData || []).reduce((acc: { [key: string]: Resource[] }, resource) => {
         const type = resource.resource_type as 'video' | 'article' | 'research';
         if (!acc[type]) acc[type] = [];
         acc[type].push({
