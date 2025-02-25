@@ -16,44 +16,6 @@ interface Resource {
   description: string;
 }
 
-async function validateUrl(url: string, type: string): Promise<boolean> {
-  try {
-    const validDomains = {
-      video: ['youtube.com', 'youtu.be', 'vimeo.com', 'coursera.org', 'edx.org'],
-      article: ['medium.com', 'dev.to', 'wikipedia.org', 'edx.org', 'coursera.org', 'researchgate.net'],
-      research: ['arxiv.org', 'researchgate.net', 'sciencedirect.com', 'springer.com', 'ieee.org', 'acm.org']
-    };
-
-    const urlObj = new URL(url);
-    const domain = urlObj.hostname.replace('www.', '');
-
-    // Check if the domain is in the whitelist for the specific type
-    const isValidDomain = validDomains[type as keyof typeof validDomains]?.some(d => domain.includes(d));
-    if (!isValidDomain) {
-      console.warn(`Domain ${domain} not in whitelist for type ${type}`);
-      return false;
-    }
-
-    // Skip HEAD request for known reliable domains
-    const reliableDomains = ['youtube.com', 'youtu.be', 'arxiv.org'];
-    if (reliableDomains.some(d => domain.includes(d))) {
-      return true;
-    }
-
-    // For other domains, verify the URL is accessible
-    const response = await fetch(url, { 
-      method: 'HEAD',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ResourceBot/1.0;)'
-      }
-    });
-    return response.status === 200;
-  } catch (error) {
-    console.error(`Error validating URL ${url}:`, error);
-    return false;
-  }
-}
-
 function cleanLLMResponse(content: string): string {
   return content
     .replace(/```json\n?/g, '')
@@ -95,31 +57,16 @@ async function generateResources(topic: string, language: string = 'english', re
         messages: [
           {
             role: 'system',
-            content: `You are a helpful assistant that provides specific, direct links to educational resources in ${language}. Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
+            content: `You are a helpful assistant that provides specific, direct links to educational resources in ${language}. 
+            Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
             
-            STRICT RULES for generating URLs:
-            1. For videos: ONLY use URLs from:
-               - youtube.com/watch?v=
-               - youtu.be/
-               - coursera.org (course videos)
-               - edx.org (course videos)
-            2. For articles: ONLY use URLs from:
-               - medium.com (technical articles)
-               - dev.to (programming tutorials)
-               - wikipedia.org (general knowledge)
-               - edx.org (course content)
-               - coursera.org (course content)
-            3. For research: ONLY use URLs from:
-               - arxiv.org (papers)
-               - researchgate.net (papers)
-               - sciencedirect.com (papers)
-               - springer.com (papers)
-               - ieee.org (papers)
-               - acm.org (papers)
-            4. NO search result pages or category pages
-            5. ALL descriptions must be in ${language}
-            6. Use REAL, EXISTING URLs - do not generate fake ones
-            7. Make sure resources are specific and relevant to ${topic}
+            IMPORTANT:
+            1. For videos: Only use YouTube, Coursera, or edX links
+            2. For articles: Use Medium, Dev.to, Wikipedia, or academic platform links
+            3. For research: Use arXiv, ResearchGate, or academic journals
+            4. All descriptions must be in ${language}
+            5. Use REAL, EXISTING URLs - do not generate fake ones
+            6. Make sure resources are specific and relevant to ${topic}
             
             Provide your response in this exact JSON format:
             [
@@ -165,20 +112,7 @@ async function generateResources(topic: string, language: string = 'english', re
       return generateResources(topic, language, retryCount + 1);
     }
 
-    const validatedResources: Resource[] = [];
-    
-    for (const resource of resources) {
-      if (isValidResource(resource)) {
-        const isUrlValid = await validateUrl(resource.url, resource.type);
-        if (isUrlValid) {
-          validatedResources.push(resource);
-        } else {
-          console.warn(`Invalid URL for resource: ${resource.url}`);
-        }
-      } else {
-        console.warn('Invalid resource structure:', resource);
-      }
-    }
+    const validatedResources = resources.filter(isValidResource);
 
     if (validatedResources.length < 3) {
       console.log('Not enough valid resources, retrying...');
