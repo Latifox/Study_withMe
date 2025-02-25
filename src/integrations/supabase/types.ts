@@ -40,7 +40,7 @@ export type Database = {
           id: number
           lecture_id: number | null
           resource_type: string
-          segment_number: number
+          sequence_number: number
           title: string
           updated_at: string
           url: string
@@ -51,7 +51,7 @@ export type Database = {
           id?: number
           lecture_id?: number | null
           resource_type: string
-          segment_number: number
+          sequence_number: number
           title: string
           updated_at?: string
           url: string
@@ -62,12 +62,19 @@ export type Database = {
           id?: number
           lecture_id?: number | null
           resource_type?: string
-          segment_number?: number
+          sequence_number?: number
           title?: string
           updated_at?: string
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_lecture_segments"
+            columns: ["lecture_id", "sequence_number"]
+            isOneToOne: false
+            referencedRelation: "lecture_segments"
+            referencedColumns: ["lecture_id", "sequence_number"]
+          },
           {
             foreignKeyName: "lecture_additional_resources_lecture_id_fkey"
             columns: ["lecture_id"]

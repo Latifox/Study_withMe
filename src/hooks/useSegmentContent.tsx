@@ -19,7 +19,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         .from('lecture_additional_resources')
         .select('*, lecture_segments!inner(title)')
         .eq('lecture_id', numericLectureId)
-        .order('segment_number, resource_type');
+        .order('sequence_number, resource_type');
 
       if (resourcesError) {
         console.error('Error fetching existing resources:', resourcesError);
@@ -30,11 +30,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       if (existingResources && existingResources.length > 0) {
         console.log('Found existing resources:', existingResources);
         
-        // Group resources by segment number
+        // Group resources by sequence number
         const groupedBySegment = existingResources.reduce((acc: Record<number, { title: string, content: string }>, resource) => {
-          const segNum = resource.segment_number;
-          if (!acc[segNum]) {
-            acc[segNum] = { 
+          const seqNum = resource.sequence_number;
+          if (!acc[seqNum]) {
+            acc[seqNum] = { 
               title: resource.lecture_segments.title,
               content: '' 
             };
@@ -44,17 +44,17 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           let sectionHeader = '';
           switch (resource.resource_type) {
             case 'video':
-              if (!acc[segNum].content.includes('Video Resources')) {
+              if (!acc[seqNum].content.includes('Video Resources')) {
                 sectionHeader = '\n## Video Resources\n';
               }
               break;
             case 'article':
-              if (!acc[segNum].content.includes('Article Resources')) {
+              if (!acc[seqNum].content.includes('Article Resources')) {
                 sectionHeader = '\n## Article Resources\n';
               }
               break;
             case 'research_paper':
-              if (!acc[segNum].content.includes('Research Papers')) {
+              if (!acc[seqNum].content.includes('Research Papers')) {
                 sectionHeader = '\n## Research Papers\n';
               }
               break;
@@ -63,7 +63,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           const resourceMarkdown = `${sectionHeader}${!sectionHeader ? '' : ''}1. [${resource.title}](${resource.url})
    Description: ${resource.description}\n`;
           
-          acc[segNum].content += resourceMarkdown;
+          acc[seqNum].content += resourceMarkdown;
           return acc;
         }, {});
 
@@ -145,7 +145,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
               .from('lecture_additional_resources')
               .insert({
                 lecture_id: numericLectureId,
-                segment_number: segment.sequence_number,
+                sequence_number: segment.sequence_number,
                 resource_type: resource.type,
                 title: resource.title,
                 url: resource.url,
@@ -201,4 +201,3 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-
