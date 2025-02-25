@@ -20,7 +20,7 @@ const StoryContent = () => {
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
   const { segmentScores, setSegmentScores } = useSegmentProgress(nodeId, numericLectureId, sequenceNumber);
-  const { data: content, isLoading, error } = useSegmentContent(numericLectureId, sequenceNumber);
+  const { data: content, isLoading, error } = useSegmentContent(numericLectureId);
   
   const { handleContinue, handleCorrectAnswer, handleWrongAnswer } = useStoryContentHandler({
     nodeId,
