@@ -10,6 +10,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -17,20 +18,17 @@ serve(async (req) => {
   try {
     const { lectureContent, aiConfig, segmentTitles } = await req.json();
     
-    console.log('Generating resources for lecture content:', lectureContent?.substring(0, 100));
-    console.log('Using AI config:', aiConfig);
-    console.log('Segment titles:', segmentTitles);
+    console.log('Processing request with:', {
+      contentLength: lectureContent?.length || 0,
+      aiConfig,
+      segmentTitles
+    });
 
-    // Create system instruction with language configuration
-    let systemInstruction = 'You are an expert at finding relevant educational resources.';
-    if (aiConfig?.content_language) {
-      systemInstruction += ` Generate all content in ${aiConfig.content_language} language.`;
-    }
-    if (aiConfig?.custom_instructions) {
-      systemInstruction += ' ' + aiConfig.custom_instructions;
+    if (!lectureContent || !segmentTitles || !segmentTitles.length) {
+      throw new Error('Missing required data: lectureContent or segmentTitles');
     }
 
-    const resources = [];
+    const allResources = [];
 
     for (const title of segmentTitles) {
       console.log('Generating resources for segment:', title);
@@ -62,37 +60,56 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: systemInstruction },
+            {
+              role: 'system',
+              content: `You are an expert at finding relevant educational resources. ${
+                aiConfig?.content_language ? 
+                `Generate all content in ${aiConfig.content_language} language.` : 
+                'Generate content in English.'
+              }${
+                aiConfig?.custom_instructions ? 
+                ' ' + aiConfig.custom_instructions : 
+                ''
+              }`
+            },
             { role: 'user', content: prompt }
           ],
           temperature: aiConfig?.temperature || 0.7,
         }),
       });
 
-      const data = await response.json();
-      if (!data.choices?.[0]?.message?.content) {
-        console.error('Invalid response from OpenAI:', data);
-        throw new Error('Invalid response from AI service');
+      if (!response.ok) {
+        console.error('OpenAI API error:', await response.text());
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
 
-      // Parse the response and add to resources array
+      const data = await response.json();
+      const generatedText = data.choices[0].message.content;
+
       try {
-        const segmentResources = JSON.parse(data.choices[0].message.content);
-        resources.push(segmentResources);
+        const segmentResources = JSON.parse(generatedText);
+        allResources.push(segmentResources);
       } catch (error) {
-        console.error('Error parsing AI response for segment:', title, error);
+        console.error('Error parsing AI response:', error);
         throw new Error('Invalid JSON response from AI service');
       }
     }
 
-    return new Response(JSON.stringify(resources), {
+    return new Response(JSON.stringify(allResources), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+    
   } catch (error) {
     console.error('Error in generate-resources function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
