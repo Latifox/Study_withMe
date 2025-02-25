@@ -17,37 +17,43 @@ interface Resource {
 }
 
 function sanitizeJSON(content: string): string {
-  // Extract JSON array pattern
-  const jsonMatch = content.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
+  // Remove any comments and trailing commas
+  const cleanContent = content.replace(/\/\/.*$/gm, '')  // Remove single line comments
+                             .replace(/\/\*[\s\S]*?\*\//gm, '') // Remove multi-line comments
+                             .replace(/,(\s*[}\]])/g, '$1')     // Remove trailing commas
+                             .trim();
+  
+  // Extract the JSON array
+  const matches = cleanContent.match(/\[[\s\S]*\]/);
+  if (!matches) {
     console.error('No JSON array found in response:', content);
-    throw new Error('No JSON array found in response');
+    throw new Error('Invalid response format: No JSON array found');
   }
 
-  // Clean the JSON string
-  let jsonStr = jsonMatch[0]
-    .replace(/```json\n?/g, '')
-    .replace(/```\n?/g, '')
-    .replace(/[\u2018\u2019\u201C\u201D']/g, '"')
-    .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
-    .trim();
-
-  console.log('Sanitized JSON:', jsonStr);
-  return jsonStr;
+  return matches[0];
 }
 
 function isValidResource(resource: any): resource is Resource {
-  return (
-    resource &&
-    typeof resource === 'object' &&
-    ['video', 'article', 'research'].includes(resource.type) &&
+  const validTypes = ['video', 'article', 'research'];
+  
+  if (!resource || typeof resource !== 'object') return false;
+  
+  // Basic structure validation
+  const hasValidStructure = 
+    validTypes.includes(resource.type) &&
     typeof resource.title === 'string' &&
     typeof resource.url === 'string' &&
-    typeof resource.description === 'string' &&
-    resource.title.length > 0 &&
-    resource.description.length > 0 &&
-    (resource.url.startsWith('http://') || resource.url.startsWith('https://'))
-  );
+    typeof resource.description === 'string';
+
+  if (!hasValidStructure) return false;
+
+  // URL validation
+  try {
+    new URL(resource.url);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 serve(async (req) => {
@@ -58,12 +64,32 @@ serve(async (req) => {
   try {
     const { topic, language = 'spanish' } = await req.json();
     
-    console.log(`Generating resources for segment topic: ${topic} in ${language}`);
+    console.log(`Generating resources for topic: ${topic} in ${language}`);
     
     if (!perplexityApiKey) {
       throw new Error('Perplexity API key not configured');
     }
-    
+
+    const systemPrompt = `You are an educational resource finder that ONLY returns real, existing resources in ${language}.
+    For the topic "${topic}", provide EXACTLY:
+    - 3 video resources (from YouTube, Coursera, or edX)
+    - 3 article resources (from educational websites, blogs, or digital libraries)
+    - 3 research papers (from ResearchGate, SciELO, or academic repositories)
+
+    CRITICAL REQUIREMENTS:
+    1. ALL URLs must be real, existing URLs that work right now
+    2. NO placeholder or example URLs
+    3. ALL content must be in ${language}
+    4. Each URL must be unique
+    5. ALL descriptions must be clear and informative
+    6. Format as a JSON array with exactly 9 items
+
+    Example format (DO NOT COPY THESE URLS, FIND REAL ONES):
+    [
+      {"type": "video", "title": "Title", "url": "https://...", "description": "..."},
+      // ... 8 more items
+    ]`;
+
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -75,28 +101,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an AI that generates educational resources in JSON format.
-            You will generate EXACTLY 9 resources about the given topic:
-            - EXACTLY 3 videos (from YouTube, Coursera, or edX)
-            - EXACTLY 3 articles (from Medium, Dev.to, Wikipedia, or academic platforms)
-            - EXACTLY 3 research papers (from arXiv, ResearchGate, or academic journals)
-            
-            Rules:
-            1. ALL content must be in ${language}
-            2. ALL URLs must be real and start with http:// or https://
-            3. ALL resources must be specifically about: ${topic}
-            4. NO placeholders or dummy content allowed
-            5. ALL descriptions must be detailed and informative
-            
-            Return ONLY a JSON array with exactly 9 items formatted like this:
-            [
-              {"type": "video", "title": "Example", "url": "https://...", "description": "Text"},
-              // ... 8 more items following same format
-            ]`
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: `Generate a JSON array of EXACTLY 9 educational resources about: ${topic}`
+            content: `Find exactly 9 educational resources about: ${topic}`
           }
         ],
         temperature: 0.1,
@@ -149,6 +158,12 @@ serve(async (req) => {
         throw new Error('Incorrect distribution of resource types');
       }
 
+      // Verify all URLs are unique
+      const urls = new Set(validatedResources.map(r => r.url));
+      if (urls.size !== validatedResources.length) {
+        throw new Error('Duplicate URLs found in resources');
+      }
+
       console.log(`Successfully generated ${validatedResources.length} resources for topic: ${topic}`);
       return new Response(
         JSON.stringify([{ concept: topic, resources: validatedResources }]), 
@@ -172,3 +187,4 @@ serve(async (req) => {
     );
   }
 });
+
