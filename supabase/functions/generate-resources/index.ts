@@ -4,10 +4,26 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+if (!openAIApiKey) {
+  throw new Error('OPENAI_API_KEY is required');
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface Resource {
+  type: 'video' | 'article' | 'research';
+  title: string;
+  url: string;
+  description: string;
+}
+
+interface ConceptResources {
+  concept: string;
+  resources: Resource[];
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,17 +34,21 @@ serve(async (req) => {
   try {
     const { lectureContent, aiConfig, segmentTitles } = await req.json();
     
-    console.log('Processing request with:', {
+    console.log('Processing request:', {
       contentLength: lectureContent?.length || 0,
       aiConfig,
-      segmentTitles
+      segmentTitles,
     });
 
-    if (!lectureContent || !segmentTitles || !segmentTitles.length) {
-      throw new Error('Missing required data: lectureContent or segmentTitles');
+    // Input validation
+    if (!lectureContent) {
+      throw new Error('Missing lecture content');
+    }
+    if (!segmentTitles || !Array.isArray(segmentTitles) || segmentTitles.length === 0) {
+      throw new Error('Invalid or empty segment titles');
     }
 
-    const allResources = [];
+    const allResources: ConceptResources[] = [];
 
     for (const title of segmentTitles) {
       console.log('Generating resources for segment:', title);
@@ -38,7 +58,7 @@ serve(async (req) => {
       3 article resources (from reputable educational websites),
       and 3 research papers or academic resources.
       
-      Format your response as a JSON object with this structure:
+      Format your response EXACTLY as a JSON object with this structure:
       {
         "concept": "${title}",
         "resources": [
@@ -49,7 +69,14 @@ serve(async (req) => {
             "description": "Brief description of what this resource covers"
           }
         ]
-      }`;
+      }
+      
+      Important:
+      1. Ensure the response is valid JSON
+      2. All fields must be strings
+      3. "type" must be exactly "video", "article", or "research"
+      4. Generate exactly 3 resources of each type
+      5. Make sure all URLs are properly formatted`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -79,19 +106,46 @@ serve(async (req) => {
       });
 
       if (!response.ok) {
-        console.error('OpenAI API error:', await response.text());
-        throw new Error(`OpenAI API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('OpenAI API error:', errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      const generatedText = data.choices[0].message.content;
+      
+      if (!data.choices?.[0]?.message?.content) {
+        console.error('Invalid OpenAI response structure:', data);
+        throw new Error('Invalid response structure from OpenAI');
+      }
 
+      const generatedText = data.choices[0].message.content;
+      
       try {
-        const segmentResources = JSON.parse(generatedText);
-        allResources.push(segmentResources);
+        const parsedResources = JSON.parse(generatedText);
+        
+        // Validate the parsed structure
+        if (!parsedResources.concept || !Array.isArray(parsedResources.resources)) {
+          console.error('Invalid resource structure:', parsedResources);
+          throw new Error('Invalid resource structure in AI response');
+        }
+
+        // Validate each resource
+        parsedResources.resources.forEach((resource: Resource, index: number) => {
+          if (!resource.type || !resource.title || !resource.url || !resource.description) {
+            console.error(`Invalid resource at index ${index}:`, resource);
+            throw new Error(`Missing required fields in resource at index ${index}`);
+          }
+          if (!['video', 'article', 'research'].includes(resource.type)) {
+            throw new Error(`Invalid resource type "${resource.type}" at index ${index}`);
+          }
+        });
+
+        allResources.push(parsedResources);
+        
       } catch (error) {
         console.error('Error parsing AI response:', error);
-        throw new Error('Invalid JSON response from AI service');
+        console.error('Raw response:', generatedText);
+        throw new Error(`Failed to parse AI response: ${error.message}`);
       }
     }
 
@@ -104,7 +158,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        details: error.stack 
+        details: error.stack,
+        timestamp: new Date().toISOString()
       }), 
       {
         status: 500,
