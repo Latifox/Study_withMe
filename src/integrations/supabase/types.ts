@@ -48,7 +48,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description: string
-          id?: never
+          id?: number
           lecture_id?: number | null
           resource_type: string
           segment_number: number
@@ -59,7 +59,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string
-          id?: never
+          id?: number
           lecture_id?: number | null
           resource_type?: string
           segment_number?: number

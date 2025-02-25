@@ -105,29 +105,45 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             throw generationError;
           }
 
-          if (!generatedContent?.resources || generatedContent.resources.length !== 6) {
-            throw new Error('Invalid resource count returned from generation');
+          // Parse the markdown into sections and extract resources
+          const sections = generatedContent.markdown.split('\n## ');
+          const resources = [];
+          let currentType = '';
+
+          for (const section of sections) {
+            if (section.includes('Video Resources')) {
+              currentType = 'video';
+            } else if (section.includes('Article Resources')) {
+              currentType = 'article';
+            } else if (section.includes('Research Papers')) {
+              currentType = 'research_paper';
+            }
+
+            // Extract resources from the section using regex
+            const resourceMatches = section.matchAll(/\d\.\s+\[(.*?)\]\((.*?)\)\s+Description:\s+(.*?)(?=\n|$)/g);
+            for (const match of resourceMatches) {
+              resources.push({
+                title: match[1],
+                url: match[2],
+                description: match[3],
+                type: currentType
+              });
+            }
           }
 
-          console.log(`Generated content for segment ${segment.sequence_number}:`, generatedContent);
-
-          // Store resources if generation was successful
-          const resources = generatedContent.resources;
-          await Promise.all(resources.map(async (resource: {
-            title: string;
-            url: string;
-            description: string;
-            type: string;
-          }) => {
+          // Store resources in the database
+          console.log(`Storing ${resources.length} resources for segment ${segment.sequence_number}`);
+          
+          await Promise.all(resources.map(async (resource) => {
             const { error: insertError } = await supabase
               .from('lecture_additional_resources')
               .insert({
                 lecture_id: numericLectureId,
                 segment_number: segment.sequence_number,
+                resource_type: resource.type,
                 title: resource.title,
                 url: resource.url,
-                description: resource.description,
-                resource_type: resource.type,
+                description: resource.description
               });
 
             if (insertError) {
@@ -136,7 +152,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             }
           }));
 
-          console.log(`Successfully stored all resources for segment ${segment.sequence_number}`);
+          console.log(`Successfully stored resources for segment ${segment.sequence_number}`);
           
           return {
             id: `segment_${segment.sequence_number}`,
@@ -147,6 +163,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           
           if (retryCount < maxRetries) {
             console.log(`Retrying segment ${segment.sequence_number} (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
             return processSegment(segment, retryCount + 1);
           }
           
