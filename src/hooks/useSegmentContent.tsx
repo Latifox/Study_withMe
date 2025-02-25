@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 export const useSegmentContent = (numericLectureId: number | null) => {
   return useQuery({
@@ -74,57 +75,71 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Generating resources for segments:', segmentData);
 
-      // Process segments sequentially to avoid race conditions
-      const segmentContents = [];
-      for (const segment of segmentData) {
-        console.log(`Generating resources for segment ${segment.sequence_number}: ${segment.title}`);
-        
-        // Generate resources using the edge function with the segment title
-        const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
-          body: { topic: segment.title, language: 'spanish' }
-        });
+      // Process all segments in parallel
+      try {
+        const segmentProcessingPromises = segmentData.map(async (segment) => {
+          console.log(`Starting resource generation for segment ${segment.sequence_number}: ${segment.title}`);
+          
+          try {
+            // Generate resources using the edge function
+            const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
+              body: { topic: segment.title, language: 'spanish' }
+            });
 
-        if (generationError) {
-          console.error(`Error generating resources for segment ${segment.sequence_number}:`, generationError);
-          throw generationError;
-        }
-
-        // Store each resource if generation was successful
-        if (generatedContent && generatedContent.resources) {
-          await Promise.all(generatedContent.resources.map(async (resource: { 
-            title: string; 
-            url: string; 
-            description: string;
-            type: string;
-          }) => {
-            const { error: insertError } = await supabase
-              .from('lecture_additional_resources')
-              .insert({
-                lecture_id: numericLectureId,
-                segment_number: segment.sequence_number,
-                title: resource.title,
-                url: resource.url,
-                description: resource.description,
-                resource_type: resource.type,
-              });
-
-            if (insertError) {
-              console.error('Error storing resource:', insertError);
-              throw insertError;
+            if (generationError) {
+              throw generationError;
             }
-          }));
-        }
 
-        segmentContents.push({
-          id: `segment_${segment.sequence_number}`,
-          content: generatedContent?.markdown || ''
+            // Store resources if generation was successful
+            if (generatedContent?.resources) {
+              await Promise.all(generatedContent.resources.map(async (resource: {
+                title: string;
+                url: string;
+                description: string;
+                type: string;
+              }) => {
+                const { error: insertError } = await supabase
+                  .from('lecture_additional_resources')
+                  .insert({
+                    lecture_id: numericLectureId,
+                    segment_number: segment.sequence_number,
+                    title: resource.title,
+                    url: resource.url,
+                    description: resource.description,
+                    resource_type: resource.type,
+                  });
+
+                if (insertError) {
+                  console.error(`Error storing resource for segment ${segment.sequence_number}:`, insertError);
+                  throw insertError;
+                }
+              }));
+            }
+
+            return {
+              id: `segment_${segment.sequence_number}`,
+              content: generatedContent?.markdown || ''
+            };
+          } catch (error) {
+            console.error(`Error processing segment ${segment.sequence_number}:`, error);
+            toast({
+              title: `Error generating resources for segment ${segment.sequence_number}`,
+              description: "Please try again later",
+              variant: "destructive",
+            });
+            throw error;
+          }
         });
-      }
 
-      return { segments: segmentContents };
+        const segmentContents = await Promise.all(segmentProcessingPromises);
+        return { segments: segmentContents };
+        
+      } catch (error) {
+        console.error('Error processing segments:', error);
+        throw error;
+      }
     },
     retry: 1,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-

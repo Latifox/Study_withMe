@@ -16,43 +16,48 @@ serve(async (req) => {
 
   try {
     const { topic, language = 'spanish' } = await req.json();
-
-    console.log(`Generating resources for topic: ${topic} in ${language}`);
+    console.log(`Generating resources for topic: "${topic}" in ${language}`);
     
     if (!perplexityApiKey) {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator. Generate EXACTLY 6 high-quality and UNIQUE educational resources about "${topic}" in ${language}.
+    const systemPrompt = `You are an educational content curator focusing on academic content. Generate EXACTLY 6 high-quality educational resources about "${topic}" in ${language}.
 
-REQUIREMENTS:
-- You MUST provide EXACTLY 2 DIFFERENT video resources (each from unique URLs)
-- You MUST provide EXACTLY 2 DIFFERENT article resources (each from unique URLs)
-- You MUST provide EXACTLY 2 DIFFERENT research papers (each from unique URLs)
-- All resources MUST be in ${language}
-- Each resource MUST have a DIFFERENT URL - no duplicate URLs allowed
-- NEVER use placeholder URLs like example.com
-- Include a brief but informative description for each resource
+YOUR RESPONSE MUST STRICTLY FOLLOW THESE RULES:
+1. Generate EXACTLY 6 resources in total:
+   - EXACTLY 2 video resources (from educational platforms)
+   - EXACTLY 2 article resources (from reputable websites)
+   - EXACTLY 2 research papers (from academic sources)
 
-Format your response in markdown EXACTLY like this:
+2. URL REQUIREMENTS:
+   - Each URL MUST BE REAL AND UNIQUE
+   - NO placeholder or example URLs
+   - USE ONLY educational sources like:
+     - Videos: coursera.org, edx.org, youtube.com/edu
+     - Articles: educational institutions, government .edu sites
+     - Papers: researchgate.net, sciencedirect.com, springer.com
+
+3. FORMATTING:
+   Generate your response in this EXACT markdown format:
 
 ## Video Resources
-1. [Title of First Video](url1)
-   Description: Brief description here
-2. [Title of Second Video](url2)
-   Description: Brief description here
+1. [Title of First Video](video_url_1)
+   Description: Brief description
+2. [Title of Second Video](video_url_2)
+   Description: Brief description
 
 ## Article Resources
-1. [Title of First Article](url1)
-   Description: Brief description here
-2. [Title of Second Article](url2)
-   Description: Brief description here
+1. [Title of First Article](article_url_1)
+   Description: Brief description
+2. [Title of Second Article](article_url_2)
+   Description: Brief description
 
 ## Research Papers
-1. [Title of First Paper](url1)
-   Description: Brief description here
-2. [Title of Second Paper](url2)
-   Description: Brief description here`;
+1. [Title of First Paper](paper_url_1)
+   Description: Brief description
+2. [Title of Second Paper](paper_url_2)
+   Description: Brief description`;
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -64,7 +69,7 @@ Format your response in markdown EXACTLY like this:
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Based on the given format, provide exactly 6 UNIQUE educational resources about: ${topic}` }
+          { role: 'user', content: `Generate exactly 6 educational resources (2 videos, 2 articles, 2 research papers) about: "${topic}" in ${language}. Follow the format exactly.` }
         ],
         temperature: 0.1,
         max_tokens: 2000,
@@ -79,16 +84,9 @@ Format your response in markdown EXACTLY like this:
     }
 
     const data = await response.json();
-    
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid response format from Perplexity:', data);
-      throw new Error('Invalid response format from Perplexity');
-    }
-
     const markdown = data.choices[0].message.content;
-    console.log('Generated markdown:', markdown);
-
-    // Parse the markdown to extract resources
+    
+    // Parse resources from markdown
     const lines = markdown.split('\n');
     const resources = [];
     let currentType = '';
@@ -133,4 +131,3 @@ Format your response in markdown EXACTLY like this:
     );
   }
 });
-
