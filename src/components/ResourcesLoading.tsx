@@ -25,29 +25,29 @@ const ResourcesLoading = () => {
               >
                 <Network className="w-12 h-12 text-black" />
               </motion.div>
-              <h2 className="text-2xl font-bold text-black">Gathering Learning Resources</h2>
-              <p className="text-black/80">Finding the best content to complement your learning...</p>
+              <h2 className="text-2xl font-bold text-black">Discovering Learning Resources</h2>
+              <p className="text-black/80">Finding the most relevant educational content for your studies...</p>
             </motion.div>
 
             <div className="space-y-6">
-              {[1, 2, 3].map((i) => (
+              {Array.from({ length: 3 }).map((_, typeIndex) => (
                 <Card 
-                  key={i}
+                  key={typeIndex}
                   className="bg-white/10 backdrop-blur-md border-white/20 p-6"
                 >
                   <div className="space-y-4">
                     <div className="h-6 bg-black/20 rounded w-1/3 animate-pulse" />
                     <div className="flex gap-2 mb-4">
-                      {[1, 2, 3].map((j) => (
+                      {Array.from({ length: 3 }).map((_, tabIndex) => (
                         <div
-                          key={j}
+                          key={tabIndex}
                           className="h-8 bg-black/10 rounded w-24 animate-pulse"
                         />
                       ))}
                     </div>
                     <div className="space-y-3">
-                      {[1, 2, 3].map((k) => (
-                        <div key={k} className="h-24 bg-black/10 rounded animate-pulse" />
+                      {Array.from({ length: 3 }).map((_, resourceIndex) => (
+                        <div key={resourceIndex} className="h-24 bg-black/10 rounded animate-pulse" />
                       ))}
                     </div>
                   </div>

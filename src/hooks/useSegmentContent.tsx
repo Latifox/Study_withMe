@@ -2,6 +2,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Resource {
+  type: 'video' | 'article' | 'research';
+  title: string;
+  url: string;
+  description: string;
+}
+
 export const useSegmentContent = (numericLectureId: number | null, sequenceNumber: number | null) => {
   return useQuery({
     queryKey: ['segment-content', numericLectureId, sequenceNumber],
@@ -46,6 +53,31 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         throw contentError;
       }
 
+      // Fetch additional resources
+      const { data: resources, error: resourcesError } = await supabase
+        .from('lecture_additional_resources')
+        .select('*')
+        .eq('lecture_id', numericLectureId)
+        .eq('segment_number', sequenceNumber);
+
+      if (resourcesError) {
+        console.error('Error fetching resources:', resourcesError);
+        throw resourcesError;
+      }
+
+      // Group resources by type for easier consumption
+      const groupedResources = (resources || []).reduce((acc: { [key: string]: Resource[] }, resource) => {
+        const type = resource.resource_type as 'video' | 'article' | 'research';
+        if (!acc[type]) acc[type] = [];
+        acc[type].push({
+          type,
+          title: resource.title,
+          url: resource.url,
+          description: resource.description
+        });
+        return acc;
+      }, {});
+
       // If no content exists yet, show the segment structure with loading messages
       if (!segmentContent) {
         return {
@@ -63,7 +95,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
               options: ['This should only take a moment...'],
               correctAnswer: 'This should only take a moment...',
               explanation: 'Quiz content is being generated with your specified AI settings.'
-            }]
+            }],
+            resources: groupedResources
           }]
         };
       }
@@ -92,7 +125,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
               correctAnswer: segmentContent.quiz_2_correct_answer,
               explanation: segmentContent.quiz_2_explanation
             }
-          ].filter(Boolean)
+          ].filter(Boolean),
+          resources: groupedResources
         }]
       };
     },
@@ -100,4 +134,3 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-

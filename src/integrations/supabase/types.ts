@@ -33,6 +33,50 @@ export type Database = {
         }
         Relationships: []
       }
+      lecture_additional_resources: {
+        Row: {
+          created_at: string
+          description: string
+          id: number
+          lecture_id: number | null
+          resource_type: string
+          segment_number: number
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: never
+          lecture_id?: number | null
+          resource_type: string
+          segment_number: number
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: never
+          lecture_id?: number | null
+          resource_type?: string
+          segment_number?: number
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_additional_resources_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lecture_ai_configs: {
         Row: {
           content_language: string | null
