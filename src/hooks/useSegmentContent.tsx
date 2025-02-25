@@ -147,10 +147,12 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             }
 
             if (currentType) {
-              // More flexible regex pattern
-              const resourceMatches = section.matchAll(/\d*\.*\s*\[([^\]]+)\]\(([^)]+)\)(?:[\s\n]*(?:Description|description)?:?\s*([^\n]+))?/g);
+              // Type the regex match result explicitly
+              const pattern = /\d*\.*\s*\[([^\]]+)\]\(([^)]+)\)(?:[\s\n]*(?:Description|description)?:?\s*([^\n]+))?/g;
+              const matches = section.matchAll(pattern);
+              const matchArray = Array.from(matches);
               
-              for (const match of Array.from(resourceMatches)) {
+              for (const match of matchArray) {
                 const [_, title, url, description = ''] = match;
                 if (title && url) {
                   resources.push({
@@ -232,3 +234,4 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+
