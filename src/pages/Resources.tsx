@@ -1,15 +1,16 @@
 
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Youtube, FileText, GraduationCap } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
 import { useSegmentContent } from "@/hooks/useSegmentContent";
 import { toast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -26,10 +27,40 @@ const Resources = () => {
 
   // Parse the numeric values from URL params and ensure they are numbers
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
-  // Extract just the number from segmentId if it exists
   const sequenceNumber = segmentId ? parseInt(segmentId) : null;
 
   console.log('Parsed numeric params:', { numericLectureId, sequenceNumber });
+
+  // If we don't have a segment ID, fetch the first available segment
+  useEffect(() => {
+    if (numericLectureId && !sequenceNumber) {
+      const fetchFirstSegment = async () => {
+        const { data: firstSegment, error } = await supabase
+          .from('lecture_segments')
+          .select('sequence_number')
+          .eq('lecture_id', numericLectureId)
+          .order('sequence_number', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.error('Error fetching first segment:', error);
+          toast({
+            title: "Error fetching segments",
+            description: "Please try again later",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (firstSegment) {
+          navigate(`/course/${courseId}/lecture/${lectureId}/segment/${firstSegment.sequence_number}/resources`);
+        }
+      };
+
+      fetchFirstSegment();
+    }
+  }, [numericLectureId, sequenceNumber, courseId, lectureId, navigate]);
 
   const { data: segmentContent, isLoading, error } = useSegmentContent(
     numericLectureId,
