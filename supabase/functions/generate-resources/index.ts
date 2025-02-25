@@ -16,16 +16,27 @@ interface Resource {
   description: string;
 }
 
-function extractJSONFromResponse(content: string): string {
-  // Find the first [ and last ] to extract the JSON array
-  const startIndex = content.indexOf('[');
-  const endIndex = content.lastIndexOf(']');
-  
-  if (startIndex === -1 || endIndex === -1) {
-    throw new Error('No valid JSON array found in response');
+function sanitizeJSON(content: string): string {
+  // Step 1: Find JSON array pattern
+  const jsonMatch = content.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    throw new Error('No JSON array found in response');
   }
+
+  // Step 2: Extract and clean the JSON string
+  let jsonStr = jsonMatch[0];
   
-  return content.slice(startIndex, endIndex + 1);
+  // Step 3: Remove any markdown code block syntax
+  jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+  
+  // Step 4: Fix common JSON formatting issues
+  jsonStr = jsonStr
+    .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes
+    .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+    .replace(/\\/g, '\\\\') // Escape backslashes
+    .trim();
+
+  return jsonStr;
 }
 
 function isValidResource(resource: any): resource is Resource {
@@ -37,7 +48,6 @@ function isValidResource(resource: any): resource is Resource {
     typeof resource.url === 'string' &&
     typeof resource.description === 'string' &&
     resource.title.length > 0 &&
-    resource.url.length > 0 &&
     resource.description.length > 0 &&
     (resource.url.startsWith('http://') || resource.url.startsWith('https://'))
   );
@@ -61,24 +71,26 @@ async function generateResources(topic: string, language: string = 'english'): P
       messages: [
         {
           role: 'system',
-          content: `You are a resourceful AI that provides JSON arrays of educational resources. You must ALWAYS respond with a JSON array, nothing else.
-          Generate exactly 9 resources (3 videos, 3 articles, 3 research papers) about: ${topic}
+          content: `You are an AI that only outputs valid JSON arrays containing educational resources.
+          Generate exactly 9 resources (3 videos, 3 articles, 3 research papers).
           
           Rules:
-          1. Videos: Only YouTube, Coursera, or edX links
-          2. Articles: Medium, Dev.to, Wikipedia, or academic platform links
-          3. Research: arXiv, ResearchGate, or academic journal links
-          4. Descriptions must be in ${language}
-          5. Only use REAL, EXISTING URLs
+          1. Videos must be from: YouTube, Coursera, or edX
+          2. Articles must be from: Medium, Dev.to, Wikipedia, or academic platforms
+          3. Research must be from: arXiv, ResearchGate, or academic journals
+          4. All text must be in ${language}
+          5. URLs must be real and start with http:// or https://
           6. Resources must be relevant to: ${topic}
-          7. IMPORTANT: Return ONLY the JSON array, no other text or explanation`
+          
+          IMPORTANT: Your ENTIRE response must be ONLY a JSON array in this format:
+          [{"type": "video","title": "Example","url": "https://...","description": "Text"}]`
         },
         {
           role: 'user',
-          content: `Return a JSON array of 9 educational resources for: ${topic}`
+          content: `Generate a JSON array of 9 educational resources about: ${topic}`
         }
       ],
-      temperature: 0.2,
+      temperature: 0.1, // Reduced temperature for more consistent formatting
       max_tokens: 1000,
       top_p: 0.9,
       frequency_penalty: 1,
@@ -97,30 +109,34 @@ async function generateResources(topic: string, language: string = 'english'): P
     throw new Error('Invalid response format from Perplexity');
   }
 
+  console.log('Raw Perplexity response:', data.choices[0].message.content);
+
   let resources: Resource[];
   try {
-    // Extract JSON array from response content
-    const jsonContent = extractJSONFromResponse(data.choices[0].message.content);
-    console.log('Extracted JSON content:', jsonContent);
-    resources = JSON.parse(jsonContent);
+    const sanitizedJSON = sanitizeJSON(data.choices[0].message.content);
+    console.log('Sanitized JSON:', sanitizedJSON);
+    
+    resources = JSON.parse(sanitizedJSON);
+    
+    if (!Array.isArray(resources)) {
+      console.error('Parsed result is not an array:', resources);
+      throw new Error('Generated content is not a valid array');
+    }
   } catch (error) {
-    console.error('Failed to parse Perplexity response:', error);
-    console.error('Raw response:', data.choices[0].message.content);
-    throw new Error('Failed to parse generated resources');
+    console.error('JSON parsing error:', error);
+    console.error('Attempted to parse:', data.choices[0].message.content);
+    throw new Error(`Failed to parse resources: ${error.message}`);
   }
 
-  if (!Array.isArray(resources)) {
-    console.error('Invalid resources format: expected array');
-    throw new Error('Invalid resources format received');
-  }
-
+  // Validate each resource
   const validatedResources = resources.filter(isValidResource);
-
+  
   if (validatedResources.length < 3) {
+    console.error('Not enough valid resources:', validatedResources);
     throw new Error('Not enough valid resources generated');
   }
 
-  console.log('Successfully generated resources:', validatedResources);
+  console.log(`Successfully generated ${validatedResources.length} resources`);
   return validatedResources;
 }
 
@@ -161,7 +177,7 @@ serve(async (req) => {
     });
     
     const allResources = await Promise.all(resourcePromises);
-    console.log('Completed resource generation');
+    console.log('Successfully generated all resources');
 
     return new Response(JSON.stringify(allResources), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -182,3 +198,4 @@ serve(async (req) => {
     );
   }
 });
+
