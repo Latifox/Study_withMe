@@ -76,6 +76,19 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         };
       }
 
+      // Fetch the AI configuration for the lecture to get the language setting
+      console.log('Fetching AI configuration for lecture:', numericLectureId);
+      const { data: aiConfig, error: aiConfigError } = await supabase
+        .from('lecture_ai_configs')
+        .select('content_language')
+        .eq('lecture_id', numericLectureId)
+        .single();
+
+      if (aiConfigError) {
+        console.error('Error fetching AI config:', aiConfigError);
+        throw aiConfigError;
+      }
+
       // If no resources exist, fetch all segment titles and generate resources for each
       console.log('No existing resources found, fetching segment titles...');
 
@@ -104,7 +117,10 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           console.log(`Starting resource generation for segment ${segment.sequence_number}: ${segment.title}`);
           
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
-            body: { topic: segment.title, language: 'spanish' }
+            body: { 
+              topic: segment.title, 
+              language: aiConfig?.content_language || 'english' // Use configured language or default to English
+            }
           });
 
           if (generationError) {
@@ -201,3 +217,4 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+
