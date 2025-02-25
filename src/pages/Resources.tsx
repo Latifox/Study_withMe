@@ -89,8 +89,8 @@ const Resources = () => {
                 {/* Right column - Selected segment content */}
                 <div className="h-[calc(100vh-200px)]">
                   {selectedSegmentId ? (
-                    <Card className="h-full bg-white/10 backdrop-blur-md border-white/20">
-                      <CardHeader>
+                    <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                      <CardHeader className="border-b border-white/20">
                         <CardTitle className="text-xl text-black">
                           {segmentContent.segments.find(s => s.id === selectedSegmentId)?.title}
                         </CardTitle>
