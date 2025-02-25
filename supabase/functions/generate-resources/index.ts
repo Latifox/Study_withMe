@@ -17,29 +17,30 @@ serve(async (req) => {
   try {
     const { topic, language = 'spanish' } = await req.json();
     console.log(`Generating resources for topic: "${topic}" in ${language}`);
-    
+
     if (!perplexityApiKey) {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `You are an educational content curator focusing on academic content. Generate EXACTLY 6 high-quality educational resources about "${topic}" in ${language}.
+    const systemPrompt = `Generate EXACTLY 6 educational resources about "${topic}" in ${language}, following this EXACT order:
 
-YOUR RESPONSE MUST STRICTLY FOLLOW THESE RULES:
-1. Generate EXACTLY 6 resources in total:
-   - EXACTLY 2 video resources (from educational platforms)
-   - EXACTLY 2 article resources (from reputable websites)
-   - EXACTLY 2 research papers (from academic sources)
+STRICT REQUIREMENTS:
+1. Generate resources in this EXACT order:
+   - FIRST: 2 video resources
+   - THEN: 2 article resources
+   - FINALLY: 2 research papers
 
-2. URL REQUIREMENTS:
-   - Each URL MUST BE REAL AND UNIQUE
-   - NO placeholder or example URLs
-   - USE ONLY educational sources like:
-     - Videos: coursera.org, edx.org, youtube.com/edu
-     - Articles: educational institutions, government .edu sites
-     - Papers: researchgate.net, sciencedirect.com, springer.com
+2. Each resource MUST have:
+   - A real, unique URL
+   - A clear title
+   - A brief description
 
-3. FORMATTING:
-   Generate your response in this EXACT markdown format:
+3. Use ONLY these types of sources:
+   - Videos: youtube.com, edx.org, coursera.org
+   - Articles: .edu domains, authoritative educational websites
+   - Research papers: researchgate.net, sciencedirect.com, springer.com
+
+Format your response in this EXACT markdown structure:
 
 ## Video Resources
 1. [Title of First Video](video_url_1)
@@ -69,12 +70,10 @@ YOUR RESPONSE MUST STRICTLY FOLLOW THESE RULES:
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate exactly 6 educational resources (2 videos, 2 articles, 2 research papers) about: "${topic}" in ${language}. Follow the format exactly.` }
+          { role: 'user', content: `Generate 6 educational resources (2 videos, 2 articles, 2 research papers) about: "${topic}" in ${language}` }
         ],
         temperature: 0.1,
         max_tokens: 2000,
-        frequency_penalty: 1,
-        presence_penalty: 0.8
       }),
     });
 
@@ -86,7 +85,7 @@ YOUR RESPONSE MUST STRICTLY FOLLOW THESE RULES:
     const data = await response.json();
     const markdown = data.choices[0].message.content;
     
-    // Parse resources from markdown
+    // Parse resources from markdown maintaining order
     const lines = markdown.split('\n');
     const resources = [];
     let currentType = '';
@@ -112,6 +111,15 @@ YOUR RESPONSE MUST STRICTLY FOLLOW THESE RULES:
       }
     }
 
+    // Validate resource count and order
+    const videoResources = resources.filter(r => r.type === 'video');
+    const articleResources = resources.filter(r => r.type === 'article');
+    const paperResources = resources.filter(r => r.type === 'research_paper');
+
+    if (videoResources.length !== 2 || articleResources.length !== 2 || paperResources.length !== 2) {
+      throw new Error('Invalid resource count in generated content');
+    }
+
     return new Response(
       JSON.stringify({ 
         resources,
@@ -124,7 +132,7 @@ YOUR RESPONSE MUST STRICTLY FOLLOW THESE RULES:
     console.error('Error in generate-resources function:', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
-      {
+      { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }

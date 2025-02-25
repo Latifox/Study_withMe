@@ -19,7 +19,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         .from('lecture_additional_resources')
         .select('*')
         .eq('lecture_id', numericLectureId)
-        .order('segment_number');
+        .order('segment_number, resource_type');
 
       if (resourcesError) {
         console.error('Error fetching existing resources:', resourcesError);
@@ -35,13 +35,19 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           const segNum = resource.segment_number;
           if (!acc[segNum]) acc[segNum] = { content: '' };
           
-          const resourceMarkdown = `
-## ${resource.resource_type === 'video' ? 'Video Resources' : 
-       resource.resource_type === 'article' ? 'Article Resources' : 
-       'Research Papers'}
-1. [${resource.title}](${resource.url})
-   Description: ${resource.description}
-`;
+          // Determine section header based on resource type
+          let sectionHeader = '';
+          if (resource.resource_type === 'video' && !acc[segNum].content.includes('Video Resources')) {
+            sectionHeader = '\n## Video Resources\n';
+          } else if (resource.resource_type === 'article' && !acc[segNum].content.includes('Article Resources')) {
+            sectionHeader = '\n## Article Resources\n';
+          } else if (resource.resource_type === 'research_paper' && !acc[segNum].content.includes('Research Papers')) {
+            sectionHeader = '\n## Research Papers\n';
+          }
+          
+          const resourceMarkdown = `${sectionHeader}${!sectionHeader ? '' : ''}1. [${resource.title}](${resource.url})
+   Description: ${resource.description}\n`;
+          
           acc[segNum].content += resourceMarkdown;
           return acc;
         }, {});
@@ -49,7 +55,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         return {
           segments: Object.entries(groupedBySegment).map(([segmentNumber, content]) => ({
             id: `segment_${segmentNumber}`,
-            content: content.content
+            content: content.content.trim()
           }))
         };
       }
@@ -95,7 +101,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
             // Store resources if generation was successful
             if (generatedContent?.resources) {
-              const insertPromises = generatedContent.resources.map(async (resource: {
+              const resources = generatedContent.resources;
+              const insertPromises = resources.map(async (resource: {
                 title: string;
                 url: string;
                 description: string;
