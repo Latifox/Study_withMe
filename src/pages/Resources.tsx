@@ -21,10 +21,14 @@ const Resources = () => {
   const { courseId, lectureId, segmentId } = useParams();
   const navigate = useNavigate();
 
-  const { data: segmentContent, isLoading } = useSegmentContent(
+  console.log('Resources page params:', { courseId, lectureId, segmentId });
+
+  const { data: segmentContent, isLoading, error } = useSegmentContent(
     lectureId ? parseInt(lectureId) : null,
     segmentId ? parseInt(segmentId) : null
   );
+
+  console.log('Segment content result:', { data: segmentContent, isLoading, error });
 
   const getResourceIcon = (type: Resource['type']) => {
     switch (type) {
@@ -39,6 +43,10 @@ const Resources = () => {
 
   if (isLoading) {
     return <ResourcesLoading />;
+  }
+
+  if (error) {
+    console.error('Error loading resources:', error);
   }
 
   if (!segmentContent?.segments[0]?.resources) {
@@ -155,3 +163,4 @@ const Resources = () => {
 };
 
 export default Resources;
+

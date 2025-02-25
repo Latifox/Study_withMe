@@ -13,9 +13,12 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
   return useQuery({
     queryKey: ['segment-content', numericLectureId, sequenceNumber],
     queryFn: async () => {
-      if (!numericLectureId || !sequenceNumber) throw new Error('Invalid parameters');
+      console.log('useSegmentContent: Starting fetch with params:', { numericLectureId, sequenceNumber });
 
-      console.log('Fetching content for lecture:', numericLectureId, 'sequence:', sequenceNumber);
+      if (!numericLectureId || !sequenceNumber) {
+        console.error('Invalid parameters:', { numericLectureId, sequenceNumber });
+        throw new Error('Invalid parameters');
+      }
 
       // First check if segment exists
       const { data: segment, error: segmentError } = await supabase
@@ -36,9 +39,11 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       }
 
       if (!segment) {
-        console.error('No segment found');
+        console.error('No segment found for:', { numericLectureId, sequenceNumber });
         throw new Error('Segment not found');
       }
+
+      console.log('Found segment:', segment);
 
       // Then fetch corresponding content
       const { data: segmentContent, error: contentError } = await supabase
@@ -60,6 +65,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
         .eq('lecture_id', numericLectureId)
         .eq('segment_number', sequenceNumber);
 
+      console.log('Initial resources fetch result:', { initialResources, resourcesError });
+
       // Create a mutable variable to store our resources
       let resourcesData = initialResources;
 
@@ -71,9 +78,11 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
             body: {
               lectureContent: segment.lectures.content,
               segmentTitles: [segment.title],
-              aiConfig: { content_language: 'english' } // Default to English if not specified
+              aiConfig: { content_language: 'english' }
             }
           });
+
+          console.log('Generate resources response:', { generatedData, generationError });
 
           if (generationError) {
             console.error('Error generating resources:', generationError);
@@ -81,8 +90,8 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
           }
 
           if (generatedData && generatedData[0]?.resources) {
-            // Resources were generated successfully
             resourcesData = generatedData[0].resources;
+            console.log('Successfully generated resources:', resourcesData);
           }
         } catch (error) {
           console.error('Error in generate-resources function:', error);
@@ -162,4 +171,3 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-
