@@ -16,35 +16,38 @@ interface Resource {
   description: string;
 }
 
-async function validateUrl(url: string): Promise<boolean> {
+async function validateUrl(url: string, type: string): Promise<boolean> {
   try {
     const validDomains = {
-      video: ['youtube.com', 'youtu.be'],
-      article: ['medium.com', 'dev.to', 'wikipedia.org', 'edx.org', 'coursera.org'],
-      research: ['arxiv.org', 'researchgate.net', 'sciencedirect.com', 'springer.com']
+      video: ['youtube.com', 'youtu.be', 'vimeo.com', 'coursera.org', 'edx.org'],
+      article: ['medium.com', 'dev.to', 'wikipedia.org', 'edx.org', 'coursera.org', 'researchgate.net'],
+      research: ['arxiv.org', 'researchgate.net', 'sciencedirect.com', 'springer.com', 'ieee.org', 'acm.org']
     };
 
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace('www.', '');
 
-    if (urlObj.pathname.includes('search') || urlObj.pathname.includes('results')) {
-      console.warn('Rejecting search results page:', url);
+    // Check if the domain is in the whitelist for the specific type
+    const isValidDomain = validDomains[type as keyof typeof validDomains]?.some(d => domain.includes(d));
+    if (!isValidDomain) {
+      console.warn(`Domain ${domain} not in whitelist for type ${type}`);
       return false;
     }
 
-    for (const [type, domains] of Object.entries(validDomains)) {
-      if (domains.some(d => domain.includes(d))) {
-        if (type === 'video' && !url.includes('watch?v=') && !url.includes('youtu.be/')) {
-          console.warn('Rejecting non-video YouTube URL:', url);
-          return false;
-        }
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.status === 200;
-      }
+    // Skip HEAD request for known reliable domains
+    const reliableDomains = ['youtube.com', 'youtu.be', 'arxiv.org'];
+    if (reliableDomains.some(d => domain.includes(d))) {
+      return true;
     }
 
-    console.warn('Domain not in whitelist:', domain);
-    return false;
+    // For other domains, verify the URL is accessible
+    const response = await fetch(url, { 
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ResourceBot/1.0;)'
+      }
+    });
+    return response.status === 200;
   } catch (error) {
     console.error(`Error validating URL ${url}:`, error);
     return false;
@@ -73,8 +76,12 @@ function isValidResource(resource: any): resource is Resource {
   );
 }
 
-async function generateResources(topic: string): Promise<Resource[]> {
-  console.log('Generating resources for topic:', topic);
+async function generateResources(topic: string, language: string = 'english', retryCount: number = 0): Promise<Resource[]> {
+  console.log(`Generating resources for topic: ${topic} in ${language}, attempt ${retryCount + 1}`);
+  
+  if (retryCount >= 3) {
+    throw new Error('Max retry attempts reached');
+  }
   
   try {
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -88,33 +95,37 @@ async function generateResources(topic: string): Promise<Resource[]> {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful assistant that provides educational resources. Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
+            content: `You are a helpful assistant that provides specific, direct links to educational resources in ${language}. Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
             
             STRICT RULES for generating URLs:
-            1. For videos: ONLY use real YouTube video URLs in format youtube.com/watch?v= or youtu.be/
+            1. For videos: ONLY use URLs from:
+               - youtube.com/watch?v=
+               - youtu.be/
+               - coursera.org (course videos)
+               - edx.org (course videos)
             2. For articles: ONLY use URLs from:
                - medium.com (technical articles)
                - dev.to (programming tutorials)
                - wikipedia.org (general knowledge)
-               - edx.org (course pages)
-               - coursera.org (course pages)
+               - edx.org (course content)
+               - coursera.org (course content)
             3. For research: ONLY use URLs from:
-               - arxiv.org (direct PDF or abstract pages)
-               - researchgate.net (direct paper pages)
-               - sciencedirect.com (direct paper pages)
-               - springer.com (direct paper pages)
+               - arxiv.org (papers)
+               - researchgate.net (papers)
+               - sciencedirect.com (papers)
+               - springer.com (papers)
+               - ieee.org (papers)
+               - acm.org (papers)
             4. NO search result pages or category pages
-            5. ALL content must be in English
-            6. Use REAL, EXISTING URLs only - do not generate fake ones
-            7. Ensure URLs point to actual content pages, not homepages
+            5. ALL descriptions must be in ${language}
+            6. Use REAL, EXISTING URLs - do not generate fake ones
+            7. Make sure resources are specific and relevant to ${topic}
             
             Provide your response in this exact JSON format:
             [
               {"type": "video", "title": "title1", "url": "url1", "description": "desc1"},
               ...
-            ]
-            
-            IMPORTANT: Reply ONLY with the JSON array. NO markdown formatting, NO extra text.`
+            ]`
           },
           {
             role: 'user',
@@ -130,7 +141,8 @@ async function generateResources(topic: string): Promise<Resource[]> {
     });
 
     if (!response.ok) {
-      throw new Error(`Perplexity API error: ${response.status} ${response.statusText}`);
+      console.error(`Perplexity API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Perplexity API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -145,22 +157,23 @@ async function generateResources(topic: string): Promise<Resource[]> {
       resources = JSON.parse(content);
     } catch (error) {
       console.error('Failed to parse Perplexity response:', error);
-      throw new Error('Failed to parse resources from Perplexity response');
+      return generateResources(topic, language, retryCount + 1);
     }
 
     if (!Array.isArray(resources)) {
-      throw new Error('Invalid resources format: expected array');
+      console.error('Invalid resources format: expected array');
+      return generateResources(topic, language, retryCount + 1);
     }
 
     const validatedResources: Resource[] = [];
     
     for (const resource of resources) {
       if (isValidResource(resource)) {
-        const isUrlValid = await validateUrl(resource.url);
+        const isUrlValid = await validateUrl(resource.url, resource.type);
         if (isUrlValid) {
           validatedResources.push(resource);
         } else {
-          console.warn(`Skipping resource with invalid URL: ${resource.url}`);
+          console.warn(`Invalid URL for resource: ${resource.url}`);
         }
       } else {
         console.warn('Invalid resource structure:', resource);
@@ -169,13 +182,17 @@ async function generateResources(topic: string): Promise<Resource[]> {
 
     if (validatedResources.length < 3) {
       console.log('Not enough valid resources, retrying...');
-      return generateResources(topic);
+      return generateResources(topic, language, retryCount + 1);
     }
 
     console.log('Successfully generated resources:', validatedResources);
     return validatedResources;
   } catch (error) {
     console.error('Error in generateResources:', error);
+    if (retryCount < 2) {
+      console.log('Retrying resource generation...');
+      return generateResources(topic, language, retryCount + 1);
+    }
     throw error;
   }
 }
@@ -201,47 +218,11 @@ serve(async (req) => {
       throw new Error('Invalid or empty segment titles');
     }
 
+    const language = aiConfig?.content_language || 'english';
+    
     const resourcePromises = segmentTitles.map(async (title) => {
       try {
-        const resources = await generateResources(title);
-        
-        // Translate descriptions if needed
-        if (aiConfig?.content_language && aiConfig.content_language !== 'english') {
-          const translationResponse = await fetch('https://api.perplexity.ai/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${perplexityApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'llama-3.1-sonar-small-128k-online',
-              messages: [
-                {
-                  role: 'system',
-                  content: `Translate the following resource descriptions to ${aiConfig.content_language}. Reply ONLY with a JSON array of translated strings.`
-                },
-                {
-                  role: 'user',
-                  content: JSON.stringify(resources.map(r => r.description))
-                }
-              ],
-              temperature: 0.2,
-              max_tokens: 1000
-            }),
-          });
-
-          if (!translationResponse.ok) {
-            throw new Error('Translation API error');
-          }
-
-          const translationData = await translationResponse.json();
-          const translations = JSON.parse(translationData.choices[0].message.content);
-          
-          resources.forEach((resource, index) => {
-            resource.description = translations[index];
-          });
-        }
-
+        const resources = await generateResources(title, language);
         return {
           concept: title,
           resources: resources
