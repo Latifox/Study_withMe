@@ -38,97 +38,87 @@ function isValidResource(resource: any): resource is Resource {
   );
 }
 
-async function generateResources(topic: string, language: string = 'english', retryCount: number = 0): Promise<Resource[]> {
-  console.log(`Generating resources for topic: ${topic} in ${language}, attempt ${retryCount + 1}`);
+async function generateResources(topic: string, language: string = 'english'): Promise<Resource[]> {
+  console.log(`Generating resources for topic: ${topic} in ${language}`);
   
-  if (retryCount >= 3) {
-    throw new Error('Max retry attempts reached');
+  if (!perplexityApiKey) {
+    throw new Error('Perplexity API key not configured');
   }
   
+  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${perplexityApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-sonar-small-128k-online',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a helpful assistant that provides specific, direct links to educational resources in ${language}. 
+          Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
+          
+          IMPORTANT:
+          1. For videos: Only use YouTube, Coursera, or edX links
+          2. For articles: Use Medium, Dev.to, Wikipedia, or academic platform links
+          3. For research: Use arXiv, ResearchGate, or academic journals
+          4. All descriptions must be in ${language}
+          5. Use REAL, EXISTING URLs - do not generate fake ones
+          6. Make sure resources are specific and relevant to ${topic}
+          
+          Provide your response in this exact JSON format:
+          [
+            {"type": "video", "title": "title1", "url": "url1", "description": "desc1"},
+            ...
+          ]`
+        },
+        {
+          role: 'user',
+          content: `Generate verified educational resources about: ${topic}`
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 1000,
+      top_p: 0.9,
+      frequency_penalty: 1,
+      presence_penalty: 0
+    }),
+  });
+
+  if (!response.ok) {
+    console.error(`Perplexity API error: ${response.status} ${response.statusText}`);
+    throw new Error(`Perplexity API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.choices?.[0]?.message?.content) {
+    throw new Error('Invalid response format from Perplexity');
+  }
+
+  let resources: Resource[];
   try {
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a helpful assistant that provides specific, direct links to educational resources in ${language}. 
-            Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
-            
-            IMPORTANT:
-            1. For videos: Only use YouTube, Coursera, or edX links
-            2. For articles: Use Medium, Dev.to, Wikipedia, or academic platform links
-            3. For research: Use arXiv, ResearchGate, or academic journals
-            4. All descriptions must be in ${language}
-            5. Use REAL, EXISTING URLs - do not generate fake ones
-            6. Make sure resources are specific and relevant to ${topic}
-            
-            Provide your response in this exact JSON format:
-            [
-              {"type": "video", "title": "title1", "url": "url1", "description": "desc1"},
-              ...
-            ]`
-          },
-          {
-            role: 'user',
-            content: `Generate verified educational resources about: ${topic}`
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 1000,
-        top_p: 0.9,
-        frequency_penalty: 1,
-        presence_penalty: 0
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`Perplexity API error: ${response.status} ${response.statusText}`);
-      throw new Error(`Perplexity API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response format from Perplexity');
-    }
-
-    let resources: Resource[];
-    try {
-      const content = cleanLLMResponse(data.choices[0].message.content);
-      resources = JSON.parse(content);
-    } catch (error) {
-      console.error('Failed to parse Perplexity response:', error);
-      return generateResources(topic, language, retryCount + 1);
-    }
-
-    if (!Array.isArray(resources)) {
-      console.error('Invalid resources format: expected array');
-      return generateResources(topic, language, retryCount + 1);
-    }
-
-    const validatedResources = resources.filter(isValidResource);
-
-    if (validatedResources.length < 3) {
-      console.log('Not enough valid resources, retrying...');
-      return generateResources(topic, language, retryCount + 1);
-    }
-
-    console.log('Successfully generated resources:', validatedResources);
-    return validatedResources;
+    const content = cleanLLMResponse(data.choices[0].message.content);
+    resources = JSON.parse(content);
   } catch (error) {
-    console.error('Error in generateResources:', error);
-    if (retryCount < 2) {
-      console.log('Retrying resource generation...');
-      return generateResources(topic, language, retryCount + 1);
-    }
-    throw error;
+    console.error('Failed to parse Perplexity response:', error);
+    throw new Error('Failed to parse generated resources');
   }
+
+  if (!Array.isArray(resources)) {
+    console.error('Invalid resources format: expected array');
+    throw new Error('Invalid resources format received');
+  }
+
+  const validatedResources = resources.filter(isValidResource);
+
+  if (validatedResources.length < 3) {
+    throw new Error('Not enough valid resources generated');
+  }
+
+  console.log('Successfully generated resources:', validatedResources);
+  return validatedResources;
 }
 
 serve(async (req) => {
