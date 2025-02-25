@@ -58,27 +58,33 @@ export const useSegmentContent = (numericLectureId: number | null, sequenceNumbe
       }
 
       // If no resources exist, we need to generate them
-      console.log('No existing resources found, fetching lecture content and segment titles...');
+      console.log('No existing resources found, fetching segment title...');
 
-      // Get the lecture title to use for generation
-      const { data: lecture, error: lectureError } = await supabase
-        .from('lectures')
+      // First get the segment title
+      const { data: segmentData, error: segmentError } = await supabase
+        .from('lecture_segments')
         .select('title')
-        .eq('id', numericLectureId)
+        .eq('lecture_id', numericLectureId)
+        .eq('sequence_number', sequenceNumber)
         .single();
 
-      if (lectureError) {
-        console.error('Error fetching lecture:', lectureError);
-        throw lectureError;
+      if (segmentError) {
+        console.error('Error fetching segment:', segmentError);
+        throw segmentError;
       }
 
-      console.log('Generating resources with lecture title:', lecture.title);
+      if (!segmentData) {
+        console.error('No segment found with the given parameters');
+        throw new Error('Segment not found');
+      }
 
-      // Generate resources using the edge function
+      console.log('Generating resources with segment title:', segmentData.title);
+
+      // Generate resources using the edge function with the segment title
       try {
         const { data: generatedData, error: generationError } = await supabase.functions.invoke('generate-resources', {
           body: {
-            topic: lecture.title,
+            topic: segmentData.title,
             language: 'spanish'
           }
         });

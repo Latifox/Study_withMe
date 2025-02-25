@@ -58,7 +58,7 @@ serve(async (req) => {
   try {
     const { topic, language = 'spanish' } = await req.json();
     
-    console.log(`Generating resources for topic: ${topic} in ${language}`);
+    console.log(`Generating resources for segment topic: ${topic} in ${language}`);
     
     if (!perplexityApiKey) {
       throw new Error('Perplexity API key not configured');
@@ -76,22 +76,27 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are an AI that generates educational resources in JSON format.
-            You will generate exactly 9 resources (3 videos, 3 articles, 3 research papers).
+            You will generate EXACTLY 9 resources about the given topic:
+            - EXACTLY 3 videos (from YouTube, Coursera, or edX)
+            - EXACTLY 3 articles (from Medium, Dev.to, Wikipedia, or academic platforms)
+            - EXACTLY 3 research papers (from arXiv, ResearchGate, or academic journals)
             
             Rules:
-            1. Videos must be from YouTube, Coursera, or edX
-            2. Articles must be from Medium, Dev.to, Wikipedia, or academic platforms
-            3. Research must be from arXiv, ResearchGate, or academic journals
-            4. All text must be in ${language}
-            5. URLs must be real and start with http:// or https://
-            6. Resources must be relevant to: ${topic}
+            1. ALL content must be in ${language}
+            2. ALL URLs must be real and start with http:// or https://
+            3. ALL resources must be specifically about: ${topic}
+            4. NO placeholders or dummy content allowed
+            5. ALL descriptions must be detailed and informative
             
-            Return ONLY a JSON array with NO additional text or formatting:
-            [{"type": "video", "title": "Example", "url": "https://...", "description": "Text"}]`
+            Return ONLY a JSON array with exactly 9 items formatted like this:
+            [
+              {"type": "video", "title": "Example", "url": "https://...", "description": "Text"},
+              // ... 8 more items following same format
+            ]`
           },
           {
             role: 'user',
-            content: `Generate a JSON array of 9 educational resources about: ${topic}`
+            content: `Generate a JSON array of EXACTLY 9 educational resources about: ${topic}`
           }
         ],
         temperature: 0.1,
@@ -125,12 +130,23 @@ serve(async (req) => {
         throw new Error('Generated content is not a valid array');
       }
 
-      // Validate each resource
+      // Validate each resource and ensure we have exactly 9 resources
       const validatedResources = resources.filter(isValidResource);
       
-      if (validatedResources.length < 3) {
-        console.error('Not enough valid resources:', validatedResources);
-        throw new Error('Not enough valid resources generated');
+      if (validatedResources.length !== 9) {
+        console.error(`Invalid number of resources generated: ${validatedResources.length}`);
+        throw new Error('Incorrect number of resources generated');
+      }
+
+      // Verify we have exactly 3 of each type
+      const counts = validatedResources.reduce((acc: Record<string, number>, resource) => {
+        acc[resource.type] = (acc[resource.type] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (counts.video !== 3 || counts.article !== 3 || counts.research !== 3) {
+        console.error('Invalid distribution of resource types:', counts);
+        throw new Error('Incorrect distribution of resource types');
       }
 
       console.log(`Successfully generated ${validatedResources.length} resources for topic: ${topic}`);
