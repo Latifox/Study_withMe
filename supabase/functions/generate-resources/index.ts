@@ -31,10 +31,9 @@ STRICT FORMAT AND CONTENT REQUIREMENTS:
    - 2 article resources (from .edu domains or reputable educational sites)
    - 2 research papers (from ResearchGate, ScienceDirect, or academic journals)
 
-2. CRUCIAL: Each resource MUST have:
-   - A real, functional URL that leads to actual content
-   - An accurate, descriptive title
-   - A brief but informative description
+2. CRUCIAL: Each resource MUST be formatted as a markdown list item with:
+   - The title as a clickable hyperlink using markdown [title](url) format
+   - A brief but informative description on the next line indented with three spaces
    - URLs must be unique and working links
    - No placeholder or example URLs
 
@@ -57,24 +56,24 @@ STRICT FORMAT AND CONTENT REQUIREMENTS:
 Format your response EXACTLY like this:
 
 ## Video Resources
-1. [Title of First Video](complete_video_url_1)
+1. [Complete Video Title](video_url_1)
    Description: Clear, specific description of the video content
 
-2. [Title of Second Video](complete_video_url_2)
+2. [Complete Video Title](video_url_2)
    Description: Clear, specific description of the video content
 
 ## Article Resources
-1. [Title of First Article](complete_article_url_1)
+1. [Complete Article Title](article_url_1)
    Description: Clear, specific description of the article content
 
-2. [Title of Second Article](complete_article_url_2)
+2. [Complete Article Title](article_url_2)
    Description: Clear, specific description of the article content
 
 ## Research Papers
-1. [Title of First Paper](complete_paper_url_1)
+1. [Complete Paper Title](paper_url_1)
    Description: Clear, specific description of the paper content
 
-2. [Title of Second Paper](complete_paper_url_2)
+2. [Complete Paper Title](paper_url_2)
    Description: Clear, specific description of the paper content`;
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -118,3 +117,4 @@ Format your response EXACTLY like this:
     );
   }
 });
+
