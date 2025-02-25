@@ -25,6 +25,17 @@ interface ConceptResources {
   resources: Resource[];
 }
 
+// Helper function to clean markdown code blocks from the response
+function cleanMarkdownCodeBlocks(text: string): string {
+  // Remove markdown code block syntax if present
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```json') || cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```json\n|^```\n/, '');
+    cleaned = cleaned.replace(/\n```$/, '');
+  }
+  return cleaned.trim();
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -58,7 +69,7 @@ serve(async (req) => {
       3 article resources (from reputable educational websites),
       and 3 research papers or academic resources.
       
-      Format your response EXACTLY as a JSON object with this structure:
+      Return ONLY valid JSON with NO markdown formatting, following this structure:
       {
         "concept": "${title}",
         "resources": [
@@ -71,12 +82,13 @@ serve(async (req) => {
         ]
       }
       
-      Important:
-      1. Ensure the response is valid JSON
+      Requirements:
+      1. Return ONLY the JSON with NO markdown or code block formatting
       2. All fields must be strings
       3. "type" must be exactly "video", "article", or "research"
       4. Generate exactly 3 resources of each type
-      5. Make sure all URLs are properly formatted`;
+      5. Make sure all URLs are properly formatted
+      6. DO NOT include any text before or after the JSON`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -89,7 +101,7 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: `You are an expert at finding relevant educational resources. ${
+              content: `You are an expert at finding relevant educational resources. Your responses must be in pure JSON format with no markdown or code block formatting. ${
                 aiConfig?.content_language ? 
                 `Generate all content in ${aiConfig.content_language} language.` : 
                 'Generate content in English.'
@@ -118,10 +130,12 @@ serve(async (req) => {
         throw new Error('Invalid response structure from OpenAI');
       }
 
-      const generatedText = data.choices[0].message.content;
+      // Clean any markdown formatting from the response
+      const cleanedText = cleanMarkdownCodeBlocks(data.choices[0].message.content);
+      console.log('Cleaned response text:', cleanedText);
       
       try {
-        const parsedResources = JSON.parse(generatedText);
+        const parsedResources = JSON.parse(cleanedText);
         
         // Validate the parsed structure
         if (!parsedResources.concept || !Array.isArray(parsedResources.resources)) {
@@ -144,7 +158,7 @@ serve(async (req) => {
         
       } catch (error) {
         console.error('Error parsing AI response:', error);
-        console.error('Raw response:', generatedText);
+        console.error('Raw response:', cleanedText);
         throw new Error(`Failed to parse AI response: ${error.message}`);
       }
     }
@@ -168,3 +182,4 @@ serve(async (req) => {
     );
   }
 });
+
