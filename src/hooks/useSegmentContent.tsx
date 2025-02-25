@@ -17,7 +17,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       // First check if resources already exist
       const { data: existingResources, error: resourcesError } = await supabase
         .from('lecture_additional_resources')
-        .select('*')
+        .select('*, lecture_segments!inner(title)')
         .eq('lecture_id', numericLectureId)
         .order('segment_number, resource_type');
 
@@ -31,9 +31,14 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         console.log('Found existing resources:', existingResources);
         
         // Group resources by segment number
-        const groupedBySegment = existingResources.reduce((acc: Record<number, { content: string }>, resource) => {
+        const groupedBySegment = existingResources.reduce((acc: Record<number, { title: string, content: string }>, resource) => {
           const segNum = resource.segment_number;
-          if (!acc[segNum]) acc[segNum] = { content: '' };
+          if (!acc[segNum]) {
+            acc[segNum] = { 
+              title: resource.lecture_segments.title,
+              content: '' 
+            };
+          }
           
           // Determine section header based on resource type
           let sectionHeader = '';
@@ -63,9 +68,10 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         }, {});
 
         return {
-          segments: Object.entries(groupedBySegment).map(([segmentNumber, content]) => ({
+          segments: Object.entries(groupedBySegment).map(([segmentNumber, data]) => ({
             id: `segment_${segmentNumber}`,
-            content: content.content.trim()
+            title: data.title,
+            content: data.content.trim()
           }))
         };
       }
@@ -156,6 +162,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           
           return {
             id: `segment_${segment.sequence_number}`,
+            title: segment.title,
             content: generatedContent.markdown
           };
         } catch (error) {
@@ -194,3 +201,4 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+

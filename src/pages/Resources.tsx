@@ -64,7 +64,7 @@ const Resources = () => {
                 {segmentContent.segments.map((segment) => (
                   <Card key={segment.id} className="mb-6 group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
                     <CardHeader>
-                      <CardTitle className="text-black">Resources for {segment.id}</CardTitle>
+                      <CardTitle className="text-black">Resources for segment: {segment.title}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[400px]">
@@ -85,3 +85,4 @@ const Resources = () => {
 };
 
 export default Resources;
+
