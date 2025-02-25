@@ -73,7 +73,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw new Error('No segments found');
       }
 
-      console.log('Generating resources for segments:', segmentData);
+      console.log('Retrieved segments for processing:', segmentData);
 
       // Process all segments in parallel
       try {
@@ -87,12 +87,15 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             });
 
             if (generationError) {
+              console.error(`Error generating resources for segment ${segment.sequence_number}:`, generationError);
               throw generationError;
             }
 
+            console.log(`Generated content for segment ${segment.sequence_number}:`, generatedContent);
+
             // Store resources if generation was successful
             if (generatedContent?.resources) {
-              await Promise.all(generatedContent.resources.map(async (resource: {
+              const insertPromises = generatedContent.resources.map(async (resource: {
                 title: string;
                 url: string;
                 description: string;
@@ -113,7 +116,10 @@ export const useSegmentContent = (numericLectureId: number | null) => {
                   console.error(`Error storing resource for segment ${segment.sequence_number}:`, insertError);
                   throw insertError;
                 }
-              }));
+              });
+
+              await Promise.all(insertPromises);
+              console.log(`Successfully stored all resources for segment ${segment.sequence_number}`);
             }
 
             return {
@@ -131,7 +137,10 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           }
         });
 
+        console.log('Processing all segments in parallel...');
         const segmentContents = await Promise.all(segmentProcessingPromises);
+        console.log('Finished processing all segments:', segmentContents);
+        
         return { segments: segmentContents };
         
       } catch (error) {
