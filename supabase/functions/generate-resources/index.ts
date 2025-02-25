@@ -16,11 +16,16 @@ interface Resource {
   description: string;
 }
 
-function cleanLLMResponse(content: string): string {
-  return content
-    .replace(/```json\n?/g, '')
-    .replace(/```\n?/g, '')
-    .trim();
+function extractJSONFromResponse(content: string): string {
+  // Find the first [ and last ] to extract the JSON array
+  const startIndex = content.indexOf('[');
+  const endIndex = content.lastIndexOf(']');
+  
+  if (startIndex === -1 || endIndex === -1) {
+    throw new Error('No valid JSON array found in response');
+  }
+  
+  return content.slice(startIndex, endIndex + 1);
 }
 
 function isValidResource(resource: any): resource is Resource {
@@ -56,26 +61,21 @@ async function generateResources(topic: string, language: string = 'english'): P
       messages: [
         {
           role: 'system',
-          content: `You are a helpful assistant that provides specific, direct links to educational resources in ${language}. 
-          Generate 9 resources (3 videos, 3 articles, 3 research papers) about the given topic.
+          content: `You are a resourceful AI that provides JSON arrays of educational resources. You must ALWAYS respond with a JSON array, nothing else.
+          Generate exactly 9 resources (3 videos, 3 articles, 3 research papers) about: ${topic}
           
-          IMPORTANT:
-          1. For videos: Only use YouTube, Coursera, or edX links
-          2. For articles: Use Medium, Dev.to, Wikipedia, or academic platform links
-          3. For research: Use arXiv, ResearchGate, or academic journals
-          4. All descriptions must be in ${language}
-          5. Use REAL, EXISTING URLs - do not generate fake ones
-          6. Make sure resources are specific and relevant to ${topic}
-          
-          Provide your response in this exact JSON format:
-          [
-            {"type": "video", "title": "title1", "url": "url1", "description": "desc1"},
-            ...
-          ]`
+          Rules:
+          1. Videos: Only YouTube, Coursera, or edX links
+          2. Articles: Medium, Dev.to, Wikipedia, or academic platform links
+          3. Research: arXiv, ResearchGate, or academic journal links
+          4. Descriptions must be in ${language}
+          5. Only use REAL, EXISTING URLs
+          6. Resources must be relevant to: ${topic}
+          7. IMPORTANT: Return ONLY the JSON array, no other text or explanation`
         },
         {
           role: 'user',
-          content: `Generate verified educational resources about: ${topic}`
+          content: `Return a JSON array of 9 educational resources for: ${topic}`
         }
       ],
       temperature: 0.2,
@@ -99,10 +99,13 @@ async function generateResources(topic: string, language: string = 'english'): P
 
   let resources: Resource[];
   try {
-    const content = cleanLLMResponse(data.choices[0].message.content);
-    resources = JSON.parse(content);
+    // Extract JSON array from response content
+    const jsonContent = extractJSONFromResponse(data.choices[0].message.content);
+    console.log('Extracted JSON content:', jsonContent);
+    resources = JSON.parse(jsonContent);
   } catch (error) {
     console.error('Failed to parse Perplexity response:', error);
+    console.error('Raw response:', data.choices[0].message.content);
     throw new Error('Failed to parse generated resources');
   }
 
