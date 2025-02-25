@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -19,6 +20,7 @@ function sanitizeJSON(content: string): string {
   // Step 1: Find JSON array pattern
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
+    console.error('No JSON array found in response:', content);
     throw new Error('No JSON array found in response');
   }
 
@@ -28,14 +30,12 @@ function sanitizeJSON(content: string): string {
   // Step 3: Remove any markdown code block syntax
   jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
   
-  // Step 4: Fix all types of quotes in property names and values
+  // Step 4: Convert all properties and values to use proper quotes
   jsonStr = jsonStr
-    // First, standardize all quotes to single quotes
-    .replace(/[\u2018\u2019\u201C\u201D"]/g, "'")
-    // Then, ensure property names use double quotes (matches 'property': or 'property' :)
-    .replace(/'([^']+)'(\s*:)/g, '"$1"$2')
-    // Keep string values in single quotes
-    .replace(/:\s*'([^']*?)'/g, ': "$1"')
+    // First, standardize all quotes to double quotes
+    .replace(/[\u2018\u2019\u201C\u201D']/g, '"')
+    // Then, ensure property names are correctly quoted
+    .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
     .replace(/\\/g, '\\\\') // Escape backslashes
     .trim();
 
@@ -75,7 +75,7 @@ async function generateResources(topic: string, language: string = 'english'): P
       messages: [
         {
           role: 'system',
-          content: `You are an AI that only outputs valid JSON arrays containing educational resources.
+          content: `You are an AI that generates educational resources in JSON format.
           Generate exactly 9 resources (3 videos, 3 articles, 3 research papers).
           
           Rules:
@@ -86,7 +86,7 @@ async function generateResources(topic: string, language: string = 'english'): P
           5. URLs must be real and start with http:// or https://
           6. Resources must be relevant to: ${topic}
           
-          IMPORTANT: Your ENTIRE response must be ONLY a JSON array with double quotes for property names:
+          Return ONLY a JSON array with NO additional text or formatting:
           [{"type": "video","title": "Example","url": "https://...","description": "Text"}]`
         },
         {
@@ -110,38 +110,35 @@ async function generateResources(topic: string, language: string = 'english'): P
   const data = await response.json();
   
   if (!data.choices?.[0]?.message?.content) {
+    console.error('Invalid response format from Perplexity:', data);
     throw new Error('Invalid response format from Perplexity');
   }
 
-  console.log('Raw Perplexity response:', data.choices[0].message.content);
-
-  let resources: Resource[];
   try {
     const sanitizedJSON = sanitizeJSON(data.choices[0].message.content);
-    console.log('Sanitized JSON:', sanitizedJSON);
+    console.log('Attempting to parse JSON:', sanitizedJSON);
     
-    resources = JSON.parse(sanitizedJSON);
+    const resources = JSON.parse(sanitizedJSON);
     
     if (!Array.isArray(resources)) {
       console.error('Parsed result is not an array:', resources);
       throw new Error('Generated content is not a valid array');
     }
+
+    // Validate each resource
+    const validatedResources = resources.filter(isValidResource);
+    
+    if (validatedResources.length < 3) {
+      console.error('Not enough valid resources:', validatedResources);
+      throw new Error('Not enough valid resources generated');
+    }
+
+    console.log(`Successfully generated ${validatedResources.length} resources for topic: ${topic}`);
+    return validatedResources;
   } catch (error) {
-    console.error('JSON parsing error:', error);
-    console.error('Attempted to parse:', data.choices[0].message.content);
-    throw new Error(`Failed to parse resources: ${error.message}`);
+    console.error(`Error processing resources for topic ${topic}:`, error);
+    throw error;
   }
-
-  // Validate each resource
-  const validatedResources = resources.filter(isValidResource);
-  
-  if (validatedResources.length < 3) {
-    console.error('Not enough valid resources:', validatedResources);
-    throw new Error('Not enough valid resources generated');
-  }
-
-  console.log(`Successfully generated ${validatedResources.length} resources`);
-  return validatedResources;
 }
 
 serve(async (req) => {
@@ -152,11 +149,7 @@ serve(async (req) => {
   try {
     const { lectureContent, aiConfig, segmentTitles } = await req.json();
     
-    console.log('Processing request:', {
-      contentLength: lectureContent?.length || 0,
-      aiConfig,
-      segmentCount: segmentTitles?.length,
-    });
+    console.log('Processing request with segments:', segmentTitles);
 
     if (!lectureContent) {
       throw new Error('Missing lecture content');
@@ -167,20 +160,28 @@ serve(async (req) => {
 
     const language = aiConfig?.content_language || 'english';
     
-    const resourcePromises = segmentTitles.map(async (title) => {
-      try {
-        const resources = await generateResources(title, language);
-        return {
-          concept: title,
-          resources: resources
-        };
-      } catch (error) {
-        console.error(`Error generating resources for segment "${title}":`, error);
-        throw error;
-      }
-    });
+    // Process each segment with error tracking
+    const results = await Promise.allSettled(
+      segmentTitles.map(title => 
+        generateResources(title, language)
+        .then(resources => ({ concept: title, resources }))
+      )
+    );
     
-    const allResources = await Promise.all(resourcePromises);
+    // Check for any failures
+    const failures = results.filter(result => result.status === 'rejected');
+    if (failures.length > 0) {
+      console.error('Some segments failed:', failures);
+      throw new Error(`Failed to generate resources for ${failures.length} segments`);
+    }
+
+    // Extract successful results
+    const allResources = results
+      .filter((result): result is PromiseFulfilledResult<{concept: string, resources: Resource[]}> => 
+        result.status === 'fulfilled'
+      )
+      .map(result => result.value);
+
     console.log('Successfully generated all resources');
 
     return new Response(JSON.stringify(allResources), {
