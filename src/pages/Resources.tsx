@@ -1,16 +1,15 @@
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Youtube, FileText, GraduationCap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
 import { useSegmentContent } from "@/hooks/useSegmentContent";
 import { toast } from "@/components/ui/use-toast";
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Resource {
   type: 'video' | 'article' | 'research';
@@ -20,51 +19,17 @@ interface Resource {
 }
 
 const Resources = () => {
-  const { courseId, lectureId, segmentId } = useParams();
+  const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
 
-  console.log('Resources page params:', { courseId, lectureId, segmentId });
+  console.log('Resources page params:', { courseId, lectureId });
 
-  // Parse the numeric values from URL params and ensure they are numbers
+  // Parse the lecture ID from URL params
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
-  const sequenceNumber = segmentId ? parseInt(segmentId) : null;
-
-  console.log('Parsed numeric params:', { numericLectureId, sequenceNumber });
-
-  // If we don't have a segment ID, fetch the first available segment
-  useEffect(() => {
-    if (numericLectureId && !sequenceNumber) {
-      const fetchFirstSegment = async () => {
-        const { data: firstSegment, error } = await supabase
-          .from('lecture_segments')
-          .select('sequence_number')
-          .eq('lecture_id', numericLectureId)
-          .order('sequence_number', { ascending: true })
-          .limit(1)
-          .single();
-
-        if (error) {
-          console.error('Error fetching first segment:', error);
-          toast({
-            title: "Error fetching segments",
-            description: "Please try again later",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (firstSegment) {
-          navigate(`/course/${courseId}/lecture/${lectureId}/segment/${firstSegment.sequence_number}/resources`);
-        }
-      };
-
-      fetchFirstSegment();
-    }
-  }, [numericLectureId, sequenceNumber, courseId, lectureId, navigate]);
 
   const { data: segmentContent, isLoading, error } = useSegmentContent(
     numericLectureId,
-    sequenceNumber
+    1 // We always use segment 1 as default since segments are just for LLM guidance
   );
 
   console.log('Segment content result:', { data: segmentContent, isLoading, error });
@@ -112,7 +77,7 @@ const Resources = () => {
               <Card className="bg-white/10 backdrop-blur-md border-white/20">
                 <CardContent className="p-6">
                   <p className="text-center text-black/80">
-                    Generating resources for this segment...
+                    Generating resources for this lecture...
                   </p>
                 </CardContent>
               </Card>
@@ -209,4 +174,3 @@ const Resources = () => {
 };
 
 export default Resources;
-
