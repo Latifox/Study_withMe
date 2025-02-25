@@ -17,7 +17,6 @@ interface Resource {
 }
 
 function extractJSONFromString(str: string): string {
-  // Find the first '[' and last ']' to extract the JSON array
   const start = str.indexOf('[');
   const end = str.lastIndexOf(']') + 1;
   
@@ -26,17 +25,13 @@ function extractJSONFromString(str: string): string {
     throw new Error('No valid JSON array found in response');
   }
   
-  // Extract the potential JSON string
   let jsonString = str.slice(start, end);
-  
-  // Remove any markdown code block markers
-  jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '');
-  
-  // Clean up common JSON formatting issues
   jsonString = jsonString
-    .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-    .replace(/\n/g, '') // Remove newlines
-    .replace(/\r/g, '') // Remove carriage returns
+    .replace(/```json/g, '')
+    .replace(/```/g, '')
+    .replace(/,(\s*[}\]])/g, '$1')
+    .replace(/\n/g, '')
+    .replace(/\r/g, '')
     .trim();
     
   return jsonString;
@@ -47,7 +42,6 @@ function isValidResource(resource: any): resource is Resource {
   
   if (!resource || typeof resource !== 'object') return false;
   
-  // Basic structure validation
   const hasValidStructure = 
     validTypes.includes(resource.type) &&
     typeof resource.title === 'string' &&
@@ -56,13 +50,39 @@ function isValidResource(resource: any): resource is Resource {
 
   if (!hasValidStructure) return false;
 
-  // URL validation
   try {
     new URL(resource.url);
     return true;
   } catch {
     return false;
   }
+}
+
+function enforceResourceDistribution(resources: Resource[]): Resource[] {
+  const groupedResources: Record<string, Resource[]> = {
+    video: [],
+    article: [],
+    research: []
+  };
+
+  // Group valid resources by type
+  resources.forEach(resource => {
+    if (isValidResource(resource)) {
+      groupedResources[resource.type].push(resource);
+    }
+  });
+
+  // Take exactly 3 resources of each type, or throw if we don't have enough
+  const finalResources: Resource[] = [];
+  for (const type of ['video', 'article', 'research'] as const) {
+    if (groupedResources[type].length < 3) {
+      console.error(`Not enough ${type} resources: ${groupedResources[type].length}`);
+      throw new Error(`Insufficient ${type} resources generated`);
+    }
+    finalResources.push(...groupedResources[type].slice(0, 3));
+  }
+
+  return finalResources;
 }
 
 serve(async (req) => {
@@ -79,13 +99,13 @@ serve(async (req) => {
       throw new Error('Perplexity API key not configured');
     }
 
-    const systemPrompt = `You are an educational resource curator who returns ONLY a JSON array containing exactly 9 resources about "${topic}" in ${language}:
+    const systemPrompt = `You are an educational resource curator who returns ONLY a JSON array containing exactly 9 educational resources about "${topic}" in ${language}:
 - Exactly 3 video resources from YouTube, Coursera, or edX
 - Exactly 3 article resources from educational websites or blogs
 - Exactly 3 research papers from academic repositories
 
-STRICT FORMAT REQUIREMENTS:
-1. Return ONLY a JSON array with exactly 9 items
+STRICT REQUIREMENTS:
+1. Return ONLY a JSON array with EXACTLY 9 items
 2. Each item must follow this exact format:
 {
   "type": "video"|"article"|"research",
@@ -93,93 +113,77 @@ STRICT FORMAT REQUIREMENTS:
   "url": "https://valid-url.com",
   "description": "Brief description"
 }
-3. ONLY include real, working URLs
+3. ALL URLs must be real and valid
 4. ALL content must be in ${language}
 5. Each URL must be unique
 6. NO explanatory text, ONLY the JSON array`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Return educational resources about: ${topic}` }
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-        top_p: 0.9,
-        frequency_penalty: 1,
-        presence_penalty: 0
-      }),
-    });
+    const maxRetries = 3;
+    let resources: Resource[] = [];
 
-    if (!response.ok) {
-      console.error(`Perplexity API error: ${response.status} ${response.statusText}`);
-      throw new Error(`Perplexity API error: ${response.status}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Attempt ${attempt} to generate valid resources`);
+        
+        const response = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${perplexityApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-sonar-small-128k-online',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Return exactly 9 educational resources about: ${topic}` }
+            ],
+            temperature: 0.1,
+            max_tokens: 2000,
+            top_p: 0.9,
+            frequency_penalty: 1,
+            presence_penalty: 0
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`Perplexity API error: ${response.status} ${response.statusText}`);
+          throw new Error(`Perplexity API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.choices?.[0]?.message?.content) {
+          console.error('Invalid response format from Perplexity:', data);
+          throw new Error('Invalid response format from Perplexity');
+        }
+
+        console.log('Raw response from Perplexity:', data.choices[0].message.content);
+
+        const jsonString = extractJSONFromString(data.choices[0].message.content);
+        const parsedResources = JSON.parse(jsonString);
+        
+        if (!Array.isArray(parsedResources)) {
+          console.error('Parsed result is not an array:', parsedResources);
+          throw new Error('Generated content is not a valid array');
+        }
+
+        // Try to enforce resource distribution
+        resources = enforceResourceDistribution(parsedResources);
+        console.log(`Successfully generated ${resources.length} resources with correct distribution`);
+        break;
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error);
+        if (attempt === maxRetries) {
+          throw new Error(`Failed to generate valid resources after ${maxRetries} attempts: ${error.message}`);
+        }
+      }
     }
 
-    const data = await response.json();
-    
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid response format from Perplexity:', data);
-      throw new Error('Invalid response format from Perplexity');
-    }
+    return new Response(
+      JSON.stringify([{ concept: topic, resources: resources }]),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
-    console.log('Raw response from Perplexity:', data.choices[0].message.content);
-
-    try {
-      const jsonString = extractJSONFromString(data.choices[0].message.content);
-      console.log('Extracted JSON string:', jsonString);
-      
-      const resources = JSON.parse(jsonString);
-      
-      if (!Array.isArray(resources)) {
-        console.error('Parsed result is not an array:', resources);
-        throw new Error('Generated content is not a valid array');
-      }
-
-      // Validate each resource
-      const validatedResources = resources.filter(isValidResource);
-      
-      if (validatedResources.length !== 9) {
-        console.error(`Invalid number of resources generated: ${validatedResources.length}`);
-        throw new Error('Incorrect number of resources generated');
-      }
-
-      // Verify we have exactly 3 of each type
-      const counts = validatedResources.reduce((acc: Record<string, number>, resource) => {
-        acc[resource.type] = (acc[resource.type] || 0) + 1;
-        return acc;
-      }, {});
-
-      if (counts.video !== 3 || counts.article !== 3 || counts.research !== 3) {
-        console.error('Invalid distribution of resource types:', counts);
-        throw new Error('Incorrect distribution of resource types');
-      }
-
-      // Verify all URLs are unique
-      const urls = new Set(validatedResources.map(r => r.url));
-      if (urls.size !== validatedResources.length) {
-        throw new Error('Duplicate URLs found in resources');
-      }
-
-      console.log(`Successfully generated ${validatedResources.length} resources for topic: ${topic}`);
-      
-      return new Response(
-        JSON.stringify([{ concept: topic, resources: validatedResources }]),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-
-    } catch (error) {
-      console.error('Error processing Perplexity response:', error);
-      console.error('Raw content that caused the error:', data.choices[0].message.content);
-      throw new Error(`Failed to process Perplexity response: ${error.message}`);
-    }
   } catch (error) {
     console.error('Error in generate-resources function:', error);
     return new Response(
