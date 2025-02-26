@@ -7,8 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-console.log('Generate resources function loaded');
-
 serve(async (req) => {
   console.log('Generate resources function called');
 
@@ -136,3 +134,4 @@ Brief description`
     );
   }
 });
+
