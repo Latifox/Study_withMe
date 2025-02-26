@@ -33,8 +33,13 @@ serve(async (req) => {
     const { topic, description } = await req.json();
     console.log('Received request for topic:', topic);
 
-    const prompt = `Generate a curated list of 6-8 high-quality educational resources for learning about "${topic}". 
-    Context about the topic: ${description}
+    const prompt = `You are an educational resource gatherer specialized in educational and academic resources. Gather and give me EXACTLY 3 high-quality resources about the topic "${topic}". Context about the topic: ${description}. YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST. YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.
+
+    You should look for more than 6 resources, and than atribute to each resource a score that would reflect the chance that the resource exists and is actually related to the topic. You than give the user only the 3 resources that have the highest score (the resources that you are certin that they exist and are related to the topic). 
+    
+    When you want to provide a Youtube resource, insted of providing the link to the resource, you should provide a link to the youtube search query. for example for the youtube resource titled Breaking down Distributed Energy Resources, with Hydro Ottawa's Trevor Freeman from channel named Ottawa Hydro , you will provide the link: https://www.youtube.com/results?search_query=Breaking+down+Distributed+Energy+Resources+%2C+with+Hydro+Ottawa%E2%80%99s+Trevor+Freeman+channel%3AHydro+Ottawa which is the equivalen of the search for Breaking down Distributed Energy Resources , with Hydro Ottawa's Trevor Freeman channel:Hydro Ottawa.
+    
+    Also, a good and easily accesible resource would be content from Khan Academy, so use it when needed.
     
     Return the response in this exact JSON format:
     {
@@ -46,9 +51,7 @@ serve(async (req) => {
           "resource_type": "video|article|tutorial|book|course"
         }
       ]
-    }
-    
-    Include a mix of different resource types. Focus on reputable sources like educational platforms, respected publications, and well-known experts.`;
+    }`;
 
     console.log('Sending request to Perplexity API');
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -69,6 +72,7 @@ serve(async (req) => {
             content: prompt
           }
         ],
+        temperature: 0.1
       }),
     });
 
