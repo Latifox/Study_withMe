@@ -38,13 +38,19 @@ export const StoryContainer = ({
   onCorrectAnswer,
   onWrongAnswer
 }: StoryContainerProps) => {
-  const { courseId, lectureId } = useParams();
-  const currentSegmentData = storyContent.segments[currentSegment];
+  const { nodeId } = useParams();
+  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) - 1 : 0; // Convert segment_1 to index 0
+  const currentSegmentData = storyContent.segments[segmentNumber];
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
-  const [currentScore, setCurrentScore] = useState(segmentScores[String(currentSegment)] || 0);
+  const [currentScore, setCurrentScore] = useState(segmentScores[String(segmentNumber)] || 0);
+
+  console.log('Current URL nodeId:', nodeId);
+  console.log('Parsed segment number:', segmentNumber);
+  console.log('Story content segments:', storyContent.segments);
+  console.log('Current segment data:', currentSegmentData);
 
   // If we don't have segment content yet, show loading state
   if (!currentSegmentData) {
@@ -67,15 +73,15 @@ export const StoryContainer = ({
   return (
     <ContentDisplay
       currentSegmentData={currentSegmentData}
-      currentSegment={currentSegment}
+      currentSegment={segmentNumber}
       currentStep={currentStep}
       totalSegments={storyContent.segments.length}
       currentScore={currentScore}
       isSlide={isSlide}
       slideIndex={slideIndex}
       questionIndex={questionIndex}
-      lectureId={lectureId}
-      courseId={courseId}
+      lectureId={String(currentSegment)}
+      courseId={String(currentSegment)}
       onContinue={onContinue}
       onCorrectAnswer={() => {
         setShowCompletionScreen(true);
