@@ -28,9 +28,8 @@ interface ActivityHeatmapProps {
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     const yearData = [];
-    const startDate = startOfYear(new Date(2025, 0, 1)); // January 1st, 2025
+    const startDate = startOfYear(new Date(2025, 0, 1));
     
-    // Generate 52 weeks * 7 days grid
     for (let week = 0; week < 52; week++) {
       for (let day = 0; day < 7; day++) {
         const currentDate = addDays(startDate, week * 7 + day);
@@ -44,7 +43,6 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       }
     }
 
-    // Map actual data onto the grid
     data.forEach((item) => {
       const itemDate = new Date(item.date);
       const daysSinceStart = Math.floor((itemDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -60,29 +58,26 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     return yearData;
   };
 
-  const allScores = data.map(d => d.score);
-  const minScore = Math.min(...allScores, 0);
-  const maxScore = Math.max(...allScores, 0);
-
-  const normalizeScore = (score: number) => {
-    if (maxScore === minScore) return 0;
-    return (score - minScore) / (maxScore - minScore);
-  };
-
   const chartData: ChartData<'scatter'> = {
     datasets: [
       {
         data: transformDataForChart(),
         backgroundColor: (context) => {
-          if (!context.raw) return 'rgba(0, 0, 0, 0)';
+          if (!context.raw) return 'rgba(255, 255, 255, 0.05)';
           const score = (context.raw as any).score || 0;
-          return score === 0 
-            ? 'rgba(0, 0, 0, 0)' 
-            : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
+          
+          if (score === 0) return 'rgba(255, 255, 255, 0.05)';
+          if (score <= 5) return 'rgba(168, 85, 247, 0.2)';
+          if (score <= 10) return 'rgba(168, 85, 247, 0.4)';
+          if (score <= 15) return 'rgba(168, 85, 247, 0.6)';
+          if (score <= 20) return 'rgba(168, 85, 247, 0.8)';
+          return 'rgba(168, 85, 247, 1)';
         },
-        borderColor: 'transparent',
-        pointRadius: 8,
-        pointStyle: 'rect',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        pointStyle: 'rect' as const,
+        radius: 8,
+        hoverBackgroundColor: 'rgba(168, 85, 247, 0.8)',
       },
     ],
   };
@@ -179,10 +174,11 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   };
 
   return (
-    <div className="w-full h-[400px] p-4 bg-background rounded-lg">
+    <div className="w-full h-[400px] p-4 rounded-lg bg-background/5">
       <Scatter data={chartData} options={options} />
     </div>
   );
 };
 
 export default ActivityHeatmap;
+
