@@ -116,7 +116,7 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
           stepSize: 1,
           padding: 10,
           callback: (value: number) => {
-            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue']; // Reordered to match your sketch
+            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue']; // Reordered to match the sketch
             return days[value];
           },
           color: 'rgba(255, 255, 255, 0.4)',
