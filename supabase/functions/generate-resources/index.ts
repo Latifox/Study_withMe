@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,49 +19,43 @@ serve(async (req) => {
     const { topic, description = '', language = 'english' } = await req.json();
     console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
 
-    if (!googleApiKey) {
-      console.error('Missing GOOGLE_API_KEY environment variable');
-      throw new Error('Google API credentials not configured');
+    if (!perplexityApiKey) {
+      console.error('Missing PERPLEXITY_API_KEY environment variable');
+      throw new Error('Perplexity API credentials not configured');
     }
 
-    console.log('Calling Gemini API with key length:', googleApiKey.length);
+    console.log('Calling Perplexity API...');
 
-    // Call Gemini API
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${googleApiKey}`
+    const messages = [
+      {
+        role: "system",
+        content: "You are an educational resource curator specializing in academic content."
       },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}. 
+      {
+        role: "user",
+        content: `Generate EXACTLY 6 high-quality educational resources about the topic "${topic}".
 
 Context about the topic:
 ${description}
 
 STRICT REQUIREMENTS:
-
 1. Resource Distribution (EXACTLY):
-   - 2 video lectures/tutorials from reputable educational sources
-   - 2 academic articles from educational institutions or reputable organizations
+   - 2 video lectures/tutorials from Youtube
+   - 2 news articles
    - 2 research papers from Google Scholar
 
 2. Resource Quality Requirements:
    Videos:
-   - Only from: youtube.com, coursera.org, edx.org, or mit.edu
+   - Only from youtube.com
    - MUST be directly educational and relevant to "${topic}"
    - NO entertainment content
    
    Articles:
-   - Only from: .edu, .org, or established educational websites
-   - MUST be academic or professional in nature
+   - Must be from reputable news sources
    - NO opinion pieces or blog posts
    
    Research Papers:
-   - Only from: scholar.google.com
-   - Prefer open-access papers
+   - Only from scholar.google.com
    - Must be directly relevant to "${topic}"
 
 3. Format Requirements:
@@ -90,33 +84,39 @@ STRICT REQUIREMENTS:
 
 2. [Paper Title](paper_url)
    Description: Clear explanation of relevance`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 1,
-          topP: 1,
-          maxOutputTokens: 2048,
-        },
+      }
+    ];
+
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${perplexityApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: messages,
+        temperature: 0.2,
+        max_tokens: 2048
       })
     });
 
-    if (!geminiResponse.ok) {
-      console.error(`Gemini API error status: ${geminiResponse.status}`);
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API error details:', errorText);
-      throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
+    if (!response.ok) {
+      console.error(`Perplexity API error status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Perplexity API error details:', errorText);
+      throw new Error(`Perplexity API error: ${response.status} - ${errorText}`);
     }
 
-    const geminiData = await geminiResponse.json();
-    console.log('Gemini API response structure:', JSON.stringify(geminiData, null, 2));
+    const data = await response.json();
+    console.log('Perplexity API response structure:', JSON.stringify(data, null, 2));
     
-    if (!geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Unexpected Gemini API response structure:', geminiData);
-      throw new Error('Invalid response format from Gemini API');
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Unexpected Perplexity API response structure:', data);
+      throw new Error('Invalid response format from Perplexity API');
     }
     
-    const markdown = geminiData.candidates[0].content.parts[0].text;
+    const markdown = data.choices[0].message.content;
     console.log('Generated markdown content:', markdown);
     
     return new Response(
@@ -142,3 +142,4 @@ STRICT REQUIREMENTS:
     );
   }
 });
+
