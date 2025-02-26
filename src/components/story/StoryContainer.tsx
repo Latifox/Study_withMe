@@ -5,7 +5,6 @@ import { useParams } from "react-router-dom";
 import StoryCompletionScreen from "./StoryCompletionScreen";
 import ContentDisplay from "./content/ContentDisplay";
 
-// Update the type to match the exact database structure
 interface StoryContainerProps {
   storyContent: {
     segments: Array<{
@@ -47,10 +46,9 @@ export const StoryContainer = ({
   console.log('Current URL nodeId:', nodeId);
   console.log('Sequence number:', sequenceNumber);
   console.log('Story content:', storyContent);
-  console.log('Story content segments length:', storyContent?.segments?.length);
+  console.log('Current step:', currentStep);
   
-  // Add null check for storyContent and its segments
-  if (!storyContent || !storyContent.segments) {
+  if (!storyContent || !storyContent.segments || !storyContent.segments.length) {
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
@@ -63,21 +61,18 @@ export const StoryContainer = ({
     );
   }
 
-  // Find the segment data that matches the sequence number (1-based)
   const currentSegmentData = storyContent.segments[sequenceNumber - 1];
-  const isSlide = currentStep < 2;
-  const slideIndex = currentStep;
-  const questionIndex = currentStep - 2;
-
+  
   console.log('Current segment data:', currentSegmentData);
+  console.log('Segments array length:', storyContent.segments.length);
+  console.log('Accessing index:', sequenceNumber - 1);
 
   if (!currentSegmentData) {
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          <p className="ml-3 text-sm text-muted-foreground">
-            Loading segment content...
+          <p className="text-sm text-muted-foreground">
+            No segment data found for sequence number {sequenceNumber}
           </p>
         </div>
       </Card>
@@ -95,9 +90,9 @@ export const StoryContainer = ({
       currentStep={currentStep}
       totalSegments={storyContent.segments.length}
       currentScore={currentScore}
-      isSlide={isSlide}
-      slideIndex={slideIndex}
-      questionIndex={questionIndex}
+      isSlide={currentStep < 2}
+      slideIndex={currentStep}
+      questionIndex={currentStep - 2}
       lectureId={String(currentSegment)}
       courseId={String(currentSegment)}
       onContinue={onContinue}
