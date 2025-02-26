@@ -7,11 +7,12 @@ import { ArrowLeft, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
-import { useSegmentContent } from "@/hooks/useSegmentContent";
 import { useGenerateResources } from "@/hooks/useGenerateResources";
 import { toast } from "@/components/ui/use-toast";
 import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Resources = () => {
   const { courseId, lectureId } = useParams();
@@ -23,11 +24,33 @@ const Resources = () => {
   // Parse the lecture ID from URL params
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
-  const { data: segmentContent, isLoading: segmentsLoading, error: segmentsError } = useSegmentContent(numericLectureId);
+  // Fetch only the basic segment information we need
+  const { data: segments, isLoading: segmentsLoading, error: segmentsError } = useQuery({
+    queryKey: ['segments-basic', numericLectureId],
+    queryFn: async () => {
+      if (!numericLectureId) {
+        throw new Error('Invalid lecture ID');
+      }
+
+      const { data, error } = await supabase
+        .from('lecture_segments')
+        .select('id, title, segment_description, lecture_id')
+        .eq('lecture_id', numericLectureId)
+        .order('sequence_number');
+
+      if (error) {
+        console.error('Error fetching segments:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    enabled: !!numericLectureId
+  });
 
   // Get the selected segment
-  const selectedSegment = selectedSegmentId 
-    ? segmentContent?.segments?.find(s => s.id === selectedSegmentId)
+  const selectedSegment = selectedSegmentId && segments 
+    ? segments.find(s => s.id === selectedSegmentId)
     : null;
 
   // Get resources for the selected segment
@@ -37,9 +60,9 @@ const Resources = () => {
   console.log('Resources content:', resourcesContent);
 
   if (segmentsError) {
-    console.error('Error loading resources:', segmentsError);
+    console.error('Error loading segments:', segmentsError);
     toast({
-      title: "Error loading resources",
+      title: "Error loading segments",
       description: "Please try again later",
       variant: "destructive",
     });
@@ -67,11 +90,11 @@ const Resources = () => {
 
             {segmentsLoading ? (
               <ResourcesLoading />
-            ) : !segmentContent?.segments ? (
+            ) : !segments ? (
               <Card className="bg-white/10 backdrop-blur-md border-white/20">
                 <CardContent className="p-6">
                   <p className="text-center text-black/80">
-                    Loading segment content...
+                    No segments found
                   </p>
                 </CardContent>
               </Card>
@@ -79,7 +102,7 @@ const Resources = () => {
               <div className="grid grid-cols-1 md:grid-cols-[350px,1fr] gap-8">
                 {/* Left column - Segment cards */}
                 <div className="space-y-4">
-                  {segmentContent.segments.map((segment) => (
+                  {segments.map((segment) => (
                     <Card 
                       key={segment.id}
                       className={`transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20 hover:shadow-xl hover:bg-white/20 cursor-pointer ${
