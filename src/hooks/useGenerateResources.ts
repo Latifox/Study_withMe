@@ -93,7 +93,7 @@ export const useGenerateResources = (segment: Segment | null) => {
 
         if (insertError) {
           console.error("Error storing resources:", insertError);
-          // Don't throw here - we still want to return the markdown even if storage fails
+          // Even if storage fails, return the markdown
         }
 
         return generatedData.markdown;
@@ -123,7 +123,7 @@ function formatResourcesToMarkdown(resources: any[]): string {
   let markdown = "## Additional Learning Resources\n\n";
   
   Object.entries(sections).forEach(([type, items]) => {
-    markdown += `### ${type.charAt(0).toUpperCase() + type.slice(1)}\n\n`;
+    markdown += `### ${type.charAt(0).toUpperCase() + type.slice(1)}s\n\n`;
     items.forEach(item => {
       markdown += `- [${item.title}](${item.url})\n  ${item.description}\n\n`;
     });
