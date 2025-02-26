@@ -10,18 +10,24 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Generate resources function started');
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Starting generate-resources function');
-    const { topic, description } = await req.json();
-    console.log('Received request with:', { topic, description });
-
     if (!perplexityApiKey) {
+      console.error('PERPLEXITY_API_KEY is not set');
       throw new Error('PERPLEXITY_API_KEY is not set');
+    }
+
+    const { topic, description, lecture_id } = await req.json();
+    console.log('Received request:', { topic, description, lecture_id });
+
+    if (!topic || !description) {
+      throw new Error('Missing required parameters: topic or description');
     }
 
     const prompt = `Generate a set of high-quality educational resources for learning about "${topic}". 
@@ -94,7 +100,7 @@ serve(async (req) => {
       });
     });
 
-    console.log('Generated markdown:', markdown);
+    console.log('Generated markdown structure:', { markdown_length: markdown.length });
 
     return new Response(
       JSON.stringify({
@@ -111,7 +117,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in generate-resources function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.toString()
+      }),
       { 
         status: 500,
         headers: { 
@@ -122,4 +131,3 @@ serve(async (req) => {
     );
   }
 });
-
