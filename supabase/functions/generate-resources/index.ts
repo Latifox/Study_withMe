@@ -25,30 +25,20 @@ serve(async (req) => {
       throw new Error('Google API credentials not configured');
     }
 
-    // First, use Google Search to find relevant resources
-    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(`${topic} ${description} educational resources`)}&num=10`;
-    const searchResponse = await fetch(searchUrl);
-    const searchData = await searchResponse.json();
-
-    if (!searchResponse.ok) {
-      console.error('Google Search API error:', searchData);
-      throw new Error(`Google Search API error: ${searchResponse.status}`);
-    }
-
-    // Prepare search results for Gemini
-    const searchResults = searchData.items?.map((item: any) => ({
-      title: item.title,
-      link: item.link,
-      snippet: item.snippet
-    })) || [];
-
-    const prompt = `You are an educational resource curator specializing in academic content. Based on the following search results and requirements, generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}.
+    // Call Gemini API with the search tool configuration
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${googleApiKey}`
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}.
 
 Context about the topic:
 ${description}
-
-Search Results:
-${JSON.stringify(searchResults, null, 2)}
 
 STRICT REQUIREMENTS:
 
@@ -103,19 +93,7 @@ Please format your response exactly as shown below:
    Description: Clear explanation of how this paper specifically addresses ${topic}
 
 2. [Complete Paper Title](paper_url)
-   Description: Clear explanation of how this paper specifically addresses ${topic}`;
-
-    // Call Gemini API
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${googleApiKey}`
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
+   Description: Clear explanation of how this paper specifically addresses ${topic}`
           }]
         }],
         tools: [{
@@ -151,7 +129,17 @@ Please format your response exactly as shown below:
     }
 
     const geminiData = await geminiResponse.json();
+    console.log('Gemini response:', JSON.stringify(geminiData, null, 2));
+    
+    // Extract the generated content
     const markdown = geminiData.candidates[0].content.parts[0].text;
+    
+    // Log the grounding metadata if available
+    if (geminiData.candidates[0].groundingMetadata?.searchEntryPoint?.renderedContent) {
+      console.log('Search results used:', 
+        geminiData.candidates[0].groundingMetadata.searchEntryPoint.renderedContent
+      );
+    }
     
     return new Response(
       JSON.stringify({ markdown }), 
