@@ -1,7 +1,22 @@
 
-import React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import React, { useEffect } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Tooltip,
+  ChartData,
+} from 'chart.js';
+import { Scatter } from 'react-chartjs-2';
 import { format } from "date-fns";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Tooltip,
+);
 
 interface ActivityHeatmapProps {
   data: Array<{
@@ -13,33 +28,15 @@ interface ActivityHeatmapProps {
   getHeatmapColor: (score: number) => string;
 }
 
-const ActivityHeatmap = ({ data, weekDays, months }: ActivityHeatmapProps) => {
-  // Transform data into the format needed for the BarChart
+const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
+  // Transform data into the format needed for Chart.js
   const transformDataForChart = () => {
-    const weekMap = new Map();
-    
-    data.forEach((day) => {
-      const weekNumber = format(day.date, 'w');
-      if (!weekMap.has(weekNumber)) {
-        weekMap.set(weekNumber, {
-          week: weekNumber,
-          Sun: 0,
-          Mon: 0,
-          Tue: 0,
-          Wed: 0,
-          Thu: 0,
-          Fri: 0,
-          Sat: 0
-        });
-      }
-      const dayName = format(day.date, 'E');
-      weekMap.get(weekNumber)[dayName] = day.score;
-    });
-
-    return Array.from(weekMap.values());
+    return data.map((item) => ({
+      x: format(item.date, 'w'), // Week number as x coordinate
+      y: new Date(item.date).getDay(), // Day of week (0-6) as y coordinate
+      score: item.score,
+    }));
   };
-
-  const chartData = transformDataForChart();
 
   // Calculate min and max scores for normalization
   const allScores = data.map(d => d.score);
@@ -52,57 +49,95 @@ const ActivityHeatmap = ({ data, weekDays, months }: ActivityHeatmapProps) => {
     return (score - minScore) / (maxScore - minScore);
   };
 
-  // Custom tooltip to show the exact score
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-2">
-          <p className="text-white text-sm">Score: {payload[0].value}</p>
-        </div>
-      );
-    }
-    return null;
+  const chartData: ChartData<'scatter'> = {
+    datasets: [
+      {
+        data: transformDataForChart(),
+        backgroundColor: (context) => {
+          if (!context.raw) return 'rgba(255, 255, 255, 0.05)';
+          const score = (context.raw as any).score || 0;
+          return score === 0 
+            ? 'rgba(255, 255, 255, 0.05)' 
+            : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
+        },
+        borderColor: 'transparent',
+        pointRadius: 15,
+        pointHoverRadius: 16,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: 'linear' as const,
+        position: 'bottom' as const,
+        min: 0,
+        max: 53, // Maximum number of weeks in a year
+        grid: {
+          display: true,
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          stepSize: 1,
+          color: 'rgba(255, 255, 255, 0.4)',
+          font: {
+            size: 12,
+          },
+        },
+      },
+      y: {
+        type: 'linear' as const,
+        min: -0.5,
+        max: 6.5,
+        grid: {
+          display: true,
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          stepSize: 1,
+          callback: (value: number) => {
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            return days[value];
+          },
+          color: 'rgba(255, 255, 255, 0.4)',
+          font: {
+            size: 12,
+          },
+        },
+      },
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            return `Score: ${context.raw.score}`;
+          },
+        },
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: {
+          size: 14,
+        },
+        bodyFont: {
+          size: 14,
+        },
+      },
+      legend: {
+        display: false,
+      },
+    },
   };
 
   return (
     <div className="w-full h-[400px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={chartData}
-          margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
-          layout="vertical"
-          barGap={1}
-          barCategoryGap={1}
-        >
-          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-          <XAxis type="number" hide />
-          <YAxis
-            dataKey="week"
-            type="category"
-            tick={{ fill: 'rgba(255, 255, 255, 0.4)', fontSize: 12 }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          {weekDays.map((day) => (
-            <Bar
-              key={day}
-              dataKey={day}
-              fill="url(#colorGradient)"
-              radius={[2, 2, 2, 2]}
-              stackId="stack"
-            >
-              {chartData.map((entry, index) => (
-                <rect
-                  key={`cell-${index}`}
-                  fill={entry[day] === 0 ? 'rgba(255, 255, 255, 0.05)' : `rgba(168, 85, 247, ${0.2 + normalizeScore(entry[day]) * 0.8})`}
-                  className="transition-all duration-300 hover:opacity-80"
-                />
-              ))}
-            </Bar>
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+      <Scatter data={chartData} options={options} />
     </div>
   );
 };
 
 export default ActivityHeatmap;
+
