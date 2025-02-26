@@ -28,15 +28,14 @@ interface ActivityHeatmapProps {
   getHeatmapColor: (score: number) => string;
 }
 
-const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
+const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     return data.map((item) => ({
-      x: parseInt(format(item.date, 'w')), // Week number
+      x: getMonth(new Date(item.date)), // Month (0-11)
       y: new Date(item.date).getDay(), // Day of week (0-6)
-      r: 0, // Set radius to 0 to create squares
+      r: item.score, // Use score for radius (will be normalized in display)
       score: item.score,
-      month: getMonth(new Date(item.date)),
-      date: getDate(item.date), // Get the day of the month (1-31)
+      date: getDate(item.date),
     }));
   };
 
@@ -74,8 +73,8 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
       x: {
         type: 'linear' as const,
         position: 'top' as const,
-        min: 0,
-        max: 53,
+        min: -0.5,
+        max: 11.5,
         grid: {
           display: true,
           color: 'rgba(255, 255, 255, 0.1)',
@@ -89,15 +88,8 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
             size: 12,
           },
           callback: function(value: number) {
-            // Only show month name at the first week of each month
-            const dataPoint = (chartData.datasets[0].data as any[]).find(
-              (d) => d.x === value && d.month !== undefined
-            );
-            if (dataPoint) {
-              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-              return monthNames[dataPoint.month];
-            }
-            return '';
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return monthNames[value];
           },
         },
       },
@@ -116,7 +108,7 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
           stepSize: 1,
           padding: 10,
           callback: (value: number) => {
-            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue']; // Reordered to match the sketch
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             return days[value];
           },
           color: 'rgba(255, 255, 255, 0.4)',
@@ -151,7 +143,6 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
     },
   };
 
-  // Helper function to get the date suffix (st, nd, rd, th)
   const getDateSuffix = (date: number) => {
     if (date > 3 && date < 21) return 'th';
     switch (date % 10) {
