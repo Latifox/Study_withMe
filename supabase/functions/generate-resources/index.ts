@@ -1,67 +1,47 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { corsHeaders } from '../_shared/cors.ts';
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-console.log("Loading generate-resources function...");
+const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
 
-serve(async (req: Request) => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
-    }
+    console.log('Starting generate-resources function');
+    const { topic, description } = await req.json();
+    console.log('Received request with:', { topic, description });
 
-    // Get the request body
-    const requestData = await req.json();
-    console.log('Request data:', requestData);
-
-    const { topic, description = '' } = requestData;
-    
-    if (!topic) {
-      throw new Error('No topic provided');
-    }
-    
-    console.log(`Generating resources for topic: "${topic}" with description: "${description}" in english`);
-
-    const messages = [
-      {
-        role: "system",
-        content: `You are an educational resource curator. Your task is to suggest high-quality learning resources for specific topics. Focus on variety and credibility. Format your response in valid JSON with markdown for display and structured data for storage.
-
-        Guidelines:
-        - Include a mix of resource types (articles, videos, interactive tools, etc.)
-        - Ensure all URLs are valid and from reputable sources
-        - Provide a brief description for each resource
-        - Group resources by type
-        - Maximum 3-4 resources per type
-        - Keep descriptions concise but informative`
-      },
-      {
-        role: "user",
-        content: `Please suggest learning resources for the topic "${topic}". Additional context: ${description}
-
-        Return the response in this format:
-        {
-          "markdown": "formatted markdown for display",
-          "resources": [
-            {
-              "resource_type": "video|article|interactive|tutorial",
-              "title": "resource title",
-              "url": "resource url",
-              "description": "brief description"
-            }
-          ]
-        }`
-      }
-    ];
-
-    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
     if (!perplexityApiKey) {
-      throw new Error('Perplexity API key not configured');
+      throw new Error('PERPLEXITY_API_KEY is not set');
     }
 
-    console.log('Sending request to Perplexity API...');
+    const prompt = `Generate a set of high-quality educational resources for learning about "${topic}". 
+    Context about the topic: ${description}
+    
+    Return the response in this exact JSON format:
+    {
+      "resources": [
+        {
+          "title": "Resource title",
+          "url": "URL to the resource",
+          "description": "Brief description of the resource",
+          "resource_type": "video|article|tutorial|book|course"
+        }
+      ]
+    }
+    
+    Include 2-3 resources of each type that are most relevant. Focus on reputable sources.`;
 
+    console.log('Sending request to Perplexity API');
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -70,39 +50,61 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: 'llama-3.1-sonar-small-128k-online',
-        messages: messages,
-        temperature: 0.1,
-        max_tokens: 2048,
-        return_images: false,
-        stream: false,
-      })
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that suggests high-quality learning resources. Be precise and specific in your recommendations.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 1000
+      }),
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Perplexity API error:', error);
-      throw new Error(`Perplexity API error: ${error}`);
+    console.log('Received response from Perplexity API');
+    const data = await response.json();
+    console.log('Perplexity API response:', data);
+
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from Perplexity API');
     }
 
-    const result = await response.json();
-    console.log('Perplexity API response:', result);
+    // Parse the JSON response from the content
+    const generatedContent = JSON.parse(data.choices[0].message.content);
+    console.log('Parsed generated content:', generatedContent);
 
-    let parsedContent;
-    try {
-      parsedContent = JSON.parse(result.choices[0].message.content);
-      console.log('Parsed content:', parsedContent);
-    } catch (error) {
-      console.error('Error parsing Perplexity response:', error);
-      throw new Error('Invalid response format from Perplexity API');
-    }
+    // Convert resources to markdown format
+    const resourcesByType: { [key: string]: any[] } = {};
+    generatedContent.resources.forEach((resource: any) => {
+      if (!resourcesByType[resource.resource_type]) {
+        resourcesByType[resource.resource_type] = [];
+      }
+      resourcesByType[resource.resource_type].push(resource);
+    });
 
-    // Return the response with CORS headers
+    let markdown = "## Additional Learning Resources\n\n";
+    Object.entries(resourcesByType).forEach(([type, resources]) => {
+      markdown += `### ${type.charAt(0).toUpperCase() + type.slice(1)}s\n\n`;
+      resources.forEach((resource: any) => {
+        markdown += `- [${resource.title}](${resource.url})\n  ${resource.description}\n\n`;
+      });
+    });
+
+    console.log('Generated markdown:', markdown);
+
     return new Response(
-      JSON.stringify(parsedContent),
+      JSON.stringify({
+        resources: generatedContent.resources,
+        markdown: markdown
+      }),
       { 
-        headers: {
+        headers: { 
           ...corsHeaders,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         }
       }
     );
@@ -110,11 +112,11 @@ serve(async (req: Request) => {
     console.error('Error in generate-resources function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
+      { 
         status: 500,
-        headers: {
+        headers: { 
           ...corsHeaders,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         }
       }
     );
