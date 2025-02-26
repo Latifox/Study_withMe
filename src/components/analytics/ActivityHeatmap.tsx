@@ -33,19 +33,36 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     // Start from January 1st, 2025 (a Wednesday)
     const startDate = startOfYear(new Date(2025, 0, 1));
     
-    return data.map((item) => {
+    // Create a data point for every day of the year
+    const yearData = [];
+    for (let month = 0; month < 12; month++) {
+      for (let week = 0; week < 6; week++) {
+        for (let day = 0; day < 7; day++) {
+          yearData.push({
+            x: month + (week * 0.15), // Add small offset for each week
+            y: day,
+            r: 8,
+            score: 0,
+            date: format(new Date(2025, month, day + 1), 'MMM d'),
+          });
+        }
+      }
+    }
+
+    // Overlay actual data points
+    data.forEach((item) => {
       const date = new Date(item.date);
-      // Calculate day position (0-6) starting from Wednesday
+      const month = getMonth(date);
       const dayPosition = (date.getDay() + 4) % 7; // +4 because we want Wed(3) to be 0
+      const week = Math.floor((getDate(date) - 1) / 7);
       
-      return {
-        x: getMonth(date),
-        y: dayPosition,
-        r: 12, // Size for squares
-        score: item.score,
-        date: format(date, 'MMM d'),
-      };
+      const index = (month * 42) + (week * 7) + dayPosition;
+      if (index < yearData.length) {
+        yearData[index].score = item.score;
+      }
     });
+
+    return yearData;
   };
 
   const allScores = data.map(d => d.score);
@@ -69,7 +86,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
             : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
         },
         borderColor: 'transparent',
-        pointRadius: 12,
+        pointRadius: 8,
         pointStyle: 'rect' as const,
       },
     ],
@@ -110,7 +127,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           },
           callback: function(value: number) {
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return monthNames[value];
+            return monthNames[Math.floor(value)];
           },
         },
       },
@@ -173,3 +190,4 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
+
