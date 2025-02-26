@@ -37,7 +37,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         yearData.push({
           x: week,
           y: day,
-          r: 8, // Reduced radius for better spacing
+          r: 8,
           score: 0,
           date: currentDate,
         });
@@ -78,7 +78,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
         pointStyle: 'rect' as const,
-        radius: 8,
+        pointRadius: 8,
         hoverBackgroundColor: 'rgba(168, 85, 247, 0.8)',
       },
     ],
@@ -87,7 +87,9 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: false, // Disable animations for better performance
+    animations: {
+      duration: 0
+    },
     layout: {
       padding: {
         top: 10,
@@ -166,10 +168,9 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      <Scatter options={options} data={chartData} />
+      <Scatter data={chartData} options={options} />
     </div>
   );
 };
 
 export default ActivityHeatmap;
-
