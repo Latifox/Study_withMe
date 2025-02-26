@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useParams } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
 import StoryCompletionScreen from "./StoryCompletionScreen";
 import ContentDisplay from "./content/ContentDisplay";
 
@@ -43,7 +44,18 @@ export const StoryContainer = ({
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
 
-  if (!storyContent?.segments?.length) {
+  console.log('StoryContainer - Current segment:', sequenceNumber);
+  console.log('StoryContainer - Story content:', storyContent);
+  console.log('StoryContainer - Current step:', currentStep);
+
+  // Validate story content structure
+  if (!storyContent || !Array.isArray(storyContent.segments)) {
+    console.error('Invalid story content structure:', storyContent);
+    toast({
+      title: "Error loading content",
+      description: "Unable to load segment content. Please try refreshing the page.",
+      variant: "destructive",
+    });
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
@@ -56,9 +68,17 @@ export const StoryContainer = ({
     );
   }
 
+  // Get current segment data
   const currentSegmentData = storyContent.segments[sequenceNumber - 1];
+  console.log('StoryContainer - Current segment data:', currentSegmentData);
 
   if (!currentSegmentData) {
+    console.error('No segment data found for sequence:', sequenceNumber);
+    toast({
+      title: "Missing segment data",
+      description: "Unable to find content for this segment. Please try again.",
+      variant: "destructive",
+    });
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
@@ -98,3 +118,4 @@ export const StoryContainer = ({
 };
 
 export default StoryContainer;
+
