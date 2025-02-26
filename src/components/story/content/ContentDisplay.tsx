@@ -5,15 +5,17 @@ import QuizHandler from "../quiz/QuizHandler";
 import SegmentProgress from "../SegmentProgress";
 import { MAX_SCORE } from "@/utils/scoreUtils";
 import { AlertCircle } from "lucide-react";
+import { useMemo } from "react";
 
 interface ContentDisplayProps {
   currentSegmentData: {
     id: string;
     title: string;
-    slides: Array<{
+    content: string;
+    slides?: Array<{
       content: string;
     }>;
-    questions: Array<{
+    questions?: Array<{
       type: "multiple_choice" | "true_false";
       question: string;
       options?: string[];
@@ -50,10 +52,19 @@ const ContentDisplay = ({
   onCorrectAnswer,
   onWrongAnswer
 }: ContentDisplayProps) => {
+  // Transform content into slides if direct content is provided
+  const slides = useMemo(() => {
+    if (currentSegmentData.slides) {
+      return currentSegmentData.slides;
+    }
+    if (currentSegmentData.content) {
+      return [{ content: currentSegmentData.content }];
+    }
+    return [];
+  }, [currentSegmentData.slides, currentSegmentData.content]);
+
   // Check if slides exist and have content for the current index
-  const hasValidSlide = isSlide && 
-    Array.isArray(currentSegmentData?.slides) && 
-    currentSegmentData.slides[slideIndex]?.content;
+  const hasValidSlide = isSlide && slides[slideIndex]?.content;
 
   // Check if questions exist for the current index
   const hasValidQuestion = !isSlide && 
@@ -81,7 +92,7 @@ const ContentDisplay = ({
       {isSlide ? (
         hasValidSlide ? (
           <TheorySlide
-            content={currentSegmentData.slides[slideIndex].content}
+            content={slides[slideIndex].content}
             onContinue={onContinue}
           />
         ) : (
@@ -128,3 +139,4 @@ const ContentDisplay = ({
 };
 
 export default ContentDisplay;
+
