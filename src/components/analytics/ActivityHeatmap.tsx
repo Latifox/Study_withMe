@@ -74,10 +74,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       {
         data: transformDataForChart(),
         backgroundColor: (context) => {
-          if (!context.raw) return 'rgba(255, 255, 255, 0.05)';
+          if (!context.raw) return 'rgba(0, 0, 0, 0)';
           const score = (context.raw as any).score || 0;
           return score === 0 
-            ? 'rgba(255, 255, 255, 0.05)' 
+            ? 'rgba(0, 0, 0, 0)' 
             : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
         },
         borderColor: 'transparent',
@@ -186,4 +186,3 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
-
