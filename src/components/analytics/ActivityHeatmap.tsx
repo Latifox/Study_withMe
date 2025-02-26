@@ -31,18 +31,23 @@ interface ActivityHeatmapProps {
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     const yearData = [];
-    
-    // Generate data for each month (12 months)
+    const daysInWeek = 7;
+    const weeksPerMonth = 6;
+
+    // Generate data points for the entire year grid
     for (let month = 0; month < 12; month++) {
-      // For each week in the month (we'll show up to 5 weeks)
-      for (let week = 0; week < 5; week++) {
-        // For each day of the week (Wednesday to Tuesday)
-        for (let day = 0; day < 7; day++) {
-          const xPosition = month + (week * 0.2); // Increase spacing between weeks
+      for (let week = 0; week < weeksPerMonth; week++) {
+        for (let day = 0; day < daysInWeek; day++) {
+          const xPosition = month; // Each month is one unit wide
+          const yPosition = day; // Each day is one unit high
+          
+          // Add small offset for week spacing
+          const xOffset = (week / weeksPerMonth) * 0.8; // Smaller offset for tighter grid
+          
           yearData.push({
-            x: xPosition,
-            y: day,
-            r: 10, // Square size
+            x: xPosition + xOffset,
+            y: yPosition,
+            r: 8, // Size of squares
             score: 0,
             date: format(new Date(2025, month, (week * 7) + day + 1), 'MMM d'),
           });
@@ -50,14 +55,14 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       }
     }
 
-    // Overlay actual data points
+    // Map actual data onto the grid
     data.forEach((item) => {
       const date = new Date(item.date);
       const month = getMonth(date);
       const dayOfWeek = (getDay(date) + 4) % 7; // Adjust to start from Wednesday
       const weekInMonth = Math.floor((getDate(date) - 1) / 7);
       
-      const index = (month * 35) + (weekInMonth * 7) + dayOfWeek;
+      const index = (month * (daysInWeek * weeksPerMonth)) + (weekInMonth * daysInWeek) + dayOfWeek;
       if (index < yearData.length) {
         yearData[index].score = item.score;
       }
@@ -87,8 +92,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
             : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
         },
         borderColor: 'transparent',
-        pointRadius: 10,
-        pointStyle: 'rect' as const,
+        pointRadius: 8,
+        pointStyle: 'rect',
       },
     ],
   };
@@ -110,7 +115,6 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         position: 'top' as const,
         min: -0.2,
         max: 11.8,
-        offset: true,
         grid: {
           display: false,
           drawBorder: false,
@@ -124,7 +128,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           padding: 8,
           font: {
             size: 12,
-            weight: '500',
+            weight: 'normal' as const,
           },
           callback: function(value: number) {
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -137,7 +141,6 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         min: -0.5,
         max: 6.5,
         reverse: true,
-        offset: true,
         grid: {
           display: false,
           drawBorder: false,
@@ -151,7 +154,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           color: 'rgba(255, 255, 255, 0.7)',
           font: {
             size: 12,
-            weight: '500',
+            weight: 'normal' as const,
           },
           callback: (value: number) => {
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
