@@ -24,6 +24,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Starting segment content generation...');
+
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('Missing OpenAI API key');
@@ -81,7 +83,7 @@ IMPORTANT:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: 'You are an educational content generator. Provide responses only in valid JSON format.' },
           { role: 'user', content: prompt }
@@ -145,6 +147,37 @@ IMPORTANT:
       console.error('quiz_2_correct_answer is not boolean');
       throw new Error('Generated content invalid: quiz_2_correct_answer must be boolean');
     }
+
+    // Initialize Supabase client with service role key for admin access
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Store the generated content
+    const { error: insertError } = await supabase
+      .from('segments_content')
+      .upsert({
+        lecture_id: lectureId,
+        sequence_number: segmentNumber,
+        theory_slide_1: content.theory_slide_1,
+        theory_slide_2: content.theory_slide_2,
+        quiz_1_type: content.quiz_1_type,
+        quiz_1_question: content.quiz_1_question,
+        quiz_1_options: content.quiz_1_options,
+        quiz_1_correct_answer: content.quiz_1_correct_answer,
+        quiz_1_explanation: content.quiz_1_explanation,
+        quiz_2_type: content.quiz_2_type,
+        quiz_2_question: content.quiz_2_question,
+        quiz_2_correct_answer: content.quiz_2_correct_answer,
+        quiz_2_explanation: content.quiz_2_explanation
+      });
+
+    if (insertError) {
+      console.error(`Error storing content:`, insertError);
+      throw insertError;
+    }
+
+    console.log('Successfully stored segment content');
 
     return new Response(
       JSON.stringify({ content }),
