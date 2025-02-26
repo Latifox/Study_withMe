@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format } from "date-fns";
+import { format, getMonth } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -28,22 +28,21 @@ interface ActivityHeatmapProps {
   getHeatmapColor: (score: number) => string;
 }
 
-const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
-  // Transform data into the format needed for Chart.js
+const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     return data.map((item) => ({
-      x: format(item.date, 'w'), // Week number as x coordinate
+      x: parseInt(format(item.date, 'w')), // Week number as x coordinate
       y: new Date(item.date).getDay(), // Day of week (0-6) as y coordinate
+      r: 0, // Set radius to 0 to create squares
       score: item.score,
+      month: getMonth(new Date(item.date)),
     }));
   };
 
-  // Calculate min and max scores for normalization
   const allScores = data.map(d => d.score);
   const minScore = Math.min(...allScores);
   const maxScore = Math.max(...allScores);
 
-  // Normalize scores (0 to 1)
   const normalizeScore = (score: number) => {
     if (maxScore === minScore) return 0;
     return (score - minScore) / (maxScore - minScore);
@@ -62,7 +61,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         },
         borderColor: 'transparent',
         pointRadius: 15,
-        pointHoverRadius: 16,
+        pointStyle: 'rect' as const,
       },
     ],
   };
@@ -73,12 +72,14 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     scales: {
       x: {
         type: 'linear' as const,
-        position: 'bottom' as const,
+        position: 'top' as const,
         min: 0,
-        max: 53, // Maximum number of weeks in a year
+        max: 53,
         grid: {
           display: true,
           color: 'rgba(255, 255, 255, 0.1)',
+          drawBorder: false,
+          lineWidth: 1,
         },
         ticks: {
           stepSize: 1,
@@ -86,18 +87,33 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 12,
           },
+          callback: function(value: number) {
+            // Only show month name at the first week of each month
+            const dataPoint = (chartData.datasets[0].data as any[]).find(
+              (d) => d.x === value && d.month !== undefined
+            );
+            if (dataPoint) {
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              return monthNames[dataPoint.month];
+            }
+            return '';
+          },
         },
       },
       y: {
         type: 'linear' as const,
         min: -0.5,
         max: 6.5,
+        reverse: true,
         grid: {
           display: true,
           color: 'rgba(255, 255, 255, 0.1)',
+          drawBorder: false,
+          lineWidth: 1,
         },
         ticks: {
           stepSize: 1,
+          padding: 10,
           callback: (value: number) => {
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             return days[value];
@@ -133,11 +149,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   };
 
   return (
-    <div className="w-full h-[400px]">
+    <div className="w-full h-[400px] p-4">
       <Scatter data={chartData} options={options} />
     </div>
   );
 };
 
 export default ActivityHeatmap;
-
