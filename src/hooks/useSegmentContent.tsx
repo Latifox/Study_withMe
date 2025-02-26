@@ -74,20 +74,20 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         };
       }
 
-      // Fetch the AI configuration for the lecture
-      console.log('Fetching AI configuration for lecture:', numericLectureId);
-      const { data: aiConfig, error: aiConfigError } = await supabase
+      // If no resources exist, let's generate them
+
+      // First get the content language from AI config if it exists
+      const { data: aiConfig } = await supabase
         .from('lecture_ai_configs')
         .select('content_language')
         .eq('lecture_id', numericLectureId)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       // Default to English if no AI config is found
       const contentLanguage = aiConfig?.content_language || 'english';
       console.log('Using content language:', contentLanguage);
 
       // Fetch all segment titles and descriptions
-      console.log('No existing resources found, fetching segment details...');
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('sequence_number, title, segment_description')
@@ -122,14 +122,16 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           });
 
           if (generationError) {
+            console.error('Error generating resources:', generationError);
             throw generationError;
           }
 
           if (!generatedContent?.markdown) {
+            console.error('No content generated for segment:', segment.sequence_number);
             throw new Error('No content generated');
           }
 
-          console.log('Generated content:', generatedContent.markdown);
+          console.log('Generated content for segment:', segment.sequence_number, generatedContent.markdown);
 
           // More flexible resource extraction
           const sections = generatedContent.markdown.split(/##\s+/);
@@ -168,24 +170,23 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             throw new Error('No valid resources found in generated content');
           }
 
-          console.log(`Found ${resources.length} resources to store`);
+          console.log(`Found ${resources.length} resources to store for segment ${segment.sequence_number}`);
           
-          for (const resource of resources) {
-            const { error: insertError } = await supabase
-              .from('lecture_additional_resources')
-              .insert({
-                lecture_id: numericLectureId,
-                sequence_number: segment.sequence_number,
-                resource_type: resource.type,
-                title: resource.title,
-                url: resource.url,
-                description: resource.description
-              });
+          // Store all resources for this segment
+          const { error: insertError } = await supabase
+            .from('lecture_additional_resources')
+            .insert(resources.map(resource => ({
+              lecture_id: numericLectureId,
+              sequence_number: segment.sequence_number,
+              resource_type: resource.type,
+              title: resource.title,
+              url: resource.url,
+              description: resource.description
+            })));
 
-            if (insertError) {
-              console.error(`Error storing resource:`, insertError);
-              throw insertError;
-            }
+          if (insertError) {
+            console.error(`Error storing resources for segment ${segment.sequence_number}:`, insertError);
+            throw insertError;
           }
 
           console.log(`Successfully stored resources for segment ${segment.sequence_number}`);
@@ -204,11 +205,6 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             return processSegment(segment, retryCount + 1);
           }
           
-          toast({
-            title: `Error generating resources for segment ${segment.sequence_number}`,
-            description: "Please try again later",
-            variant: "destructive",
-          });
           throw error;
         }
       };
@@ -225,6 +221,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         return { segments: results };
       } catch (error) {
         console.error('Error processing segments:', error);
+        toast({
+          title: "Error generating resources",
+          description: "Please try again later",
+          variant: "destructive",
+        });
         throw error;
       }
     },
