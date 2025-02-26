@@ -2,8 +2,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -18,15 +16,15 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, description = '', language = 'english' } = await req.json();
-    console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
-
+    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+    
     if (!perplexityApiKey) {
       console.error('Missing PERPLEXITY_API_KEY environment variable');
       throw new Error('Perplexity API credentials not configured');
     }
 
-    console.log('Calling Perplexity API...');
+    const { topic, description = '' } = await req.json();
+    console.log(`Generating resources for topic: "${topic}" with description: "${description}"`);
 
     const messages = [
       {
@@ -34,11 +32,11 @@ serve(async (req) => {
         content: `You are an educational resource curator specialized in finding high-quality learning materials. For the topic "${topic}", find EXACTLY three types of resources: 1 video, 1 article, and 1 research paper or in-depth guide. Context: ${description}. 
         
         Requirements:
-        - All resources must be in ${language}
-        - For videos: use search query format 
+        - For videos: use YouTube search query format (e.g. https://www.youtube.com/results?search_query=TITLE)
         - Verify all links are accessible
         - Include brief descriptions with each resource
-        - Focus on beginner-friendly content when possible`
+        - Focus on beginner-friendly content when possible
+        - Format response in markdown`
       },
       {
         role: "user",
@@ -46,7 +44,7 @@ serve(async (req) => {
 
 1. Video Resource:
    - Must be from reputable educational channels
-   - Format: use YouTube search query (e.g., https://www.youtube.com/results?search_query=TITLE+channel:CHANNEL_NAME)
+   - Format: use YouTube search query
    - Prioritize content from established educational channels
 
 2. Article Resource:
@@ -74,6 +72,8 @@ Brief description
 Brief description`
       }
     ];
+
+    console.log('Calling Perplexity API...');
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
