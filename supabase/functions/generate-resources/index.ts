@@ -33,12 +33,11 @@ serve(async (req) => {
       },
       {
         role: "user",
-        content: `Search for at least 10-12 potential high-quality resources about the topic "${topic}". For each resource you find, assign it a confidence score from 0 to 100 based on:
-- Likelihood that the URL is valid and accessible (40 points max)
-- Relevance to the topic "${topic}" (30 points max)
-- Quality and authority of the source (30 points max)
+        content: `Search for at least 6-8 potential high-quality resources about the topic "${topic}". For each resource you find, assign it a confidence score from 0 to 100 based on:
+- Likelihood that the URL exists and is accessible (50 points max)
+- Relevance and quality of content for the topic "${topic}" (50 points max)
 
-Then select ONLY the 6 resources with the highest total scores to present to the user.
+Then select ONLY the 3 resources with the highest total scores to present to the user.
 
 Context about the topic:
 ${description}
@@ -46,31 +45,22 @@ ${description}
 YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST.
 YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.
 
-Format Requirements for the final 6 highest-scoring resources:
+Format Requirements for the final 3 highest-scoring resources:
    - Each resource MUST have a clear title
    - Each URL MUST be functional
    - Each description MUST explain relevance to "${topic}"
    - Follow this exact markdown format:
 
-## Video Resources
+## Video Resource
 1. [Video Title](video_url)
    Description: Clear explanation of relevance
 
-2. [Video Title](video_url)
-   Description: Clear explanation of relevance
-
-## Article Resources
+## Article Resource
 1. [Article Title](article_url)
    Description: Clear explanation of relevance
 
-2. [Article Title](article_url)
-   Description: Clear explanation of relevance
-
-## Research Papers
+## Research Paper
 1. [Paper Title](paper_url)
-   Description: Clear explanation of relevance
-
-2. [Paper Title](paper_url)
    Description: Clear explanation of relevance`
       }
     ];
