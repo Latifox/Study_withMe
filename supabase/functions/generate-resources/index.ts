@@ -33,25 +33,31 @@ serve(async (req) => {
     const { topic, description } = await req.json();
     console.log('Received request for topic:', topic);
 
-    const prompt = `You are an educational resource gatherer specialized in educational and academic resources. Gather and give me EXACTLY 3 high-quality resources about the topic "${topic}". Context about the topic: ${description}. YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST. YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.
+    const prompt = `You are an educational resource curator. Your task is to create a well-structured markdown document with exactly 3 high-quality educational resources about "${topic}". Context about the topic: ${description}
 
-    You should look for more than 6 resources, and than atribute to each resource a score that would reflect the chance that the resource exists and is actually related to the topic. You than give the user only the 3 resources that have the highest score (the resources that you are certin that they exist and are related to the topic). 
-    
-    When you want to provide a Youtube resource, insted of providing the link to the resource, you should provide a link to the youtube search query. for example for the youtube resource titled Breaking down Distributed Energy Resources, with Hydro Ottawa's Trevor Freeman from channel named Ottawa Hydro , you will provide the link: https://www.youtube.com/results?search_query=Breaking+down+Distributed+Energy+Resources+%2C+with+Hydro+Ottawa%E2%80%99s+Trevor+Freeman+channel%3AHydro+Ottawa which is the equivalen of the search for Breaking down Distributed Energy Resources , with Hydro Ottawa's Trevor Freeman channel:Hydro Ottawa.
-    
-    Also, a good and easily accesible resource would be content from Khan Academy, so use it when needed.
-    
-    Return the response in this exact JSON format:
-    {
-      "resources": [
-        {
-          "title": "Resource title",
-          "url": "URL to the resource",
-          "description": "Brief description of why this resource is valuable",
-          "resource_type": "video|article|tutorial|book|course"
-        }
-      ]
-    }`;
+    Requirements:
+    1. Format your response in clean markdown with proper headers and bullet points
+    2. Include only resources in English that definitely exist and are accessible
+    3. For YouTube videos, use search query URLs instead of direct links
+       Example: https://www.youtube.com/results?search_query=Breaking+down+Distributed+Energy+Resources+channel%3AHydro+Ottawa
+    4. Prioritize reputable sources like Khan Academy, educational platforms, and academic institutions
+    5. Each resource should include:
+       - A descriptive title
+       - A valid URL
+       - A brief explanation of its value
+    6. Organize resources by type (e.g., Video, Article, Tutorial)
+
+    Format example:
+    ## Additional Learning Resources
+
+    ### Videos
+    - [Title of Video](youtube-search-url)
+      Brief description of why this video is valuable
+
+    ### Articles
+    - [Article Title](article-url)
+      Brief explanation of the article's relevance
+    `;
 
     console.log('Sending request to Perplexity API');
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -88,42 +94,12 @@ serve(async (req) => {
       throw new Error('Invalid response format from Perplexity API');
     }
 
-    // Parse the JSON string from the content
-    let parsedResources;
-    try {
-      parsedResources = JSON.parse(data.choices[0].message.content);
-      console.log('Successfully parsed resources:', parsedResources);
-    } catch (error) {
-      console.error('Error parsing Perplexity response:', error);
-      throw new Error('Failed to parse Perplexity response');
-    }
+    // Return the markdown content directly
+    const markdown = data.choices[0].message.content;
+    console.log('Returning markdown content:', markdown);
 
-    // Convert resources to markdown
-    let markdown = "## Additional Learning Resources\n\n";
-    const resourcesByType: { [key: string]: Resource[] } = {};
-
-    // Group resources by type
-    parsedResources.resources.forEach((resource: Resource) => {
-      if (!resourcesByType[resource.resource_type]) {
-        resourcesByType[resource.resource_type] = [];
-      }
-      resourcesByType[resource.resource_type].push(resource);
-    });
-
-    // Generate markdown sections by type
-    Object.entries(resourcesByType).forEach(([type, resources]) => {
-      markdown += `### ${type.charAt(0).toUpperCase() + type.slice(1)}s\n\n`;
-      resources.forEach(resource => {
-        markdown += `- [${resource.title}](${resource.url})\n  ${resource.description}\n\n`;
-      });
-    });
-
-    console.log('Returning generated content');
     return new Response(
-      JSON.stringify({
-        resources: parsedResources.resources,
-        markdown: markdown
-      }),
+      JSON.stringify({ markdown }),
       { 
         headers: { 
           ...corsHeaders,
@@ -145,3 +121,4 @@ serve(async (req) => {
     );
   }
 });
+

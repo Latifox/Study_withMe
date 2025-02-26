@@ -9,13 +9,6 @@ interface Segment {
   lecture_id: number;
 }
 
-interface Resource {
-  title: string;
-  url: string;
-  description: string;
-  resource_type: string;
-}
-
 export const useGenerateResources = (segment: Segment | null) => {
   return useQuery({
     queryKey: ["resources", segment?.title, segment?.lecture_id],
@@ -30,21 +23,22 @@ export const useGenerateResources = (segment: Segment | null) => {
       });
 
       // First try to get existing resources
-      const { data: existingResources, error: fetchError } = await supabase
+      const { data: existingContent, error: fetchError } = await supabase
         .from('lecture_additional_resources')
-        .select('*')
+        .select('content')
         .eq('title', segment.title)
-        .eq('lecture_id', segment.lecture_id);
+        .eq('lecture_id', segment.lecture_id)
+        .single();
 
       if (fetchError) {
         console.error("Error fetching existing resources:", fetchError);
         throw fetchError;
       }
 
-      // If we have existing resources, format and return them
-      if (existingResources && existingResources.length > 0) {
-        console.log('Found existing resources:', existingResources);
-        return formatResourcesToMarkdown(existingResources);
+      // If we have existing content, return it
+      if (existingContent?.content) {
+        console.log('Found existing resources content');
+        return existingContent.content;
       }
 
       // If no resources exist, generate new ones using the generate-resources function
@@ -69,20 +63,18 @@ export const useGenerateResources = (segment: Segment | null) => {
 
       console.log('Generated data:', generatedData);
 
-      if (!generatedData?.markdown || !generatedData?.resources) {
+      if (!generatedData?.markdown) {
         throw new Error("Invalid response from generate-resources function");
       }
 
-      // Store the generated resources in the database
+      // Store the generated markdown in the database
       const { error: insertError } = await supabase
         .from('lecture_additional_resources')
-        .insert(
-          generatedData.resources.map((resource: Resource) => ({
-            lecture_id: segment.lecture_id,
-            title: segment.title,
-            ...resource
-          }))
-        );
+        .insert({
+          lecture_id: segment.lecture_id,
+          title: segment.title,
+          content: generatedData.markdown
+        });
 
       if (insertError) {
         console.error("Error storing resources:", insertError);
@@ -97,26 +89,3 @@ export const useGenerateResources = (segment: Segment | null) => {
   });
 };
 
-function formatResourcesToMarkdown(resources: any[]): string {
-  const sections: { [key: string]: any[] } = {};
-  
-  // Group resources by type
-  resources.forEach(resource => {
-    if (!sections[resource.resource_type]) {
-      sections[resource.resource_type] = [];
-    }
-    sections[resource.resource_type].push(resource);
-  });
-
-  // Convert to markdown
-  let markdown = "## Additional Learning Resources\n\n";
-  
-  Object.entries(sections).forEach(([type, items]) => {
-    markdown += `### ${type.charAt(0).toUpperCase() + type.slice(1)}s\n\n`;
-    items.forEach(item => {
-      markdown += `- [${item.title}](${item.url})\n  ${item.description}\n\n`;
-    });
-  });
-
-  return markdown;
-}
