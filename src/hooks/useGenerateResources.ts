@@ -51,4 +51,3 @@ export const useGenerateResources = (segment: Segment | null) => {
     gcTime: Infinity, // Keep the data cached indefinitely (formerly cacheTime)
   });
 };
-

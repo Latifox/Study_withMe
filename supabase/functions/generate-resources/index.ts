@@ -29,6 +29,11 @@ serve(async (req) => {
     console.log('Request data:', requestData);
 
     const { topic, description = '' } = requestData;
+    
+    if (!topic) {
+      throw new Error('No topic provided');
+    }
+    
     console.log(`Generating resources for topic: "${topic}" with description: "${description}"`);
 
     const messages = [
@@ -91,7 +96,8 @@ Brief description`
         messages: messages,
         temperature: 0.1,
         max_tokens: 2048,
-        return_images: false
+        return_images: false,
+        stream: false,
       })
     });
 
@@ -134,4 +140,3 @@ Brief description`
     );
   }
 });
-
