@@ -41,7 +41,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       return {
         x: getMonth(date),
         y: dayPosition,
-        r: item.score,
+        r: 8, // Fixed size for squares
         score: item.score,
         date: getDate(date),
       };
@@ -69,8 +69,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
             : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
         },
         borderColor: 'transparent',
-        pointRadius: 15,
-        pointStyle: 'rect' as const,
+        pointRadius: 12,
+        pointStyle: 'rectRot' as const,
       },
     ],
   };
@@ -78,23 +78,31 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 20,
+        right: 20,
+        bottom: 10,
+        left: 50
+      }
+    },
     scales: {
       x: {
         type: 'linear' as const,
         position: 'top' as const,
         min: -0.5,
         max: 11.5,
+        offset: true,
         grid: {
-          display: true,
-          color: 'rgba(255, 255, 255, 0.1)',
-          drawBorder: false,
-          lineWidth: 1,
+          display: false,
         },
         ticks: {
           stepSize: 1,
-          color: 'rgba(255, 255, 255, 0.4)',
+          color: 'rgba(255, 255, 255, 0.7)',
+          padding: 5,
           font: {
             size: 12,
+            weight: '500',
           },
           callback: function(value: number) {
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -107,23 +115,21 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         min: -0.5,
         max: 6.5,
         reverse: true,
+        offset: true,
         grid: {
-          display: true,
-          color: 'rgba(255, 255, 255, 0.1)',
-          drawBorder: false,
-          lineWidth: 1,
+          display: false,
         },
         ticks: {
           stepSize: 1,
-          padding: 10,
-          callback: (value: number) => {
-            // Starting from Wednesday
-            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
-            return days[value];
-          },
-          color: 'rgba(255, 255, 255, 0.4)',
+          padding: 8,
+          color: 'rgba(255, 255, 255, 0.7)',
           font: {
             size: 12,
+            weight: '500',
+          },
+          callback: (value: number) => {
+            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
+            return days[value];
           },
         },
       },
