@@ -8,18 +8,17 @@ import ContentDisplay from "./content/ContentDisplay";
 interface StoryContainerProps {
   storyContent: {
     segments: Array<{
-      id: string;
-      title: string;
-      slides: Array<{
-        content: string;
-      }>;
-      questions: Array<{
-        type: "multiple_choice" | "true_false";
-        question: string;
-        options?: string[];
-        correctAnswer: string | boolean;
-        explanation: string;
-      }>;
+      theory_slide_1: string;
+      theory_slide_2: string;
+      quiz_1_type: string;
+      quiz_1_question: string;
+      quiz_1_options?: string[];
+      quiz_1_correct_answer: string;
+      quiz_1_explanation: string;
+      quiz_2_type: string;
+      quiz_2_question: string;
+      quiz_2_correct_answer: boolean;
+      quiz_2_explanation: string;
     }>;
   };
   currentSegment: number;
@@ -45,9 +44,9 @@ export const StoryContainer = ({
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
-  const [currentScore, setCurrentScore] = useState(segmentScores[currentSegmentData?.id] || 0);
+  const [currentScore, setCurrentScore] = useState(segmentScores[String(currentSegment)] || 0);
 
-  // If we don't have slides or questions yet, show loading state
+  // If we don't have segment content yet, show loading state
   if (!currentSegmentData) {
     return (
       <Card className="p-2">

@@ -3,25 +3,21 @@ import { Card } from "@/components/ui/card";
 import TheorySlide from "../TheorySlide";
 import QuizHandler from "../quiz/QuizHandler";
 import SegmentProgress from "../SegmentProgress";
-import { MAX_SCORE } from "@/utils/scoreUtils";
 import { AlertCircle } from "lucide-react";
-import { useMemo } from "react";
 
 interface ContentDisplayProps {
   currentSegmentData: {
-    id: string;
-    title: string;
-    content: string;
-    slides?: Array<{
-      content: string;
-    }>;
-    questions?: Array<{
-      type: "multiple_choice" | "true_false";
-      question: string;
-      options?: string[];
-      correctAnswer: string | boolean;
-      explanation: string;
-    }>;
+    theory_slide_1: string;
+    theory_slide_2: string;
+    quiz_1_type: string;
+    quiz_1_question: string;
+    quiz_1_options?: string[];
+    quiz_1_correct_answer: string;
+    quiz_1_explanation: string;
+    quiz_2_type: string;
+    quiz_2_question: string;
+    quiz_2_correct_answer: boolean;
+    quiz_2_explanation: string;
   };
   currentSegment: number;
   currentStep: number;
@@ -52,29 +48,34 @@ const ContentDisplay = ({
   onCorrectAnswer,
   onWrongAnswer
 }: ContentDisplayProps) => {
-  // Transform content into slides if direct content is provided
-  const slides = useMemo(() => {
-    if (currentSegmentData.slides) {
-      return currentSegmentData.slides;
-    }
-    if (currentSegmentData.content) {
-      return [{ content: currentSegmentData.content }];
-    }
-    return [];
-  }, [currentSegmentData.slides, currentSegmentData.content]);
+  // Get the appropriate content based on the slide index
+  const currentSlideContent = isSlide 
+    ? slideIndex === 0 
+      ? currentSegmentData.theory_slide_1 
+      : currentSegmentData.theory_slide_2
+    : '';
 
-  // Check if slides exist and have content for the current index
-  const hasValidSlide = isSlide && slides[slideIndex]?.content;
+  // Get the appropriate question based on the question index
+  const currentQuestion = !isSlide ? {
+    type: questionIndex === 0 ? currentSegmentData.quiz_1_type : currentSegmentData.quiz_2_type,
+    question: questionIndex === 0 ? currentSegmentData.quiz_1_question : currentSegmentData.quiz_2_question,
+    options: questionIndex === 0 ? currentSegmentData.quiz_1_options : undefined,
+    correctAnswer: questionIndex === 0 
+      ? currentSegmentData.quiz_1_correct_answer 
+      : currentSegmentData.quiz_2_correct_answer,
+    explanation: questionIndex === 0 
+      ? currentSegmentData.quiz_1_explanation 
+      : currentSegmentData.quiz_2_explanation
+  } : null;
 
-  // Check if questions exist for the current index
-  const hasValidQuestion = !isSlide && 
-    Array.isArray(currentSegmentData?.questions) && 
-    currentSegmentData.questions[questionIndex];
+  // Check if we have valid content for the current state
+  const hasValidSlide = isSlide && Boolean(currentSlideContent);
+  const hasValidQuestion = !isSlide && currentQuestion !== null;
 
   console.log('Current segment data:', currentSegmentData);
   console.log('Is slide:', isSlide, 'slideIndex:', slideIndex);
-  console.log('Has valid slide:', hasValidSlide);
-  console.log('Has valid question:', hasValidQuestion);
+  console.log('Current slide content:', currentSlideContent);
+  console.log('Current question:', currentQuestion);
 
   return (
     <Card className="p-2 bg-transparent border-none shadow-none">
@@ -86,13 +87,11 @@ const ContentDisplay = ({
           totalSteps={4}
         />
       </div>
-
-      <h2 className="text-base font-bold mb-2 text-gray-700">{currentSegmentData.title}</h2>
       
       {isSlide ? (
         hasValidSlide ? (
           <TheorySlide
-            content={slides[slideIndex].content}
+            content={currentSlideContent}
             onContinue={onContinue}
           />
         ) : (
@@ -111,8 +110,11 @@ const ContentDisplay = ({
       ) : (
         hasValidQuestion ? (
           <QuizHandler
-            currentSegmentData={currentSegmentData}
-            questionIndex={questionIndex}
+            currentSegmentData={{
+              id: String(currentSegment),
+              questions: [currentQuestion]
+            }}
+            questionIndex={0}
             lectureId={lectureId}
             courseId={courseId}
             currentScore={currentScore}
@@ -139,4 +141,3 @@ const ContentDisplay = ({
 };
 
 export default ContentDisplay;
-
