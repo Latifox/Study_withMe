@@ -87,10 +87,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     maintainAspectRatio: false,
     layout: {
       padding: {
-        top: 30,
+        top: 20,
         right: 20,
-        bottom: 30,
-        left: 60
+        bottom: 40,
+        left: 70
       }
     },
     scales: {
