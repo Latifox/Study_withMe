@@ -89,14 +89,14 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       padding: {
         top: 30,
         right: 20,
-        bottom: 10,
+        bottom: 30,
         left: 60
       }
     },
     scales: {
       x: {
         type: 'linear' as const,
-        position: 'top' as const,
+        position: 'bottom' as const,
         min: -0.5,
         max: 51.5,
         grid: {
@@ -181,3 +181,4 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
+
