@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format, getMonth } from "date-fns";
+import { format, getMonth, getDate } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -31,11 +31,12 @@ interface ActivityHeatmapProps {
 const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     return data.map((item) => ({
-      x: parseInt(format(item.date, 'w')), // Week number as x coordinate
-      y: new Date(item.date).getDay(), // Day of week (0-6) as y coordinate
+      x: parseInt(format(item.date, 'w')), // Week number
+      y: new Date(item.date).getDay(), // Day of week (0-6)
       r: 0, // Set radius to 0 to create squares
       score: item.score,
       month: getMonth(new Date(item.date)),
+      date: getDate(item.date), // Get the day of the month (1-31)
     }));
   };
 
@@ -115,7 +116,7 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
           stepSize: 1,
           padding: 10,
           callback: (value: number) => {
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue']; // Reordered to match your sketch
             return days[value];
           },
           color: 'rgba(255, 255, 255, 0.4)',
@@ -129,7 +130,9 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
       tooltip: {
         callbacks: {
           label: (context: any) => {
-            return `Score: ${context.raw.score}`;
+            const date = context.raw.date;
+            const suffix = getDateSuffix(date);
+            return `${date}${suffix} - Score: ${context.raw.score}`;
           },
         },
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -146,6 +149,17 @@ const ActivityHeatmap = ({ data, weekDays }: ActivityHeatmapProps) => {
         display: false,
       },
     },
+  };
+
+  // Helper function to get the date suffix (st, nd, rd, th)
+  const getDateSuffix = (date: number) => {
+    if (date > 3 && date < 21) return 'th';
+    switch (date % 10) {
+      case 1:  return "st";
+      case 2:  return "nd";
+      case 3:  return "rd";
+      default: return "th";
+    }
   };
 
   return (
