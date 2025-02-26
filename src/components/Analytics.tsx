@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
@@ -147,8 +146,6 @@ const Analytics = () => {
 
     return allDays.map(date => ({
       date,
-      weekDay: format(date, 'E'),
-      week: Math.floor((date.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)),
       score: activityMap.get(format(date, 'yyyy-MM-dd')) || 0
     }));
   };
@@ -253,7 +250,17 @@ const Analytics = () => {
                         key={score}
                         className={cn(
                           "w-3 h-3 rounded-sm border border-white/10",
-                          getHeatmapColor(score)
+                          score === 0 
+                            ? "bg-white/5"
+                            : score <= 5
+                            ? "bg-purple-500/20"
+                            : score <= 10
+                            ? "bg-purple-500/40"
+                            : score <= 15
+                            ? "bg-purple-500/60"
+                            : score <= 20
+                            ? "bg-purple-500/80"
+                            : "bg-purple-500"
                         )}
                       />
                     ))}
@@ -262,12 +269,7 @@ const Analytics = () => {
                 </div>
               </div>
               
-              <ActivityHeatmap 
-                data={heatmapData}
-                getHeatmapColor={getHeatmapColor}
-                weekDays={weekDays}
-                months={months}
-              />
+              <ActivityHeatmap data={heatmapData} />
             </div>
           </div>
         </div>
