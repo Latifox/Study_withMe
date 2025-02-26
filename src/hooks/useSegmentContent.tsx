@@ -66,8 +66,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       }
 
       const processSegment = async (segment: { sequence_number: number; title: string; segment_description: string }, retryCount = 0) => {
-        const maxRetries = 3;
-        const retryDelay = (retryCount: number) => Math.min(1000 * Math.pow(2, retryCount), 10000);
+        const maxRetries = 1; // Changed from 3 to 1
+        const retryDelay = 2000; // Fixed delay of 2 seconds
 
         try {
           // Check if content already exists for this segment
@@ -137,7 +137,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         } catch (error) {
           if (retryCount < maxRetries) {
             console.log(`Retrying segment ${segment.sequence_number} (attempt ${retryCount + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay(retryCount)));
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
             return processSegment(segment, retryCount + 1);
           }
           throw error;
@@ -177,7 +177,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retry: false, // Disable retries at the query level since we handle them manually
     retryOnMount: false, // Prevent retrying when component remounts
     staleTime: Infinity, // Prevent automatic refetching
-    gcTime: Infinity, // Keep the data cached indefinitely (formerly cacheTime)
+    gcTime: Infinity, // Keep the data cached indefinitely
   });
 };
 
