@@ -340,17 +340,25 @@ const Analytics = () => {
                   </div>
                   
                   <div className="flex-1 relative">
-                    <div className="grid grid-cols-[repeat(52,1fr)] grid-rows-7 gap-1 aspect-[52/7]">
-                      {prepareHeatmapData().map((day, index) => (
+                    <div className="grid" style={{
+                      gridTemplateColumns: 'repeat(52, minmax(0, 1fr))',
+                      gridTemplateRows: 'repeat(7, 1fr)',
+                      gap: '1px',
+                      aspectRatio: '52/7'
+                    }}>
+                      {heatmapData.map((day, index) => (
                         <TooltipProvider key={index}>
                           <TooltipUI>
                             <TooltipTrigger asChild>
                               <div 
                                 className={cn(
-                                  "aspect-square rounded-sm transition-all duration-300 hover:scale-125 hover:z-10",
+                                  "w-full h-full rounded-sm transition-all duration-300 hover:scale-125 hover:z-10",
                                   getHeatmapColor(day.score),
                                   "border border-white/10"
                                 )}
+                                style={{
+                                  aspectRatio: '1/1'
+                                }}
                               />
                             </TooltipTrigger>
                             <TooltipContent>
