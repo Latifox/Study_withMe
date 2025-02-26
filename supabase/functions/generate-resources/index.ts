@@ -29,46 +29,46 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: "You are an educational resource gatherer specialized in educational and academic resources. Your task is to find and score resources based on their relevance and likelihood of existence."
+        content: "You are an educational resource gatherer specialized in educational and academic resources. Gather and give me EXACTLY 3 high-quality resources about the topic."
       },
       {
         role: "user",
-        content: `Search for at least 6 potential high-quality resources about the topic "${topic}". For each resource you find, assign it a confidence score from 0 to 100 based on:
+        content: `Search for at least 6 potential high-quality resources about "${topic}" and score each resource from 0-100 based on:
 
-- Resource Existence & Accessibility (50 points max):
-  * For YouTube videos: Verify the video exists and is not region-locked (must be globally available)
-  * For articles: Check that the URL is from a reputable, stable source
-  * For research papers: Ensure they are publicly accessible
+1. Resource Existence & Accessibility (50 points max):
+   * For YouTube videos: You MUST verify if the video exists by checking its view count. If you can't find the view count, the video is unavailable - assign 0 points
+   * For articles: Check publication date, author credentials, and domain reputation
+   * For papers: Verify public accessibility and citation count
 
-- Content Quality & Relevance (50 points max):
-  * Direct relevance to "${topic}"
-  * Depth and accuracy of content
-  * Authority of the source
-
-Then select ONLY the 3 resources with the highest total scores (one video, one article, one research paper) to present to the user.
+2. Content Quality & Relevance (50 points max):
+   * Direct relevance to "${topic}"
+   * Content depth and academic rigor
+   * Author/creator expertise
+   * For YouTube: Channel reputation and educational focus
 
 Context about the topic:
 ${description}
 
-YOU MUST VERIFY THAT:
-1. ALL URLs ARE FUNCTIONAL AND ACCESSIBLE
-2. YOUTUBE VIDEOS ARE NOT REGION-LOCKED AND ARE PUBLICLY AVAILABLE
-3. ALL RESOURCES ARE IN ENGLISH
-4. ALL RESOURCES ARE DIRECTLY RELEVANT TO "${topic}"
+STRICT REQUIREMENTS:
+1. Each resource MUST be in English
+2. YouTube videos MUST be verified by finding their view count
+3. All URLs must be functional and accessible
+4. Score each resource out of 100 total points
+5. Select and return ONLY the top 3 scoring resources
 
 Format the final 3 highest-scoring resources exactly like this:
 
-## Video Resource
+## Video Resources
 1. [Video Title](video_url)
-   Description: Clear explanation of relevance
-
-## Article Resource
+   Description: Brief description of content and relevance
+   
+## Article Resources
 1. [Article Title](article_url)
-   Description: Clear explanation of relevance
-
-## Research Paper
+   Description: Brief description of content and relevance
+   
+## Research Papers
 1. [Paper Title](paper_url)
-   Description: Clear explanation of relevance`
+   Description: Brief description of content and relevance`
       }
     ];
 
