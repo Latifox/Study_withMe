@@ -121,7 +121,7 @@ const Resources = () => {
                 </div>
 
                 {/* Right column - Selected segment content */}
-                <div className="h-[calc(100vh-200px)]">
+                <div className="min-h-[calc(100vh-200px)]">
                   {!selectedSegmentId ? (
                     <div className="h-full flex items-center justify-center text-black/60">
                       Select a segment to view its resources
@@ -139,43 +139,41 @@ const Resources = () => {
                       </CardContent>
                     </Card>
                   ) : (
-                    <Card className="h-full bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
+                    <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
                       <CardHeader className="border-b border-white/20">
                         <CardTitle className="text-xl text-black">
                           {selectedSegment?.title}
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <ScrollArea className="h-[calc(100vh-300px)] px-4">
-                          <div className="prose prose-lg prose-slate max-w-none">
-                            <ReactMarkdown 
-                              components={{
-                                h2: ({ children }) => (
-                                  <h2 className="text-lg font-semibold text-black/80 border-b border-black/10 pb-2 mb-4">
-                                    {children}
-                                  </h2>
-                                ),
-                                a: ({ children, href }) => (
-                                  <a 
-                                    href={href} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 transition-colors no-underline hover:underline"
-                                  >
-                                    {children}
-                                  </a>
-                                ),
-                                li: ({ children }) => (
-                                  <li className="mb-4 text-black/80">
-                                    {children}
-                                  </li>
-                                )
-                              }}
-                            >
-                              {resourcesContent}
-                            </ReactMarkdown>
-                          </div>
-                        </ScrollArea>
+                      <CardContent className="p-6">
+                        <div className="prose prose-lg prose-slate max-w-none">
+                          <ReactMarkdown 
+                            components={{
+                              h2: ({ children }) => (
+                                <h2 className="text-lg font-semibold text-black/80 border-b border-black/10 pb-2 mb-4">
+                                  {children}
+                                </h2>
+                              ),
+                              a: ({ children, href }) => (
+                                <a 
+                                  href={href} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 transition-colors no-underline hover:underline"
+                                >
+                                  {children}
+                                </a>
+                              ),
+                              li: ({ children }) => (
+                                <li className="mb-4 text-black/80">
+                                  {children}
+                                </li>
+                              )
+                            }}
+                          >
+                            {resourcesContent}
+                          </ReactMarkdown>
+                        </div>
                       </CardContent>
                     </Card>
                   )}
@@ -190,3 +188,4 @@ const Resources = () => {
 };
 
 export default Resources;
+
