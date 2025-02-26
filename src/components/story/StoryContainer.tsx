@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import StoryCompletionScreen from "./StoryCompletionScreen";
 import ContentDisplay from "./content/ContentDisplay";
 
+// Update the type to match the exact database structure
 interface StoryContainerProps {
   storyContent: {
     segments: Array<{
@@ -39,7 +40,6 @@ export const StoryContainer = ({
   onWrongAnswer
 }: StoryContainerProps) => {
   const { nodeId } = useParams();
-  // Get the actual sequence number from the URL without subtracting 1
   const sequenceNumber = nodeId ? parseInt(nodeId.split('_')[1]) : 1;
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
@@ -63,15 +63,14 @@ export const StoryContainer = ({
     );
   }
 
-  // Find the segment data that matches the sequence number
-  const currentSegmentData = storyContent.segments.find((_, index) => index === sequenceNumber - 1);
+  // Find the segment data that matches the sequence number (1-based)
+  const currentSegmentData = storyContent.segments[sequenceNumber - 1];
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
 
   console.log('Current segment data:', currentSegmentData);
 
-  // If we don't have segment content yet, show loading state
   if (!currentSegmentData) {
     return (
       <Card className="p-2">
