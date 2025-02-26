@@ -33,16 +33,16 @@ serve(async (req) => {
       },
       {
         role: "user",
-        content: `Search for at least 6 potential educational resources about "${topic}" and evaluate each with a score from 0-100 based on:
+        content: `Search for at least 6 potential educational resources about "${topic}" and evaluate them carefully, scoring each from 0-100 based on:
 
-1. Resource Existence Probability (50 points):
-   * For YouTube videos: Score based on channel reputation, views estimation, and upload date
-   * For articles: Score based on publisher reputation, author credibility, and recent publication date
+1. Resource Existence & Accessibility (50 points):
+   * For YouTube videos: Score based on channel reputation (especially Khan Academy), likely view count, and educational focus
+   * For articles: Score based on source reliability, author credentials, and recent publication date
    * For research papers: Score based on journal reputation, citation count, and public accessibility
 
-2. Content Relevance Score (50 points):
+2. Content Relevance & Quality (50 points):
    * Direct relevance to "${topic}"
-   * Depth and quality of educational content
+   * Depth and comprehensiveness of educational content
    * Target audience appropriateness
    * Overall educational value
 
@@ -50,10 +50,11 @@ CRITICAL REQUIREMENTS:
 1. ALL resources MUST be in English
 2. For YouTube resources:
    - Convert direct video links into search query URLs
-   - Format: https://www.youtube.com/results?search_query=TITLE+channel:CHANNEL_NAME
-   - Example: For video "Physics 101" by "Science Academy":
-     https://www.youtube.com/results?search_query=Physics+101+channel:Science+Academy
-3. For articles and papers: Verify URL accessibility
+   - Format: https://www.youtube.com/results?search_query=VIDEO_TITLE+channel:CHANNEL_NAME
+   - Example: For video "Breaking down Distributed Energy Resources" by "Hydro Ottawa":
+     https://www.youtube.com/results?search_query=Breaking+down+Distributed+Energy+Resources+channel:Hydro+Ottawa
+   - Prioritize content from Khan Academy when relevant
+3. For articles and papers: Double-check URL accessibility
 4. Return ONLY the 3 highest-scoring resources (one of each type)
 
 Format your response EXACTLY like this:
