@@ -1,40 +1,9 @@
 
 project_id = "bjpawnertrqwtgyvrhml"
 
-[db.wrangler]
-nodes = 1
-database_id = "db"
-local_port = 54322
+[global]
+version = "v1.67.2"
 
-[[edge_functions]]
-name = "generate-segments-structure"
+[functions.generate-segment-content]
+verify_jwt = true
 
-[[edge_functions]]
-name = "generate-segment-content"
-
-[[edge_functions]]
-name = "extract-pdf-text"
-
-[[edge_functions]]
-name = "chat-with-lecture"
-
-[[edge_functions]]
-name = "generate-flashcards"
-
-[[edge_functions]]
-name = "generate-lecture-summary"
-
-[[edge_functions]]
-name = "generate-mindmap"
-
-[[edge_functions]]
-name = "generate-quiz"
-
-[[edge_functions]]
-name = "generate-resources"
-
-[[edge_functions]]
-name = "generate-story-content"
-
-[[edge_functions]]
-name = "map-subject-content"

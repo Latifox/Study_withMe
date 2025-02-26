@@ -1,7 +1,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { corsHeaders } from '../_shared/cors.ts'
 import { OpenAI } from "https://deno.land/x/openai@1.4.3/mod.ts"
+import { corsHeaders } from '../_shared/cors.ts'
 
 const openAI = new OpenAI(Deno.env.get('OPENAI_API_KEY') || '');
 
@@ -29,7 +29,7 @@ serve(async (req) => {
       Content Language: ${contentLanguage || 'english'}
 
       Create content in this format:
-      1. Two theory slides that explain the key concepts
+      1. Two theory slides that explain the key concepts from the lecture content, focusing on this segment's topic
       2. Two quiz questions to test understanding
 
       The content should be based on this lecture material:
@@ -37,8 +37,8 @@ serve(async (req) => {
 
       Return a JSON object with these exact fields:
       {
-        "theory_slide_1": "First slide content",
-        "theory_slide_2": "Second slide content",
+        "theory_slide_1": "First slide content with main concept explanation",
+        "theory_slide_2": "Second slide content with detailed examples",
         "quiz_1_type": "multiple_choice",
         "quiz_1_question": "Question text",
         "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
@@ -51,6 +51,8 @@ serve(async (req) => {
       }
     `;
 
+    console.log('Sending request to OpenAI...');
+    
     const completion = await openAI.createChatCompletion({
       model: "gpt-4",
       messages: [
@@ -63,15 +65,17 @@ serve(async (req) => {
           "content": prompt 
         }
       ],
-      temperature: 0.7
+      temperature: 0.7,
+      max_tokens: 2000
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Generated content:', response);
+    console.log('Received response from OpenAI');
 
     let content;
     try {
       content = JSON.parse(response);
+      console.log('Successfully parsed OpenAI response');
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       throw new Error('Invalid content format received from OpenAI');
@@ -92,3 +96,4 @@ serve(async (req) => {
     )
   }
 })
+
