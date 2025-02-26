@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
@@ -109,7 +109,7 @@ const LectureSummary = () => {
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
-              <BookOpen className="w-12 h-12 mx-auto animate-pulse text-primary" />
+              <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
               <p className="text-lg text-black">Generating highlights...</p>
               <p className="text-sm text-muted-foreground">
                 This may take a moment as we analyze the lecture content.
