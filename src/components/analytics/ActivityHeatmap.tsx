@@ -30,19 +30,21 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     const yearData = [];
     const startDate = startOfYear(new Date(2025, 0, 1));
     
+    // Generate data points for the entire year
     for (let week = 0; week < 52; week++) {
       for (let day = 0; day < 7; day++) {
         const currentDate = addDays(startDate, week * 7 + day);
         yearData.push({
           x: week,
           y: day,
-          r: 10,
+          r: 8, // Reduced radius for better spacing
           score: 0,
           date: currentDate,
         });
       }
     }
 
+    // Map actual data to the generated grid
     data.forEach((item) => {
       const itemDate = new Date(item.date);
       const daysSinceStart = Math.floor((itemDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -50,7 +52,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       const day = daysSinceStart % 7;
       
       const index = week * 7 + day;
-      if (index < yearData.length) {
+      if (index >= 0 && index < yearData.length) {
         yearData[index].score = item.score;
       }
     });
@@ -76,7 +78,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
         pointStyle: 'rect' as const,
-        pointRadius: 10,
+        radius: 8,
         hoverBackgroundColor: 'rgba(168, 85, 247, 0.8)',
       },
     ],
@@ -85,12 +87,13 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false, // Disable animations for better performance
     layout: {
       padding: {
-        top: 20,
-        right: 20,
-        bottom: 40,
-        left: 70
+        top: 10,
+        right: 10,
+        bottom: 25,
+        left: 50
       }
     },
     scales: {
@@ -110,10 +113,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           stepSize: 4,
           color: 'rgba(255, 255, 255, 0.7)',
           padding: 8,
-          font: {
-            size: 12,
-            weight: 'normal' as const,
-          },
+          autoSkip: false,
           callback: function(value: number) {
             if (value % 4 === 0) {
               const date = addDays(startOfYear(new Date(2025, 0, 1)), value * 7);
@@ -137,12 +137,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         },
         ticks: {
           stepSize: 1,
-          padding: 12,
+          padding: 8,
           color: 'rgba(255, 255, 255, 0.7)',
-          font: {
-            size: 12,
-            weight: 'normal' as const,
-          },
           callback: (value: number) => {
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
             return days[value];
@@ -158,14 +154,9 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           },
         },
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        padding: 12,
-        cornerRadius: 8,
-        titleFont: {
-          size: 14,
-        },
-        bodyFont: {
-          size: 14,
-        },
+        padding: 8,
+        cornerRadius: 4,
+        displayColors: false,
       },
       legend: {
         display: false,
@@ -175,7 +166,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      <Scatter data={chartData} options={options} />
+      <Scatter options={options} data={chartData} />
     </div>
   );
 };
