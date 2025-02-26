@@ -198,22 +198,22 @@ const Analytics = () => {
               title="Total Lectures"
               value={totalLectures}
               icon={BookOpen}
-              gradientFrom="emerald-500"
-              gradientTo="teal-400"
+              gradientFrom="teal-500"
+              gradientTo="teal-600"
             />
             <StatsCard
               title="Current Streak"
               value={`${currentStreak} days`}
               icon={Flame}
               gradientFrom="red-500"
-              gradientTo="rose-400"
+              gradientTo="red-600"
             />
             <StatsCard
               title="Total XP"
               value={totalXP}
               icon={Star}
               gradientFrom="amber-500"
-              gradientTo="yellow-400"
+              gradientTo="amber-600"
             />
           </div>
 
