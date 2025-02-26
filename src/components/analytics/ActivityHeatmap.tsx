@@ -31,13 +31,12 @@ const ActivityHeatmap = ({ data, getHeatmapColor, weekDays, months }: ActivityHe
         
         <div className="flex-1 relative">
           <div 
-            className="grid gap-1" 
             style={{
-              gridTemplateColumns: `repeat(52, minmax(10px, 1fr))`,
-              gridTemplateRows: `repeat(7, 1fr)`,
-              gridAutoFlow: 'column',
-              height: '100%',
-              minHeight: '150px'
+              display: 'grid',
+              gridTemplateColumns: 'repeat(52, 16px)',
+              gridTemplateRows: 'repeat(7, 16px)',
+              gap: '4px',
+              width: 'fit-content'
             }}
           >
             {data.map((day, index) => (
@@ -46,7 +45,7 @@ const ActivityHeatmap = ({ data, getHeatmapColor, weekDays, months }: ActivityHe
                   <TooltipTrigger asChild>
                     <div 
                       className={cn(
-                        "w-full h-full rounded-sm cursor-pointer transition-all duration-300 hover:scale-125 hover:z-10",
+                        "w-4 h-4 rounded-sm cursor-pointer transition-all duration-300 hover:scale-125 hover:z-10",
                         getHeatmapColor(day.score),
                         "border border-white/10"
                       )}
