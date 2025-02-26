@@ -39,17 +39,34 @@ export const StoryContainer = ({
   onWrongAnswer
 }: StoryContainerProps) => {
   const { nodeId } = useParams();
-  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) - 1 : 0; // Convert segment_1 to index 0
+  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) - 1 : 0;
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+  const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
+
+  console.log('Current URL nodeId:', nodeId);
+  console.log('Parsed segment number:', segmentNumber);
+  console.log('Story content:', storyContent);
+  console.log('Story content segments length:', storyContent?.segments?.length);
+  
+  // Add null check for storyContent and its segments
+  if (!storyContent || !storyContent.segments) {
+    return (
+      <Card className="p-2">
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <p className="ml-3 text-sm text-muted-foreground">
+            Loading content...
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
   const currentSegmentData = storyContent.segments[segmentNumber];
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
-  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
-  const [currentScore, setCurrentScore] = useState(segmentScores[String(segmentNumber)] || 0);
 
-  console.log('Current URL nodeId:', nodeId);
-  console.log('Parsed segment number:', segmentNumber);
-  console.log('Story content segments:', storyContent.segments);
   console.log('Current segment data:', currentSegmentData);
 
   // If we don't have segment content yet, show loading state
