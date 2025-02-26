@@ -48,17 +48,12 @@ const ContentDisplay = ({
   onCorrectAnswer,
   onWrongAnswer
 }: ContentDisplayProps) => {
-  console.log('ContentDisplay - Current segment data:', currentSegmentData);
-  console.log('ContentDisplay - Is slide:', isSlide, 'slideIndex:', slideIndex);
-
   // Get the appropriate content based on the slide index
   const currentSlideContent = isSlide 
     ? slideIndex === 0 
       ? currentSegmentData.theory_slide_1 
       : currentSegmentData.theory_slide_2
     : '';
-
-  console.log('ContentDisplay - Current slide content:', currentSlideContent);
 
   // Get the appropriate question based on the question index
   const currentQuestion = !isSlide ? {
@@ -74,7 +69,7 @@ const ContentDisplay = ({
   } : null;
 
   // Check if we have valid content for the current state
-  const hasValidSlide = isSlide && Boolean(currentSlideContent?.trim());
+  const hasValidSlide = isSlide && Boolean(currentSlideContent);
   const hasValidQuestion = !isSlide && currentQuestion !== null;
 
   return (

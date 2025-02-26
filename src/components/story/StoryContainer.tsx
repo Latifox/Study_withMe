@@ -43,12 +43,7 @@ export const StoryContainer = ({
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
 
-  console.log('Current URL nodeId:', nodeId);
-  console.log('Sequence number:', sequenceNumber);
-  console.log('Story content:', storyContent);
-  console.log('Current step:', currentStep);
-  
-  if (!storyContent || !storyContent.segments || !storyContent.segments.length) {
+  if (!storyContent?.segments?.length) {
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
@@ -62,17 +57,14 @@ export const StoryContainer = ({
   }
 
   const currentSegmentData = storyContent.segments[sequenceNumber - 1];
-  
-  console.log('Current segment data:', currentSegmentData);
-  console.log('Segments array length:', storyContent.segments.length);
-  console.log('Accessing index:', sequenceNumber - 1);
 
   if (!currentSegmentData) {
     return (
       <Card className="p-2">
         <div className="flex items-center justify-center h-32">
-          <p className="text-sm text-muted-foreground">
-            No segment data found for sequence number {sequenceNumber}
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <p className="ml-3 text-sm text-muted-foreground">
+            Loading segment content...
           </p>
         </div>
       </Card>
