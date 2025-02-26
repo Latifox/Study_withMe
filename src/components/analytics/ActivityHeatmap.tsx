@@ -41,9 +41,9 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       return {
         x: getMonth(date),
         y: dayPosition,
-        r: 8, // Fixed size for squares
+        r: 12, // Size for squares
         score: item.score,
-        date: getDate(date),
+        date: format(date, 'MMM d'),
       };
     });
   };
@@ -70,7 +70,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         },
         borderColor: 'transparent',
         pointRadius: 12,
-        pointStyle: 'rectRot' as const,
+        pointStyle: 'rect' as const,
       },
     ],
   };
@@ -95,6 +95,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         offset: true,
         grid: {
           display: false,
+          drawBorder: false,
+        },
+        border: {
+          display: false,
         },
         ticks: {
           stepSize: 1,
@@ -102,7 +106,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           padding: 5,
           font: {
             size: 12,
-            weight: 500, // Changed from '500' to 500 (number)
+            weight: 500,
           },
           callback: function(value: number) {
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -118,6 +122,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         offset: true,
         grid: {
           display: false,
+          drawBorder: false,
+        },
+        border: {
+          display: false,
         },
         ticks: {
           stepSize: 1,
@@ -125,7 +133,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           color: 'rgba(255, 255, 255, 0.7)',
           font: {
             size: 12,
-            weight: 500, // Changed from '500' to 500 (number)
+            weight: 500,
           },
           callback: (value: number) => {
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
@@ -138,9 +146,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       tooltip: {
         callbacks: {
           label: (context: any) => {
-            const date = context.raw.date;
-            const suffix = getDateSuffix(date);
-            return `${date}${suffix} - Score: ${context.raw.score}`;
+            return `${context.raw.date} - Score: ${context.raw.score}`;
           },
         },
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -159,22 +165,11 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     },
   };
 
-  const getDateSuffix = (date: number) => {
-    if (date > 3 && date < 21) return 'th';
-    switch (date % 10) {
-      case 1:  return "st";
-      case 2:  return "nd";
-      case 3:  return "rd";
-      default: return "th";
-    }
-  };
-
   return (
-    <div className="w-full h-[400px] p-4">
+    <div className="w-full h-[400px] p-4 bg-background rounded-lg">
       <Scatter data={chartData} options={options} />
     </div>
   );
 };
 
 export default ActivityHeatmap;
-
