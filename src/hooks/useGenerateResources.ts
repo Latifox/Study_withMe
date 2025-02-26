@@ -48,6 +48,7 @@ export const useGenerateResources = (segment: Segment | null) => {
     retry: false, // Disable retries
     retryOnMount: false, // Prevent retrying on mount
     staleTime: Infinity, // Prevent automatic refetching
-    cacheTime: Infinity, // Keep the data cached indefinitely
+    gcTime: Infinity, // Keep the data cached indefinitely (formerly cacheTime)
   });
 };
+

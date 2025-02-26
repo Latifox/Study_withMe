@@ -177,6 +177,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retry: false, // Disable retries at the query level since we handle them manually
     retryOnMount: false, // Prevent retrying when component remounts
     staleTime: Infinity, // Prevent automatic refetching
-    cacheTime: Infinity, // Keep the data cached indefinitely
+    gcTime: Infinity, // Keep the data cached indefinitely (formerly cacheTime)
   });
 };
+
