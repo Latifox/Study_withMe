@@ -14,80 +14,25 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw new Error('Invalid parameters');
       }
 
-      // First check if resources already exist
-      const { data: existingResources, error: resourcesError } = await supabase
-        .from('lecture_additional_resources')
-        .select('*, lecture_segments!inner(title, segment_description)')
+      // First check if content already exists
+      const { data: existingContent, error: contentError } = await supabase
+        .from('segments_content')
+        .select('*')
         .eq('lecture_id', numericLectureId)
-        .order('sequence_number, resource_type');
+        .order('sequence_number');
 
-      if (resourcesError) {
-        console.error('Error fetching existing resources:', resourcesError);
-        throw resourcesError;
+      if (contentError) {
+        console.error('Error fetching existing content:', contentError);
+        throw contentError;
       }
 
-      // If resources exist, return them grouped by segment
-      if (existingResources && existingResources.length > 0) {
-        console.log('Found existing resources:', existingResources);
-        
-        const groupedBySegment = existingResources.reduce((acc: Record<number, { title: string, content: string }>, resource) => {
-          const seqNum = resource.sequence_number;
-          if (!acc[seqNum]) {
-            acc[seqNum] = { 
-              title: resource.lecture_segments.title,
-              content: '' 
-            };
-          }
-          
-          let sectionHeader = '';
-          switch (resource.resource_type) {
-            case 'video':
-              if (!acc[seqNum].content.includes('Video Resources')) {
-                sectionHeader = '\n## Video Resources\n';
-              }
-              break;
-            case 'article':
-              if (!acc[seqNum].content.includes('Article Resources')) {
-                sectionHeader = '\n## Article Resources\n';
-              }
-              break;
-            case 'research_paper':
-              if (!acc[seqNum].content.includes('Research Papers')) {
-                sectionHeader = '\n## Research Papers\n';
-              }
-              break;
-          }
-          
-          const resourceMarkdown = `${sectionHeader}${!sectionHeader ? '' : ''}1. [${resource.title}](${resource.url})
-   Description: ${resource.description}\n`;
-          
-          acc[seqNum].content += resourceMarkdown;
-          return acc;
-        }, {});
-
-        return {
-          segments: Object.entries(groupedBySegment).map(([segmentNumber, data]) => ({
-            id: `segment_${segmentNumber}`,
-            title: data.title,
-            content: data.content.trim()
-          }))
-        };
+      // If content exists for all segments, return it
+      if (existingContent && existingContent.length > 0) {
+        console.log('Found existing content:', existingContent);
+        return { segments: existingContent };
       }
 
-      // If no resources exist, let's generate them
-
-      // First get the content language from AI config if it exists
-      const { data: aiConfig } = await supabase
-        .from('lecture_ai_configs')
-        .select('content_language')
-        .eq('lecture_id', numericLectureId)
-        .maybeSingle();
-
-      // Default to English if no AI config is found
-      const contentLanguage = aiConfig?.content_language || 'english';
-      console.log('Using content language:', contentLanguage);
-
-      // Fetch all segment titles and descriptions
+      // Get all segment titles and descriptions
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('sequence_number, title, segment_description')
@@ -106,96 +51,76 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log('Retrieved segments for processing:', segmentData);
 
+      // First get the lecture content
+      const { data: lecture } = await supabase
+        .from('lectures')
+        .select('content')
+        .eq('id', numericLectureId)
+        .single();
+
+      if (!lecture?.content) {
+        throw new Error('No lecture content found');
+      }
+
+      // Get the content language from AI config if it exists
+      const { data: aiConfig } = await supabase
+        .from('lecture_ai_configs')
+        .select('content_language')
+        .eq('lecture_id', numericLectureId)
+        .maybeSingle();
+
+      const contentLanguage = aiConfig?.content_language || 'english';
+      console.log('Using content language:', contentLanguage);
+
       const processSegment = async (segment: { sequence_number: number; title: string; segment_description: string }, retryCount = 0) => {
         const maxRetries = 3;
-        const retryDelay = (retryCount: number) => Math.min(2000 * Math.pow(2, retryCount), 10000);
+        const retryDelay = (retryCount: number) => Math.min(1000 * Math.pow(2, retryCount), 10000);
 
         try {
-          console.log(`Starting resource generation for segment ${segment.sequence_number}: ${segment.title}`);
+          console.log(`Generating content for segment ${segment.sequence_number}: ${segment.title}`);
           
-          const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-resources', {
-            body: { 
-              topic: segment.title,
-              description: segment.segment_description,
-              language: contentLanguage
+          const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
+            body: {
+              lectureId: numericLectureId,
+              segmentNumber: segment.sequence_number,
+              segmentTitle: segment.title,
+              segmentDescription: segment.segment_description,
+              lectureContent: lecture.content
             }
           });
 
-          if (generationError) {
-            console.error('Error generating resources:', generationError);
-            throw generationError;
+          if (generationError || !generatedContent?.content) {
+            throw generationError || new Error('No content generated');
           }
 
-          if (!generatedContent?.markdown) {
-            console.error('No content generated for segment:', segment.sequence_number);
-            throw new Error('No content generated');
-          }
+          const content = generatedContent.content;
+          console.log(`Generated content for segment ${segment.sequence_number}:`, content);
 
-          console.log('Generated content for segment:', segment.sequence_number, generatedContent.markdown);
-
-          // More flexible resource extraction
-          const sections = generatedContent.markdown.split(/##\s+/);
-          const resources = [];
-          
-          for (const section of sections) {
-            let currentType = '';
-            
-            if (section.toLowerCase().includes('video')) {
-              currentType = 'video';
-            } else if (section.toLowerCase().includes('article')) {
-              currentType = 'article';
-            } else if (section.toLowerCase().includes('research')) {
-              currentType = 'research_paper';
-            }
-
-            if (currentType) {
-              const pattern = /\d*\.*\s*\[([^\]]+)\]\(([^)]+)\)(?:[\s\n]*(?:Description|description)?:?\s*([^\n]+))?/g;
-              const matches: RegExpMatchArray[] = Array.from(section.matchAll(pattern));
-              
-              for (const match of matches) {
-                const [_, title, url, description = ''] = match;
-                if (title && url) {
-                  resources.push({
-                    title: title.trim(),
-                    url: url.trim(),
-                    description: description.trim() || `Resource about ${segment.title}`,
-                    type: currentType
-                  });
-                }
-              }
-            }
-          }
-
-          if (resources.length === 0) {
-            throw new Error('No valid resources found in generated content');
-          }
-
-          console.log(`Found ${resources.length} resources to store for segment ${segment.sequence_number}`);
-          
-          // Store all resources for this segment
+          // Store the generated content
           const { error: insertError } = await supabase
-            .from('lecture_additional_resources')
-            .insert(resources.map(resource => ({
+            .from('segments_content')
+            .upsert({
               lecture_id: numericLectureId,
               sequence_number: segment.sequence_number,
-              resource_type: resource.type,
-              title: resource.title,
-              url: resource.url,
-              description: resource.description
-            })));
+              theory_slide_1: content.theory_slide_1,
+              theory_slide_2: content.theory_slide_2,
+              quiz_1_type: content.quiz_1_type,
+              quiz_1_question: content.quiz_1_question,
+              quiz_1_options: content.quiz_1_options,
+              quiz_1_correct_answer: content.quiz_1_correct_answer,
+              quiz_1_explanation: content.quiz_1_explanation,
+              quiz_2_type: content.quiz_2_type,
+              quiz_2_question: content.quiz_2_question,
+              quiz_2_correct_answer: content.quiz_2_correct_answer,
+              quiz_2_explanation: content.quiz_2_explanation
+            });
 
           if (insertError) {
-            console.error(`Error storing resources for segment ${segment.sequence_number}:`, insertError);
+            console.error(`Error storing content for segment ${segment.sequence_number}:`, insertError);
             throw insertError;
           }
 
-          console.log(`Successfully stored resources for segment ${segment.sequence_number}`);
-          
-          return {
-            id: `segment_${segment.sequence_number}`,
-            title: segment.title,
-            content: generatedContent.markdown
-          };
+          return content;
         } catch (error) {
           console.error(`Error processing segment ${segment.sequence_number}:`, error);
           
@@ -214,7 +139,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         const results = [];
         for (const segment of segmentData) {
           const content = await processSegment(segment);
-          results.push(content);
+          results.push({
+            ...content,
+            sequence_number: segment.sequence_number,
+            lecture_id: numericLectureId
+          });
         }
         
         console.log('Finished processing all segments:', results);
@@ -222,15 +151,14 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       } catch (error) {
         console.error('Error processing segments:', error);
         toast({
-          title: "Error generating resources",
+          title: "Error generating content",
           description: "Please try again later",
           variant: "destructive",
         });
         throw error;
       }
     },
-    retry: 1,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
-
