@@ -23,33 +23,25 @@ const ActivityHeatmap = ({ data, getHeatmapColor, weekDays, months }: ActivityHe
   return (
     <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
       <div className="flex gap-4">
-        {/* Week days column */}
-        <div className="flex flex-col justify-between py-1 text-xs text-white/40">
+        {/* Week days labels */}
+        <div className="flex flex-col justify-between text-xs text-white/40">
           {weekDays.map(day => (
-            <div key={day} className="h-4">{day}</div>
+            <div key={day} className="h-[14px]">{day}</div>
           ))}
         </div>
         
-        <div className="flex-1">
-          {/* Main grid container */}
-          <div className="relative w-full min-w-[750px]">
-            <div 
-              className="grid gap-1"
-              style={{
-                gridTemplateColumns: 'repeat(52, 1fr)',
-                gridTemplateRows: 'repeat(7, 1fr)',
-                gridAutoFlow: 'column',
-                aspectRatio: '7/1',
-                width: '100%'
-              }}
-            >
+        {/* Main heatmap container */}
+        <div className="flex-1 overflow-x-auto">
+          <div className="relative min-w-[750px]">
+            {/* Heatmap grid */}
+            <div className="grid grid-cols-52 grid-rows-7 auto-rows-fr gap-[2px]" style={{ aspectRatio: '4/1' }}>
               {data.map((day, index) => (
                 <TooltipProvider key={index}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div 
                         className={cn(
-                          "aspect-square w-full rounded-sm cursor-pointer transition-all duration-300 hover:scale-125 hover:z-10",
+                          "w-full pb-[100%] relative rounded-sm cursor-pointer transition-all duration-300 hover:scale-125 hover:z-10",
                           getHeatmapColor(day.score),
                           "border border-white/10"
                         )}
@@ -69,11 +61,9 @@ const ActivityHeatmap = ({ data, getHeatmapColor, weekDays, months }: ActivityHe
             </div>
 
             {/* Months labels */}
-            <div className="absolute -bottom-6 left-0 right-0 flex justify-between">
-              {months.map((month) => (
-                <div key={month} className="text-xs text-white/40">
-                  {month}
-                </div>
+            <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-white/40">
+              {months.map(month => (
+                <div key={month}>{month}</div>
               ))}
             </div>
           </div>
@@ -84,3 +74,4 @@ const ActivityHeatmap = ({ data, getHeatmapColor, weekDays, months }: ActivityHe
 };
 
 export default ActivityHeatmap;
+
