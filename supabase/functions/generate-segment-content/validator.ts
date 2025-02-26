@@ -1,33 +1,28 @@
 
-import { AIConfig } from "./types.ts";
-
-export function validateConfig(config: any): AIConfig {
-  const defaultConfig: AIConfig = {
-    temperature: 0.7,
-    creativity_level: 0.5,
-    detail_level: 0.6,
-    custom_instructions: '',
-    content_language: ''
-  };
-
-  if (!config) {
-    console.log('No config provided, using defaults');
-    return defaultConfig;
+export function validateGeneratedContent(content: any) {
+  if (!content) {
+    throw new Error('No content provided');
   }
-
-  const validatedConfig: AIConfig = {
-    temperature: Number(config.temperature) || defaultConfig.temperature,
-    creativity_level: Number(config.creativity_level) || defaultConfig.creativity_level,
-    detail_level: Number(config.detail_level) || defaultConfig.detail_level,
-    custom_instructions: String(config.custom_instructions || defaultConfig.custom_instructions),
-    content_language: String(config.content_language || defaultConfig.content_language)
-  };
-
-  // Ensure values are within valid ranges
-  validatedConfig.temperature = Math.min(Math.max(validatedConfig.temperature, 0), 1);
-  validatedConfig.creativity_level = Math.min(Math.max(validatedConfig.creativity_level, 0), 1);
-  validatedConfig.detail_level = Math.min(Math.max(validatedConfig.detail_level, 0), 1);
-
-  console.log('Validated config:', validatedConfig);
-  return validatedConfig;
+  
+  // Validate theory slides
+  if (!content.theory_slide_1 || !content.theory_slide_2) {
+    throw new Error('Missing theory slides');
+  }
+  
+  // Validate quiz 1
+  if (!content.quiz_1_type || !content.quiz_1_question || !content.quiz_1_correct_answer || !content.quiz_1_explanation) {
+    throw new Error('Missing required quiz 1 fields');
+  }
+  
+  // For multiple choice questions, validate options
+  if (content.quiz_1_type === 'multiple_choice' && (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length !== 4)) {
+    throw new Error('Multiple choice questions must have exactly 4 options');
+  }
+  
+  // Validate quiz 2
+  if (!content.quiz_2_type || !content.quiz_2_question || content.quiz_2_correct_answer === undefined || !content.quiz_2_explanation) {
+    throw new Error('Missing required quiz 2 fields');
+  }
+  
+  return true;
 }
