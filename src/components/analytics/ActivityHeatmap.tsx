@@ -36,7 +36,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         yearData.push({
           x: week,
           y: day,
-          r: 12, // Increased from 10 to 12 for bigger cells
+          r: 10, // Increased from 8 to 10 for bigger cells
           score: 0,
           date: currentDate,
         });
@@ -76,7 +76,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
         pointStyle: 'rect' as const,
-        pointRadius: 12, // Increased from 10 to 12 for bigger cells
+        pointRadius: 10, // Increased from 8 to 10 for bigger cells
         hoverBackgroundColor: 'rgba(168, 85, 247, 0.8)',
       },
     ],
@@ -149,10 +149,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           },
         },
         afterFit: (axis: any) => {
-          // Further reduce the amount of space allocated for the Y-axis labels
+          // Reduce the amount of space allocated for the Y-axis labels
           axis.paddingTop = 0;
           axis.paddingBottom = 0;
-          axis.height = 120; // Reduced from 150 to 120 to bring rows even closer together
+          axis.height = 150; // Reduced height to bring rows closer together
         },
       },
     },
