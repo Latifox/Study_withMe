@@ -9,6 +9,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface Resource {
+  title: string;
+  url: string;
+  description: string;
+  resource_type: string;
+}
+
 serve(async (req) => {
   console.log('Generate resources function started');
 
@@ -23,14 +30,10 @@ serve(async (req) => {
       throw new Error('PERPLEXITY_API_KEY is not set');
     }
 
-    const { topic, description, lecture_id } = await req.json();
-    console.log('Received request:', { topic, description, lecture_id });
+    const { topic, description } = await req.json();
+    console.log('Received request for topic:', topic);
 
-    if (!topic || !description) {
-      throw new Error('Missing required parameters: topic or description');
-    }
-
-    const prompt = `Generate a set of high-quality educational resources for learning about "${topic}". 
+    const prompt = `Generate a curated list of 6-8 high-quality educational resources for learning about "${topic}". 
     Context about the topic: ${description}
     
     Return the response in this exact JSON format:
@@ -39,13 +42,13 @@ serve(async (req) => {
         {
           "title": "Resource title",
           "url": "URL to the resource",
-          "description": "Brief description of the resource",
+          "description": "Brief description of why this resource is valuable",
           "resource_type": "video|article|tutorial|book|course"
         }
       ]
     }
     
-    Include 2-3 resources of each type that are most relevant. Focus on reputable sources.`;
+    Include a mix of different resource types. Focus on reputable sources like educational platforms, respected publications, and well-known experts.`;
 
     console.log('Sending request to Perplexity API');
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -55,72 +58,79 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'llama-2-70b-chat',
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that suggests high-quality learning resources. Be precise and specific in your recommendations.'
+            content: 'You are a helpful assistant that suggests high-quality learning resources.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.2,
-        max_tokens: 1000
       }),
     });
 
-    console.log('Received response from Perplexity API');
-    const data = await response.json();
-    console.log('Perplexity API response:', data);
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from Perplexity API');
+    if (!response.ok) {
+      console.error('Perplexity API error:', await response.text());
+      throw new Error(`Perplexity API error: ${response.status}`);
     }
 
-    // Parse the JSON response from the content
-    const generatedContent = JSON.parse(data.choices[0].message.content);
-    console.log('Parsed generated content:', generatedContent);
+    const data = await response.json();
+    console.log('Received response from Perplexity API');
 
-    // Convert resources to markdown format
-    const resourcesByType: { [key: string]: any[] } = {};
-    generatedContent.resources.forEach((resource: any) => {
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from Perplexity API');
+    }
+
+    // Parse the JSON string from the content
+    let parsedResources;
+    try {
+      parsedResources = JSON.parse(data.choices[0].message.content);
+      console.log('Successfully parsed resources:', parsedResources);
+    } catch (error) {
+      console.error('Error parsing Perplexity response:', error);
+      throw new Error('Failed to parse Perplexity response');
+    }
+
+    // Convert resources to markdown
+    let markdown = "## Additional Learning Resources\n\n";
+    const resourcesByType: { [key: string]: Resource[] } = {};
+
+    // Group resources by type
+    parsedResources.resources.forEach((resource: Resource) => {
       if (!resourcesByType[resource.resource_type]) {
         resourcesByType[resource.resource_type] = [];
       }
       resourcesByType[resource.resource_type].push(resource);
     });
 
-    let markdown = "## Additional Learning Resources\n\n";
+    // Generate markdown sections by type
     Object.entries(resourcesByType).forEach(([type, resources]) => {
       markdown += `### ${type.charAt(0).toUpperCase() + type.slice(1)}s\n\n`;
-      resources.forEach((resource: any) => {
+      resources.forEach(resource => {
         markdown += `- [${resource.title}](${resource.url})\n  ${resource.description}\n\n`;
       });
     });
 
-    console.log('Generated markdown structure:', { markdown_length: markdown.length });
-
+    console.log('Returning generated content');
     return new Response(
       JSON.stringify({
-        resources: generatedContent.resources,
+        resources: parsedResources.resources,
         markdown: markdown
       }),
       { 
         headers: { 
           ...corsHeaders,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json' 
         }
       }
     );
   } catch (error) {
     console.error('Error in generate-resources function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.toString()
-      }),
+      JSON.stringify({ error: error.message }),
       { 
         status: 500,
         headers: { 
