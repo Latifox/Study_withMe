@@ -20,10 +20,13 @@ serve(async (req) => {
     console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
 
     if (!googleApiKey) {
+      console.error('Missing GOOGLE_API_KEY environment variable');
       throw new Error('Google API credentials not configured');
     }
 
-    // Call Gemini API with improved prompt and configuration
+    console.log('Calling Gemini API with key length:', googleApiKey.length);
+
+    // Call Gemini API
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
@@ -99,17 +102,22 @@ STRICT REQUIREMENTS:
     });
 
     if (!geminiResponse.ok) {
-      console.error(`Gemini API error: ${geminiResponse.status}`);
-      const errorData = await geminiResponse.json();
-      console.error('Gemini API error details:', errorData);
-      throw new Error(`Gemini API error: ${geminiResponse.status}`);
+      console.error(`Gemini API error status: ${geminiResponse.status}`);
+      const errorText = await geminiResponse.text();
+      console.error('Gemini API error details:', errorText);
+      throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
     }
 
     const geminiData = await geminiResponse.json();
-    console.log('Gemini response:', JSON.stringify(geminiData, null, 2));
+    console.log('Gemini API response structure:', JSON.stringify(geminiData, null, 2));
     
-    // Extract the generated content
+    if (!geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error('Unexpected Gemini API response structure:', geminiData);
+      throw new Error('Invalid response format from Gemini API');
+    }
+    
     const markdown = geminiData.candidates[0].content.parts[0].text;
+    console.log('Generated markdown content:', markdown);
     
     return new Response(
       JSON.stringify({ markdown }), 
@@ -117,9 +125,16 @@ STRICT REQUIREMENTS:
     );
 
   } catch (error) {
-    console.error('Error in generate-resources function:', error);
+    console.error('Detailed error in generate-resources function:', {
+      error: error.message,
+      stack: error.stack,
+    });
+    
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Check function logs for more information'
+      }), 
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -127,4 +142,3 @@ STRICT REQUIREMENTS:
     );
   }
 });
-
