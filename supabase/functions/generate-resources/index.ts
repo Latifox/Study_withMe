@@ -10,6 +10,8 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Generate resources function called');
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -29,47 +31,47 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: `You are an educational resource gatherer specialized in educational and academic resources. Gather and give me EXACTLY 3 high-quality resources about the topic "${topic}". Context about the topic: ${description}. YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST. YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.`
+        content: `You are an educational resource curator specialized in finding high-quality learning materials. For the topic "${topic}", find EXACTLY three types of resources: 1 video, 1 article, and 1 research paper or in-depth guide. Context: ${description}. 
+        
+        Requirements:
+        - All resources must be in ${language}
+        - For videos: use search query format 
+        - Verify all links are accessible
+        - Include brief descriptions with each resource
+        - Focus on beginner-friendly content when possible`
       },
       {
         role: "user",
-        content: `Search for at least 6 potential educational resources about "${topic}" and evaluate them carefully, scoring each from 0-100 based on:
+        content: `Find educational resources about "${topic}" that meet these criteria:
 
-1. Resource Existence & Accessibility (50 points):
-   * For YouTube videos: Score based on channel reputation (especially Khan Academy), likely view count, and educational focus
-   * For articles: Score based on source reliability, author credentials, and recent publication date
-   * For research papers: Score based on journal reputation, citation count, and public accessibility
+1. Video Resource:
+   - Must be from reputable educational channels
+   - Format: use YouTube search query (e.g., https://www.youtube.com/results?search_query=TITLE+channel:CHANNEL_NAME)
+   - Prioritize content from established educational channels
 
-2. Content Relevance & Quality (50 points):
-   * Direct relevance to "${topic}"
-   * Depth and comprehensiveness of educational content
-   * Target audience appropriateness
-   * Overall educational value
+2. Article Resource:
+   - Must be from reliable sources (educational websites, reputable blogs, documentation)
+   - Should be comprehensive yet accessible
+   - Recent publication preferred
 
-CRITICAL REQUIREMENTS:
-1. ALL resources MUST be in English
-2. For YouTube resources:
-   - Convert direct video links into search query URLs
-   - Format: https://www.youtube.com/results?search_query=VIDEO_TITLE+channel:CHANNEL_NAME
-   - Example: For video "Breaking down Distributed Energy Resources" by "Hydro Ottawa":
-     https://www.youtube.com/results?search_query=Breaking+down+Distributed+Energy+Resources+channel:Hydro+Ottawa
-   - Prioritize content from Khan Academy when relevant
-3. For articles and papers: Double-check URL accessibility
-4. Return ONLY the 3 highest-scoring resources (one of each type)
+3. Academic/In-depth Resource:
+   - Can be a research paper, detailed guide, or comprehensive documentation
+   - Must be publicly accessible
+   - Should provide deeper understanding
 
-Format your response EXACTLY like this:
+Format your response in markdown:
 
 ## Video Resources
-1. [Video Title](https://www.youtube.com/results?search_query=VIDEO_TITLE+channel:CHANNEL_NAME)
-   Description: Brief explanation with score justification
+[Title](youtube_search_url)
+Brief description
 
 ## Article Resources
-1. [Article Title](article_url)
-   Description: Brief explanation with score justification
+[Title](url)
+Brief description
 
-## Research Papers
-1. [Paper Title](paper_url)
-   Description: Brief explanation with score justification`
+## In-depth Resources
+[Title](url)
+Brief description`
       }
     ];
 
@@ -80,10 +82,11 @@ Format your response EXACTLY like this:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar-pro',
+        model: 'llama-3.1-sonar-small-128k-online',
         messages: messages,
         temperature: 0.1,
-        max_tokens: 2048
+        max_tokens: 2048,
+        return_images: false
       })
     });
 
@@ -95,7 +98,7 @@ Format your response EXACTLY like this:
     }
 
     const data = await response.json();
-    console.log('Perplexity API response structure:', JSON.stringify(data, null, 2));
+    console.log('Perplexity API response received');
     
     if (!data.choices?.[0]?.message?.content) {
       console.error('Unexpected Perplexity API response structure:', data);
@@ -111,11 +114,7 @@ Format your response EXACTLY like this:
     );
 
   } catch (error) {
-    console.error('Detailed error in generate-resources function:', {
-      error: error.message,
-      stack: error.stack,
-    });
-    
+    console.error('Error in generate-resources function:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,

@@ -1,2 +1,5 @@
 
 project_id = "bjpawnertrqwtgyvrhml"
+
+[functions.generate-resources]
+verify_jwt = true
