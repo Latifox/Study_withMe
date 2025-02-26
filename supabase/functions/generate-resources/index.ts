@@ -29,20 +29,14 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: "You are an educational resource curator specializing in academic content."
+        content: "You are an educational resource gatherer specialized in educational and academic resources."
       },
       {
         role: "user",
-        content: `Generate EXACTLY 6 high-quality educational resources about the topic "${topic}".
+        content: `Gather and give me EXACTLY 6 high-quality resources about the topic "${topic}".
 
 Context about the topic:
 ${description}
-
-STRICT REQUIREMENTS:
-1. Resource Distribution (EXACTLY):
-   - 2 video lectures/tutorials from Youtube
-   - 2 news articles
-   - 2 research papers from Google Scholar
 
 YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST.
 YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.
@@ -85,7 +79,7 @@ Format Requirements:
       body: JSON.stringify({
         model: 'sonar-pro',
         messages: messages,
-        temperature: 0.2,
+        temperature: 0.1,
         max_tokens: 2048
       })
     });
@@ -131,4 +125,3 @@ Format Requirements:
     );
   }
 });
-
