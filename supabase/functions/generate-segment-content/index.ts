@@ -6,9 +6,9 @@ import { corsHeaders } from '../_shared/cors.ts'
 const openAI = new OpenAI(Deno.env.get('OPENAI_API_KEY') || '');
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -54,7 +54,7 @@ serve(async (req) => {
     console.log('Sending request to OpenAI...');
     
     const completion = await openAI.createChatCompletion({
-      model: "gpt-4",
+      model: "gpt-4o-mini", // Changed from gpt-4 to gpt-4o-mini
       messages: [
         { 
           "role": "system", 
@@ -96,4 +96,3 @@ serve(async (req) => {
     )
   }
 })
-
