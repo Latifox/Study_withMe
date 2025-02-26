@@ -1,179 +1,94 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import "https://deno.land/x/xhr@0.1.0/mod.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { corsHeaders } from '../_shared/cors.ts'
+import { OpenAI } from "https://deno.land/x/openai@1.4.3/mod.ts"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const openAI = new OpenAI(Deno.env.get('OPENAI_API_KEY') || '');
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const {
-      lectureId,
-      segmentNumber,
-      segmentTitle,
-      segmentDescription,
-      lectureContent
-    } = await req.json()
+    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage } = await req.json()
 
-    if (!lectureId || !segmentNumber || !segmentTitle || !lectureContent) {
-      throw new Error('Missing required parameters')
+    console.log(`Generating content for segment ${segmentNumber} of lecture ${lectureId}`);
+    console.log('Content language:', contentLanguage);
+
+    // Validate required fields
+    if (!lectureId || !segmentNumber || !segmentTitle || !segmentDescription || !lectureContent) {
+      throw new Error('Missing required fields');
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const supabase = createClient(supabaseUrl!, supabaseKey!)
+    const prompt = `
+      Generate educational content for a lecture segment with the following details:
+      Title: ${segmentTitle}
+      Description: ${segmentDescription}
+      Content Language: ${contentLanguage || 'english'}
 
-    console.log('Fetching AI config for lecture:', lectureId)
-    
-    // Fetch AI configuration
-    const { data: aiConfig, error: configError } = await supabase
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle()
+      Create content in this format:
+      1. Two theory slides that explain the key concepts
+      2. Two quiz questions to test understanding
 
-    if (configError) {
-      console.error('Error fetching AI config:', configError)
-    }
+      The content should be based on this lecture material:
+      ${lectureContent}
 
-    // Use default values if no config is found
-    const config = aiConfig || {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.6,
-      content_language: 'English',
-      custom_instructions: ''
-    }
+      Return a JSON object with these exact fields:
+      {
+        "theory_slide_1": "First slide content",
+        "theory_slide_2": "Second slide content",
+        "quiz_1_type": "multiple_choice",
+        "quiz_1_question": "Question text",
+        "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+        "quiz_1_correct_answer": "Correct option",
+        "quiz_1_explanation": "Why this is correct",
+        "quiz_2_type": "true_false",
+        "quiz_2_question": "True/false question text",
+        "quiz_2_correct_answer": true/false,
+        "quiz_2_explanation": "Why this is true/false"
+      }
+    `;
 
-    console.log('Using AI config:', config)
+    const completion = await openAI.createChatCompletion({
+      model: "gpt-4",
+      messages: [
+        { 
+          "role": "system", 
+          "content": "You are an educational content creator specializing in creating engaging and informative lecture materials."
+        },
+        { 
+          "role": "user", 
+          "content": prompt 
+        }
+      ],
+      temperature: 0.7
+    });
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
-    
-    // Enhanced system prompt with specific formatting and scope instructions
-    const systemPrompt = `You are an expert educational content creator. Create focused, well-structured content following these strict requirements:
+    const response = completion.choices[0].message.content;
+    console.log('Generated content:', response);
 
-1. Content Scope:
-   - Focus EXCLUSIVELY on the concepts mentioned in the segment description
-   - Do NOT include information from other segments or topics not mentioned in the description
-   - Base your explanations on the relevant parts of the lecture content
-   - Stay focused and avoid discussing related but out-of-scope topics
-
-2. Length and Structure:
-   - Each slide must be between 150-350 words
-   - Break content into clear sections using ## headers
-   - Use proper paragraph breaks for readability
-
-3. Formatting (use Markdown syntax):
-   - Use **bold text** for key concepts and important terms
-   - Create organized lists using * or - for bullet points
-   - Use 1. 2. 3. for numbered lists
-   - Use > for important quotes or key takeaways
-
-4. Content Guidelines:
-   - Explain concepts clearly and directly
-   - Don't cite external sources or references
-   - Make content engaging and educational
-   - Use ${config.content_language || 'English'}
-   - Be ${config.creativity_level > 0.5 ? 'creative and engaging' : 'focused and analytical'}
-   - Provide ${config.detail_level > 0.5 ? 'detailed' : 'concise'} explanations
-
-${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: config.temperature,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: `Create educational content for this specific lecture segment:
-              Title: ${segmentTitle}
-              Description: ${segmentDescription}
-              
-              Important: Generate content that ONLY covers the concepts and topics mentioned in the segment description above.
-              Use the following lecture content ONLY as a source for accurate information about these specific concepts:
-              ${lectureContent.substring(0, 8000)}
-              
-              Generate:
-              1. Two theory slides (formatted according to the guidelines)
-                 - Focus exclusively on explaining the concepts from this segment's description
-                 - Do not include information about topics not mentioned in the description
-              2. Two quiz questions:
-                 - First: A multiple choice question about the key concepts from this segment
-                 - Second: A true/false question about the main ideas covered in this segment
-              
-              Format as valid JSON with these fields:
-              {
-                "theory_slide_1": "content",
-                "theory_slide_2": "content",
-                "quiz_1_type": "multiple_choice",
-                "quiz_1_question": "question",
-                "quiz_1_options": ["option1", "option2", "option3", "option4"],
-                "quiz_1_correct_answer": "correct option",
-                "quiz_1_explanation": "explanation",
-                "quiz_2_type": "true_false",
-                "quiz_2_question": "question",
-                "quiz_2_correct_answer": true/false,
-                "quiz_2_explanation": "explanation"
-              }`
-          }
-        ],
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
-    }
-
-    const aiResponse = await response.json()
-    let content
+    let content;
     try {
-      const jsonStr = aiResponse.choices[0].message.content.replace(/```json\n?|\n?```/g, '')
-      content = JSON.parse(jsonStr)
+      content = JSON.parse(response);
     } catch (error) {
-      console.error('Error parsing AI response:', error)
-      throw new Error('Failed to parse AI response')
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Invalid content format received from OpenAI');
     }
 
-    console.log('Generated content structure:', Object.keys(content))
-
-    // Save the content to the database
-    const { error: insertError } = await supabase
-      .from('segments_content')
-      .upsert({
-        lecture_id: lectureId,
-        sequence_number: segmentNumber,
-        ...content
-      })
-
-    if (insertError) {
-      console.error('Error saving content:', insertError)
-      throw insertError
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-
+    return new Response(
+      JSON.stringify({ content }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
   } catch (error) {
-    console.error('Error in generate-segment-content:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    console.error('Error in generate-segment-content:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      },
+    )
   }
 })
-

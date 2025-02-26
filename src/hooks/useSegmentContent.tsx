@@ -26,12 +26,6 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw contentError;
       }
 
-      // If content exists for all segments, return it
-      if (existingContent && existingContent.length > 0) {
-        console.log('Found existing content:', existingContent);
-        return { segments: existingContent };
-      }
-
       // Get all segment titles and descriptions
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
@@ -50,6 +44,12 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       }
 
       console.log('Retrieved segments for processing:', segmentData);
+
+      // If content exists for all segments, return it
+      if (existingContent && existingContent.length === segmentData.length) {
+        console.log('Found existing content for all segments:', existingContent);
+        return { segments: existingContent };
+      }
 
       // First get the lecture content
       const { data: lecture } = await supabase
@@ -77,6 +77,19 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         const retryDelay = (retryCount: number) => Math.min(1000 * Math.pow(2, retryCount), 10000);
 
         try {
+          // Check if content already exists for this segment
+          const { data: existingSegmentContent } = await supabase
+            .from('segments_content')
+            .select('*')
+            .eq('lecture_id', numericLectureId)
+            .eq('sequence_number', segment.sequence_number)
+            .single();
+
+          if (existingSegmentContent) {
+            console.log(`Content already exists for segment ${segment.sequence_number}, skipping generation`);
+            return existingSegmentContent;
+          }
+
           console.log(`Generating content for segment ${segment.sequence_number}: ${segment.title}`);
           
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
@@ -85,12 +98,18 @@ export const useSegmentContent = (numericLectureId: number | null) => {
               segmentNumber: segment.sequence_number,
               segmentTitle: segment.title,
               segmentDescription: segment.segment_description,
-              lectureContent: lecture.content
+              lectureContent: lecture.content,
+              contentLanguage: contentLanguage
             }
           });
 
-          if (generationError || !generatedContent?.content) {
-            throw generationError || new Error('No content generated');
+          if (generationError) {
+            console.error(`Error generating content for segment ${segment.sequence_number}:`, generationError);
+            throw generationError;
+          }
+
+          if (!generatedContent?.content) {
+            throw new Error('No content generated');
           }
 
           const content = generatedContent.content;
