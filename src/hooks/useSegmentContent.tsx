@@ -162,6 +162,10 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryOnMount: false, // Prevent retrying when component remounts
     staleTime: Infinity, // Prevent automatic refetching
     gcTime: Infinity, // Keep the data cached indefinitely
+    enabled: !!numericLectureId, // Only run the query if we have a lecture ID
+    refetchOnMount: false, // Prevent refetching when component remounts
+    refetchOnWindowFocus: false, // Prevent refetching when window gains focus
+    refetchOnReconnect: false, // Prevent refetching when network reconnects
+    refetchInterval: false, // Prevent periodic refetching
   });
 };
-
