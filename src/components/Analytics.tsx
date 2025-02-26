@@ -1,22 +1,18 @@
+
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfYear, endOfYear } from "date-fns";
+import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, startOfYear, endOfYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen, Star } from "lucide-react";
-import {
-  Tooltip as TooltipUI,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import StatsCard from "./analytics/StatsCard";
+import ActivityChart from "./analytics/ActivityChart";
+import ActivityHeatmap from "./analytics/ActivityHeatmap";
 
 type QuizProgress = Database['public']['Tables']['quiz_progress']['Row'];
 type UserProgressRow = Database['public']['Tables']['user_progress']['Row'];
@@ -198,62 +194,27 @@ const Analytics = () => {
 
         <div className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-emerald-500/90 to-teal-400/90 hover:from-emerald-500 hover:to-teal-400 transition-colors relative group">
-                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
-                    <BookOpen 
-                      className="w-6 h-6 text-white" 
-                      strokeWidth={2}
-                      style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-white/90">Total Lectures</p>
-                    <p className="text-3xl font-bold text-white drop-shadow-md">{totalLectures}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-red-500/90 to-rose-400/90 hover:from-red-500 hover:to-rose-400 transition-colors relative group">
-                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
-                    <Flame 
-                      className="w-6 h-6 text-white" 
-                      strokeWidth={2}
-                      style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-white/90">Current Streak</p>
-                    <p className="text-3xl font-bold text-white drop-shadow-md">{currentStreak} days</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-              <CardContent className="pt-6 rounded-lg bg-gradient-to-br from-amber-500/90 to-yellow-400/90 hover:from-amber-500 hover:to-yellow-400 transition-colors relative group">
-                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
-                    <Star 
-                      className="w-6 h-6 text-white" 
-                      strokeWidth={2}
-                      style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-white/90">Total XP</p>
-                    <p className="text-3xl font-bold text-white drop-shadow-md">{totalXP}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <StatsCard
+              title="Total Lectures"
+              value={totalLectures}
+              icon={BookOpen}
+              gradientFrom="emerald-500"
+              gradientTo="teal-400"
+            />
+            <StatsCard
+              title="Current Streak"
+              value={`${currentStreak} days`}
+              icon={Flame}
+              gradientFrom="red-500"
+              gradientTo="rose-400"
+            />
+            <StatsCard
+              title="Total XP"
+              value={totalXP}
+              icon={Star}
+              gradientFrom="amber-500"
+              gradientTo="yellow-400"
+            />
           </div>
 
           <div className="space-y-6">
@@ -279,37 +240,7 @@ const Analytics = () => {
               </div>
             </div>
 
-            <div className="h-[400px] rounded-lg p-4 bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                  <XAxis dataKey="date" stroke="#fff" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#fff" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: "rgba(255,255,255,0.1)",
-                      backdropFilter: "blur(8px)",
-                      border: "1px solid rgba(255,255,255,0.2)",
-                      borderRadius: "8px",
-                      color: "white"
-                    }} 
-                    labelStyle={{ color: "white" }}
-                    itemStyle={{ color: "white" }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="cumulative" 
-                    stroke="#ffffff" 
-                    strokeWidth={4}
-                    dot={false}
-                    activeDot={{
-                      r: 8,
-                      style: { fill: "#ffffff", stroke: "white", strokeWidth: 2 }
-                    }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <ActivityChart data={chartData} />
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -331,59 +262,12 @@ const Analytics = () => {
                 </div>
               </div>
               
-              <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <div className="flex gap-4">
-                  <div className="flex flex-col justify-between py-1 text-xs text-white/40">
-                    {weekDays.map(day => (
-                      <div key={day} className="h-8 flex items-center">{day}</div>
-                    ))}
-                  </div>
-                  
-                  <div className="flex-1 relative">
-                    <div className="grid" style={{
-                      gridTemplateColumns: 'repeat(52, minmax(0, 1fr))',
-                      gridTemplateRows: 'repeat(7, 1fr)',
-                      gap: '1px',
-                      aspectRatio: '52/7'
-                    }}>
-                      {heatmapData.map((day, index) => (
-                        <TooltipProvider key={index}>
-                          <TooltipUI>
-                            <TooltipTrigger asChild>
-                              <div 
-                                className={cn(
-                                  "w-full h-full rounded-sm transition-all duration-300 hover:scale-125 hover:z-10",
-                                  getHeatmapColor(day.score),
-                                  "border border-white/10"
-                                )}
-                                style={{
-                                  aspectRatio: '1/1'
-                                }}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-medium">
-                                {format(day.date, 'MMM dd, yyyy')}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {day.score} XP earned
-                              </p>
-                            </TooltipContent>
-                          </TooltipUI>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-
-                    <div className="absolute left-0 right-0 bottom-[-24px] flex justify-between">
-                      {months.map((month) => (
-                        <div key={month} className="text-xs text-white/40">
-                          {month}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ActivityHeatmap 
+                data={heatmapData}
+                getHeatmapColor={getHeatmapColor}
+                weekDays={weekDays}
+                months={months}
+              />
             </div>
           </div>
         </div>
