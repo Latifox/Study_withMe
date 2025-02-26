@@ -7,23 +7,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+console.log('Generate resources function loaded');
+
 serve(async (req) => {
   console.log('Generate resources function called');
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+    console.log('Checking Perplexity API key:', perplexityApiKey ? 'Present' : 'Missing');
     
     if (!perplexityApiKey) {
       console.error('Missing PERPLEXITY_API_KEY environment variable');
       throw new Error('Perplexity API credentials not configured');
     }
 
-    const { topic, description = '' } = await req.json();
+    const requestData = await req.json();
+    console.log('Request data:', requestData);
+
+    const { topic, description = '' } = requestData;
     console.log(`Generating resources for topic: "${topic}" with description: "${description}"`);
 
     const messages = [
@@ -89,6 +96,8 @@ Brief description`
         return_images: false
       })
     });
+
+    console.log('Perplexity API response status:', response.status);
 
     if (!response.ok) {
       console.error(`Perplexity API error status: ${response.status}`);
