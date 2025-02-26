@@ -33,23 +33,30 @@ serve(async (req) => {
       },
       {
         role: "user",
-        content: `Search for at least 6-8 potential high-quality resources about the topic "${topic}". For each resource you find, assign it a confidence score from 0 to 100 based on:
-- Likelihood that the URL exists and is accessible (50 points max)
-- Relevance and quality of content for the topic "${topic}" (50 points max)
+        content: `Search for at least 6 potential high-quality resources about the topic "${topic}". For each resource you find, assign it a confidence score from 0 to 100 based on:
 
-Then select ONLY the 3 resources with the highest total scores to present to the user.
+- Resource Existence & Accessibility (50 points max):
+  * For YouTube videos: Verify the video exists and is not region-locked (must be globally available)
+  * For articles: Check that the URL is from a reputable, stable source
+  * For research papers: Ensure they are publicly accessible
+
+- Content Quality & Relevance (50 points max):
+  * Direct relevance to "${topic}"
+  * Depth and accuracy of content
+  * Authority of the source
+
+Then select ONLY the 3 resources with the highest total scores (one video, one article, one research paper) to present to the user.
 
 Context about the topic:
 ${description}
 
-YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST.
-YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.
+YOU MUST VERIFY THAT:
+1. ALL URLs ARE FUNCTIONAL AND ACCESSIBLE
+2. YOUTUBE VIDEOS ARE NOT REGION-LOCKED AND ARE PUBLICLY AVAILABLE
+3. ALL RESOURCES ARE IN ENGLISH
+4. ALL RESOURCES ARE DIRECTLY RELEVANT TO "${topic}"
 
-Format Requirements for the final 3 highest-scoring resources:
-   - Each resource MUST have a clear title
-   - Each URL MUST be functional
-   - Each description MUST explain relevance to "${topic}"
-   - Follow this exact markdown format:
+Format the final 3 highest-scoring resources exactly like this:
 
 ## Video Resource
 1. [Video Title](video_url)
