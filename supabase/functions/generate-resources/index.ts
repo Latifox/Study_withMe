@@ -3,8 +3,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
-const searchApiKey = Deno.env.get('GOOGLE_SEARCH_API_KEY');
-const searchEngineId = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,12 +19,12 @@ serve(async (req) => {
     const { topic, description = '', language = 'english' } = await req.json();
     console.log(`Generating resources for topic: "${topic}" with description: "${description}" in ${language}`);
 
-    if (!googleApiKey || !searchApiKey || !searchEngineId) {
+    if (!googleApiKey) {
       throw new Error('Google API credentials not configured');
     }
 
-    // Call Gemini API with the search tool configuration
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
+    // Call Gemini API with improved prompt and configuration
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,7 +33,7 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}.
+            text: `You are an educational resource curator specializing in academic content. Generate EXACTLY 6 high-quality educational resources about the topic "${topic}" in ${language}. 
 
 Context about the topic:
 ${description}
@@ -44,76 +42,55 @@ STRICT REQUIREMENTS:
 
 1. Resource Distribution (EXACTLY):
    - 2 video lectures/tutorials from reputable educational sources
-   - 2 academic articles/press material
-   - 2 research papers or academic publications
+   - 2 academic articles from educational institutions or reputable organizations
+   - 2 research papers from Google Scholar
 
 2. Resource Quality Requirements:
-   Videos (MUST follow ALL these rules):
-   - NO entertainment videos, music, or non-educational content
-   - MUST be directly related to "${topic}" and its description
-   - MUST be from: youtube.com 
-   - Each URL must be unique and functional
+   Videos:
+   - Only from: youtube.com, coursera.org, edx.org, or mit.edu
+   - MUST be directly educational and relevant to "${topic}"
+   - NO entertainment content
    
-   Articles (MUST follow ALL these rules)
-   - MUST be directly related to "${topic}" and its description
-   - MUST be accessible without subscription
+   Articles:
+   - Only from: .edu, .org, or established educational websites
+   - MUST be academic or professional in nature
    - NO opinion pieces or blog posts
-   - Each URL must be unique and functional
    
-   Research Papers (MUST follow ALL these rules):
-   - ONLY links to Google Scholar
-   - MUST be directly related to "${topic}" and its description
+   Research Papers:
+   - Only from: scholar.google.com
    - Prefer open-access papers
-   - Each URL must be unique and functional
+   - Must be directly relevant to "${topic}"
 
 3. Format Requirements:
-   - Use markdown list format
-   - Each resource MUST have a clear, descriptive title
-   - URLs MUST be real and functional
-   - Descriptions MUST explain the specific relevance to "${topic}"
-
-Please format your response exactly as shown below:
+   - Each resource MUST have a clear title
+   - Each URL MUST be functional
+   - Each description MUST explain relevance to "${topic}"
+   - Follow this exact markdown format:
 
 ## Video Resources
-1. [Complete Video Title](video_url)
-   Description: Clear explanation of how this video specifically addresses ${topic}
+1. [Video Title](video_url)
+   Description: Clear explanation of relevance
 
-2. [Complete Video Title](video_url)
-   Description: Clear explanation of how this video specifically addresses ${topic}
+2. [Video Title](video_url)
+   Description: Clear explanation of relevance
 
 ## Article Resources
-1. [Complete Article Title](article_url)
-   Description: Clear explanation of how this article specifically addresses ${topic}
+1. [Article Title](article_url)
+   Description: Clear explanation of relevance
 
-2. [Complete Article Title](article_url)
-   Description: Clear explanation of how this article specifically addresses ${topic}
+2. [Article Title](article_url)
+   Description: Clear explanation of relevance
 
 ## Research Papers
-1. [Complete Paper Title](paper_url)
-   Description: Clear explanation of how this paper specifically addresses ${topic}
+1. [Paper Title](paper_url)
+   Description: Clear explanation of relevance
 
-2. [Complete Paper Title](paper_url)
-   Description: Clear explanation of how this paper specifically addresses ${topic}`
-          }]
-        }],
-        tools: [{
-          function_declarations: [{
-            name: "search",
-            description: "Search for information",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "The search query"
-                }
-              },
-              required: ["query"]
-            }
+2. [Paper Title](paper_url)
+   Description: Clear explanation of relevance`
           }]
         }],
         generationConfig: {
-          temperature: 0.1,
+          temperature: 0.2,
           topK: 1,
           topP: 1,
           maxOutputTokens: 2048,
@@ -133,13 +110,6 @@ Please format your response exactly as shown below:
     
     // Extract the generated content
     const markdown = geminiData.candidates[0].content.parts[0].text;
-    
-    // Log the grounding metadata if available
-    if (geminiData.candidates[0].groundingMetadata?.searchEntryPoint?.renderedContent) {
-      console.log('Search results used:', 
-        geminiData.candidates[0].groundingMetadata.searchEntryPoint.renderedContent
-      );
-    }
     
     return new Response(
       JSON.stringify({ markdown }), 
