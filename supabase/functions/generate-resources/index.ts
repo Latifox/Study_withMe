@@ -44,21 +44,10 @@ STRICT REQUIREMENTS:
    - 2 news articles
    - 2 research papers from Google Scholar
 
-2. Resource Quality Requirements:
-   Videos:
-   - Only from youtube.com
-   - MUST be directly educational and relevant to "${topic}"
-   - NO entertainment content
-   
-   Articles:
-   - Must be from reputable news sources
-   - NO opinion pieces or blog posts
-   
-   Research Papers:
-   - Only from scholar.google.com
-   - Must be directly relevant to "${topic}"
+YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST.
+YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.
 
-3. Format Requirements:
+Format Requirements:
    - Each resource MUST have a clear title
    - Each URL MUST be functional
    - Each description MUST explain relevance to "${topic}"
