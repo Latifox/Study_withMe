@@ -6,6 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 interface Segment {
   title: string;
   segment_description: string;
+  lecture_id: number; // Added this property to match the database schema
 }
 
 interface Resource {
