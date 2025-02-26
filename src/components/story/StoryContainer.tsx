@@ -39,12 +39,13 @@ export const StoryContainer = ({
   onWrongAnswer
 }: StoryContainerProps) => {
   const { nodeId } = useParams();
-  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) - 1 : 0;
+  // Get the actual sequence number from the URL without subtracting 1
+  const sequenceNumber = nodeId ? parseInt(nodeId.split('_')[1]) : 1;
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
 
   console.log('Current URL nodeId:', nodeId);
-  console.log('Parsed segment number:', segmentNumber);
+  console.log('Sequence number:', sequenceNumber);
   console.log('Story content:', storyContent);
   console.log('Story content segments length:', storyContent?.segments?.length);
   
@@ -62,7 +63,8 @@ export const StoryContainer = ({
     );
   }
 
-  const currentSegmentData = storyContent.segments[segmentNumber];
+  // Find the segment data that matches the sequence number
+  const currentSegmentData = storyContent.segments.find((_, index) => index === sequenceNumber - 1);
   const isSlide = currentStep < 2;
   const slideIndex = currentStep;
   const questionIndex = currentStep - 2;
@@ -90,7 +92,7 @@ export const StoryContainer = ({
   return (
     <ContentDisplay
       currentSegmentData={currentSegmentData}
-      currentSegment={segmentNumber}
+      currentSegment={sequenceNumber}
       currentStep={currentStep}
       totalSegments={storyContent.segments.length}
       currentScore={currentScore}
