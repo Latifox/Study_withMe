@@ -336,17 +336,17 @@ const Analytics = () => {
               </div>
               
               <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <div className="flex gap-4">
-                  <div className="flex flex-col justify-between text-xs text-white/40">
+                <div className="flex gap-4 relative">
+                  <div className="flex flex-col justify-between py-1 text-xs text-white/40 w-8">
                     {weekDays.map((day) => (
                       <div key={day} className="h-4 leading-4">{day}</div>
                     ))}
                   </div>
                   
-                  <div className="relative flex-1">
-                    <div className="grid grid-cols-[repeat(52,1fr)] gap-1">
+                  <div className="flex-1 relative">
+                    <div className="grid grid-cols-[repeat(52,1fr)] gap-[2px]">
                       {weeks.map((week) => (
-                        <div key={week.toISOString()} className="w-4">
+                        <div key={week.toISOString()} className="w-full">
                           {weekDays.map((_, dayIndex) => {
                             const date = addDays(week, dayIndex);
                             const dateStr = startOfDay(date).toISOString();
@@ -358,7 +358,7 @@ const Analytics = () => {
                                   <TooltipTrigger>
                                     <div 
                                       className={cn(
-                                        "w-4 h-4 rounded-sm mb-1 transition-all duration-300 hover:transform hover:scale-150",
+                                        "w-full aspect-square rounded-sm mb-[2px] transition-all duration-300 hover:transform hover:scale-150",
                                         getHeatmapColor(score)
                                       )}
                                     />
@@ -379,20 +379,19 @@ const Analytics = () => {
                       ))}
                     </div>
 
-                    <div className="absolute left-0 right-0 bottom-[-24px]">
-                      <div className="relative h-6">
-                        {monthPositions.map(({ month, position }) => (
-                          <div
-                            key={month}
-                            className="absolute text-xs text-white/40 transform -translate-x-1/2"
-                            style={{
-                              left: `${(position / 52) * 100}%`
-                            }}
-                          >
-                            {month}
-                          </div>
-                        ))}
-                      </div>
+                    <div className="absolute left-0 right-0 bottom-[-24px] flex justify-between px-2">
+                      {monthPositions.map(({ month }, index) => (
+                        <div
+                          key={month}
+                          className="text-xs text-white/40 absolute"
+                          style={{
+                            left: `${(index * (100 / 12))}%`,
+                            transform: 'translateX(-50%)'
+                          }}
+                        >
+                          {month}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
