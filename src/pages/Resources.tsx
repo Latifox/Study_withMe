@@ -3,10 +3,9 @@ import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
-import ResourcesLoading from "@/components/ResourcesLoading";
 import { useGenerateResources } from "@/hooks/useGenerateResources";
 import { toast } from "@/components/ui/use-toast";
 import ReactMarkdown from 'react-markdown';
@@ -89,7 +88,9 @@ const Resources = () => {
             </div>
 
             {segmentsLoading ? (
-              <ResourcesLoading />
+              <div className="flex justify-center items-center min-h-[60vh]">
+                <Loader2 className="w-8 h-8 animate-spin text-black" />
+              </div>
             ) : !segments ? (
               <Card className="bg-white/10 backdrop-blur-md border-white/20">
                 <CardContent className="p-6">
@@ -126,19 +127,19 @@ const Resources = () => {
                       Select a segment to view its resources
                     </div>
                   ) : resourcesLoading ? (
-                    <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                    <Card className="h-full bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
                       <CardContent className="h-full flex items-center justify-center">
-                        <ResourcesLoading />
+                        <Loader2 className="w-8 h-8 animate-spin text-black" />
                       </CardContent>
                     </Card>
                   ) : resourcesError ? (
-                    <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                    <Card className="h-full bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
                       <CardContent className="h-full flex items-center justify-center">
                         <p className="text-red-500">Error loading resources. Please try again.</p>
                       </CardContent>
                     </Card>
                   ) : (
-                    <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                    <Card className="h-full bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
                       <CardHeader className="border-b border-white/20">
                         <CardTitle className="text-xl text-black">
                           {selectedSegment?.title}
