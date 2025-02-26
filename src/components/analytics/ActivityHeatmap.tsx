@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format, getMonth, getDate } from "date-fns";
+import { format, getMonth, getDate, startOfYear } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -30,13 +30,22 @@ interface ActivityHeatmapProps {
 
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
-    return data.map((item) => ({
-      x: getMonth(new Date(item.date)),
-      y: (new Date(item.date).getDay() + 3) % 7, // Shift days to start from Wednesday
-      r: item.score,
-      score: item.score,
-      date: getDate(new Date(item.date)),
-    }));
+    // Start from January 1st, 2025 (a Wednesday)
+    const startDate = startOfYear(new Date(2025, 0, 1));
+    
+    return data.map((item) => {
+      const date = new Date(item.date);
+      // Calculate day position (0-6) starting from Wednesday
+      const dayPosition = (date.getDay() + 4) % 7; // +4 because we want Wed(3) to be 0
+      
+      return {
+        x: getMonth(date),
+        y: dayPosition,
+        r: item.score,
+        score: item.score,
+        date: getDate(date),
+      };
+    });
   };
 
   const allScores = data.map(d => d.score);
@@ -108,7 +117,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           stepSize: 1,
           padding: 10,
           callback: (value: number) => {
-            // Reordered to start from Wednesday
+            // Starting from Wednesday
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
             return days[value];
           },
