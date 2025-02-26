@@ -31,11 +31,11 @@ interface ActivityHeatmapProps {
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     return data.map((item) => ({
-      x: getMonth(new Date(item.date)), // Month (0-11)
-      y: new Date(item.date).getDay(), // Day of week (0-6)
-      r: item.score, // Use score for radius (will be normalized in display)
+      x: getMonth(new Date(item.date)),
+      y: (new Date(item.date).getDay() + 3) % 7, // Shift days to start from Wednesday
+      r: item.score,
       score: item.score,
-      date: getDate(item.date),
+      date: getDate(new Date(item.date)),
     }));
   };
 
@@ -108,7 +108,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           stepSize: 1,
           padding: 10,
           callback: (value: number) => {
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            // Reordered to start from Wednesday
+            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
             return days[value];
           },
           color: 'rgba(255, 255, 255, 0.4)',
