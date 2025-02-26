@@ -33,40 +33,42 @@ serve(async (req) => {
       },
       {
         role: "user",
-        content: `Search for at least 6 potential educational resources about "${topic}" and score each from 0-100 based on:
+        content: `Search for at least 6 potential educational resources about "${topic}" and evaluate each with a score from 0-100 based on:
 
-1. Resource Existence & Accessibility (50 points):
-   * For YouTube videos: Score based on channel reputation, educational focus, expected availability
-   * For articles: Score based on source reliability, author credentials, publication date
-   * For research papers: Score based on public accessibility, citations, author credibility
-   
-2. Content Relevance & Quality (50 points):
+1. Resource Existence Probability (50 points):
+   * For YouTube videos: Score based on channel reputation, views estimation, and upload date
+   * For articles: Score based on publisher reputation, author credibility, and recent publication date
+   * For research papers: Score based on journal reputation, citation count, and public accessibility
+
+2. Content Relevance Score (50 points):
    * Direct relevance to "${topic}"
-   * Depth of content
-   * Educational value
-   * Comprehensibility for the target audience
+   * Depth and quality of educational content
+   * Target audience appropriateness
+   * Overall educational value
 
-IMPORTANT REQUIREMENTS:
+CRITICAL REQUIREMENTS:
 1. ALL resources MUST be in English
-2. For YouTube resources, provide SEARCH QUERY URLs:
-   - Format: https://www.youtube.com/results?search_query=TITLE+WITH+PLUS+SIGNS
-   - Example: For "Physics 101: Energy" → https://www.youtube.com/results?search_query=Physics+101+Energy
-3. For articles and papers: Verify URLs are accessible
+2. For YouTube resources:
+   - Convert direct video links into search query URLs
+   - Format: https://www.youtube.com/results?search_query=TITLE+channel:CHANNEL_NAME
+   - Example: For video "Physics 101" by "Science Academy":
+     https://www.youtube.com/results?search_query=Physics+101+channel:Science+Academy
+3. For articles and papers: Verify URL accessibility
 4. Return ONLY the 3 highest-scoring resources (one of each type)
 
 Format your response EXACTLY like this:
 
 ## Video Resources
-1. [Title of Educational Video](https://www.youtube.com/results?search_query=ENCODED+VIDEO+TITLE)
-   Description: Brief explanation of content and relevance
+1. [Video Title](https://www.youtube.com/results?search_query=VIDEO_TITLE+channel:CHANNEL_NAME)
+   Description: Brief explanation with score justification
 
 ## Article Resources
 1. [Article Title](article_url)
-   Description: Brief explanation of content and relevance
+   Description: Brief explanation with score justification
 
 ## Research Papers
 1. [Paper Title](paper_url)
-   Description: Brief explanation of content and relevance`
+   Description: Brief explanation with score justification`
       }
     ];
 
@@ -125,4 +127,3 @@ Format your response EXACTLY like this:
     );
   }
 });
-
