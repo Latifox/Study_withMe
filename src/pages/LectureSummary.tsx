@@ -134,6 +134,7 @@ const LectureSummary = () => {
             Back to Lectures
           </Button>
           <Button 
+            variant="outline"
             onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
             className="gap-2 bg-white/80 hover:bg-white"
           >
