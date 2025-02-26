@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format, getMonth, getDate, startOfYear } from "date-fns";
+import { format, getMonth, getDate, startOfYear, getDay } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -30,20 +30,21 @@ interface ActivityHeatmapProps {
 
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
-    // Start from January 1st, 2025 (a Wednesday)
-    const startDate = startOfYear(new Date(2025, 0, 1));
-    
-    // Create a data point for every day of the year
     const yearData = [];
+    
+    // Generate data for each month (12 months)
     for (let month = 0; month < 12; month++) {
-      for (let week = 0; week < 6; week++) {
+      // For each week in the month (we'll show up to 5 weeks)
+      for (let week = 0; week < 5; week++) {
+        // For each day of the week (Wednesday to Tuesday)
         for (let day = 0; day < 7; day++) {
+          const xPosition = month + (week * 0.2); // Increase spacing between weeks
           yearData.push({
-            x: month + (week * 0.15), // Add small offset for each week
+            x: xPosition,
             y: day,
-            r: 8,
+            r: 10, // Square size
             score: 0,
-            date: format(new Date(2025, month, day + 1), 'MMM d'),
+            date: format(new Date(2025, month, (week * 7) + day + 1), 'MMM d'),
           });
         }
       }
@@ -53,10 +54,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     data.forEach((item) => {
       const date = new Date(item.date);
       const month = getMonth(date);
-      const dayPosition = (date.getDay() + 4) % 7; // +4 because we want Wed(3) to be 0
-      const week = Math.floor((getDate(date) - 1) / 7);
+      const dayOfWeek = (getDay(date) + 4) % 7; // Adjust to start from Wednesday
+      const weekInMonth = Math.floor((getDate(date) - 1) / 7);
       
-      const index = (month * 42) + (week * 7) + dayPosition;
+      const index = (month * 35) + (weekInMonth * 7) + dayOfWeek;
       if (index < yearData.length) {
         yearData[index].score = item.score;
       }
@@ -66,8 +67,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   };
 
   const allScores = data.map(d => d.score);
-  const minScore = Math.min(...allScores);
-  const maxScore = Math.max(...allScores);
+  const minScore = Math.min(...allScores, 0);
+  const maxScore = Math.max(...allScores, 0);
 
   const normalizeScore = (score: number) => {
     if (maxScore === minScore) return 0;
@@ -86,7 +87,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
             : `rgba(168, 85, 247, ${0.2 + normalizeScore(score) * 0.8})`;
         },
         borderColor: 'transparent',
-        pointRadius: 8,
+        pointRadius: 10,
         pointStyle: 'rect' as const,
       },
     ],
@@ -97,18 +98,18 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     maintainAspectRatio: false,
     layout: {
       padding: {
-        top: 20,
+        top: 30,
         right: 20,
         bottom: 10,
-        left: 50
+        left: 60
       }
     },
     scales: {
       x: {
         type: 'linear' as const,
         position: 'top' as const,
-        min: -0.5,
-        max: 11.5,
+        min: -0.2,
+        max: 11.8,
         offset: true,
         grid: {
           display: false,
@@ -120,10 +121,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         ticks: {
           stepSize: 1,
           color: 'rgba(255, 255, 255, 0.7)',
-          padding: 5,
+          padding: 8,
           font: {
             size: 12,
-            weight: 500,
+            weight: '500',
           },
           callback: function(value: number) {
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -146,11 +147,11 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         },
         ticks: {
           stepSize: 1,
-          padding: 8,
+          padding: 12,
           color: 'rgba(255, 255, 255, 0.7)',
           font: {
             size: 12,
-            weight: 500,
+            weight: '500',
           },
           callback: (value: number) => {
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
@@ -190,4 +191,3 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
-
