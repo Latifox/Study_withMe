@@ -50,7 +50,7 @@ const Resources = () => {
 
   // Get the selected segment
   const selectedSegment = selectedSegmentId && segments 
-    ? segments.find(s => s.id === selectedSegmentId)
+    ? segments.find(s => s.id.toString() === selectedSegmentId)
     : null;
 
   // Get resources for the selected segment
@@ -106,9 +106,9 @@ const Resources = () => {
                     <Card 
                       key={segment.id}
                       className={`transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20 hover:shadow-xl hover:bg-white/20 cursor-pointer ${
-                        selectedSegmentId === segment.id ? 'ring-2 ring-black' : ''
+                        selectedSegmentId === segment.id.toString() ? 'ring-2 ring-black' : ''
                       }`}
-                      onClick={() => setSelectedSegmentId(segment.id)}
+                      onClick={() => setSelectedSegmentId(segment.id.toString())}
                     >
                       <CardHeader>
                         <CardTitle className="text-lg text-black">

@@ -58,7 +58,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-2-70b-chat',
+        model: 'sonar-pro',
         messages: [
           {
             role: 'system',
