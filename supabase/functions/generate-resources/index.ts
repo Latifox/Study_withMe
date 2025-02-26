@@ -29,46 +29,44 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: "You are an educational resource gatherer specialized in educational and academic resources. Gather and give me EXACTLY 3 high-quality resources about the topic."
+        content: `You are an educational resource gatherer specialized in educational and academic resources. Gather and give me EXACTLY 3 high-quality resources about the topic "${topic}". Context about the topic: ${description}. YOU HAVE TO MAKE SURE THE LINKS TO RESOURCES ARE VALID, AND THE RESOURCES ACTUALLY EXIST. YOU SHOULD BE SEARCHING FOR RESOURCES IN ENGLISH.`
       },
       {
         role: "user",
-        content: `Search for at least 6 potential high-quality resources about "${topic}" and score each resource from 0-100 based on:
+        content: `Search for at least 6 potential educational resources about "${topic}" and score each from 0-100 based on:
 
-1. Resource Existence & Accessibility (50 points max):
-   * For YouTube videos: You MUST verify if the video exists by checking its view count. If you can't find the view count, the video is unavailable - assign 0 points
-   * For articles: Check publication date, author credentials, and domain reputation
-   * For papers: Verify public accessibility and citation count
-
-2. Content Quality & Relevance (50 points max):
+1. Resource Existence & Accessibility (50 points):
+   * For YouTube videos: Score based on channel reputation, educational focus, expected availability
+   * For articles: Score based on source reliability, author credentials, publication date
+   * For research papers: Score based on public accessibility, citations, author credibility
+   
+2. Content Relevance & Quality (50 points):
    * Direct relevance to "${topic}"
-   * Content depth and academic rigor
-   * Author/creator expertise
-   * For YouTube: Channel reputation and educational focus
+   * Depth of content
+   * Educational value
+   * Comprehensibility for the target audience
 
-Context about the topic:
-${description}
+IMPORTANT REQUIREMENTS:
+1. ALL resources MUST be in English
+2. For YouTube resources, provide SEARCH QUERY URLs:
+   - Format: https://www.youtube.com/results?search_query=TITLE+WITH+PLUS+SIGNS
+   - Example: For "Physics 101: Energy" → https://www.youtube.com/results?search_query=Physics+101+Energy
+3. For articles and papers: Verify URLs are accessible
+4. Return ONLY the 3 highest-scoring resources (one of each type)
 
-STRICT REQUIREMENTS:
-1. Each resource MUST be in English
-2. YouTube videos MUST be verified by finding their view count
-3. All URLs must be functional and accessible
-4. Score each resource out of 100 total points
-5. Select and return ONLY the top 3 scoring resources
-
-Format the final 3 highest-scoring resources exactly like this:
+Format your response EXACTLY like this:
 
 ## Video Resources
-1. [Video Title](video_url)
-   Description: Brief description of content and relevance
-   
+1. [Title of Educational Video](https://www.youtube.com/results?search_query=ENCODED+VIDEO+TITLE)
+   Description: Brief explanation of content and relevance
+
 ## Article Resources
 1. [Article Title](article_url)
-   Description: Brief description of content and relevance
-   
+   Description: Brief explanation of content and relevance
+
 ## Research Papers
 1. [Paper Title](paper_url)
-   Description: Brief description of content and relevance`
+   Description: Brief explanation of content and relevance`
       }
     ];
 
@@ -127,3 +125,4 @@ Format the final 3 highest-scoring resources exactly like this:
     );
   }
 });
+
