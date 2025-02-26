@@ -80,12 +80,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         .from('lecture_ai_configs')
         .select('content_language')
         .eq('lecture_id', numericLectureId)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
-      if (aiConfigError) {
-        console.error('Error fetching AI config:', aiConfigError);
-        throw aiConfigError;
-      }
+      // Default to English if no AI config is found
+      const contentLanguage = aiConfig?.content_language || 'english';
+      console.log('Using content language:', contentLanguage);
 
       // Fetch all segment titles and descriptions
       console.log('No existing resources found, fetching segment details...');
@@ -118,7 +117,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             body: { 
               topic: segment.title,
               description: segment.segment_description,
-              language: aiConfig?.content_language || 'english'
+              language: contentLanguage
             }
           });
 
@@ -233,3 +232,4 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
   });
 };
+
