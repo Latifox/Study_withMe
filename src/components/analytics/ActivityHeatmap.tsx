@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format, getMonth, getDate, startOfYear, getDay } from "date-fns";
+import { format, addDays, startOfYear } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -23,46 +23,35 @@ interface ActivityHeatmapProps {
     date: Date;
     score: number;
   }>;
-  weekDays: string[];
-  months: string[];
-  getHeatmapColor: (score: number) => string;
 }
 
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const transformDataForChart = () => {
     const yearData = [];
-    const daysInWeek = 7;
-    const weeksPerMonth = 6;
-
-    // Generate data points for the entire year grid
-    for (let month = 0; month < 12; month++) {
-      for (let week = 0; week < weeksPerMonth; week++) {
-        for (let day = 0; day < daysInWeek; day++) {
-          const xPosition = month; // Each month is one unit wide
-          const yPosition = day; // Each day is one unit high
-          
-          // Add small offset for week spacing
-          const xOffset = (week / weeksPerMonth) * 0.8; // Smaller offset for tighter grid
-          
-          yearData.push({
-            x: xPosition + xOffset,
-            y: yPosition,
-            r: 8, // Size of squares
-            score: 0,
-            date: format(new Date(2025, month, (week * 7) + day + 1), 'MMM d'),
-          });
-        }
+    const startDate = startOfYear(new Date(2025, 0, 1)); // January 1st, 2025
+    
+    // Generate 52 weeks * 7 days grid
+    for (let week = 0; week < 52; week++) {
+      for (let day = 0; day < 7; day++) {
+        const currentDate = addDays(startDate, week * 7 + day);
+        yearData.push({
+          x: week,
+          y: day,
+          r: 8,
+          score: 0,
+          date: currentDate,
+        });
       }
     }
 
     // Map actual data onto the grid
     data.forEach((item) => {
-      const date = new Date(item.date);
-      const month = getMonth(date);
-      const dayOfWeek = (getDay(date) + 4) % 7; // Adjust to start from Wednesday
-      const weekInMonth = Math.floor((getDate(date) - 1) / 7);
+      const itemDate = new Date(item.date);
+      const daysSinceStart = Math.floor((itemDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const week = Math.floor(daysSinceStart / 7);
+      const day = daysSinceStart % 7;
       
-      const index = (month * (daysInWeek * weeksPerMonth)) + (weekInMonth * daysInWeek) + dayOfWeek;
+      const index = week * 7 + day;
       if (index < yearData.length) {
         yearData[index].score = item.score;
       }
@@ -113,8 +102,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       x: {
         type: 'linear' as const,
         position: 'top' as const,
-        min: -0.2,
-        max: 11.8,
+        min: -0.5,
+        max: 51.5,
         grid: {
           display: false,
           drawBorder: false,
@@ -123,7 +112,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           display: false,
         },
         ticks: {
-          stepSize: 1,
+          stepSize: 4,
           color: 'rgba(255, 255, 255, 0.7)',
           padding: 8,
           font: {
@@ -131,8 +120,11 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
             weight: 'normal' as const,
           },
           callback: function(value: number) {
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return monthNames[Math.floor(value)];
+            if (value % 4 === 0) {
+              const date = addDays(startOfYear(new Date(2025, 0, 1)), value * 7);
+              return format(date, 'MMM');
+            }
+            return '';
           },
         },
       },
@@ -167,7 +159,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       tooltip: {
         callbacks: {
           label: (context: any) => {
-            return `${context.raw.date} - Score: ${context.raw.score}`;
+            return `${format(context.raw.date, 'MMM d, yyyy')} - Score: ${context.raw.score}`;
           },
         },
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -194,3 +186,4 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
+
