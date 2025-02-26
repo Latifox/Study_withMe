@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
@@ -9,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfWeek, eachWeekOfInterval, addWeeks, addMonths } from "date-fns";
+import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, addDays, startOfYear, endOfYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen, Star } from "lucide-react";
 import {
@@ -31,23 +30,12 @@ const Analytics = () => {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('week');
 
-  const endDate = startOfDay(new Date());
-  const startDate = startOfDay(new Date(endDate.getFullYear() - 1, 0, 1)); // January 1st of previous year
+  const currentYear = new Date().getFullYear();
+  const startDate = startOfYear(new Date(currentYear, 0, 1));
+  const endDate = endOfYear(new Date(currentYear, 11, 31));
   
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
-  const weeks = eachWeekOfInterval(
-    { start: startDate, end: endDate },
-    { weekStartsOn: 0 } // Start weeks on Sunday
-  );
-
-  const monthPositions = Array.from({ length: 12 }, (_, i) => {
-    const date = new Date(startDate.getFullYear(), i, 1); // First of each month
-    return {
-      month: format(date, 'MMM'),
-      position: Math.floor(i * (52 / 12))
-    };
-  });
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   const getDateRange = () => {
     const now = new Date();
@@ -59,7 +47,7 @@ const Analytics = () => {
       case 'year':
         return subYears(now, 1);
       case 'all':
-        return subYears(now, 10); // Effectively "all" data
+        return subYears(now, 10);
       default:
         return subDays(now, 7);
     }
@@ -148,28 +136,34 @@ const Analytics = () => {
   };
 
   const prepareHeatmapData = () => {
-    if (!userProgress?.progressData.length) return new Map();
+    if (!userProgress?.progressData.length) return [];
     
-    const dateScores = new Map();
+    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+    
+    const activityMap = new Map();
     userProgress.progressData.forEach(progress => {
       if (progress.completed_at) {
-        const date = new Date(progress.completed_at);
-        const dateKey = startOfDay(date).toISOString();
-        const currentScore = dateScores.get(dateKey) || 0;
-        dateScores.set(dateKey, currentScore + (progress.score || 0));
+        const date = startOfDay(new Date(progress.completed_at));
+        const key = format(date, 'yyyy-MM-dd');
+        activityMap.set(key, (activityMap.get(key) || 0) + (progress.score || 0));
       }
     });
-    
-    return dateScores;
+
+    return allDays.map(date => ({
+      date,
+      weekDay: format(date, 'E'),
+      week: Math.floor((date.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)),
+      score: activityMap.get(format(date, 'yyyy-MM-dd')) || 0
+    }));
   };
 
   const getHeatmapColor = (score: number) => {
-    if (score === 0) return 'bg-white/5 border border-white/10';
-    if (score <= 5) return 'bg-blue-500/20 border border-blue-500/20';
-    if (score <= 10) return 'bg-blue-500/40 border border-blue-500/30';
-    if (score <= 15) return 'bg-blue-500/60 border border-blue-500/40';
-    if (score <= 20) return 'bg-blue-500/80 border border-blue-500/50';
-    return 'bg-blue-500 border border-blue-500';
+    if (score === 0) return 'bg-white/5';
+    if (score <= 5) return 'bg-purple-500/20';
+    if (score <= 10) return 'bg-purple-500/40';
+    if (score <= 15) return 'bg-purple-500/60';
+    if (score <= 20) return 'bg-purple-500/80';
+    return 'bg-purple-500';
   };
 
   const totalLectures = userProgress?.quizProgress ? 
@@ -327,7 +321,7 @@ const Analytics = () => {
                       <div
                         key={score}
                         className={cn(
-                          "w-3 h-3 rounded-sm",
+                          "w-3 h-3 rounded-sm border border-white/10",
                           getHeatmapColor(score)
                         )}
                       />
@@ -338,66 +332,43 @@ const Analytics = () => {
               </div>
               
               <div className="p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg">
-                <div className="flex gap-4 relative">
-                  <div className="flex flex-col justify-between py-1 text-xs text-white/40 w-8">
-                    {weekDays.map((day) => (
-                      <div key={day} className="h-4 leading-4">{day}</div>
+                <div className="flex gap-4">
+                  <div className="flex flex-col justify-between py-1 text-xs text-white/40">
+                    {weekDays.map(day => (
+                      <div key={day} className="h-8 flex items-center">{day}</div>
                     ))}
                   </div>
                   
                   <div className="flex-1 relative">
-                    <div 
-                      className="grid gap-[2px]" 
-                      style={{
-                        gridTemplateColumns: 'repeat(52, minmax(0, 1fr))',
-                        gridTemplateRows: 'repeat(7, 1fr)',
-                        aspectRatio: '52/7'
-                      }}
-                    >
-                      {weeks.map((week) => (
-                        <React.Fragment key={week.toISOString()}>
-                          {weekDays.map((_, dayIndex) => {
-                            const date = addDays(week, dayIndex);
-                            const dateStr = startOfDay(date).toISOString();
-                            const score = heatmapData.get(dateStr) || 0;
-                            
-                            return (
-                              <TooltipProvider key={dateStr}>
-                                <TooltipUI>
-                                  <TooltipTrigger>
-                                    <div 
-                                      className={cn(
-                                        "w-full h-full rounded-sm transition-all duration-300 hover:transform hover:scale-150 hover:z-10",
-                                        getHeatmapColor(score)
-                                      )}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="font-medium">
-                                      {format(date, 'MMM dd, yyyy')}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {score} XP earned
-                                    </p>
-                                  </TooltipContent>
-                                </TooltipUI>
-                              </TooltipProvider>
-                            );
-                          })}
-                        </React.Fragment>
+                    <div className="grid grid-cols-[repeat(52,1fr)] grid-rows-7 gap-1 aspect-[52/7]">
+                      {prepareHeatmapData().map((day, index) => (
+                        <TooltipProvider key={index}>
+                          <TooltipUI>
+                            <TooltipTrigger asChild>
+                              <div 
+                                className={cn(
+                                  "aspect-square rounded-sm transition-all duration-300 hover:scale-125 hover:z-10",
+                                  getHeatmapColor(day.score),
+                                  "border border-white/10"
+                                )}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">
+                                {format(day.date, 'MMM dd, yyyy')}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {day.score} XP earned
+                              </p>
+                            </TooltipContent>
+                          </TooltipUI>
+                        </TooltipProvider>
                       ))}
                     </div>
 
-                    <div className="absolute left-0 right-0 bottom-[-24px]">
-                      {monthPositions.map(({ month }, index) => (
-                        <div
-                          key={month}
-                          className="absolute text-xs text-white/40"
-                          style={{
-                            left: `${(index * (100 / 12))}%`,
-                            transform: 'translateX(-50%)'
-                          }}
-                        >
+                    <div className="absolute left-0 right-0 bottom-[-24px] flex justify-between">
+                      {months.map((month) => (
+                        <div key={month} className="text-xs text-white/40">
                           {month}
                         </div>
                       ))}
