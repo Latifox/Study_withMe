@@ -28,7 +28,7 @@ export const useGenerateResources = (segment: Segment | null) => {
         .select('content')
         .eq('title', segment.title)
         .eq('lecture_id', segment.lecture_id)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         console.error("Error fetching existing resources:", fetchError);
@@ -36,7 +36,7 @@ export const useGenerateResources = (segment: Segment | null) => {
       }
 
       // If we have existing content, return it
-      if (existingContent?.content) {
+      if (existingContent) {
         console.log('Found existing resources content');
         return existingContent.content;
       }
@@ -88,4 +88,3 @@ export const useGenerateResources = (segment: Segment | null) => {
     retryDelay: 1000,
   });
 };
-

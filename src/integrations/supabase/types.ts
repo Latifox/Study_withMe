@@ -35,54 +35,30 @@ export type Database = {
       }
       lecture_additional_resources: {
         Row: {
+          content: string
           created_at: string
-          description: string
           id: number
-          lecture_id: number | null
-          resource_type: string
-          sequence_number: number
+          lecture_id: number
           title: string
           updated_at: string
-          url: string
         }
         Insert: {
+          content: string
           created_at?: string
-          description: string
           id?: number
-          lecture_id?: number | null
-          resource_type: string
-          sequence_number: number
+          lecture_id: number
           title: string
           updated_at?: string
-          url: string
         }
         Update: {
+          content?: string
           created_at?: string
-          description?: string
           id?: number
-          lecture_id?: number | null
-          resource_type?: string
-          sequence_number?: number
+          lecture_id?: number
           title?: string
           updated_at?: string
-          url?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_lecture_segments"
-            columns: ["lecture_id", "sequence_number"]
-            isOneToOne: false
-            referencedRelation: "lecture_segments"
-            referencedColumns: ["lecture_id", "sequence_number"]
-          },
-          {
-            foreignKeyName: "lecture_additional_resources_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       lecture_ai_configs: {
         Row: {
