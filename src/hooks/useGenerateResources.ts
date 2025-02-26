@@ -38,9 +38,16 @@ export const useGenerateResources = (segment: Segment | null) => {
         throw error;
       }
 
+      if (!data?.markdown) {
+        throw new Error("No resources generated");
+      }
+
       return data.markdown;
     },
     enabled: !!segment,
-    retry: 1
+    retry: false, // Disable retries
+    retryOnMount: false, // Prevent retrying on mount
+    staleTime: Infinity, // Prevent automatic refetching
+    cacheTime: Infinity, // Keep the data cached indefinitely
   });
 };

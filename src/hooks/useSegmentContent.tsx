@@ -54,6 +54,17 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       const contentLanguage = aiConfig?.content_language || 'english';
       console.log('Using content language:', contentLanguage);
 
+      // Check if content already exists for all segments
+      const { data: allExistingContent } = await supabase
+        .from('segments_content')
+        .select('*')
+        .eq('lecture_id', numericLectureId);
+
+      if (allExistingContent && allExistingContent.length === segmentData.length) {
+        console.log('Found existing content for all segments:', allExistingContent);
+        return { segments: allExistingContent };
+      }
+
       const processSegment = async (segment: { sequence_number: number; title: string; segment_description: string }, retryCount = 0) => {
         const maxRetries = 3;
         const retryDelay = (retryCount: number) => Math.min(1000 * Math.pow(2, retryCount), 10000);
@@ -118,46 +129,40 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             throw insertError;
           }
 
-          // Return both the generated content and the segment info
           return {
             ...generatedContent.content,
             sequence_number: segment.sequence_number,
             lecture_id: numericLectureId
           };
         } catch (error) {
-          console.error(`Error processing segment ${segment.sequence_number}:`, error);
-          
           if (retryCount < maxRetries) {
             console.log(`Retrying segment ${segment.sequence_number} (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, retryDelay(retryCount)));
             return processSegment(segment, retryCount + 1);
           }
-          
           throw error;
         }
       };
 
-      // Process segments sequentially
       try {
-        // Only fetch existing content once
-        const { data: allExistingContent } = await supabase
-          .from('segments_content')
-          .select('*')
-          .eq('lecture_id', numericLectureId);
-
-        if (allExistingContent && allExistingContent.length === segmentData.length) {
-          console.log('Found existing content for all segments:', allExistingContent);
-          return { segments: allExistingContent };
-        }
-
-        // Process segments one by one
+        // Process segments sequentially
         const results = [];
         for (const segment of segmentData) {
-          const content = await processSegment(segment);
-          results.push(content);
+          try {
+            const content = await processSegment(segment);
+            results.push(content);
+          } catch (error) {
+            console.error(`Failed to process segment ${segment.sequence_number}, moving to next segment:`, error);
+            // Instead of throwing, we'll continue with other segments
+            continue;
+          }
+        }
+
+        if (results.length === 0) {
+          throw new Error('Failed to generate content for any segments');
         }
         
-        console.log('Finished processing all segments:', results);
+        console.log('Finished processing segments:', results);
         return { segments: results };
       } catch (error) {
         console.error('Error processing segments:', error);
@@ -169,7 +174,9 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw error;
       }
     },
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
+    retry: false, // Disable retries at the query level since we handle them manually
+    retryOnMount: false, // Prevent retrying when component remounts
+    staleTime: Infinity, // Prevent automatic refetching
+    cacheTime: Infinity, // Keep the data cached indefinitely
   });
 };
