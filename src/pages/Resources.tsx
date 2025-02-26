@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import ResourcesLoading from "@/components/ResourcesLoading";
 import { useSegmentContent } from "@/hooks/useSegmentContent";
+import { useGenerateResources } from "@/hooks/useGenerateResources";
 import { toast } from "@/components/ui/use-toast";
 import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
@@ -22,12 +23,21 @@ const Resources = () => {
   // Parse the lecture ID from URL params
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
-  const { data: segmentContent, isLoading, error } = useSegmentContent(numericLectureId);
+  const { data: segmentContent, isLoading: segmentsLoading, error: segmentsError } = useSegmentContent(numericLectureId);
 
-  console.log('Segment content result:', { data: segmentContent, isLoading, error });
+  // Get the selected segment
+  const selectedSegment = selectedSegmentId 
+    ? segmentContent?.segments?.find(s => s.id === selectedSegmentId)
+    : null;
 
-  if (error) {
-    console.error('Error loading resources:', error);
+  // Get resources for the selected segment
+  const { data: resourcesContent, isLoading: resourcesLoading, error: resourcesError } = useGenerateResources(selectedSegment);
+
+  console.log('Selected segment:', selectedSegment);
+  console.log('Resources content:', resourcesContent);
+
+  if (segmentsError) {
+    console.error('Error loading resources:', segmentsError);
     toast({
       title: "Error loading resources",
       description: "Please try again later",
@@ -55,13 +65,13 @@ const Resources = () => {
               </h1>
             </div>
 
-            {isLoading ? (
+            {segmentsLoading ? (
               <ResourcesLoading />
             ) : !segmentContent?.segments ? (
               <Card className="bg-white/10 backdrop-blur-md border-white/20">
                 <CardContent className="p-6">
                   <p className="text-center text-black/80">
-                    Generating resources for this lecture...
+                    Loading segment content...
                   </p>
                 </CardContent>
               </Card>
@@ -88,11 +98,27 @@ const Resources = () => {
 
                 {/* Right column - Selected segment content */}
                 <div className="h-[calc(100vh-200px)]">
-                  {selectedSegmentId ? (
+                  {!selectedSegmentId ? (
+                    <div className="h-full flex items-center justify-center text-black/60">
+                      Select a segment to view its resources
+                    </div>
+                  ) : resourcesLoading ? (
+                    <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                      <CardContent className="h-full flex items-center justify-center">
+                        <ResourcesLoading />
+                      </CardContent>
+                    </Card>
+                  ) : resourcesError ? (
+                    <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                      <CardContent className="h-full flex items-center justify-center">
+                        <p className="text-red-500">Error loading resources. Please try again.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
                     <Card className="h-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
                       <CardHeader className="border-b border-white/20">
                         <CardTitle className="text-xl text-black">
-                          {segmentContent.segments.find(s => s.id === selectedSegmentId)?.title}
+                          {selectedSegment?.title}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -122,16 +148,12 @@ const Resources = () => {
                                 )
                               }}
                             >
-                              {segmentContent.segments.find(s => s.id === selectedSegmentId)?.content}
+                              {resourcesContent}
                             </ReactMarkdown>
                           </div>
                         </ScrollArea>
                       </CardContent>
                     </Card>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-black/60">
-                      Select a segment to view its resources
-                    </div>
                   )}
                 </div>
               </div>
@@ -144,4 +166,3 @@ const Resources = () => {
 };
 
 export default Resources;
-
