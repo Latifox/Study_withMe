@@ -14,19 +14,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw new Error('Invalid parameters');
       }
 
-      // First check if content already exists
-      const { data: existingContent, error: contentError } = await supabase
-        .from('segments_content')
-        .select('*')
-        .eq('lecture_id', numericLectureId)
-        .order('sequence_number');
-
-      if (contentError) {
-        console.error('Error fetching existing content:', contentError);
-        throw contentError;
-      }
-
-      // Get all segment titles and descriptions
+      // Get all segment titles and descriptions first
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('sequence_number, title, segment_description')
@@ -44,12 +32,6 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       }
 
       console.log('Retrieved segments for processing:', segmentData);
-
-      // If content exists for all segments, return it
-      if (existingContent && existingContent.length === segmentData.length) {
-        console.log('Found existing content for all segments:', existingContent);
-        return { segments: existingContent };
-      }
 
       // First get the lecture content
       const { data: lecture } = await supabase
@@ -78,16 +60,16 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
         try {
           // Check if content already exists for this segment
-          const { data: existingSegmentContent } = await supabase
+          const { data: existingContent } = await supabase
             .from('segments_content')
             .select('*')
             .eq('lecture_id', numericLectureId)
             .eq('sequence_number', segment.sequence_number)
             .single();
 
-          if (existingSegmentContent) {
+          if (existingContent) {
             console.log(`Content already exists for segment ${segment.sequence_number}, skipping generation`);
-            return existingSegmentContent;
+            return existingContent;
           }
 
           console.log(`Generating content for segment ${segment.sequence_number}: ${segment.title}`);
@@ -112,26 +94,23 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             throw new Error('No content generated');
           }
 
-          const content = generatedContent.content;
-          console.log(`Generated content for segment ${segment.sequence_number}:`, content);
-
           // Store the generated content
           const { error: insertError } = await supabase
             .from('segments_content')
             .upsert({
               lecture_id: numericLectureId,
               sequence_number: segment.sequence_number,
-              theory_slide_1: content.theory_slide_1,
-              theory_slide_2: content.theory_slide_2,
-              quiz_1_type: content.quiz_1_type,
-              quiz_1_question: content.quiz_1_question,
-              quiz_1_options: content.quiz_1_options,
-              quiz_1_correct_answer: content.quiz_1_correct_answer,
-              quiz_1_explanation: content.quiz_1_explanation,
-              quiz_2_type: content.quiz_2_type,
-              quiz_2_question: content.quiz_2_question,
-              quiz_2_correct_answer: content.quiz_2_correct_answer,
-              quiz_2_explanation: content.quiz_2_explanation
+              theory_slide_1: generatedContent.content.theory_slide_1,
+              theory_slide_2: generatedContent.content.theory_slide_2,
+              quiz_1_type: generatedContent.content.quiz_1_type,
+              quiz_1_question: generatedContent.content.quiz_1_question,
+              quiz_1_options: generatedContent.content.quiz_1_options,
+              quiz_1_correct_answer: generatedContent.content.quiz_1_correct_answer,
+              quiz_1_explanation: generatedContent.content.quiz_1_explanation,
+              quiz_2_type: generatedContent.content.quiz_2_type,
+              quiz_2_question: generatedContent.content.quiz_2_question,
+              quiz_2_correct_answer: generatedContent.content.quiz_2_correct_answer,
+              quiz_2_explanation: generatedContent.content.quiz_2_explanation
             });
 
           if (insertError) {
@@ -139,7 +118,12 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             throw insertError;
           }
 
-          return content;
+          // Return both the generated content and the segment info
+          return {
+            ...generatedContent.content,
+            sequence_number: segment.sequence_number,
+            lecture_id: numericLectureId
+          };
         } catch (error) {
           console.error(`Error processing segment ${segment.sequence_number}:`, error);
           
@@ -155,14 +139,22 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       // Process segments sequentially
       try {
+        // Only fetch existing content once
+        const { data: allExistingContent } = await supabase
+          .from('segments_content')
+          .select('*')
+          .eq('lecture_id', numericLectureId);
+
+        if (allExistingContent && allExistingContent.length === segmentData.length) {
+          console.log('Found existing content for all segments:', allExistingContent);
+          return { segments: allExistingContent };
+        }
+
+        // Process segments one by one
         const results = [];
         for (const segment of segmentData) {
           const content = await processSegment(segment);
-          results.push({
-            ...content,
-            sequence_number: segment.sequence_number,
-            lecture_id: numericLectureId
-          });
+          results.push(content);
         }
         
         console.log('Finished processing all segments:', results);
