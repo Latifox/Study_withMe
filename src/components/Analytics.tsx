@@ -344,9 +344,16 @@ const Analytics = () => {
                   </div>
                   
                   <div className="flex-1 relative">
-                    <div className="grid grid-cols-[repeat(52,1fr)] gap-[2px]">
+                    <div 
+                      className="grid gap-[2px]" 
+                      style={{
+                        gridTemplateColumns: 'repeat(52, minmax(0, 1fr))',
+                        gridTemplateRows: 'repeat(7, 1fr)',
+                        aspectRatio: '52/7'
+                      }}
+                    >
                       {weeks.map((week) => (
-                        <div key={week.toISOString()} className="w-full">
+                        <React.Fragment key={week.toISOString()}>
                           {weekDays.map((_, dayIndex) => {
                             const date = addDays(week, dayIndex);
                             const dateStr = startOfDay(date).toISOString();
@@ -358,7 +365,7 @@ const Analytics = () => {
                                   <TooltipTrigger>
                                     <div 
                                       className={cn(
-                                        "w-full aspect-square rounded-sm mb-[2px] transition-all duration-300 hover:transform hover:scale-150",
+                                        "w-full h-full rounded-sm transition-all duration-300 hover:transform hover:scale-150 hover:z-10",
                                         getHeatmapColor(score)
                                       )}
                                     />
@@ -375,15 +382,15 @@ const Analytics = () => {
                               </TooltipProvider>
                             );
                           })}
-                        </div>
+                        </React.Fragment>
                       ))}
                     </div>
 
-                    <div className="absolute left-0 right-0 bottom-[-24px] flex justify-between px-2">
+                    <div className="absolute left-0 right-0 bottom-[-24px]">
                       {monthPositions.map(({ month }, index) => (
                         <div
                           key={month}
-                          className="text-xs text-white/40 absolute"
+                          className="absolute text-xs text-white/40"
                           style={{
                             left: `${(index * (100 / 12))}%`,
                             transform: 'translateX(-50%)'
