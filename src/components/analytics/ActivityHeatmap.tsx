@@ -102,7 +102,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           padding: 5,
           font: {
             size: 12,
-            weight: '500',
+            weight: 500, // Changed from '500' to 500 (number)
           },
           callback: function(value: number) {
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -125,7 +125,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           color: 'rgba(255, 255, 255, 0.7)',
           font: {
             size: 12,
-            weight: '500',
+            weight: 500, // Changed from '500' to 500 (number)
           },
           callback: (value: number) => {
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
@@ -177,3 +177,4 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
+
