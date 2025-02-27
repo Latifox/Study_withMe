@@ -21,28 +21,41 @@ const Analytics = () => {
     try {
       const data = [];
       const today = new Date();
+      // Start from exactly one year ago for better visualization
       const startDate = new Date(today);
       startDate.setDate(startDate.getDate() - 365);
 
-      // Generate fewer data points to reduce complexity
-      for (let i = 0; i < 50; i++) {
+      // Generate fewer data points to improve performance
+      for (let i = 0; i < 30; i++) {
+        const randomDays = Math.floor(Math.random() * 365);
         const date = new Date(startDate);
-        date.setDate(date.getDate() + Math.floor(Math.random() * 365));
+        date.setDate(date.getDate() + randomDays);
         
-        data.push({
-          date,
-          score: Math.floor(Math.random() * 25)
-        });
+        // Ensure the date is valid
+        if (!isNaN(date.getTime())) {
+          data.push({
+            date,
+            score: Math.floor(Math.random() * 20) + 1 // Scores between 1-20
+          });
+        }
       }
+      
+      // Always include at least one valid data point to ensure the chart renders
+      data.push({
+        date: new Date(),
+        score: 10
+      });
+      
       return data;
     } catch (error) {
       console.error("Error generating random activity data:", error);
       // Return a minimal set of data if there's an error
-      return [{ date: new Date(), score: 1 }];
+      return [{ date: new Date(), score: 5 }];
     }
   };
 
-  const activityData = generateRandomActivityData();
+  // Generate activity data once (not on every render)
+  const activityData = React.useMemo(() => generateRandomActivityData(), []);
 
   return (
     <div className="mt-16">
@@ -77,12 +90,35 @@ const Analytics = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <ActivityHeatmap activityData={activityData} />
+            <ErrorBoundary fallback={<div className="w-full h-[220px] flex items-center justify-center text-white/70">Unable to load heatmap</div>}>
+              <ActivityHeatmap activityData={activityData} />
+            </ErrorBoundary>
           </CardContent>
         </Card>
       </div>
     </div>
   );
 };
+
+// Simple ErrorBoundary component to catch and handle runtime errors
+class ErrorBoundary extends React.Component<{children: React.ReactNode, fallback: React.ReactNode}> {
+  state = { hasError: false };
+  
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error: Error) {
+    console.error("Error caught by ErrorBoundary:", error);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    
+    return this.props.children;
+  }
+}
 
 export default Analytics;
