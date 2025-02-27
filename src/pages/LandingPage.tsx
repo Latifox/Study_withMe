@@ -98,27 +98,43 @@ const LandingPage = () => {
     "Easy integration with your existing course materials and teaching style"
   ];
 
-  // Gamification elements to display with bolder colors
+  // Gamification elements to display with bold, eye-catching colors
   const gamificationElements = [
     {
-      icon: <Star className="h-8 w-8 text-yellow-500" />,
+      icon: <Star className="h-10 w-10 text-yellow-400" />,
       title: "Experience Points (XP)",
-      description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge."
+      description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
+      color: "from-yellow-400 to-yellow-600",
+      bgColor: "bg-gradient-to-br from-yellow-50 to-yellow-100",
+      borderColor: "border-yellow-300",
+      hoverColor: "hover:shadow-yellow-200/50"
     },
     {
-      icon: <Flame className="h-8 w-8 text-orange-600" />,
+      icon: <Flame className="h-10 w-10 text-red-500" />,
       title: "Learning Streaks",
-      description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention."
+      description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
+      color: "from-red-500 to-orange-500",
+      bgColor: "bg-gradient-to-br from-orange-50 to-red-100",
+      borderColor: "border-red-300",
+      hoverColor: "hover:shadow-red-200/50"
     },
     {
-      icon: <Trophy className="h-8 w-8 text-amber-600" />,
+      icon: <Trophy className="h-10 w-10 text-amber-500" />,
       title: "Achievements",
-      description: "Unlock achievements as you reach milestones in your learning journey."
+      description: "Unlock achievements as you reach milestones in your learning journey.",
+      color: "from-amber-400 to-amber-600",
+      bgColor: "bg-gradient-to-br from-amber-50 to-amber-100",
+      borderColor: "border-amber-300",
+      hoverColor: "hover:shadow-amber-200/50"
     },
     {
-      icon: <Zap className="h-8 w-8 text-purple-600" />,
+      icon: <Zap className="h-10 w-10 text-blue-500" />,
       title: "Skill Mastery",
-      description: "Watch your skill levels grow through continuous practice and assessment."
+      description: "Watch your skill levels grow through continuous practice and assessment.",
+      color: "from-blue-500 to-indigo-600",
+      bgColor: "bg-gradient-to-br from-blue-50 to-indigo-100",
+      borderColor: "border-blue-300",
+      hoverColor: "hover:shadow-blue-200/50"
     }
   ];
 
@@ -179,7 +195,7 @@ const LandingPage = () => {
 
         {/* Gamification Section */}
         <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="text-center mb-8">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Learn with Purpose
@@ -190,14 +206,21 @@ const LandingPage = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {gamificationElements.map((element, index) => (
-              <div key={index} className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-md border border-purple-100 transform transition-all duration-300 hover:shadow-xl hover:scale-105 flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+              <div 
+                key={index} 
+                className={`${element.bgColor} backdrop-blur-sm p-8 rounded-xl shadow-lg ${element.borderColor} border-2 transform transition-all duration-300 hover:shadow-2xl ${element.hoverColor} hover:scale-105 hover:-translate-y-1`}
+              >
+                <div className={`w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br ${element.color} flex items-center justify-center shadow-md`}>
                   {element.icon}
                 </div>
-                <h3 className="text-xl font-bold mb-2">{element.title}</h3>
-                <p className="text-gray-700">{element.description}</p>
+                <h3 className="text-xl font-bold mb-3 text-center bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  {element.title}
+                </h3>
+                <p className="text-gray-700 text-center">
+                  {element.description}
+                </p>
               </div>
             ))}
           </div>
