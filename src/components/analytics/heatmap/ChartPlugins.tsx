@@ -46,7 +46,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
       const ticks = this.ticks || [];
       
       // First draw the grid lines and scale as normal
-      originalDraw.apply(this, [ctx]);
+      originalDraw.apply(this, arguments);
       
       // Then redraw the tick labels with our custom positioning
       ctx.save();
@@ -59,7 +59,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     };
     
     // Call the modified draw method
-    yAxis.draw(ctx);
+    yAxis.draw();
     
     // Restore original method
     yAxis.draw = originalDraw;
