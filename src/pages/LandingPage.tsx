@@ -432,7 +432,7 @@ const LandingPage = () => {
                   </ul>
                   
                   <Button 
-                    variant={plan.buttonVariant as any}
+                    variant={plan.buttonVariant as "default" | "outline"}
                     className={`w-full ${
                       plan.buttonVariant === 'default' 
                         ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
