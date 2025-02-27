@@ -194,13 +194,14 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           crossAlign: 'center' as const,
         },
         afterFit: (scaleInstance: any) => {
-          // Add this afterFit callback to adjust day label position
+          scaleInstance.paddingTop = scaleInstance.paddingTop - 3; // Move the entire y-axis up
+          
+          // Also adjust the day label rendering
           const originalDraw = scaleInstance.draw;
           scaleInstance.draw = function() {
             const ctx = this.ctx;
             ctx.save();
-            // Move day labels up by 0.5 pixels (from previous -0.25 to -0.5)
-            ctx.translate(0, -0.5);
+            ctx.translate(0, -2); // More significant movement upward (2 pixels)
             originalDraw.apply(this, arguments);
             ctx.restore();
           };
