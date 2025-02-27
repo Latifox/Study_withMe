@@ -157,15 +157,15 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         afterFit: (scaleInstance: any) => {
           // This hack shifts the labels up to align with cells
           scaleInstance.paddingTop = 10;
-          scaleInstance.labelOffset = -8; // Negative value moves labels up
+          scaleInstance.labelOffset = -4; // Reducing the negative value to move labels down slightly
           
-          // Apply a transformation to the y-axis labels to move them up
+          // Apply a transformation to the y-axis labels to move them up, but less than before
           const originalDraw = scaleInstance.draw;
           scaleInstance.draw = function() {
             const ctx = this.ctx;
             ctx.save();
-            // Translate the context to move the labels up
-            ctx.translate(0, -8);
+            // Translate the context to move the labels (reduced from -8 to -5)
+            ctx.translate(0, -5);
             originalDraw.apply(this, arguments);
             ctx.restore();
           };
