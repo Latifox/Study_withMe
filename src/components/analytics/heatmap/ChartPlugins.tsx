@@ -35,19 +35,20 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     // We'll draw them manually in the afterDraw hook
     const yScale = chart.scales.y;
     if (yScale) {
-      // Store the original draw method to avoid duplicate calls
-      const originalDrawMethod = yScale.draw;
-      
-      // Override the drawLabels method to prevent default label drawing
-      yScale.options.ticks.display = false;
+      // Instead of directly accessing ticks property, use the API to set display to false
+      if (yScale.options && yScale.options.ticks) {
+        yScale.options.ticks.display = false;
+      }
     }
   },
   afterDraw: (chart) => {
     const yScale = chart.scales.y;
-    if (!yScale || !yScale.ticks) return;
+    if (!yScale) return;
+    
+    const ticks = yScale.ticks;
+    if (!ticks || ticks.length === 0) return;
     
     const ctx = chart.ctx;
-    const ticks = yScale.ticks;
     
     // Set text styling for the labels
     ctx.save();
