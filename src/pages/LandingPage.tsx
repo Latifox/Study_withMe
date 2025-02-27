@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -81,13 +82,15 @@ const LandingPage = () => {
     title: "Experience Points (XP)",
     description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
     color: "bg-yellow-400",
-    textColor: "text-yellow-900"
+    textColor: "text-yellow-900",
+    gradientText: "bg-gradient-to-r from-yellow-500 to-amber-500 bg-clip-text text-transparent"
   }, {
     icon: <Flame className="h-10 w-10 text-white" />,
     title: "Learning Streaks",
     description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
     color: "bg-red-500",
-    textColor: "text-red-900"
+    textColor: "text-red-900",
+    gradientText: "bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent"
   }];
 
   // Revised subscription plans with consistent text coloring
@@ -210,7 +213,11 @@ const LandingPage = () => {
                   </div>
                 </div>
                 
-                <p className={`text-gray-700 ${element.textColor} text-center`}>
+                <h3 className={`text-xl font-bold mb-3 text-center ${element.gradientText}`}>
+                  {element.title}
+                </h3>
+                
+                <p className={`font-bold ${element.gradientText} text-center`}>
                   {element.description}
                 </p>
               </div>)}
