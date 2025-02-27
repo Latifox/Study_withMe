@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Facebook, Mail, Eye, EyeOff } from "lucide-react";
+import { Facebook, Mail, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { user, loading } = useAuth();
+  const [authLoading, setAuthLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -22,6 +24,13 @@ const Auth = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+
+  useEffect(() => {
+    // If user is already logged in, redirect to dashboard
+    if (user && !loading) {
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +44,7 @@ const Auth = () => {
       return;
     }
     
-    setLoading(true);
+    setAuthLoading(true);
     
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -68,13 +77,13 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setAuthLoading(true);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -102,7 +111,7 @@ const Auth = () => {
       }
 
       if (data?.user) {
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (error: any) {
       toast({
@@ -111,7 +120,7 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -121,7 +130,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
@@ -150,6 +159,14 @@ const Auth = () => {
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-indigo-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
+          <Button 
+            variant="ghost" 
+            className="absolute top-4 left-4 text-gray-600 hover:text-gray-900"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Button>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
             {activeTab === "login" ? "Welcome Back" : "Create Account"}
           </h1>
@@ -297,14 +314,14 @@ const Auth = () => {
                     <Button 
                       type="submit" 
                       className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-300" 
-                      disabled={loading}
+                      disabled={authLoading}
                     >
-                      {loading ? (
+                      {authLoading ? (
                         <span className="h-4 w-4 border-2 border-current border-t-transparent animate-spin rounded-full mr-2"></span>
                       ) : (
                         <Mail className="mr-2 h-4 w-4" />
                       )}
-                      {loading ? "Signing in..." : "Sign in with Email"}
+                      {authLoading ? "Signing in..." : "Sign in with Email"}
                     </Button>
                   </form>
                 </div>
@@ -448,14 +465,14 @@ const Auth = () => {
                     <Button 
                       type="submit" 
                       className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-300" 
-                      disabled={loading}
+                      disabled={authLoading}
                     >
-                      {loading ? (
+                      {authLoading ? (
                         <span className="h-4 w-4 border-2 border-current border-t-transparent animate-spin rounded-full mr-2"></span>
                       ) : (
                         <Mail className="mr-2 h-4 w-4" />
                       )}
-                      {loading ? "Signing up..." : "Sign up with Email"}
+                      {authLoading ? "Signing up..." : "Sign up with Email"}
                     </Button>
                   </form>
                 </div>

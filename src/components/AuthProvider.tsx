@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,10 +29,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (session?.user) {
           setUser(session.user);
+          
+          // If user is logged in and trying to access auth page or landing page,
+          // redirect to dashboard
+          if (location.pathname === '/auth' || location.pathname === '/') {
+            navigate('/dashboard');
+          }
         } else {
           setUser(null);
-          // If no session exists and we're not on the auth page, redirect to auth
-          if (window.location.pathname !== '/auth') {
+          // If no session exists and we're not on the auth page or landing page, redirect to auth
+          const publicRoutes = ['/auth', '/'];
+          if (!publicRoutes.includes(location.pathname)) {
             navigate('/auth');
           }
         }
@@ -53,17 +61,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (event === 'SIGNED_IN') {
           setUser(session?.user ?? null);
-          navigate('/');
+          navigate('/dashboard');
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
-          navigate('/auth');
+          navigate('/');
         } else if (event === 'TOKEN_REFRESHED') {
           setUser(session?.user ?? null);
         } else if (event === 'USER_UPDATED') {
           setUser(session?.user ?? null);
         } else if (event === 'INITIAL_SESSION') {
           if (!session) {
-            if (window.location.pathname !== '/auth') {
+            const publicRoutes = ['/auth', '/'];
+            if (!publicRoutes.includes(location.pathname)) {
               navigate('/auth');
             }
           }
@@ -75,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   // Show loading state
   if (loading) {
