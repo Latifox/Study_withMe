@@ -95,7 +95,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         top: 10,
         right: 10,
         bottom: 25,
-        left: 0 // No left padding needed as we're handling labels separately
+        left: 40
       }
     },
     scales: {
@@ -139,8 +139,37 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           display: false,
         },
         ticks: {
-          display: false, // Hide the original y-axis ticks
+          stepSize: 1,
+          padding: 10,
+          color: 'rgba(255, 255, 255, 0.7)',
+          callback: (value: number) => {
+            // 2025 starts on Wednesday (Jan 1, 2025)
+            // With reverse: true, 0 = Wednesday (top) to 6 = Tuesday (bottom)
+            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
+            return days[Math.floor(value)];
+          },
+          font: {
+            size: 11,
+          },
+          align: 'center' as const,
+          crossAlign: 'center' as const,
         },
+        afterFit: (scaleInstance: any) => {
+          // This hack shifts the labels to align with cells
+          scaleInstance.paddingTop = 10;
+          scaleInstance.labelOffset = 0;
+          
+          // Apply a transformation to the y-axis labels to move them down
+          const originalDraw = scaleInstance.draw;
+          scaleInstance.draw = function() {
+            const ctx = this.ctx;
+            ctx.save();
+            // Translate the context to move the labels down by 8 pixels
+            ctx.translate(0, 8);
+            originalDraw.apply(this, arguments);
+            ctx.restore();
+          };
+        }
       },
     },
     plugins: {
@@ -163,23 +192,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      <div className="relative w-full h-full" style={{ display: 'flex' }}>
-        {/* Day labels column with precise positioning */}
-        <div className="w-12 flex flex-col justify-between" style={{ paddingTop: '25px', paddingBottom: '25px' }}>
-          <div className="text-xs text-white/70 text-right pr-2">WED</div>
-          <div className="text-xs text-white/70 text-right pr-2">THU</div>
-          <div className="text-xs text-white/70 text-right pr-2">FRI</div>
-          <div className="text-xs text-white/70 text-right pr-2">SAT</div>
-          <div className="text-xs text-white/70 text-right pr-2">SUN</div>
-          <div className="text-xs text-white/70 text-right pr-2">MON</div>
-          <div className="text-xs text-white/70 text-right pr-2">TUE</div>
-        </div>
-        
-        {/* Chart */}
-        <div className="flex-1">
-          <Scatter data={chartData} options={options} />
-        </div>
-      </div>
+      <Scatter data={chartData} options={options} />
     </div>
   );
 };
