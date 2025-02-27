@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings, GraduationCap, School } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings, GraduationCap, School, Trophy, Flame, Star, Zap, Award } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
 const LandingPage = () => {
@@ -98,6 +98,30 @@ const LandingPage = () => {
     "Easy integration with your existing course materials and teaching style"
   ];
 
+  // Gamification elements to display
+  const gamificationElements = [
+    {
+      icon: <Star className="h-8 w-8 text-yellow-400" />,
+      title: "Experience Points (XP)",
+      description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge."
+    },
+    {
+      icon: <Flame className="h-8 w-8 text-red-500" />,
+      title: "Learning Streaks",
+      description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention."
+    },
+    {
+      icon: <Trophy className="h-8 w-8 text-amber-500" />,
+      title: "Achievements",
+      description: "Unlock achievements as you reach milestones in your learning journey."
+    },
+    {
+      icon: <Zap className="h-8 w-8 text-blue-400" />,
+      title: "Skill Mastery",
+      description: "Watch your skill levels grow through continuous practice and assessment."
+    }
+  ];
+
   return <div className="min-h-screen relative overflow-hidden">
       {/* Background with mesh pattern */}
       <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100">
@@ -151,6 +175,32 @@ const LandingPage = () => {
           <Button size="lg" onClick={handleGetStarted} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
             Get Started {isHovering ? <Sparkles className="ml-2 h-5 w-5 animate-pulse" /> : <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>
+        </div>
+
+        {/* Gamification Section */}
+        <div className="container mx-auto px-4 py-12 md:py-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Learn with Purpose
+              </span>
+            </h2>
+            <p className="text-lg text-gray-700 max-w-3xl mx-auto">
+              Our gamified learning approach keeps you motivated and tracks your progress through your educational journey
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {gamificationElements.map((element, index) => (
+              <div key={index} className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-md border border-purple-100 transform transition-all duration-300 hover:shadow-xl hover:scale-105 flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                  {element.icon}
+                </div>
+                <h3 className="text-xl font-bold mb-2">{element.title}</h3>
+                <p className="text-gray-700">{element.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Features Carousel Section - Reduced top padding here */}
