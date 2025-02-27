@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -303,7 +302,7 @@ const LandingPage = () => {
             <div className="overflow-hidden" ref={emblaRef}>
               <div className="flex">
                 {features.map((feature, index) => <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4">
-                    <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-md hover:shadow-xl transition-all border border-purple-100 h-full">
+                    <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-xl hover:shadow-2xl transition-shadow border border-purple-100 h-full">
                       <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                         {feature.icon}
                       </div>

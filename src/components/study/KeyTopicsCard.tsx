@@ -7,7 +7,7 @@ interface KeyTopicsCardProps {
 
 const KeyTopicsCard = ({ topics }: KeyTopicsCardProps) => {
   return (
-    <Card className="group hover:shadow-2xl transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20">
+    <Card className="group hover:shadow-2xl transition-all duration-300 shadow-xl bg-white/10 backdrop-blur-md border-white/20">
       <div className="p-6">
         <h2 className="text-xl font-semibold mb-3 text-white">Key Topics</h2>
         <div className="flex flex-wrap gap-2">

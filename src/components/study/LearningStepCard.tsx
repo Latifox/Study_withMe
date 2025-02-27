@@ -39,7 +39,7 @@ const LearningStepCard = ({ step, courseId, lectureId }: LearningStepCardProps) 
   };
 
   return (
-    <Card className="group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] bg-white/10 backdrop-blur-md border-white/20">
+    <Card className="group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] shadow-xl bg-white/10 backdrop-blur-md border-white/20">
       <div className="p-6">
         <div className="flex items-start gap-6">
           <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
