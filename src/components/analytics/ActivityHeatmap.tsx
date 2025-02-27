@@ -95,7 +95,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         top: 10,
         right: 10,
         bottom: 25,
-        left: 40  // Reduced left padding to better align day labels with cells
+        left: 40
       }
     },
     scales: {
@@ -129,8 +129,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         type: 'linear' as const,
         min: -0.5,
         max: 6.5,
-        reverse: true,  // This ensures 0 is at the top (Wednesday)
-        offset: true,   // Add this to ensure the grid aligns with ticks
+        reverse: true,
+        offset: true,
         grid: {
           display: false,
           drawBorder: false,
@@ -140,27 +140,36 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         },
         ticks: {
           stepSize: 1,
-          padding: 10,  // Increased padding to move labels away from cells
+          padding: 10,
           color: 'rgba(255, 255, 255, 0.7)',
           callback: (value: number) => {
             // 2025 starts on Wednesday (Jan 1, 2025)
             // With reverse: true, 0 = Wednesday (top) to 6 = Tuesday (bottom)
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
-            return days[Math.floor(value)];  // Math.floor to handle any floating point issues
+            return days[Math.floor(value)];
           },
           font: {
-            size: 11,  // Slightly smaller font for day labels
+            size: 11,
           },
-          // Use Chart.js supported alignment values
           align: 'center' as const,
-          crossAlign: 'far' as const,  // Changed to 'far' to align with grid cells
-          textMargin: 0,
-          z: 1, // Ensure labels are drawn on top
+          crossAlign: 'center' as const,
         },
         afterFit: (scaleInstance: any) => {
-          // Add a little more margin to help with alignment
-          scaleInstance.paddingLeft = 35;
-        },
+          // This hack shifts the labels up to align with cells
+          scaleInstance.paddingTop = 10;
+          scaleInstance.labelOffset = -8; // Negative value moves labels up
+          
+          // Apply a transformation to the y-axis labels to move them up
+          const originalDraw = scaleInstance.draw;
+          scaleInstance.draw = function() {
+            const ctx = this.ctx;
+            ctx.save();
+            // Translate the context to move the labels up
+            ctx.translate(0, -8);
+            originalDraw.apply(this, arguments);
+            ctx.restore();
+          };
+        }
       },
     },
     plugins: {
