@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -210,9 +209,7 @@ const LandingPage = () => {
                     {element.icon}
                   </div>
                 </div>
-                <h3 className={`text-xl font-bold mb-3 text-center ${element.textColor}`}>
-                  {element.title}
-                </h3>
+                
                 <p className={`text-gray-700 ${element.textColor} text-center`}>
                   {element.description}
                 </p>
