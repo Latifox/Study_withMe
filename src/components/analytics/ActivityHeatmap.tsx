@@ -151,8 +151,9 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
             size: 11,  // Slightly smaller font for day labels
           },
           // Alignment properties for precisely aligning day labels with cells
-          align: 'right' as 'right',
-          crossAlign: 'center' as 'center',
+          // Using 'center' instead of 'right' to match the expected type
+          align: 'center',
+          crossAlign: 'center',
           // Offset to get perfect alignment - moves labels to align with grid cells
           textMargin: 0,
           z: 1, // Ensure labels are drawn on top
