@@ -142,6 +142,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           padding: 8,
           color: 'rgba(255, 255, 255, 0.7)',
           callback: (value: number) => {
+            // 2025 starts on Wednesday, so align days accordingly
+            // We're using reverse: true above, so 0 = Wednesday, 6 = Tuesday
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
             return days[value];
           },
