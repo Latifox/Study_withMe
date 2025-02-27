@@ -95,7 +95,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         top: 10,
         right: 10,
         bottom: 25,
-        left: 10 // Reduced left padding since we're using custom labels
+        left: 0 // No left padding needed as we're handling labels separately
       }
     },
     scales: {
@@ -164,15 +164,15 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
       <div className="relative w-full h-full" style={{ display: 'flex' }}>
-        {/* Day labels - positioned to align with heatmap cells */}
-        <div className="flex flex-col justify-between py-[22px] text-xs text-white/70 w-[40px] text-right pr-2">
-          <div>WED</div>
-          <div>THU</div>
-          <div>FRI</div>
-          <div>SAT</div>
-          <div>SUN</div>
-          <div>MON</div>
-          <div>TUE</div>
+        {/* Day labels column with precise positioning */}
+        <div className="w-12 flex flex-col justify-between" style={{ paddingTop: '25px', paddingBottom: '25px' }}>
+          <div className="text-xs text-white/70 text-right pr-2">WED</div>
+          <div className="text-xs text-white/70 text-right pr-2">THU</div>
+          <div className="text-xs text-white/70 text-right pr-2">FRI</div>
+          <div className="text-xs text-white/70 text-right pr-2">SAT</div>
+          <div className="text-xs text-white/70 text-right pr-2">SUN</div>
+          <div className="text-xs text-white/70 text-right pr-2">MON</div>
+          <div className="text-xs text-white/70 text-right pr-2">TUE</div>
         </div>
         
         {/* Chart */}
