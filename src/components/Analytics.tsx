@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Flame, Trophy, BookOpen, Star } from "lucide-react";
 import StatsCard from "./analytics/StatsCard";
 import ActivityChart from "./analytics/ActivityChart";
-import ActivityHeatmap from "./analytics/ActivityHeatmap";
+import ActivityHeatmap from "./analytics/heatmap/ActivityHeatmap";
 
 type QuizProgress = Database['public']['Tables']['quiz_progress']['Row'];
 type UserProgressRow = Database['public']['Tables']['user_progress']['Row'];
