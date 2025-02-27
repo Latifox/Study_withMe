@@ -116,7 +116,7 @@ const LandingPage = () => {
     }
   ];
 
-  // Revised subscription plans
+  // Revised subscription plans with updated purple color schemes
   const subscriptionPlans = [
     {
       name: "Free",
@@ -133,10 +133,10 @@ const LandingPage = () => {
       ctaText: "Get Started",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
-      color: "bg-gradient-to-b from-slate-50 to-slate-100",
-      borderColor: "border-slate-200",
-      textColor: "text-slate-700",
-      iconColor: "text-slate-500",
+      color: "bg-gradient-to-b from-purple-50 to-purple-100",
+      borderColor: "border-purple-200",
+      textColor: "text-purple-700",
+      iconColor: "text-purple-400",
       buttonVariant: "outline"
     },
     {
@@ -155,10 +155,10 @@ const LandingPage = () => {
       ctaText: "Upgrade Now",
       recommended: true,
       icon: <Rocket className="h-7 w-7" />,
-      color: "bg-gradient-to-b from-purple-50 to-indigo-100",
-      borderColor: "border-purple-200",
-      textColor: "text-purple-700",
-      iconColor: "text-purple-500",
+      color: "bg-gradient-to-b from-purple-200 to-purple-300",
+      borderColor: "border-purple-400",
+      textColor: "text-purple-800",
+      iconColor: "text-purple-600",
       buttonVariant: "default"
     },
     {
@@ -178,10 +178,10 @@ const LandingPage = () => {
       ctaText: "Go Premium",
       recommended: false,
       icon: <Crown className="h-7 w-7" />,
-      color: "bg-gradient-to-b from-amber-50 to-amber-100",
-      borderColor: "border-amber-200",
-      textColor: "text-amber-700",
-      iconColor: "text-amber-500",
+      color: "bg-gradient-to-b from-purple-600 to-purple-700",
+      borderColor: "border-purple-800",
+      textColor: "text-white",
+      iconColor: "text-purple-100",
       buttonVariant: "outline"
     }
   ];
