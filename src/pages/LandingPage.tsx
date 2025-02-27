@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings, GraduationCap, School, Trophy, Flame, Star, Zap, Award } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings, GraduationCap, School, Trophy, Flame, Star, Zap, Award, Check, Clock, Diamond, Shield } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
 const LandingPage = () => {
@@ -112,6 +113,59 @@ const LandingPage = () => {
       description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
       color: "bg-red-500",
       textColor: "text-red-900"
+    }
+  ];
+
+  // Subscription plans
+  const subscriptionPlans = [
+    {
+      name: "Free",
+      price: "$0",
+      period: "forever",
+      description: "Basic access to EduSync AI features",
+      features: [
+        "Limited AI-generated summaries",
+        "Basic study plans",
+        "5 AI chat messages per day",
+        "Standard quiz generation"
+      ],
+      recommended: false,
+      color: "bg-gradient-to-r from-gray-200 to-gray-300",
+      icon: <Clock className="h-8 w-8 text-gray-600" />
+    },
+    {
+      name: "Premium",
+      price: "$9.99",
+      period: "month",
+      description: "Full access to all EduSync AI features",
+      features: [
+        "Unlimited AI-generated summaries",
+        "Advanced personalized study plans",
+        "Unlimited AI chat conversations",
+        "Advanced quiz generation and analytics",
+        "Priority customer support",
+        "No advertisements"
+      ],
+      recommended: true,
+      color: "bg-gradient-to-r from-purple-600 to-indigo-600",
+      icon: <Diamond className="h-8 w-8 text-white" />
+    },
+    {
+      name: "Academic",
+      price: "$79.99",
+      period: "year",
+      description: "Perfect for educators and institutions",
+      features: [
+        "Everything in Premium",
+        "Administrative dashboard for educators",
+        "Student progress tracking",
+        "Bulk student account management",
+        "Customizable learning materials",
+        "API access for integration"
+      ],
+      recommended: false,
+      color: "bg-gradient-to-r from-teal-500 to-teal-600",
+      icon: <Shield className="h-8 w-8 text-white" />
     }
   ];
 
@@ -300,6 +354,71 @@ const LandingPage = () => {
                 ))}
               </ul>
             </div>
+          </div>
+        </div>
+
+        {/* Subscription Plans Section */}
+        <div className="container mx-auto px-4 py-16 md:py-24">
+          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl mb-12 border-2 border-purple-500">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Subscription Plans
+              </span>
+            </h2>
+            <p className="text-lg text-gray-700 text-center">
+              Choose the perfect plan for your learning journey
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {subscriptionPlans.map((plan, index) => (
+              <div 
+                key={index}
+                className={`rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl ${
+                  plan.recommended ? 'ring-4 ring-purple-500 transform scale-105 z-10' : 'bg-white/80'
+                }`}
+              >
+                {plan.recommended && (
+                  <div className="bg-purple-600 text-white text-center py-2 font-semibold">
+                    MOST POPULAR
+                  </div>
+                )}
+                
+                <div className={`${plan.color} text-white p-6 text-center`}>
+                  <div className="mx-auto w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
+                    {plan.icon}
+                  </div>
+                  <h3 className="text-2xl font-bold mb-1">{plan.name}</h3>
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-3xl font-bold">{plan.price}</span>
+                    <span className="text-sm ml-1">/{plan.period}</span>
+                  </div>
+                  <p className="mt-2 text-white/90">{plan.description}</p>
+                </div>
+                
+                <div className={`p-6 ${plan.recommended ? 'bg-white' : 'bg-white/80'}`}>
+                  <ul className="space-y-3 mb-6">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start">
+                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <Button 
+                    className={`w-full ${
+                      plan.recommended 
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white' 
+                        : 'bg-white border border-gray-300 hover:bg-gray-100 text-gray-800'
+                    }`}
+                    onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}
+                  >
+                    {plan.recommended ? 'Get Started' : 'Choose Plan'}
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
