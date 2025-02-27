@@ -376,7 +376,7 @@ const LandingPage = () => {
 
         {/* Subscription Plans Section - Redesigned */}
         <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl mb-12 border-2 border-purple-500">
+          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl mb-16 border-2 border-purple-500">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
               <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Choose Your Plan
@@ -387,7 +387,7 @@ const LandingPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-12">
             {subscriptionPlans.map((plan, index) => (
               <div 
                 key={index}
