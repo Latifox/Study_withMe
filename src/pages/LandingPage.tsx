@@ -113,20 +113,6 @@ const LandingPage = () => {
       description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
       color: "bg-red-500",
       textColor: "text-red-900"
-    },
-    {
-      icon: <Trophy className="h-10 w-10 text-white" />,
-      title: "Achievements",
-      description: "Unlock achievements as you reach milestones in your learning journey.",
-      color: "bg-amber-500",
-      textColor: "text-amber-900"
-    },
-    {
-      icon: <Zap className="h-10 w-10 text-white" />,
-      title: "Skill Mastery",
-      description: "Watch your skill levels grow through continuous practice and assessment.",
-      color: "bg-blue-500",
-      textColor: "text-blue-900"
     }
   ];
 
@@ -198,7 +184,7 @@ const LandingPage = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {gamificationElements.map((element, index) => (
               <div 
                 key={index} 
@@ -325,3 +311,4 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
