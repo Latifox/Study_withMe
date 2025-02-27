@@ -150,11 +150,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 11,  // Slightly smaller font for day labels
           },
-          // Alignment properties for precisely aligning day labels with cells
-          // Using 'center' instead of 'right' to match the expected type
-          align: 'center',
-          crossAlign: 'center',
-          // Offset to get perfect alignment - moves labels to align with grid cells
+          // Fix for alignment - Chart.js expects a specific type for align
+          // Valid values for align are 'center', 'start', 'end', or 'inner'
+          align: 'center' as const,
+          crossAlign: 'center' as const,
           textMargin: 0,
           z: 1, // Ensure labels are drawn on top
         },
