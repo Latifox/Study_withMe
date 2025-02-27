@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format, addDays, startOfYear } from "date-fns";
+import { format, addDays, startOfYear, setDate, getMonth, getYear } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -60,6 +60,26 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     return yearData;
   };
 
+  // Calculate x-axis positions for month labels (15th of each month)
+  const getMonthLabelPositions = () => {
+    const startDate = startOfYear(new Date(2025, 0, 1));
+    const monthPositions = [];
+
+    // For each month, find the column index for the 15th
+    for (let month = 0; month < 12; month++) {
+      const fifteenthDate = new Date(getYear(startDate), month, 15);
+      const daysSinceStart = Math.floor((fifteenthDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weekIndex = Math.floor(daysSinceStart / 7);
+      
+      monthPositions.push({
+        month,
+        weekIndex
+      });
+    }
+
+    return monthPositions;
+  };
+
   const chartData: ChartData<'scatter'> = {
     datasets: [
       {
@@ -83,6 +103,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       },
     ],
   };
+
+  const monthPositions = getMonthLabelPositions();
 
   const options = {
     responsive: true,
@@ -112,18 +134,29 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           display: false,
         },
         ticks: {
-          stepSize: 4,
-          color: 'rgba(255, 255, 255, 0.7)',
-          padding: 8,
+          display: false,
           autoSkip: false,
-          callback: function(value: number) {
-            if (value % 4 === 0) {
-              const date = addDays(startOfYear(new Date(2025, 0, 1)), value * 7);
-              return format(date, 'MMM');
-            }
-            return '';
-          },
         },
+        afterDraw: (axis: any) => {
+          const ctx = axis.chart.ctx;
+          const chart = axis.chart;
+          const { left, right, top, bottom } = chart.chartArea;
+          const width = right - left;
+          
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.font = '11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif';
+          
+          monthPositions.forEach(pos => {
+            const monthName = format(new Date(2025, pos.month, 1), 'MMM');
+            const xPixel = left + ((pos.weekIndex + 0.5) / 52) * width;
+            ctx.fillText(monthName, xPixel, bottom + 10);
+          });
+          
+          ctx.restore();
+        }
       },
       y: {
         type: 'linear' as const,
