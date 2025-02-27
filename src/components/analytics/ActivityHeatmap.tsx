@@ -201,7 +201,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           scaleInstance.draw = function() {
             const ctx = this.ctx;
             ctx.save();
-            ctx.translate(0, -2.25); // Increased from -2 to -2.25 pixels (0.25 pixels more)
+            ctx.translate(0, -2.35); // Increased from -2.25 to -2.35 pixels (0.1 pixels more)
             originalDraw.apply(this, arguments);
             ctx.restore();
           };
@@ -238,3 +238,4 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
+
