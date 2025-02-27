@@ -72,17 +72,17 @@ export const createChartData = (transformedData: any[]): ChartData<'scatter'> =>
         const score = (context.raw as any).score || 0;
         
         if (score === 0) return 'rgba(255, 255, 255, 0.05)';
-        if (score <= 5) return 'rgba(168, 85, 247, 0.2)';
-        if (score <= 10) return 'rgba(168, 85, 247, 0.4)';
-        if (score <= 15) return 'rgba(168, 85, 247, 0.6)';
-        if (score <= 20) return 'rgba(168, 85, 247, 0.8)';
-        return 'rgba(168, 85, 247, 1)';
+        if (score <= 5) return 'rgba(255, 223, 0, 0.2)';  // Light yellow
+        if (score <= 10) return 'rgba(255, 223, 0, 0.4)'; // Medium-light yellow
+        if (score <= 15) return 'rgba(255, 223, 0, 0.6)'; // Medium yellow
+        if (score <= 20) return 'rgba(255, 223, 0, 0.8)'; // Medium-dark yellow
+        return 'rgba(255, 223, 0, 1)';                    // Bold/bright yellow
       },
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.1)',
       pointStyle: 'rect' as const,
       pointRadius: 8,
-      hoverBackgroundColor: 'rgba(168, 85, 247, 0.8)',
+      hoverBackgroundColor: 'rgba(255, 223, 0, 0.8)',    // Hover color also changed to yellow
     },
   ],
 });
