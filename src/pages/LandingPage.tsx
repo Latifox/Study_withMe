@@ -98,25 +98,25 @@ const LandingPage = () => {
     "Easy integration with your existing course materials and teaching style"
   ];
 
-  // Gamification elements to display
+  // Gamification elements to display with bolder colors
   const gamificationElements = [
     {
-      icon: <Star className="h-8 w-8 text-yellow-400" />,
+      icon: <Star className="h-8 w-8 text-yellow-500" />,
       title: "Experience Points (XP)",
       description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge."
     },
     {
-      icon: <Flame className="h-8 w-8 text-red-500" />,
+      icon: <Flame className="h-8 w-8 text-orange-600" />,
       title: "Learning Streaks",
       description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention."
     },
     {
-      icon: <Trophy className="h-8 w-8 text-amber-500" />,
+      icon: <Trophy className="h-8 w-8 text-amber-600" />,
       title: "Achievements",
       description: "Unlock achievements as you reach milestones in your learning journey."
     },
     {
-      icon: <Zap className="h-8 w-8 text-blue-400" />,
+      icon: <Zap className="h-8 w-8 text-purple-600" />,
       title: "Skill Mastery",
       description: "Watch your skill levels grow through continuous practice and assessment."
     }
