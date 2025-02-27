@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -213,9 +212,7 @@ const LandingPage = () => {
                   </div>
                 </div>
                 
-                <h3 className={`text-xl font-bold mb-3 text-center ${element.gradientText}`}>
-                  {element.title}
-                </h3>
+                
                 
                 <p className={`font-bold ${element.gradientText} text-center`}>
                   {element.description}
