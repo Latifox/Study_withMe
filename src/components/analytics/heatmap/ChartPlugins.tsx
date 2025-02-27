@@ -31,11 +31,14 @@ export const createMonthLabelsPlugin = (monthPositions: Array<{month: number, we
 export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
   id: 'dayLabels',
   beforeInit: (chart) => {
-    // Set the built-in Y-axis tick display to false to prevent duplicate labels
-    if (chart.options.scales?.y) {
+    // Configure the y-axis to not draw the labels by default
+    // We'll draw them manually in the afterDraw hook
+    const yScale = chart.scales.y;
+    if (yScale) {
+      // Access the ticks display property through the proper path
       chart.options.scales.y.ticks = {
         ...chart.options.scales.y.ticks,
-        display: false // This completely disables the default tick labels
+        display: false
       };
     }
   },
@@ -43,7 +46,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     const yScale = chart.scales.y;
     if (!yScale) return;
     
-    // Get ticks directly from the scale instance
+    // Get ticks directly from the scale instance, not from options
     const ticks = yScale.ticks;
     if (!ticks || ticks.length === 0) return;
     
@@ -60,10 +63,11 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     ticks.forEach((tick) => {
       if (typeof tick.label === 'string') {
         // Position labels to the left of the chart area with a 8px right padding
+        // and vertically centered with the tick, but shifted up by 5px
         ctx.fillText(
           tick.label, 
           yScale.left - 8, 
-          yScale.getPixelForTick(tick.value)
+          yScale.getPixelForTick(tick.value) - 5
         );
       }
     });
