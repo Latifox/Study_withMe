@@ -1,6 +1,6 @@
 
 import { Plugin } from 'chart.js';
-import { format } from "date-fns";
+import { format, startOfYear } from "date-fns";
 
 // Plugin to draw month labels below the chart
 export const createMonthLabelsPlugin = (monthPositions: Array<{month: number, weekIndex: number}>): Plugin<'scatter'> => ({
@@ -27,49 +27,38 @@ export const createMonthLabelsPlugin = (monthPositions: Array<{month: number, we
   }
 });
 
-// Plugin to properly handle day label positioning
+// Plugin to adjust day label positions by moving up 2.5 pixels
 export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
   id: 'dayLabels',
-  beforeInit: (chart) => {
-    // Configure the y-axis to not draw the labels by default
-    // We'll draw them manually in the afterDraw hook
-    if (chart.options.scales && chart.options.scales.y) {
-      chart.options.scales.y.ticks = {
-        ...chart.options.scales.y.ticks,
-        display: false
-      };
-    }
-  },
   afterDraw: (chart) => {
-    const yScale = chart.scales.y;
-    if (!yScale) return;
+    const yAxis = chart.scales.y;
     
-    // Get ticks directly from the scale instance
-    const ticks = yScale.ticks;
-    if (!ticks || ticks.length === 0) return;
+    if (!yAxis || !yAxis.ticks) return;
     
     const ctx = chart.ctx;
     
-    // Set text styling for the labels
-    ctx.save();
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.font = '11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif';
+    // Backup original methods
+    const originalDraw = yAxis.draw;
     
-    // Draw the ticks manually with the desired positioning
-    ticks.forEach((tick) => {
-      if (typeof tick.label === 'string') {
-        // Position labels to the left of the chart area with a 8px right padding
-        // and vertically centered with the tick
-        ctx.fillText(
-          tick.label, 
-          yScale.left - 8, 
-          yScale.getPixelForTick(tick.value)
-        );
-      }
-    });
+    // Override the draw method to adjust labels
+    yAxis.draw = function(chartArea) {
+      // First draw the grid lines and scale as normal
+      originalDraw.call(this, chartArea);
+      
+      // Then redraw the tick labels with our custom positioning
+      ctx.save();
+      ctx.translate(0, -2.5); // Move up by 2.5 pixels (previous 2.0 + 0.5 more)
+      
+      // Only draw the labels part
+      this.drawLabels(chartArea);
+      
+      ctx.restore();
+    };
     
-    ctx.restore();
+    // Call the modified draw method
+    yAxis.draw(chart.chartArea);
+    
+    // Restore original method
+    yAxis.draw = originalDraw;
   }
 });
