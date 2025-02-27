@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,9 @@ const LandingPage = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
-    startIndex: 0 // Start with "Study Plan"
+    align: "start",
+    dragFree: true,
+    containScroll: "trimSnaps"
   });
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
@@ -212,8 +215,6 @@ const LandingPage = () => {
                   </div>
                 </div>
                 
-                
-                
                 <p className={`font-bold ${element.gradientText} text-center`}>
                   {element.description}
                 </p>
@@ -234,7 +235,7 @@ const LandingPage = () => {
             </p>
           </div>
           
-          <div className="relative">
+          <div className="relative overflow-hidden">
             {/* Carousel Navigation */}
             <Button variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10" onClick={scrollPrev}>
               <ChevronLeft className="h-5 w-5" />
@@ -246,8 +247,9 @@ const LandingPage = () => {
             
             {/* Carousel Container with improved shadow visibility */}
             <div className="overflow-visible" ref={emblaRef}>
-              <div className="flex py-6">
-                {features.map((feature, index) => <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4 py-2">
+              <div className="flex py-6 ml-0">
+                {features.map((feature, index) => (
+                  <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4 py-2">
                     <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-xl hover:shadow-2xl transition-shadow border border-purple-100 h-full transform hover:scale-105 duration-300">
                       <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                         {feature.icon}
@@ -257,7 +259,8 @@ const LandingPage = () => {
                         {feature.description}
                       </p>
                     </div>
-                  </div>)}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
