@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatsCard from './analytics/StatsCard';
 import ActivityChart from './analytics/ActivityChart';
 import ActivityHeatmap from './analytics/heatmap/ActivityHeatmap';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
 const Analytics = () => {
@@ -16,46 +15,26 @@ const Analytics = () => {
     { title: "Completed Quizzes", value: "24", change: "+6" }
   ];
 
-  // Sample activity data for heatmap with fallback
-  const generateRandomActivityData = () => {
-    try {
-      const data = [];
-      const today = new Date();
-      // Start from exactly one year ago for better visualization
-      const startDate = new Date(today);
-      startDate.setDate(startDate.getDate() - 365);
-
-      // Generate fewer data points to improve performance
-      for (let i = 0; i < 30; i++) {
-        const randomDays = Math.floor(Math.random() * 365);
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + randomDays);
-        
-        // Ensure the date is valid
-        if (!isNaN(date.getTime())) {
-          data.push({
-            date,
-            score: Math.floor(Math.random() * 20) + 1 // Scores between 1-20
-          });
-        }
-      }
-      
-      // Always include at least one valid data point to ensure the chart renders
-      data.push({
-        date: new Date(),
-        score: 10
-      });
-      
-      return data;
-    } catch (error) {
-      console.error("Error generating random activity data:", error);
-      // Return a minimal set of data if there's an error
-      return [{ date: new Date(), score: 5 }];
-    }
-  };
-
   // Generate activity data once (not on every render)
-  const activityData = React.useMemo(() => generateRandomActivityData(), []);
+  const activityData = React.useMemo(() => {
+    const data = [];
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+
+    // Generate fewer data points for better performance
+    for (let i = 0; i < 100; i++) {
+      const date = new Date(startDate.getTime());
+      date.setDate(date.getDate() + Math.floor(Math.random() * 365));
+      
+      data.push({
+        date,
+        score: Math.floor(Math.random() * 20) + 1  // Activity score between 1-20
+      });
+    }
+    
+    return data;
+  }, []);
 
   return (
     <div className="mt-16">
@@ -90,35 +69,14 @@ const Analytics = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <ErrorBoundary fallback={<div className="w-full h-[220px] flex items-center justify-center text-white/70">Unable to load heatmap</div>}>
+            <div className="w-full h-[220px]">
               <ActivityHeatmap activityData={activityData} />
-            </ErrorBoundary>
+            </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
 };
-
-// Simple ErrorBoundary component to catch and handle runtime errors
-class ErrorBoundary extends React.Component<{children: React.ReactNode, fallback: React.ReactNode}> {
-  state = { hasError: false };
-  
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  
-  componentDidCatch(error: Error) {
-    console.error("Error caught by ErrorBoundary:", error);
-  }
-  
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-    
-    return this.props.children;
-  }
-}
 
 export default Analytics;
