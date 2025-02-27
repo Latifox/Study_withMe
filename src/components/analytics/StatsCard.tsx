@@ -20,7 +20,7 @@ const StatsCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }: Stats
   };
 
   return (
-    <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+    <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-shadow overflow-hidden">
       <CardContent className={getGradientClasses()}>
         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="flex items-center gap-4 relative z-10">
