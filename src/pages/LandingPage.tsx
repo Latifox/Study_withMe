@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings, GraduationCap, School, Trophy, Flame, Star, Zap, Award, Check, Clock, Diamond, Shield, Rocket, Crown } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
-
 const LandingPage = () => {
   const navigate = useNavigate();
   const {
@@ -17,7 +15,6 @@ const LandingPage = () => {
     loop: true,
     startIndex: 0 // Start with "Study Plan"
   });
-  
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
 
@@ -35,16 +32,13 @@ const LandingPage = () => {
     // Clear interval on unmount
     return () => clearInterval(autoScrollInterval);
   }, [emblaApi, scrollNext]);
-
   const handleGetStarted = () => {
     navigate("/auth");
   };
-
   const handleSignUp = () => {
     // Navigate to auth page with register tab pre-selected
     navigate("/auth?tab=register");
   };
-
   const features = [{
     icon: <Users className="h-6 w-6 text-purple-600" />,
     title: "Study Plan",
@@ -78,115 +72,68 @@ const LandingPage = () => {
     title: "AI Configuration",
     description: "Customize the AI's behavior with adjustable parameters for personalized learning experiences."
   }];
-
-  const studentBenefits = [
-    "Personalized study plans tailored to your learning style and pace",
-    "Interactive content that makes complex concepts easier to understand",
-    "AI-generated summaries and highlights to save study time",
-    "Intelligent flashcards that adapt to your knowledge gaps",
-    "24/7 AI tutor available to answer questions about course material",
-    "Self-assessment quizzes that identify areas needing improvement",
-    "Integrated resources to expand your knowledge beyond course material"
-  ];
-
-  const teacherBenefits = [
-    "Automated content transformation from your lecture materials",
-    "Detailed analytics on student engagement and performance",
-    "Reduced workload with AI-generated quizzes and assessments",
-    "Ability to customize learning paths for individual students or groups",
-    "Insights into common student misunderstandings and knowledge gaps",
-    "More time for meaningful student interactions and personalized support",
-    "Easy integration with your existing course materials and teaching style"
-  ];
+  const studentBenefits = ["Personalized study plans tailored to your learning style and pace", "Interactive content that makes complex concepts easier to understand", "AI-generated summaries and highlights to save study time", "Intelligent flashcards that adapt to your knowledge gaps", "24/7 AI tutor available to answer questions about course material", "Self-assessment quizzes that identify areas needing improvement", "Integrated resources to expand your knowledge beyond course material"];
+  const teacherBenefits = ["Automated content transformation from your lecture materials", "Detailed analytics on student engagement and performance", "Reduced workload with AI-generated quizzes and assessments", "Ability to customize learning paths for individual students or groups", "Insights into common student misunderstandings and knowledge gaps", "More time for meaningful student interactions and personalized support", "Easy integration with your existing course materials and teaching style"];
 
   // Gamification elements to display with bold, eye-catching colors
-  const gamificationElements = [
-    {
-      icon: <Star className="h-10 w-10 text-white" />,
-      title: "Experience Points (XP)",
-      description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
-      color: "bg-yellow-400",
-      textColor: "text-yellow-900"
-    },
-    {
-      icon: <Flame className="h-10 w-10 text-white" />,
-      title: "Learning Streaks",
-      description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
-      color: "bg-red-500",
-      textColor: "text-red-900"
-    }
-  ];
+  const gamificationElements = [{
+    icon: <Star className="h-10 w-10 text-white" />,
+    title: "Experience Points (XP)",
+    description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
+    color: "bg-yellow-400",
+    textColor: "text-yellow-900"
+  }, {
+    icon: <Flame className="h-10 w-10 text-white" />,
+    title: "Learning Streaks",
+    description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
+    color: "bg-red-500",
+    textColor: "text-red-900"
+  }];
 
   // Revised subscription plans with consistent text coloring
-  const subscriptionPlans = [
-    {
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Basic features to get you started",
-      features: [
-        "5 AI chat messages per day",
-        "Basic study plans",
-        "Limited highlights & summaries",
-        "Standard quiz generation",
-        "Basic flashcards"
-      ],
-      ctaText: "Get Started Now",
-      recommended: false,
-      icon: <Clock className="h-7 w-7" />,
-      color: "bg-white",
-      borderColor: "border-purple-200",
-      textColor: "text-purple-900",
-      iconColor: "text-purple-400",
-      headerBg: "bg-gradient-to-b from-purple-100 via-purple-50/70 to-white"
-    },
-    {
-      name: "Plus",
-      price: "$4.99",
-      period: "month",
-      description: "Enhanced learning experience",
-      features: [
-        "50 AI chat messages per day",
-        "Personalized study paths",
-        "Full lecture highlights",
-        "Advanced quiz generation",
-        "Unlimited flashcards",
-        "Priority support"
-      ],
-      ctaText: "Choose Plan",
-      recommended: true,
-      icon: <Rocket className="h-7 w-7" />,
-      color: "bg-white",
-      borderColor: "border-purple-400",
-      textColor: "text-purple-900",
-      iconColor: "text-purple-600",
-      headerBg: "bg-gradient-to-b from-purple-300 via-purple-200/80 to-white"
-    },
-    {
-      name: "Premium",
-      price: "$9.99",
-      period: "month",
-      description: "Ultimate learning toolkit",
-      features: [
-        "Unlimited AI chat conversations",
-        "Advanced personalized study plans",
-        "Interactive story mode access",
-        "Advanced analytics & progress tracking",
-        "Exclusive learning resources",
-        "Premium support",
-        "No advertisements"
-      ],
-      ctaText: "Choose Plan",
-      recommended: false,
-      icon: <Crown className="h-7 w-7" />,
-      color: "bg-white",
-      borderColor: "border-purple-800",
-      textColor: "text-purple-900",
-      iconColor: "text-purple-300",
-      headerBg: "bg-gradient-to-b from-purple-700 via-purple-500/80 to-white"
-    }
-  ];
-
+  const subscriptionPlans = [{
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    description: "Basic features to get you started",
+    features: ["5 AI chat messages per day", "Basic study plans", "Limited highlights & summaries", "Standard quiz generation", "Basic flashcards"],
+    ctaText: "Get Started Now",
+    recommended: false,
+    icon: <Clock className="h-7 w-7" />,
+    color: "bg-white",
+    borderColor: "border-purple-200",
+    textColor: "text-purple-900",
+    iconColor: "text-purple-400",
+    headerBg: "bg-gradient-to-b from-purple-100 via-purple-50/70 to-white"
+  }, {
+    name: "Plus",
+    price: "$4.99",
+    period: "month",
+    description: "Enhanced learning experience",
+    features: ["50 AI chat messages per day", "Personalized study paths", "Full lecture highlights", "Advanced quiz generation", "Unlimited flashcards", "Priority support"],
+    ctaText: "Choose Plan",
+    recommended: true,
+    icon: <Rocket className="h-7 w-7" />,
+    color: "bg-white",
+    borderColor: "border-purple-400",
+    textColor: "text-purple-900",
+    iconColor: "text-purple-600",
+    headerBg: "bg-gradient-to-b from-purple-300 via-purple-200/80 to-white"
+  }, {
+    name: "Premium",
+    price: "$9.99",
+    period: "month",
+    description: "Ultimate learning toolkit",
+    features: ["Unlimited AI chat conversations", "Advanced personalized study plans", "Interactive story mode access", "Advanced analytics & progress tracking", "Exclusive learning resources", "Premium support", "No advertisements"],
+    ctaText: "Choose Plan",
+    recommended: false,
+    icon: <Crown className="h-7 w-7" />,
+    color: "bg-white",
+    borderColor: "border-purple-800",
+    textColor: "text-purple-900",
+    iconColor: "text-purple-300",
+    headerBg: "bg-gradient-to-b from-purple-700 via-purple-500/80 to-white"
+  }];
   return <div className="min-h-screen relative overflow-hidden">
       {/* Background with mesh pattern */}
       <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100">
@@ -256,24 +203,17 @@ const LandingPage = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {gamificationElements.map((element, index) => (
-              <div 
-                key={index} 
-                className="bg-white/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/20 transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1"
-              >
+            {gamificationElements.map((element, index) => <div key={index} className="bg-white/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/20 transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1">
                 <div className="flex items-center mb-6">
                   <div className={`${element.color} p-4 rounded-full flex items-center justify-center shadow-lg mr-4`}>
                     {element.icon}
                   </div>
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    {element.title}
-                  </h3>
+                  
                 </div>
                 <p className={`text-gray-700 ${element.textColor}`}>
                   {element.description}
                 </p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
@@ -303,8 +243,7 @@ const LandingPage = () => {
             {/* Carousel Container with improved shadow visibility */}
             <div className="overflow-visible" ref={emblaRef}>
               <div className="flex py-6">
-                {features.map((feature, index) => (
-                  <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4 py-2">
+                {features.map((feature, index) => <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4 py-2">
                     <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-xl hover:shadow-2xl transition-shadow border border-purple-100 h-full transform hover:scale-105 duration-300">
                       <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                         {feature.icon}
@@ -314,8 +253,7 @@ const LandingPage = () => {
                         {feature.description}
                       </p>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
           </div>
@@ -343,14 +281,12 @@ const LandingPage = () => {
               </div>
               
               <ul className="space-y-3">
-                {studentBenefits.map((benefit, index) => (
-                  <li key={index} className="flex items-start">
+                {studentBenefits.map((benefit, index) => <li key={index} className="flex items-start">
                     <div className="mt-1 min-w-6 min-h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
                       <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
                     </div>
                     <span className="text-gray-700">{benefit}</span>
-                  </li>
-                ))}
+                  </li>)}
               </ul>
             </div>
             
@@ -364,14 +300,12 @@ const LandingPage = () => {
               </div>
               
               <ul className="space-y-3">
-                {teacherBenefits.map((benefit, index) => (
-                  <li key={index} className="flex items-start">
+                {teacherBenefits.map((benefit, index) => <li key={index} className="flex items-start">
                     <div className="mt-1 min-w-6 min-h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
                       <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
                     </div>
                     <span className="text-gray-700">{benefit}</span>
-                  </li>
-                ))}
+                  </li>)}
               </ul>
             </div>
           </div>
@@ -391,17 +325,11 @@ const LandingPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {subscriptionPlans.map((plan, index) => (
-              <div 
-                key={index}
-                className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}
-              >
+            {subscriptionPlans.map((plan, index) => <div key={index} className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}>
                 <Card className={`overflow-hidden h-full flex flex-col border ${plan.borderColor} shadow-lg transition-all duration-300 hover:shadow-xl`}>
-                  {plan.recommended && (
-                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
+                  {plan.recommended && <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                       MOST POPULAR
-                    </div>
-                  )}
+                    </div>}
                   
                   <CardHeader className={`${plan.headerBg} pb-8`}>
                     <div className="flex items-center gap-3 mb-4">
@@ -421,28 +349,22 @@ const LandingPage = () => {
                   
                   <CardContent className="bg-white flex-grow">
                     <ul className="space-y-3 mb-6">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start">
+                      {plan.features.map((feature, i) => <li key={i} className="flex items-start">
                           <div className={`${plan.iconColor} flex-shrink-0 mt-0.5 mr-2`}>
                             <Check className="h-5 w-5" />
                           </div>
                           <span className="text-gray-700">{feature}</span>
-                        </li>
-                      ))}
+                        </li>)}
                     </ul>
                   </CardContent>
                   
                   <CardFooter className="bg-white pt-0 pb-6 px-6">
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                      onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}
-                    >
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white" onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}>
                       {plan.ctaText}
                     </Button>
                   </CardFooter>
                 </Card>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
@@ -463,5 +385,4 @@ const LandingPage = () => {
       </div>
     </div>;
 };
-
 export default LandingPage;
