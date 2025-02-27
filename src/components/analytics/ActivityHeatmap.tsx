@@ -124,7 +124,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       monthPositions.forEach(pos => {
         const monthName = format(new Date(2025, pos.month, 1), 'MMM');
         const xPixel = left + ((pos.weekIndex + 0.5) / 52) * width;
-        // Moved month labels 0.25 pixels downward (9.5 instead of 9.25)
+        // Positioned month labels 9.5 pixels below the bottom of the chart area
         ctx.fillText(monthName, xPixel, bottom + 9.5);
       });
       
@@ -190,21 +190,14 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 11,
           },
+          // Adjusted these properties to move day labels
           align: 'center' as const,
-          crossAlign: 'center' as const,
+          crossAlign: 'far' as const, // Changed from 'center' to 'far' to move labels upward
         },
+        // Simplified the afterFit callback by removing the translation approach
         afterFit: (scaleInstance: any) => {
-          scaleInstance.paddingTop = scaleInstance.paddingTop - 3; // Move the entire y-axis up
-          
-          // Also adjust the day label rendering
-          const originalDraw = scaleInstance.draw;
-          scaleInstance.draw = function() {
-            const ctx = this.ctx;
-            ctx.save();
-            ctx.translate(0, -0.5); // Set translation to (0,-0.5) to move day names UP by 0.5 pixels
-            originalDraw.apply(this, arguments);
-            ctx.restore();
-          };
+          // Move the entire y-axis up more aggressively
+          scaleInstance.paddingTop = scaleInstance.paddingTop - 5;
         }
       },
     },
