@@ -115,10 +115,6 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       const { left, right, bottom } = chart.chartArea;
       const width = right - left;
       
-      // Important: Debug the coordinates
-      console.log('Chart area:', { left, right, bottom, width });
-      console.log('Month positions:', monthPositions);
-      
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
@@ -128,15 +124,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       monthPositions.forEach(pos => {
         const monthName = format(new Date(2025, pos.month, 1), 'MMM');
         const xPixel = left + ((pos.weekIndex + 0.5) / 52) * width;
-        // Draw month labels 15px below the chart bottom
-        ctx.fillText(monthName, xPixel, bottom + 15);
-        
-        // Debug line to visualize the month position
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.moveTo(xPixel, bottom);
-        ctx.lineTo(xPixel, bottom + 5);
-        ctx.stroke();
+        ctx.fillText(monthName, xPixel, bottom + 10);
       });
       
       ctx.restore();
@@ -204,18 +192,6 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           },
           align: 'center' as const,
           crossAlign: 'center' as const,
-        },
-        afterFit: (scaleInstance: any) => {
-          // Adjust the label position to be half a cell higher
-          const originalDraw = scaleInstance.draw;
-          scaleInstance.draw = function() {
-            const ctx = this.ctx;
-            ctx.save();
-            // Moved day labels up by 2.45 pixels (2.3 + 0.15)
-            ctx.translate(0, -2.45);
-            originalDraw.apply(this, arguments);
-            ctx.restore();
-          };
         }
       },
     },
