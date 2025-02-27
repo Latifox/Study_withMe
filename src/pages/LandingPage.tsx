@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -204,13 +205,15 @@ const LandingPage = () => {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {gamificationElements.map((element, index) => <div key={index} className="bg-white/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/20 transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1">
-                <div className="flex items-center mb-6">
-                  <div className={`${element.color} p-4 rounded-full flex items-center justify-center shadow-lg mr-4`}>
+                <div className="flex items-center justify-center mb-6">
+                  <div className={`${element.color} p-4 rounded-full flex items-center justify-center shadow-lg mr-0`}>
                     {element.icon}
                   </div>
-                  
                 </div>
-                <p className={`text-gray-700 ${element.textColor}`}>
+                <h3 className={`text-xl font-bold mb-3 text-center ${element.textColor}`}>
+                  {element.title}
+                </h3>
+                <p className={`text-gray-700 ${element.textColor} text-center`}>
                   {element.description}
                 </p>
               </div>)}
