@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -376,7 +375,7 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Subscription Plans Section - Completely reimplemented */}
+        {/* Subscription Plans Section */}
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
@@ -419,7 +418,7 @@ const LandingPage = () => {
                   <p className={`mb-4 ${plan.textColor} opacity-90`}>{plan.description}</p>
                 </div>
                 
-                <div className="bg-white p-8 border-t-0 flex flex-col h-full">
+                <div className="bg-white p-8 border-t-0 flex flex-col h-full z-10">
                   <ul className="space-y-3 mb-8 flex-grow">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start">
@@ -431,10 +430,10 @@ const LandingPage = () => {
                     ))}
                   </ul>
                   
-                  <div className="mt-auto">
+                  <div className="mt-auto w-full flex items-center justify-center">
                     <Button 
                       variant={plan.buttonVariant === 'default' ? 'default' : 'outline'}
-                      className={`w-full ${
+                      className={`w-full !relative !z-50 ${
                         plan.buttonVariant === 'default' 
                           ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
                           : `border ${plan.borderColor} ${plan.textColor} hover:bg-gray-50`
