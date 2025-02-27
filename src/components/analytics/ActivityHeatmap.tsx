@@ -150,8 +150,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 11,  // Slightly smaller font for day labels
           },
-          align: 'center',
-          crossAlign: 'center',
+          align: 'center' as 'center', // TypeScript now knows this is a valid value
+          crossAlign: 'center' as 'center', // Same with this property
         },
       },
     },
