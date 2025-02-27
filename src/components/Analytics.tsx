@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
@@ -152,11 +153,11 @@ const Analytics = () => {
 
   const getHeatmapColor = (score: number) => {
     if (score === 0) return 'bg-white/5';
-    if (score <= 5) return 'bg-purple-500/20';
-    if (score <= 10) return 'bg-purple-500/40';
-    if (score <= 15) return 'bg-purple-500/60';
-    if (score <= 20) return 'bg-purple-500/80';
-    return 'bg-purple-500';
+    if (score <= 5) return 'bg-yellow-500/20';
+    if (score <= 10) return 'bg-yellow-500/40';
+    if (score <= 15) return 'bg-yellow-500/60';
+    if (score <= 20) return 'bg-yellow-500/80';
+    return 'bg-yellow-500';
   };
 
   const totalLectures = userProgress?.quizProgress ? 
@@ -253,14 +254,14 @@ const Analytics = () => {
                           score === 0 
                             ? "bg-white/5"
                             : score <= 5
-                            ? "bg-purple-500/20"
+                            ? "bg-yellow-500/20"
                             : score <= 10
-                            ? "bg-purple-500/40"
+                            ? "bg-yellow-500/40"
                             : score <= 15
-                            ? "bg-purple-500/60"
+                            ? "bg-yellow-500/60"
                             : score <= 20
-                            ? "bg-purple-500/80"
-                            : "bg-purple-500"
+                            ? "bg-yellow-500/80"
+                            : "bg-yellow-500"
                         )}
                       />
                     ))}
