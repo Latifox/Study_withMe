@@ -117,7 +117,7 @@ const LandingPage = () => {
     }
   ];
 
-  // Revised subscription plans with improved gradient transitions
+  // Revised subscription plans with consistent text coloring
   const subscriptionPlans = [
     {
       name: "Free",
@@ -136,7 +136,7 @@ const LandingPage = () => {
       icon: <Clock className="h-7 w-7" />,
       color: "bg-white",
       borderColor: "border-purple-200",
-      textColor: "text-purple-700",
+      textColor: "text-purple-900",
       iconColor: "text-purple-400",
       headerBg: "bg-gradient-to-b from-purple-100 via-purple-50/70 to-white"
     },
@@ -158,7 +158,7 @@ const LandingPage = () => {
       icon: <Rocket className="h-7 w-7" />,
       color: "bg-white",
       borderColor: "border-purple-400",
-      textColor: "text-purple-800",
+      textColor: "text-purple-900",
       iconColor: "text-purple-600",
       headerBg: "bg-gradient-to-b from-purple-300 via-purple-200/80 to-white"
     },
@@ -181,8 +181,8 @@ const LandingPage = () => {
       icon: <Crown className="h-7 w-7" />,
       color: "bg-white",
       borderColor: "border-purple-800",
-      textColor: "text-white",
-      iconColor: "text-purple-100",
+      textColor: "text-purple-900",
+      iconColor: "text-purple-300",
       headerBg: "bg-gradient-to-b from-purple-700 via-purple-500/80 to-white"
     }
   ];
