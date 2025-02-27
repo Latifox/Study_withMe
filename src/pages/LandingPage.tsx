@@ -376,7 +376,7 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Subscription Plans Section - Redesigned */}
+        {/* Subscription Plans Section - Completely reimplemented */}
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
@@ -419,8 +419,8 @@ const LandingPage = () => {
                   <p className={`mb-4 ${plan.textColor} opacity-90`}>{plan.description}</p>
                 </div>
                 
-                <div className="bg-white p-8 border-t-0 h-full flex flex-col">
-                  <ul className="space-y-3 mb-6 flex-grow">
+                <div className="bg-white p-8 border-t-0 flex flex-col h-full">
+                  <ul className="space-y-3 mb-8 flex-grow">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start">
                         <div className={`${plan.iconColor} flex-shrink-0 mt-0.5 mr-2`}>
@@ -431,17 +431,19 @@ const LandingPage = () => {
                     ))}
                   </ul>
                   
-                  <Button 
-                    variant={plan.buttonVariant as "default" | "outline"}
-                    className={`w-full ${
-                      plan.buttonVariant === 'default' 
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-                        : `border ${plan.borderColor} ${plan.textColor} hover:bg-gray-50`
-                    }`}
-                    onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}
-                  >
-                    {plan.ctaText}
-                  </Button>
+                  <div className="mt-auto">
+                    <Button 
+                      variant={plan.buttonVariant === 'default' ? 'default' : 'outline'}
+                      className={`w-full ${
+                        plan.buttonVariant === 'default' 
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
+                          : `border ${plan.borderColor} ${plan.textColor} hover:bg-gray-50`
+                      }`}
+                      onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}
+                    >
+                      {plan.ctaText}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
