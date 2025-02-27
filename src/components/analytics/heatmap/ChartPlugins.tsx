@@ -42,7 +42,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     const originalDraw = yAxis.draw;
     
     // Override the draw method to adjust labels
-    yAxis.draw = function() {
+    yAxis.draw = function(ctx) {
       const ticks = this.ticks || [];
       
       // First draw the grid lines and scale as normal
@@ -59,7 +59,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     };
     
     // Call the modified draw method
-    yAxis.draw(); // Remove the ctx parameter here, as it's not expected
+    yAxis.draw(ctx); // Pass the ctx parameter here
     
     // Restore original method
     yAxis.draw = originalDraw;
