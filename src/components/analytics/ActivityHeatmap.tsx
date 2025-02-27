@@ -132,6 +132,37 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     }
   };
 
+  // Custom plugin to adjust day label positions
+  const dayLabelsPlugin: Plugin<'scatter'> = {
+    id: 'dayLabels',
+    afterDraw: (chart) => {
+      const yAxis = chart.scales.y;
+      
+      if (!yAxis || !yAxis.ticks) return;
+      
+      const ctx = chart.ctx;
+      ctx.save();
+      
+      // Adjust the position of each day label by moving it up 1 pixel
+      const originalDrawTick = yAxis.drawTick;
+      yAxis.drawTick = function(context, index) {
+        const { y } = this.getTicks()[index];
+        ctx.save();
+        ctx.translate(0, -1); // Move up by 1 pixel 
+        originalDrawTick.call(this, context, index);
+        ctx.restore();
+      };
+      
+      // Call the original draw method
+      yAxis.draw(chart.ctx);
+      
+      // Restore the original method
+      yAxis.drawTick = originalDrawTick;
+      
+      ctx.restore();
+    }
+  };
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -190,15 +221,10 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 11,
           },
-          // Adjusted these properties to move day labels
           align: 'center' as const,
-          crossAlign: 'far' as const, // Changed from 'center' to 'far' to move labels upward
+          crossAlign: 'center' as const,
         },
-        // Simplified the afterFit callback by removing the translation approach
-        afterFit: (scaleInstance: any) => {
-          // Move the entire y-axis up more aggressively
-          scaleInstance.paddingTop = scaleInstance.paddingTop - 5;
-        }
+        // Remove the afterFit callback since we're using the dayLabelsPlugin
       },
     },
     plugins: {
@@ -224,7 +250,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       <Scatter 
         data={chartData} 
         options={options} 
-        plugins={[monthLabelsPlugin]} 
+        plugins={[monthLabelsPlugin, dayLabelsPlugin]} 
       />
     </div>
   );
