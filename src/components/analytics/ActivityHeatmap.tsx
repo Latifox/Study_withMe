@@ -87,7 +87,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animations: {
+    animation: {
       duration: 0
     },
     layout: {
