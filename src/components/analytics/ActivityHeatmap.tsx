@@ -95,7 +95,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         top: 10,
         right: 10,
         bottom: 25,
-        left: 60  // Increased left padding to make room for day labels
+        left: 40  // Reduced left padding to better align day labels with cells
       }
     },
     scales: {
@@ -130,6 +130,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         min: -0.5,
         max: 6.5,
         reverse: true,  // This ensures 0 is at the top (Wednesday)
+        offset: true,   // Add this to ensure the grid aligns with ticks
         grid: {
           display: false,
           drawBorder: false,
@@ -139,7 +140,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         },
         ticks: {
           stepSize: 1,
-          padding: 8,
+          padding: 10,  // Increased padding to move labels away from cells
           color: 'rgba(255, 255, 255, 0.7)',
           callback: (value: number) => {
             // 2025 starts on Wednesday (Jan 1, 2025)
@@ -150,12 +151,15 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 11,  // Slightly smaller font for day labels
           },
-          // Fix for alignment - Chart.js expects a specific type for align
-          // Valid values for align are 'center', 'start', 'end', or 'inner'
+          // Use Chart.js supported alignment values
           align: 'center' as const,
-          crossAlign: 'center' as const,
+          crossAlign: 'far' as const,  // Changed to 'far' to align with grid cells
           textMargin: 0,
           z: 1, // Ensure labels are drawn on top
+        },
+        afterFit: (scaleInstance: any) => {
+          // Add a little more margin to help with alignment
+          scaleInstance.paddingLeft = 35;
         },
       },
     },
