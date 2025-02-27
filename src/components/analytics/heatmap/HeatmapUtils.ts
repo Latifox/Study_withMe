@@ -134,6 +134,7 @@ export const createChartOptions = () => ({
         display: false,
       },
       ticks: {
+        // We'll make sure these don't display by setting display: false in the plugin
         stepSize: 1,
         padding: 10,
         color: 'rgba(255, 255, 255, 0.7)',
@@ -146,8 +147,6 @@ export const createChartOptions = () => ({
         font: {
           size: 11,
         },
-        align: 'center' as const,
-        crossAlign: 'center' as const,
       },
     },
   },
