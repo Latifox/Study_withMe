@@ -124,8 +124,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       monthPositions.forEach(pos => {
         const monthName = format(new Date(2025, pos.month, 1), 'MMM');
         const xPixel = left + ((pos.weekIndex + 0.5) / 52) * width;
-        // Move month labels 0.5 pixels upward (9.5 instead of 10)
-        ctx.fillText(monthName, xPixel, bottom + 9.5);
+        // Move month labels 0.75 pixels upward (9.25 instead of 9.5)
+        ctx.fillText(monthName, xPixel, bottom + 9.25);
       });
       
       ctx.restore();
@@ -238,4 +238,3 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 };
 
 export default ActivityHeatmap;
-
