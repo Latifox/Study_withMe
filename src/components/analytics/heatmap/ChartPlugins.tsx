@@ -35,16 +35,18 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     // We'll draw them manually in the afterDraw hook
     const yScale = chart.scales.y;
     if (yScale) {
-      // Instead of directly accessing ticks property, use the API to set display to false
-      if (yScale.options && yScale.options.ticks) {
-        yScale.options.ticks.display = false;
-      }
+      // Access the ticks display property through the proper path
+      chart.options.scales.y.ticks = {
+        ...chart.options.scales.y.ticks,
+        display: false
+      };
     }
   },
   afterDraw: (chart) => {
     const yScale = chart.scales.y;
     if (!yScale) return;
     
+    // Get ticks directly from the scale instance, not from options
     const ticks = yScale.ticks;
     if (!ticks || ticks.length === 0) return;
     
