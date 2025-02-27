@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
 import { ActivityData, transformDataForChart, getMonthLabelPositions, createChartData, createChartOptions } from './HeatmapUtils';
-import { createMonthLabelsPlugin, createDayLabelsPlugin } from './ChartPlugins';
+import { createMonthLabelsPlugin } from './ChartPlugins';
 
 ChartJS.register(
   CategoryScale,
@@ -37,14 +37,13 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   
   // Create plugins for custom rendering
   const monthLabelsPlugin = createMonthLabelsPlugin(monthPositions);
-  const dayLabelsPlugin = createDayLabelsPlugin();
 
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
       <Scatter 
         data={chartData} 
         options={options} 
-        plugins={[monthLabelsPlugin, dayLabelsPlugin]} 
+        plugins={[monthLabelsPlugin]} 
       />
     </div>
   );

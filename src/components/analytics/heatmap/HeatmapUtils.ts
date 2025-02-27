@@ -99,7 +99,7 @@ export const createChartOptions = () => ({
       top: 10,
       right: 10,
       bottom: 30,
-      left: 40
+      left: 10
     }
   },
   scales: {
@@ -134,20 +134,7 @@ export const createChartOptions = () => ({
         display: false,
       },
       ticks: {
-        stepSize: 1,
-        padding: 10,
-        color: 'rgba(255, 255, 255, 0.7)',
-        callback: (value: number) => {
-          // 2025 starts on Wednesday (Jan 1, 2025)
-          // With reverse: true, 0 = Wednesday (top) to 6 = Tuesday (bottom)
-          const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
-          return days[Math.floor(value)];
-        },
-        font: {
-          size: 11,
-        },
-        align: 'center' as const,
-        crossAlign: 'center' as const,
+        display: false,
       },
     },
   },

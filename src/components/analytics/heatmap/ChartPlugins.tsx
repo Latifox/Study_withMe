@@ -26,39 +26,3 @@ export const createMonthLabelsPlugin = (monthPositions: Array<{month: number, we
     ctx.restore();
   }
 });
-
-// Plugin to adjust day label positions by moving up 2.5 pixels
-export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
-  id: 'dayLabels',
-  afterDraw: (chart) => {
-    const yAxis = chart.scales.y;
-    
-    if (!yAxis || !yAxis.ticks) return;
-    
-    const ctx = chart.ctx;
-    
-    // Backup original methods
-    const originalDraw = yAxis.draw;
-    
-    // Override the draw method to adjust labels
-    yAxis.draw = function(chartArea) {
-      // First draw the grid lines and scale as normal
-      originalDraw.call(this, chartArea);
-      
-      // Then redraw the tick labels with our custom positioning
-      ctx.save();
-      ctx.translate(0, -2.5); // Move up by 2.5 pixels (previous 2.0 + 0.5 more)
-      
-      // Only draw the labels part
-      this.drawLabels(chartArea);
-      
-      ctx.restore();
-    };
-    
-    // Call the modified draw method
-    yAxis.draw(chart.chartArea);
-    
-    // Restore original method
-    yAxis.draw = originalDraw;
-  }
-});
