@@ -434,12 +434,7 @@ const LandingPage = () => {
                   
                   <CardFooter className="bg-white pt-0 pb-6 px-6">
                     <Button 
-                      variant={plan.buttonVariant === 'default' ? 'default' : 'outline'}
-                      className={`w-full ${
-                        plan.buttonVariant === 'default' 
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-                          : `border ${plan.borderColor} ${plan.textColor} hover:bg-gray-50`
-                      }`}
+                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
                       onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}
                     >
                       {plan.ctaText}
