@@ -1,6 +1,6 @@
 
 import { ChartData } from 'chart.js';
-import { addDays, startOfYear, getYear, getMonth, setDate } from "date-fns";
+import { addDays, startOfYear, getYear, getMonth, format } from "date-fns";
 
 export interface ActivityData {
   date: Date;
@@ -168,6 +168,3 @@ export const createChartOptions = () => ({
     },
   },
 });
-
-// Import missing 'format' from date-fns
-import { format } from 'date-fns';

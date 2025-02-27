@@ -1,50 +1,62 @@
 
-import React from "react";
+import React, { useEffect, useState } from 'react';
+import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   Tooltip,
+  Legend,
+  ScatterController,
 } from 'chart.js';
-import { Scatter } from 'react-chartjs-2';
-import { ActivityData, transformDataForChart, getMonthLabelPositions, createChartData, createChartOptions } from './HeatmapUtils';
+import 'chart.js/auto';
+import { transformDataForChart, createChartData, createChartOptions, getMonthLabelPositions } from './HeatmapUtils';
 import { createMonthLabelsPlugin, createDayLabelsPlugin } from './ChartPlugins';
 
+// Register required Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
+  ScatterController,
   Tooltip,
+  Legend
 );
 
-interface ActivityHeatmapProps {
-  data: ActivityData[];
+export interface ActivityData {
+  date: Date;
+  score: number;
 }
 
-const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
-  // Transform the data for the chart
-  const transformedData = transformDataForChart(data);
-  
-  // Calculate month positions for labels
-  const monthPositions = getMonthLabelPositions();
-  
-  // Create chart data
-  const chartData = createChartData(transformedData);
-  
-  // Create chart options - ensure we're hiding default y-axis tick labels
-  const options = createChartOptions();
-  
-  // Create plugins for custom rendering
+interface ActivityHeatmapProps {
+  activityData: ActivityData[];
+}
+
+const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityData }) => {
+  const [transformedData, setTransformedData] = useState<any[]>([]);
+  const [monthPositions, setMonthPositions] = useState<Array<{month: number, weekIndex: number}>>([]);
+
+  useEffect(() => {
+    setTransformedData(transformDataForChart(activityData));
+    setMonthPositions(getMonthLabelPositions());
+  }, [activityData]);
+
+  // Create chart plugins
   const monthLabelsPlugin = createMonthLabelsPlugin(monthPositions);
   const dayLabelsPlugin = createDayLabelsPlugin();
 
+  // Create chart data and options
+  const data = createChartData(transformedData);
+  const options = createChartOptions();
+
   return (
-    <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      <Scatter 
-        data={chartData} 
-        options={options} 
-        plugins={[monthLabelsPlugin, dayLabelsPlugin]} 
+    <div className="w-full h-[220px]">
+      <Chart
+        type="scatter"
+        data={data}
+        options={options}
+        plugins={[monthLabelsPlugin, dayLabelsPlugin]}
       />
     </div>
   );
