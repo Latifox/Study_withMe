@@ -201,7 +201,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           scaleInstance.draw = function() {
             const ctx = this.ctx;
             ctx.save();
-            ctx.translate(0, 0.55); // Changed from 0.85 to 0.55 to move day names UP by 0.3 pixels
+            ctx.translate(0, 1.15); // Changed from 0.55 to 1.15 to move day names DOWN by 0.6 pixels
             originalDraw.apply(this, arguments);
             ctx.restore();
           };
