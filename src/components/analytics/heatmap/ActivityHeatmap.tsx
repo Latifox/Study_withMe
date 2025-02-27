@@ -32,7 +32,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
   // Create chart data
   const chartData = createChartData(transformedData);
   
-  // Create chart options
+  // Create chart options - ensure we're hiding default y-axis tick labels
   const options = createChartOptions();
   
   // Create plugins for custom rendering

@@ -27,38 +27,48 @@ export const createMonthLabelsPlugin = (monthPositions: Array<{month: number, we
   }
 });
 
-// Plugin to adjust day label positions by moving up 3 pixels
+// Plugin to properly handle day label positioning
 export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
   id: 'dayLabels',
+  beforeInit: (chart) => {
+    // Configure the y-axis to not draw the labels by default
+    // We'll draw them manually in the afterDraw hook
+    const yScale = chart.scales.y;
+    if (yScale) {
+      // Store the original draw method to avoid duplicate calls
+      const originalDrawMethod = yScale.draw;
+      
+      // Override the drawLabels method to prevent default label drawing
+      yScale.options.ticks.display = false;
+    }
+  },
   afterDraw: (chart) => {
-    const yAxis = chart.scales.y;
-    
-    if (!yAxis || !yAxis.ticks) return;
+    const yScale = chart.scales.y;
+    if (!yScale || !yScale.ticks) return;
     
     const ctx = chart.ctx;
+    const ticks = yScale.ticks;
     
-    // Backup original methods
-    const originalDraw = yAxis.draw;
+    // Set text styling for the labels
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif';
     
-    // Override the draw method to adjust labels
-    yAxis.draw = function(chartArea) {
-      // First draw the grid lines and scale as normal
-      originalDraw.call(this, chartArea);
-      
-      // Then redraw the tick labels with our custom positioning
-      ctx.save();
-      ctx.translate(0, -3.0); // Move up by 3.0 pixels (previous 2.5 + 0.5 more)
-      
-      // Only draw the labels part
-      this.drawLabels(chartArea);
-      
-      ctx.restore();
-    };
+    // Draw the ticks manually with the desired positioning
+    ticks.forEach((tick) => {
+      if (typeof tick.label === 'string') {
+        // Position labels to the left of the chart area with a 8px right padding
+        // and vertically centered with the tick, but shifted up by 5px
+        ctx.fillText(
+          tick.label, 
+          yScale.left - 8, 
+          yScale.getPixelForTick(tick.value) - 5
+        );
+      }
+    });
     
-    // Call the modified draw method
-    yAxis.draw(chart.chartArea);
-    
-    // Restore original method
-    yAxis.draw = originalDraw;
+    ctx.restore();
   }
 });
