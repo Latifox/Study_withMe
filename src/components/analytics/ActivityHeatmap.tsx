@@ -7,6 +7,7 @@ import {
   PointElement,
   Tooltip,
   ChartData,
+  Plugin,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
 import { format, addDays, startOfYear, setDate, getMonth, getYear } from "date-fns";
@@ -106,6 +107,30 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 
   const monthPositions = getMonthLabelPositions();
 
+  // Create a custom plugin to draw month labels
+  const monthLabelsPlugin: Plugin<'scatter'> = {
+    id: 'monthLabels',
+    afterDraw: (chart) => {
+      const ctx = chart.ctx;
+      const { left, right, bottom } = chart.chartArea;
+      const width = right - left;
+      
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif';
+      
+      monthPositions.forEach(pos => {
+        const monthName = format(new Date(2025, pos.month, 1), 'MMM');
+        const xPixel = left + ((pos.weekIndex + 0.5) / 52) * width;
+        ctx.fillText(monthName, xPixel, bottom + 10);
+      });
+      
+      ctx.restore();
+    }
+  };
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -137,26 +162,6 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           display: false,
           autoSkip: false,
         },
-        afterDraw: (axis: any) => {
-          const ctx = axis.chart.ctx;
-          const chart = axis.chart;
-          const { left, right, top, bottom } = chart.chartArea;
-          const width = right - left;
-          
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-          ctx.font = '11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif';
-          
-          monthPositions.forEach(pos => {
-            const monthName = format(new Date(2025, pos.month, 1), 'MMM');
-            const xPixel = left + ((pos.weekIndex + 0.5) / 52) * width;
-            ctx.fillText(monthName, xPixel, bottom + 10);
-          });
-          
-          ctx.restore();
-        }
       },
       y: {
         type: 'linear' as const,
@@ -221,7 +226,11 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
 
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      <Scatter data={chartData} options={options} />
+      <Scatter 
+        data={chartData} 
+        options={options} 
+        plugins={[monthLabelsPlugin]} 
+      />
     </div>
   );
 };
