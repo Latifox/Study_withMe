@@ -3,12 +3,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowRight, BookOpen, Brain, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, ListChecks, Calendar, MessageSquare, Lightbulb, BookOpenCheck } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isHovering, setIsHovering] = useState(false);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+  
+  const scrollPrev = () => emblaApi && emblaApi.scrollPrev();
+  const scrollNext = () => emblaApi && emblaApi.scrollNext();
 
   const handleGetStarted = () => {
     navigate("/auth");
@@ -18,6 +23,54 @@ const LandingPage = () => {
     // Navigate to auth page with register tab pre-selected
     navigate("/auth?tab=register");
   };
+
+  const features = [
+    {
+      icon: <Brain className="h-6 w-6 text-purple-600" />,
+      title: "AI-Generated Quizzes",
+      description: "Test your knowledge with automatically generated quizzes based on your lecture content."
+    },
+    {
+      icon: <Sparkles className="h-6 w-6 text-purple-600" />,
+      title: "Interactive Flashcards",
+      description: "Study efficiently with flashcards created from key concepts in your course materials."
+    },
+    {
+      icon: <BookOpen className="h-6 w-6 text-purple-600" />,
+      title: "Personalized Study Plans",
+      description: "Get customized study plans that help you focus on the most important concepts."
+    },
+    {
+      icon: <FileText className="h-6 w-6 text-purple-600" />,
+      title: "Summary Generation",
+      description: "Convert lengthy lectures into concise summaries that capture the key points."
+    },
+    {
+      icon: <MessageSquare className="h-6 w-6 text-purple-600" />,
+      title: "AI Chat Assistant",
+      description: "Chat with an AI tutor that understands your course materials and can answer your questions."
+    },
+    {
+      icon: <Lightbulb className="h-6 w-6 text-purple-600" />,
+      title: "Concept Mapping",
+      description: "Visualize connections between different concepts in your courses."
+    },
+    {
+      icon: <BookOpenCheck className="h-6 w-6 text-purple-600" />,
+      title: "Interactive Learning",
+      description: "Learn through stories and interactive content generated from your materials."
+    },
+    {
+      icon: <ListChecks className="h-6 w-6 text-purple-600" />,
+      title: "Progress Tracking",
+      description: "Monitor your learning progress across all your courses and study materials."
+    },
+    {
+      icon: <Calendar className="h-6 w-6 text-purple-600" />,
+      title: "Study Scheduling",
+      description: "Create optimal study schedules based on your learning needs and available time."
+    }
+  ];
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -91,38 +144,49 @@ const LandingPage = () => {
           </Button>
         </div>
 
-        {/* Features Section */}
+        {/* Features Carousel Section */}
         <div className="container mx-auto px-4 py-16 md:py-24">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
             Powerful Learning Tools
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-md hover:shadow-xl transition-all border border-purple-100">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Brain className="h-6 w-6 text-purple-600" />
+          
+          <div className="relative">
+            {/* Carousel Navigation */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10"
+              onClick={scrollPrev}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10"
+              onClick={scrollNext}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+            
+            {/* Carousel Container */}
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {features.map((feature, index) => (
+                  <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4">
+                    <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-md hover:shadow-xl transition-all border border-purple-100 h-full">
+                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                        {feature.icon}
+                      </div>
+                      <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                      <p className="text-gray-700">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h3 className="text-xl font-bold mb-3">AI-Generated Quizzes</h3>
-              <p className="text-gray-700">
-                Test your knowledge with automatically generated quizzes based on your lecture content.
-              </p>
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-md hover:shadow-xl transition-all border border-purple-100">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Sparkles className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Interactive Flashcards</h3>
-              <p className="text-gray-700">
-                Study efficiently with flashcards created from key concepts in your course materials.
-              </p>
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-md hover:shadow-xl transition-all border border-purple-100">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <BookOpen className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Personalized Study Plans</h3>
-              <p className="text-gray-700">
-                Get customized study plans that help you focus on the most important concepts.
-              </p>
             </div>
           </div>
         </div>
