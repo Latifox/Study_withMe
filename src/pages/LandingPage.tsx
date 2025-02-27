@@ -127,7 +127,7 @@ const LandingPage = () => {
     price: "$9.99",
     period: "month",
     description: "Ultimate learning toolkit",
-    features: ["Unlimited AI chat conversations", "Advanced personalized study plans", "Interactive story mode access", "Advanced analytics & progress tracking", "Exclusive learning resources", "Premium support", "No advertisements"],
+    features: ["Unlimited access to all functionalities provided by EduSync AI"],
     ctaText: "Choose Plan",
     recommended: false,
     icon: <Crown className="h-7 w-7" />,
@@ -390,3 +390,4 @@ const LandingPage = () => {
     </div>;
 };
 export default LandingPage;
+
