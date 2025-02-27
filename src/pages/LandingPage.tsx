@@ -130,7 +130,7 @@ const LandingPage = () => {
         "Standard quiz generation",
         "Basic flashcards"
       ],
-      ctaText: "Get Started",
+      ctaText: "Get Started Now",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
       color: "bg-gradient-to-b from-purple-50 to-purple-100",
@@ -152,7 +152,7 @@ const LandingPage = () => {
         "Unlimited flashcards",
         "Priority support"
       ],
-      ctaText: "Upgrade Now",
+      ctaText: "Choose Plan",
       recommended: true,
       icon: <Rocket className="h-7 w-7" />,
       color: "bg-gradient-to-b from-purple-200 to-purple-300",
@@ -175,7 +175,7 @@ const LandingPage = () => {
         "Premium support",
         "No advertisements"
       ],
-      ctaText: "Go Premium",
+      ctaText: "Choose Plan",
       recommended: false,
       icon: <Crown className="h-7 w-7" />,
       color: "bg-gradient-to-b from-purple-600 to-purple-700",
