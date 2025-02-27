@@ -160,9 +160,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           scaleInstance.draw = function() {
             const ctx = this.ctx;
             ctx.save();
-            // Translate the context downward by one quarter of a cell height (approx 4-5px)
-            // Previously was -8px moving up, now moving down relative to that position
-            ctx.translate(0, -4);
+            // Moving DOWN by 4 pixels (positive value moves down)
+            ctx.translate(0, 4);
             originalDraw.apply(this, arguments);
             ctx.restore();
           };
