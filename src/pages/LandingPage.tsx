@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -117,7 +116,7 @@ const LandingPage = () => {
     }
   ];
 
-  // Revised subscription plans with updated purple color schemes
+  // Revised subscription plans with updated gradient styling
   const subscriptionPlans = [
     {
       name: "Free",
@@ -134,11 +133,11 @@ const LandingPage = () => {
       ctaText: "Get Started Now",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
-      color: "bg-gradient-to-b from-purple-50 to-purple-100",
+      color: "bg-gradient-to-b from-purple-50 via-purple-100/70 to-white",
       borderColor: "border-purple-200",
       textColor: "text-purple-700",
       iconColor: "text-purple-400",
-      buttonVariant: "outline"
+      headerBg: "bg-gradient-to-b from-purple-100 via-purple-50/50 to-transparent"
     },
     {
       name: "Plus",
@@ -156,11 +155,11 @@ const LandingPage = () => {
       ctaText: "Choose Plan",
       recommended: true,
       icon: <Rocket className="h-7 w-7" />,
-      color: "bg-gradient-to-b from-purple-200 to-purple-300",
+      color: "bg-gradient-to-b from-purple-200 via-purple-100/80 to-white",
       borderColor: "border-purple-400",
       textColor: "text-purple-800",
       iconColor: "text-purple-600",
-      buttonVariant: "default"
+      headerBg: "bg-gradient-to-b from-purple-300 via-purple-200/50 to-transparent"
     },
     {
       name: "Premium",
@@ -179,11 +178,11 @@ const LandingPage = () => {
       ctaText: "Choose Plan",
       recommended: false,
       icon: <Crown className="h-7 w-7" />,
-      color: "bg-gradient-to-b from-purple-600 to-purple-700",
+      color: "bg-gradient-to-b from-purple-600 via-purple-500/90 to-white",
       borderColor: "border-purple-800",
       textColor: "text-white",
       iconColor: "text-purple-100",
-      buttonVariant: "outline"
+      headerBg: "bg-gradient-to-b from-purple-700 via-purple-600/50 to-transparent"
     }
   ];
 
@@ -396,16 +395,16 @@ const LandingPage = () => {
                 key={index}
                 className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}
               >
-                <Card className="overflow-hidden h-full flex flex-col">
+                <Card className={`overflow-hidden h-full flex flex-col ${plan.color} transition-all duration-300 hover:shadow-xl`}>
                   {plan.recommended && (
                     <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                       MOST POPULAR
                     </div>
                   )}
                   
-                  <CardHeader className={`${plan.color} ${plan.borderColor}`}>
+                  <CardHeader className={`${plan.headerBg} transition-colors duration-300`}>
                     <div className="flex items-center gap-3 mb-4">
-                      <div className={`p-2 rounded-full bg-white/30 ${plan.iconColor}`}>
+                      <div className={`p-2 rounded-full bg-white/30 ${plan.iconColor} backdrop-blur-sm`}>
                         {plan.icon}
                       </div>
                       <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
@@ -419,7 +418,7 @@ const LandingPage = () => {
                     <p className={`${plan.textColor} opacity-90`}>{plan.description}</p>
                   </CardHeader>
                   
-                  <CardContent className="bg-white flex-grow">
+                  <CardContent className="flex-grow backdrop-blur-sm">
                     <ul className="space-y-3 mb-6">
                       {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-start">
@@ -432,7 +431,7 @@ const LandingPage = () => {
                     </ul>
                   </CardContent>
                   
-                  <CardFooter className="bg-white pt-0 pb-6 px-6">
+                  <CardFooter className="pt-0 pb-6 px-6 backdrop-blur-sm">
                     <Button 
                       className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
                       onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}
