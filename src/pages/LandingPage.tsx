@@ -1,9 +1,11 @@
-import { useState } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const {
@@ -11,17 +13,37 @@ const LandingPage = () => {
   } = useToast();
   const [isHovering, setIsHovering] = useState(false);
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: true
+    loop: true,
+    startIndex: 0 // Start with "Study Plan"
   });
-  const scrollPrev = () => emblaApi && emblaApi.scrollPrev();
-  const scrollNext = () => emblaApi && emblaApi.scrollNext();
+  
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+
+  // Auto-scroll functionality
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    // Auto-scroll interval (5 seconds)
+    const autoScrollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        scrollNext();
+      }
+    }, 5000);
+
+    // Clear interval on unmount
+    return () => clearInterval(autoScrollInterval);
+  }, [emblaApi, scrollNext]);
+
   const handleGetStarted = () => {
     navigate("/auth");
   };
+
   const handleSignUp = () => {
     // Navigate to auth page with register tab pre-selected
     navigate("/auth?tab=register");
   };
+
   const features = [{
     icon: <Users className="h-6 w-6 text-purple-600" />,
     title: "Study Plan",
@@ -51,6 +73,7 @@ const LandingPage = () => {
     title: "Additional Resources",
     description: "Discover related materials and resources to deepen your understanding."
   }];
+
   return <div className="min-h-screen relative overflow-hidden">
       {/* Background with mesh pattern */}
       <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100">
@@ -158,4 +181,5 @@ const LandingPage = () => {
       </div>
     </div>;
 };
+
 export default LandingPage;
