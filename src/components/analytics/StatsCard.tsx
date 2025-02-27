@@ -10,7 +10,8 @@ interface StatsCardProps {
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, change }) => {
-  const isPositive = change.startsWith('+');
+  // Add a null check to handle undefined change values
+  const isPositive = change && change.startsWith('+');
   
   return (
     <Card className="bg-white/10 backdrop-blur-md border-white/20 transition-all duration-200 hover:bg-white/15">

@@ -16,23 +16,30 @@ const Analytics = () => {
     { title: "Completed Quizzes", value: "24", change: "+6" }
   ];
 
-  // Sample activity data for heatmap
+  // Sample activity data for heatmap with fallback
   const generateRandomActivityData = () => {
-    const data = [];
-    const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 365);
+    try {
+      const data = [];
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 365);
 
-    for (let i = 0; i < 120; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + Math.floor(Math.random() * 365));
-      
-      data.push({
-        date,
-        score: Math.floor(Math.random() * 25)
-      });
+      // Generate fewer data points to reduce complexity
+      for (let i = 0; i < 50; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + Math.floor(Math.random() * 365));
+        
+        data.push({
+          date,
+          score: Math.floor(Math.random() * 25)
+        });
+      }
+      return data;
+    } catch (error) {
+      console.error("Error generating random activity data:", error);
+      // Return a minimal set of data if there's an error
+      return [{ date: new Date(), score: 1 }];
     }
-    return data;
   };
 
   const activityData = generateRandomActivityData();

@@ -38,28 +38,45 @@ const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityData }) => {
   const [monthPositions, setMonthPositions] = useState<Array<{month: number, weekIndex: number}>>([]);
 
   useEffect(() => {
-    setTransformedData(transformDataForChart(activityData));
-    setMonthPositions(getMonthLabelPositions());
+    // Ensure we have valid data before transforming
+    if (Array.isArray(activityData) && activityData.length > 0) {
+      setTransformedData(transformDataForChart(activityData));
+      setMonthPositions(getMonthLabelPositions());
+    }
   }, [activityData]);
 
-  // Create chart plugins
-  const monthLabelsPlugin = createMonthLabelsPlugin(monthPositions);
-  const dayLabelsPlugin = createDayLabelsPlugin();
+  // Only render chart when we have data
+  if (!transformedData.length) {
+    return <div className="w-full h-[220px] flex items-center justify-center">Loading heatmap...</div>;
+  }
 
-  // Create chart data and options
-  const data = createChartData(transformedData);
-  const options = createChartOptions();
+  try {
+    // Create chart plugins
+    const monthLabelsPlugin = createMonthLabelsPlugin(monthPositions);
+    const dayLabelsPlugin = createDayLabelsPlugin();
 
-  return (
-    <div className="w-full h-[220px]">
-      <Chart
-        type="scatter"
-        data={data}
-        options={options}
-        plugins={[monthLabelsPlugin, dayLabelsPlugin]}
-      />
-    </div>
-  );
+    // Create chart data and options
+    const data = createChartData(transformedData);
+    const options = createChartOptions();
+
+    return (
+      <div className="w-full h-[220px]">
+        <Chart
+          type="scatter"
+          data={data}
+          options={options}
+          plugins={[monthLabelsPlugin, dayLabelsPlugin]}
+        />
+      </div>
+    );
+  } catch (error) {
+    console.error("Error rendering ActivityHeatmap:", error);
+    return (
+      <div className="w-full h-[220px] flex items-center justify-center text-white/70">
+        Unable to load heatmap
+      </div>
+    );
+  }
 };
 
 export default ActivityHeatmap;
