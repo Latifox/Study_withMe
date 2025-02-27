@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, ListChecks, Calendar, MessageSquare, Lightbulb, BookOpenCheck } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
 const LandingPage = () => {
@@ -26,49 +26,39 @@ const LandingPage = () => {
 
   const features = [
     {
-      icon: <Brain className="h-6 w-6 text-purple-600" />,
-      title: "AI-Generated Quizzes",
-      description: "Test your knowledge with automatically generated quizzes based on your lecture content."
-    },
-    {
-      icon: <Sparkles className="h-6 w-6 text-purple-600" />,
-      title: "Interactive Flashcards",
-      description: "Study efficiently with flashcards created from key concepts in your course materials."
+      icon: <Users className="h-6 w-6 text-purple-600" />,
+      title: "Study Plan",
+      description: "Get a personalized learning path optimized for efficient knowledge acquisition."
     },
     {
       icon: <BookOpen className="h-6 w-6 text-purple-600" />,
-      title: "Personalized Study Plans",
-      description: "Get customized study plans that help you focus on the most important concepts."
+      title: "Story Mode",
+      description: "Experience your learning materials through engaging interactive stories."
     },
     {
       icon: <FileText className="h-6 w-6 text-purple-600" />,
-      title: "Summary Generation",
-      description: "Convert lengthy lectures into concise summaries that capture the key points."
+      title: "Highlights",
+      description: "Access key points and summaries extracted from your lecture materials."
     },
     {
       icon: <MessageSquare className="h-6 w-6 text-purple-600" />,
-      title: "AI Chat Assistant",
-      description: "Chat with an AI tutor that understands your course materials and can answer your questions."
+      title: "Chat",
+      description: "Engage in conversations with an AI tutor about your course materials."
     },
     {
-      icon: <Lightbulb className="h-6 w-6 text-purple-600" />,
-      title: "Concept Mapping",
-      description: "Visualize connections between different concepts in your courses."
+      icon: <HeartPulse className="h-6 w-6 text-purple-600" />,
+      title: "Flashcards",
+      description: "Review concepts with automatically generated flashcards for effective memorization."
     },
     {
-      icon: <BookOpenCheck className="h-6 w-6 text-purple-600" />,
-      title: "Interactive Learning",
-      description: "Learn through stories and interactive content generated from your materials."
+      icon: <HelpCircle className="h-6 w-6 text-purple-600" />,
+      title: "Quiz",
+      description: "Test your knowledge with AI-generated quizzes based on your lectures."
     },
     {
-      icon: <ListChecks className="h-6 w-6 text-purple-600" />,
-      title: "Progress Tracking",
-      description: "Monitor your learning progress across all your courses and study materials."
-    },
-    {
-      icon: <Calendar className="h-6 w-6 text-purple-600" />,
-      title: "Study Scheduling",
-      description: "Create optimal study schedules based on your learning needs and available time."
+      icon: <Link2 className="h-6 w-6 text-purple-600" />,
+      title: "Additional Resources",
+      description: "Discover related materials and resources to deepen your understanding."
     }
   ];
 
