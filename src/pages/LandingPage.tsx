@@ -14,6 +14,11 @@ const LandingPage = () => {
     navigate("/auth");
   };
 
+  const handleSignUp = () => {
+    // Navigate to auth page with register tab pre-selected
+    navigate("/auth?tab=register");
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Background with mesh pattern */}
@@ -55,7 +60,7 @@ const LandingPage = () => {
               Login
             </Button>
             <Button
-              onClick={() => navigate("/auth")}
+              onClick={handleSignUp}
               className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
             >
               Sign Up

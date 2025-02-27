@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { useAuth } from "@/components/AuthProvider";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user, loading } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
@@ -23,7 +24,13 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  
+  // Get the tab from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const tabParam = queryParams.get('tab');
+  const [activeTab, setActiveTab] = useState<"login" | "register">(
+    tabParam === "register" ? "register" : "login"
+  );
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
@@ -185,7 +192,7 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs 
-              defaultValue="login" 
+              defaultValue={activeTab} 
               className="w-full"
               onValueChange={(value) => setActiveTab(value as "login" | "register")}
             >
