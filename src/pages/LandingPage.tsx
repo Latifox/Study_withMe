@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -210,7 +209,9 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 py-8 md:py-12">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl mb-12 border-2 border-purple-400">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-              Powerful Learning Tools
+              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Powerful Learning Tools
+              </span>
             </h2>
             <p className="text-lg text-gray-700 text-center">
               Explore our range of AI-powered features designed to enhance your educational experience
