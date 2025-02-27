@@ -354,7 +354,7 @@ const LandingPage = () => {
                   <CardContent className="bg-white flex-grow">
                     <ul className="space-y-3 mb-6">
                       {plan.features.map((feature, i) => <li key={i} className="flex items-start">
-                          <div className={`${plan.iconColor} flex-shrink-0 mt-0.5 mr-2`}>
+                          <div className="text-purple-600 flex-shrink-0 mt-0.5 mr-2">
                             <Check className="h-5 w-5" />
                           </div>
                           <span className="text-gray-700">{feature}</span>
