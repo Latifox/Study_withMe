@@ -1,9 +1,11 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings, GraduationCap, School, Trophy, Flame, Star, Zap, Award, Check, Clock, Diamond, Shield, Rocket, Crown } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -375,7 +377,7 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Subscription Plans Section */}
+        {/* Subscription Plans Section - Completely reimplemented */}
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
@@ -388,52 +390,52 @@ const LandingPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {subscriptionPlans.map((plan, index) => (
               <div 
                 key={index}
-                className={`relative rounded-2xl overflow-hidden transition-all duration-300 group hover:-translate-y-2 ${
-                  plan.recommended ? 'md:scale-110 md:-mt-4 md:mb-4 z-10 shadow-xl' : 'shadow-lg'
-                }`}
+                className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}
               >
-                {plan.recommended && (
-                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 font-medium text-sm">
-                    MOST POPULAR
-                  </div>
-                )}
-                
-                <div className={`${plan.color} p-8 ${plan.recommended ? 'pt-10' : ''} ${plan.borderColor} border-b`}>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`p-2 rounded-full bg-white/30 ${plan.iconColor}`}>
-                      {plan.icon}
+                <Card className="overflow-hidden h-full flex flex-col">
+                  {plan.recommended && (
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
+                      MOST POPULAR
                     </div>
-                    <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
-                  </div>
+                  )}
                   
-                  <div className="mb-2">
-                    <span className={`text-3xl font-bold ${plan.textColor}`}>{plan.price}</span>
-                    <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
-                  </div>
+                  <CardHeader className={`${plan.color} ${plan.borderColor}`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`p-2 rounded-full bg-white/30 ${plan.iconColor}`}>
+                        {plan.icon}
+                      </div>
+                      <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
+                    </div>
+                    
+                    <div className="mb-2">
+                      <span className={`text-3xl font-bold ${plan.textColor}`}>{plan.price}</span>
+                      <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
+                    </div>
+                    
+                    <p className={`${plan.textColor} opacity-90`}>{plan.description}</p>
+                  </CardHeader>
                   
-                  <p className={`mb-4 ${plan.textColor} opacity-90`}>{plan.description}</p>
-                </div>
-                
-                <div className="bg-white p-8 border-t-0 flex flex-col h-full z-10">
-                  <ul className="space-y-3 mb-8 flex-grow">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start">
-                        <div className={`${plan.iconColor} flex-shrink-0 mt-0.5 mr-2`}>
-                          <Check className="h-5 w-5" />
-                        </div>
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <CardContent className="bg-white flex-grow">
+                    <ul className="space-y-3 mb-6">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start">
+                          <div className={`${plan.iconColor} flex-shrink-0 mt-0.5 mr-2`}>
+                            <Check className="h-5 w-5" />
+                          </div>
+                          <span className="text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
                   
-                  <div className="mt-auto w-full flex items-center justify-center">
+                  <CardFooter className="bg-white pt-0 pb-6 px-6">
                     <Button 
                       variant={plan.buttonVariant === 'default' ? 'default' : 'outline'}
-                      className={`w-full !relative !z-50 ${
+                      className={`w-full ${
                         plan.buttonVariant === 'default' 
                           ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
                           : `border ${plan.borderColor} ${plan.textColor} hover:bg-gray-50`
@@ -442,8 +444,8 @@ const LandingPage = () => {
                     >
                       {plan.ctaText}
                     </Button>
-                  </div>
-                </div>
+                  </CardFooter>
+                </Card>
               </div>
             ))}
           </div>
