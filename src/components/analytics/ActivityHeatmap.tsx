@@ -9,7 +9,7 @@ import {
   ChartData,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { format, addDays, startOfYear } from "date-fns";
+import { format, addDays, startOfYear, getDate, parseISO } from "date-fns";
 
 ChartJS.register(
   CategoryScale,
@@ -60,6 +60,26 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     return yearData;
   };
 
+  // Find week indices for the 15th of each month
+  const getMonthPositions = () => {
+    const startDate = startOfYear(new Date(2025, 0, 1));
+    const monthPositions = [];
+    
+    for (let month = 0; month < 12; month++) {
+      // Create a date for the 15th of each month
+      const date = new Date(2025, month, 15);
+      const daysSinceStart = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weekIndex = Math.floor(daysSinceStart / 7);
+      
+      monthPositions.push({
+        month: format(date, 'MMM'),
+        weekIndex
+      });
+    }
+    
+    return monthPositions;
+  };
+
   const chartData: ChartData<'scatter'> = {
     datasets: [
       {
@@ -83,6 +103,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       },
     ],
   };
+
+  const monthPositions = getMonthPositions();
 
   const options = {
     responsive: true,
@@ -112,16 +134,14 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           display: false,
         },
         ticks: {
-          stepSize: 4,
+          stepSize: 1,
           color: 'rgba(255, 255, 255, 0.7)',
           padding: 8,
           autoSkip: false,
           callback: function(value: number) {
-            if (value % 4 === 0) {
-              const date = addDays(startOfYear(new Date(2025, 0, 1)), value * 7);
-              return format(date, 'MMM');
-            }
-            return '';
+            // Show month names where the 15th of the month is located
+            const matchingMonth = monthPositions.find(m => m.weekIndex === value);
+            return matchingMonth ? matchingMonth.month : '';
           },
         },
       },
