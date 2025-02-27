@@ -173,13 +173,13 @@ const LandingPage = () => {
 
         {/* Gamification Section */}
         <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 bg-white/60 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Learn with Purpose
               </span>
             </h2>
-            <p className="text-lg text-gray-700 max-w-3xl mx-auto">
+            <p className="text-lg text-gray-700">
               Our gamified learning approach keeps you motivated and tracks your progress through your educational journey
             </p>
           </div>
@@ -208,9 +208,14 @@ const LandingPage = () => {
 
         {/* Features Carousel Section - Reduced top padding here */}
         <div className="container mx-auto px-4 py-8 md:py-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-            Powerful Learning Tools
-          </h2>
+          <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+              Powerful Learning Tools
+            </h2>
+            <p className="text-lg text-gray-700 text-center">
+              Explore our range of AI-powered features designed to enhance your educational experience
+            </p>
+          </div>
           
           <div className="relative">
             {/* Carousel Navigation */}
@@ -243,9 +248,14 @@ const LandingPage = () => {
 
         {/* Benefits Sections - Students and Teachers */}
         <div className="container mx-auto px-4 py-16 md:py-24">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-            Who Benefits from <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">EduSync AI</span>
-          </h2>
+          <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl shadow-sm mx-auto max-w-3xl mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+              Who Benefits from <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">EduSync AI</span>
+            </h2>
+            <p className="text-lg text-gray-700 text-center">
+              Our platform serves both students and educators with specialized tools and features
+            </p>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
             {/* Students Section */}
