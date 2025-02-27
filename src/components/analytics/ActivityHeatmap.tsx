@@ -95,7 +95,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         top: 10,
         right: 10,
         bottom: 25,
-        left: 40
+        left: 10 // Reduced left padding since we're using custom labels
       }
     },
     scales: {
@@ -139,18 +139,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           display: false,
         },
         ticks: {
-          stepSize: 1,
-          padding: 10,
-          color: 'rgba(255, 255, 255, 0.7)',
-          callback: (value: number) => {
-            // 2025 starts on Wednesday (Jan 1, 2025)
-            // With reverse: true, 0 = Wednesday (top) to 6 = Tuesday (bottom)
-            const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
-            return days[Math.floor(value)];
-          },
-          font: {
-            size: 11,
-          },
+          display: false, // Hide the original y-axis ticks
         },
       },
     },
@@ -172,47 +161,25 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     },
   };
 
-  // Create custom render function to implement proper day label alignment
-  const renderChart = () => {
-    return (
-      <div className="relative w-full h-full">
-        {/* Day labels column */}
-        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between pt-[15px] pb-[15px] z-10 text-xs text-white/70" style={{ width: '40px' }}>
-          <div className="flex items-center justify-end pr-2">Wed</div>
-          <div className="flex items-center justify-end pr-2">Thu</div>
-          <div className="flex items-center justify-end pr-2">Fri</div>
-          <div className="flex items-center justify-end pr-2">Sat</div>
-          <div className="flex items-center justify-end pr-2">Sun</div>
-          <div className="flex items-center justify-end pr-2">Mon</div>
-          <div className="flex items-center justify-end pr-2">Tue</div>
-        </div>
-        
-        {/* Chart with y-axis ticks hidden */}
-        <div className="w-full h-full pl-[40px]">
-          <Scatter 
-            data={chartData} 
-            options={{
-              ...options,
-              scales: {
-                ...options.scales,
-                y: {
-                  ...options.scales.y,
-                  ticks: {
-                    ...options.scales.y.ticks,
-                    display: false, // Hide the original y-axis ticks
-                  }
-                }
-              }
-            }} 
-          />
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      {renderChart()}
+      <div className="relative w-full h-full" style={{ display: 'flex' }}>
+        {/* Day labels - positioned to align with heatmap cells */}
+        <div className="flex flex-col justify-between py-[22px] text-xs text-white/70 w-[40px] text-right pr-2">
+          <div>WED</div>
+          <div>THU</div>
+          <div>FRI</div>
+          <div>SAT</div>
+          <div>SUN</div>
+          <div>MON</div>
+          <div>TUE</div>
+        </div>
+        
+        {/* Chart */}
+        <div className="flex-1">
+          <Scatter data={chartData} options={options} />
+        </div>
+      </div>
     </div>
   );
 };
