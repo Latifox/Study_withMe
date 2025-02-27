@@ -106,7 +106,6 @@ const LandingPage = () => {
     recommended: false,
     icon: <Clock className="h-7 w-7" />,
     color: "bg-white",
-    borderColor: "border-purple-200",
     textColor: "text-purple-900",
     iconColor: "text-purple-400",
     headerBg: "bg-gradient-to-b from-purple-100 via-purple-50/70 to-white"
@@ -120,7 +119,6 @@ const LandingPage = () => {
     recommended: true,
     icon: <Rocket className="h-7 w-7" />,
     color: "bg-white",
-    borderColor: "border-purple-400",
     textColor: "text-purple-900",
     iconColor: "text-purple-600",
     headerBg: "bg-gradient-to-b from-purple-300 via-purple-200/80 to-white"
@@ -134,7 +132,6 @@ const LandingPage = () => {
     recommended: false,
     icon: <Crown className="h-7 w-7" />,
     color: "bg-white",
-    borderColor: "border-purple-800",
     textColor: "text-purple-900",
     iconColor: "text-purple-300",
     headerBg: "bg-gradient-to-b from-purple-700 via-purple-500/80 to-white"
@@ -333,7 +330,7 @@ const LandingPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {subscriptionPlans.map((plan, index) => <div key={index} className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}>
-                <Card className={`overflow-hidden h-full flex flex-col border ${plan.borderColor} shadow-lg transition-all duration-300 hover:shadow-xl`}>
+                <Card className={`overflow-hidden h-full flex flex-col shadow-lg transition-all duration-300 hover:shadow-xl border-0`}>
                   {plan.recommended && <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                       MOST POPULAR
                     </div>}
