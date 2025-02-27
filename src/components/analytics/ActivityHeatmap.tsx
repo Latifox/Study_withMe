@@ -151,25 +151,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           font: {
             size: 11,
           },
-          align: 'center' as const,
-          crossAlign: 'center' as const,
         },
-        afterFit: (scaleInstance: any) => {
-          // This hack shifts the labels to align with cells
-          scaleInstance.paddingTop = 10;
-          scaleInstance.labelOffset = 0;
-          
-          // Apply a transformation to the y-axis labels to move them down
-          const originalDraw = scaleInstance.draw;
-          scaleInstance.draw = function() {
-            const ctx = this.ctx;
-            ctx.save();
-            // Translate the context to move the labels down by 8 pixels
-            ctx.translate(0, 8);
-            originalDraw.apply(this, arguments);
-            ctx.restore();
-          };
-        }
       },
     },
     plugins: {
@@ -190,9 +172,47 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
     },
   };
 
+  // Create custom render function to implement proper day label alignment
+  const renderChart = () => {
+    return (
+      <div className="relative w-full h-full">
+        {/* Day labels column */}
+        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between pt-[15px] pb-[15px] z-10 text-xs text-white/70" style={{ width: '40px' }}>
+          <div className="flex items-center justify-end pr-2">Wed</div>
+          <div className="flex items-center justify-end pr-2">Thu</div>
+          <div className="flex items-center justify-end pr-2">Fri</div>
+          <div className="flex items-center justify-end pr-2">Sat</div>
+          <div className="flex items-center justify-end pr-2">Sun</div>
+          <div className="flex items-center justify-end pr-2">Mon</div>
+          <div className="flex items-center justify-end pr-2">Tue</div>
+        </div>
+        
+        {/* Chart with y-axis ticks hidden */}
+        <div className="w-full h-full pl-[40px]">
+          <Scatter 
+            data={chartData} 
+            options={{
+              ...options,
+              scales: {
+                ...options.scales,
+                y: {
+                  ...options.scales.y,
+                  ticks: {
+                    ...options.scales.y.ticks,
+                    display: false, // Hide the original y-axis ticks
+                  }
+                }
+              }
+            }} 
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full h-[300px] p-4 rounded-lg bg-background/5">
-      <Scatter data={chartData} options={options} />
+      {renderChart()}
     </div>
   );
 };
