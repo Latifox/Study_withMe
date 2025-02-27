@@ -242,7 +242,7 @@ const LandingPage = () => {
         </div>
 
         {/* Benefits Sections - Students and Teachers */}
-        <div className="container mx-auto px-4 py-16 md:py-24 bg-white/40 backdrop-blur-sm rounded-xl shadow-md">
+        <div className="container mx-auto px-4 py-16 md:py-24">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
             Who Benefits from <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">EduSync AI</span>
           </h2>
@@ -311,4 +311,3 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
-
