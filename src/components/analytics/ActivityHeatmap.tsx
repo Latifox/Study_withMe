@@ -95,7 +95,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         top: 10,
         right: 10,
         bottom: 25,
-        left: 50
+        left: 60  // Increased left padding to make room for day labels
       }
     },
     scales: {
@@ -129,7 +129,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
         type: 'linear' as const,
         min: -0.5,
         max: 6.5,
-        reverse: true,
+        reverse: true,  // This ensures 0 is at the top (Wednesday)
         grid: {
           display: false,
           drawBorder: false,
@@ -142,11 +142,16 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           padding: 8,
           color: 'rgba(255, 255, 255, 0.7)',
           callback: (value: number) => {
-            // 2025 starts on Wednesday, so align days accordingly
-            // We're using reverse: true above, so 0 = Wednesday, 6 = Tuesday
+            // 2025 starts on Wednesday (Jan 1, 2025)
+            // With reverse: true, 0 = Wednesday (top) to 6 = Tuesday (bottom)
             const days = ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'];
-            return days[value];
+            return days[Math.floor(value)];  // Math.floor to handle any floating point issues
           },
+          font: {
+            size: 11,  // Slightly smaller font for day labels
+          },
+          align: 'center',
+          crossAlign: 'center',
         },
       },
     },
