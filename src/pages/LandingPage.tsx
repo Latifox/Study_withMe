@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users, Settings } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
 const LandingPage = () => {
@@ -72,6 +72,10 @@ const LandingPage = () => {
     icon: <Link2 className="h-6 w-6 text-purple-600" />,
     title: "Additional Resources",
     description: "Discover related materials and resources to deepen your understanding."
+  }, {
+    icon: <Settings className="h-6 w-6 text-purple-600" />,
+    title: "AI Configuration",
+    description: "Customize the AI's behavior with adjustable parameters for personalized learning experiences."
   }];
 
   return <div className="min-h-screen relative overflow-hidden">
