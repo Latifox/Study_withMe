@@ -27,7 +27,7 @@ export const createMonthLabelsPlugin = (monthPositions: Array<{month: number, we
   }
 });
 
-// Plugin to adjust day label positions by moving up 2.5 pixels
+// Plugin to adjust day label positions by moving up 3 pixels
 export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
   id: 'dayLabels',
   afterDraw: (chart) => {
@@ -47,7 +47,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
       
       // Then redraw the tick labels with our custom positioning
       ctx.save();
-      ctx.translate(0, -2.5); // Move up by 2.5 pixels (previous 2.0 + 0.5 more)
+      ctx.translate(0, -3.0); // Move up by 3.0 pixels (previous 2.5 + 0.5 more)
       
       // Only draw the labels part
       this.drawLabels(chartArea);
