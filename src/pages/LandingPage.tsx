@@ -1,69 +1,57 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowRight, BookOpen, Brain, Sparkles, ChevronLeft, ChevronRight, FileText, MessageSquare, HeartPulse, HelpCircle, Link2, Users } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
-
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [isHovering, setIsHovering] = useState(false);
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
-  
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true
+  });
   const scrollPrev = () => emblaApi && emblaApi.scrollPrev();
   const scrollNext = () => emblaApi && emblaApi.scrollNext();
-
   const handleGetStarted = () => {
     navigate("/auth");
   };
-
   const handleSignUp = () => {
     // Navigate to auth page with register tab pre-selected
     navigate("/auth?tab=register");
   };
-
-  const features = [
-    {
-      icon: <Users className="h-6 w-6 text-purple-600" />,
-      title: "Study Plan",
-      description: "Get a personalized learning path optimized for efficient knowledge acquisition."
-    },
-    {
-      icon: <BookOpen className="h-6 w-6 text-purple-600" />,
-      title: "Story Mode",
-      description: "Experience your learning materials through engaging interactive stories."
-    },
-    {
-      icon: <FileText className="h-6 w-6 text-purple-600" />,
-      title: "Highlights",
-      description: "Access key points and summaries extracted from your lecture materials."
-    },
-    {
-      icon: <MessageSquare className="h-6 w-6 text-purple-600" />,
-      title: "Chat",
-      description: "Engage in conversations with an AI tutor about your course materials."
-    },
-    {
-      icon: <HeartPulse className="h-6 w-6 text-purple-600" />,
-      title: "Flashcards",
-      description: "Review concepts with automatically generated flashcards for effective memorization."
-    },
-    {
-      icon: <HelpCircle className="h-6 w-6 text-purple-600" />,
-      title: "Quiz",
-      description: "Test your knowledge with AI-generated quizzes based on your lectures."
-    },
-    {
-      icon: <Link2 className="h-6 w-6 text-purple-600" />,
-      title: "Additional Resources",
-      description: "Discover related materials and resources to deepen your understanding."
-    }
-  ];
-
-  return (
-    <div className="min-h-screen relative overflow-hidden">
+  const features = [{
+    icon: <Users className="h-6 w-6 text-purple-600" />,
+    title: "Study Plan",
+    description: "Get a personalized learning path optimized for efficient knowledge acquisition."
+  }, {
+    icon: <BookOpen className="h-6 w-6 text-purple-600" />,
+    title: "Story Mode",
+    description: "Experience your learning materials through engaging interactive stories."
+  }, {
+    icon: <FileText className="h-6 w-6 text-purple-600" />,
+    title: "Highlights",
+    description: "Access key points and summaries extracted from your lecture materials."
+  }, {
+    icon: <MessageSquare className="h-6 w-6 text-purple-600" />,
+    title: "Chat",
+    description: "Engage in conversations with an AI tutor about your course materials."
+  }, {
+    icon: <HeartPulse className="h-6 w-6 text-purple-600" />,
+    title: "Flashcards",
+    description: "Review concepts with automatically generated flashcards for effective memorization."
+  }, {
+    icon: <HelpCircle className="h-6 w-6 text-purple-600" />,
+    title: "Quiz",
+    description: "Test your knowledge with AI-generated quizzes based on your lectures."
+  }, {
+    icon: <Link2 className="h-6 w-6 text-purple-600" />,
+    title: "Additional Resources",
+    description: "Discover related materials and resources to deepen your understanding."
+  }];
+  return <div className="min-h-screen relative overflow-hidden">
       {/* Background with mesh pattern */}
       <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100">
         {/* Mesh grid overlay */}
@@ -95,17 +83,10 @@ const LandingPage = () => {
             </span>
           </div>
           <div>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/auth")}
-              className="border-purple-200 hover:bg-purple-100 hover:text-purple-700 mr-2"
-            >
+            <Button variant="outline" onClick={() => navigate("/auth")} className="border-purple-200 hover:bg-purple-100 hover:text-purple-700 mr-2">
               Login
             </Button>
-            <Button
-              onClick={handleSignUp}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
+            <Button onClick={handleSignUp} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
               Sign Up
             </Button>
           </div>
@@ -119,17 +100,8 @@ const LandingPage = () => {
               AI-Powered Education
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12">
-            Upload your course materials and let our AI create personalized quizzes, flashcards, 
-            study plans, and interactive learning experiences.
-          </p>
-          <Button 
-            size="lg" 
-            onClick={handleGetStarted}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-          >
+          <p className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12">Upload your course materials and let our AI guide you on a journey of discovery, transforming learning into a meaningful exploration of growth and understanding!</p>
+          <Button size="lg" onClick={handleGetStarted} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
             Get Started {isHovering ? <Sparkles className="ml-2 h-5 w-5 animate-pulse" /> : <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>
         </div>
@@ -142,29 +114,18 @@ const LandingPage = () => {
           
           <div className="relative">
             {/* Carousel Navigation */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10"
-              onClick={scrollPrev}
-            >
+            <Button variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10" onClick={scrollPrev}>
               <ChevronLeft className="h-5 w-5" />
             </Button>
             
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10"
-              onClick={scrollNext}
-            >
+            <Button variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10" onClick={scrollNext}>
               <ChevronRight className="h-5 w-5" />
             </Button>
             
             {/* Carousel Container */}
             <div className="overflow-hidden" ref={emblaRef}>
               <div className="flex">
-                {features.map((feature, index) => (
-                  <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4">
+                {features.map((feature, index) => <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4">
                     <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-md hover:shadow-xl transition-all border border-purple-100 h-full">
                       <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                         {feature.icon}
@@ -174,8 +135,7 @@ const LandingPage = () => {
                         {feature.description}
                       </p>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
           </div>
@@ -196,8 +156,6 @@ const LandingPage = () => {
           </div>
         </footer>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default LandingPage;
