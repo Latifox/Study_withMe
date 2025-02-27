@@ -160,8 +160,8 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           scaleInstance.draw = function() {
             const ctx = this.ctx;
             ctx.save();
-            // Moving DOWN by 4 pixels (positive value moves down)
-            ctx.translate(0, 4);
+            // Moving DOWN by 6 pixels (increased from 4)
+            ctx.translate(0, 6);
             originalDraw.apply(this, arguments);
             ctx.restore();
           };
