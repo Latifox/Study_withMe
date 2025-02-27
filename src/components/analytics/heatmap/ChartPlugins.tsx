@@ -59,7 +59,7 @@ export const createDayLabelsPlugin = (): Plugin<'scatter'> => ({
     };
     
     // Call the modified draw method
-    yAxis.draw(ctx); // Pass the ctx parameter here
+    yAxis.draw(); // Remove the ctx parameter here, as it's not expected
     
     // Restore original method
     yAxis.draw = originalDraw;
