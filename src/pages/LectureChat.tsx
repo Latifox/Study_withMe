@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +8,7 @@ import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Loader } from "lucide-react";
+import { ArrowLeft, Loader, Send } from "lucide-react";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 const LectureChat = () => {
@@ -100,27 +101,33 @@ const LectureChat = () => {
             <PDFViewer lectureId={lectureId} />
           </div>
           <div className="h-[calc(100vh-2rem)] bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
-            <div className="flex-1 overflow-auto space-y-4 mb-4">
-              {messages.map((message, index) => (
-                <ChatMessage key={index} message={message} />
-              ))}
-              <div ref={messagesEndRef} />
+            <div className="flex-1 overflow-auto mb-4 px-2">
+              <div className="space-y-3">
+                {messages.map((message, index) => (
+                  <ChatMessage key={index} message={message} />
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center bg-white/50 backdrop-blur-sm rounded-full border border-white/30 pl-4 pr-2 py-1">
               <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Type your message..."
                 onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
                 disabled={isLoading}
-                className="bg-white/50 backdrop-blur-sm border-white/30"
+                className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500"
               />
               <Button 
                 onClick={handleSendMessage} 
                 disabled={isLoading}
-                className="min-w-[80px]"
+                size="icon"
+                className="rounded-full h-9 w-9 bg-blue-500 hover:bg-blue-600 flex items-center justify-center"
               >
-                {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : "Send"}
+                {isLoading ? 
+                  <Loader className="w-4 h-4 animate-spin" /> : 
+                  <Send className="w-4 h-4" />
+                }
               </Button>
             </div>
           </div>
