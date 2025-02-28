@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Viewer, Worker, SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
+import Viewer, { SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
 import '@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css';
 
 interface PDFViewerProps {
@@ -51,29 +51,34 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
     return <div className="flex justify-center items-center h-full">Loading PDF...</div>;
   }
 
+  // Need to set worker externally instead of as a component
+  // The Worker component usage was incorrect in the previous version
+  if (pdfUrl) {
+    // Set the worker URL globally
+    (window as any).pdfjsWorker = 'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js';
+  }
+
   return (
     <div className="h-full flex flex-col" ref={setContainerRef}>
       <div className="flex-1 overflow-auto flex justify-center">
-        <Worker workerUrl="https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js">
-          {pdfUrl && (
-            <div style={{ height: '100%', width: '100%' }}>
-              <Viewer
-                fileUrl={pdfUrl}
-                onDocumentLoad={handleDocumentLoad}
-                ref={viewerRef}
-                defaultScale={SpecialZoomLevel.PageFit}
-                renderPage={(props) => {
-                  const { index } = props;
-                  // When a new page is rendered, update our page number state if needed
-                  if (index === pageNumber - 1) {
-                    setTimeout(() => props.pageRef?.current?.scrollIntoView(), 0);
-                  }
-                  return props.canvasLayer;
-                }}
-              />
-            </div>
-          )}
-        </Worker>
+        {pdfUrl && (
+          <div style={{ height: '100%', width: '100%' }}>
+            <Viewer
+              fileUrl={pdfUrl}
+              onDocumentLoad={handleDocumentLoad}
+              ref={viewerRef}
+              defaultScale={SpecialZoomLevel.PageFit}
+              renderPage={(props) => {
+                const { index } = props;
+                // When a new page is rendered, update our page number state if needed
+                if (index === pageNumber - 1) {
+                  setTimeout(() => props.pageRef?.current?.scrollIntoView(), 0);
+                }
+                return props.canvasLayer;
+              }}
+            />
+          </div>
+        )}
       </div>
       
       <div className="p-4 border-t bg-white flex justify-center items-center gap-4">
