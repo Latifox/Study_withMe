@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Loader2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, ExternalLink, BookOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
@@ -142,6 +142,13 @@ const LectureSummary = () => {
             <ExternalLink className="w-4 h-4" />
           </Button>
         </div>
+
+        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
+            <BookOpen className="w-5 h-5 inline mr-1" />
+            Highlights
+          </span>
+        </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Column - Navigation Cards */}
