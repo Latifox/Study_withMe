@@ -135,7 +135,7 @@ const QuizConfiguration = () => {
         <Button
           variant="ghost"
           onClick={handleBack}
-          className="mb-4 gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
+          className="mb-4 gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
         >
           <ArrowLeft className="mr-2" />
           Back to Lectures
