@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -108,7 +109,7 @@ const Flashcards = () => {
               Back to Lecture
             </Button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              
+              <BookOpen className="w-5 h-5 text-purple-500" />
               <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
                 Flashcards
               </span>
