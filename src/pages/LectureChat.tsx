@@ -106,7 +106,7 @@ const LectureChat = () => {
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
                 <BookOpen className="w-5 h-5 inline mr-1" />
-                Chat with PDF
+                Chat with your Lecture
               </span>
             </h1>
           </div>
