@@ -163,7 +163,7 @@ const LectureSummary = () => {
             ].map(({ id, label }) => (
               <Card 
                 key={id}
-                className={`p-4 cursor-pointer hover:bg-white/80 transition-colors backdrop-blur-sm ${
+                className={`p-4 cursor-pointer hover:bg-white/80 transition-colors backdrop-blur-sm border border-black/20 shadow-md ${
                   selectedCategory === id ? 'bg-white/80 border-primary shadow-md' : 'bg-white/50'
                 }`}
                 onClick={() => setSelectedCategory(id as Category)}
@@ -175,7 +175,7 @@ const LectureSummary = () => {
 
           {/* Right Column - Content Display */}
           <div className="md:col-span-2">
-            <Card className="p-6 bg-white/30 backdrop-blur-md border border-white/20">
+            <Card className="p-6 bg-white/30 backdrop-blur-md border border-black/20 shadow-md">
               <div className="prose prose-sm max-w-none text-black">
                 <ReactMarkdown>
                   {summaryData[selectedCategory]}
