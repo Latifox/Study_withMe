@@ -1,114 +1,105 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.2';
-import { generateSegmentContent } from './generator.ts';
-import { validateContent } from './validator.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { generateSegmentContent } from "./generator.ts";
+import { verifyParameters } from "./validator.ts";
+import { saveFunctionExecutionData } from "./db.ts";
 
+// CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
 
   try {
-    // Get environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase credentials');
-    }
-
     // Parse request body
-    const requestData = await req.json();
+    const requestBody = await req.json();
+    
+    console.log("Received request:", JSON.stringify(requestBody, null, 2));
+    
+    // Validate parameters
     const { 
       lectureId, 
       segmentNumber, 
       segmentTitle, 
       segmentDescription, 
-      lectureContent,
-      contentLanguage = 'english'
-    } = requestData;
-
-    console.log(`Processing request for segment ${segmentNumber} of lecture ${lectureId}`);
-    console.log(`Title: ${segmentTitle}, Description: ${segmentDescription}, Language: ${contentLanguage}`);
+      lectureContent, 
+      contentLanguage 
+    } = verifyParameters(requestBody);
     
-    if (!lectureId || !segmentNumber || !segmentTitle) {
-      throw new Error('Missing required parameters');
+    console.log(`Processing segment ${segmentNumber} for lecture ${lectureId}`);
+    console.log(`Title: ${segmentTitle}`);
+    console.log(`Description: ${segmentDescription}`);
+    console.log(`Language: ${contentLanguage}`);
+    
+    // Log first 100 chars of lecture content for debugging
+    if (lectureContent) {
+      console.log(`Lecture content (first 100 chars): ${lectureContent.substring(0, 100)}...`);
+    } else {
+      console.log("Lecture content is missing or empty");
     }
 
-    // Generate the segment content
-    const segmentContent = await generateSegmentContent({
-      content: lectureContent,
-      title: segmentTitle,
-      description: segmentDescription,
-      language: contentLanguage
-    });
-
-    // Validate the generated content
-    validateContent(segmentContent);
+    // Record function execution start time
+    const startTime = Date.now();
     
-    console.log('Content generated and validated successfully');
-    
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Store in segments_content table
-    console.log(`Saving content to segments_content table for lecture ${lectureId}, segment ${segmentNumber}`);
-    
-    const { data, error } = await supabase
-      .from('segments_content')
-      .upsert({
-        lecture_id: lectureId,
-        sequence_number: segmentNumber,
-        theory_slide_1: segmentContent.theory_slide_1,
-        theory_slide_2: segmentContent.theory_slide_2,
-        quiz_1_type: segmentContent.quiz_1_type,
-        quiz_1_question: segmentContent.quiz_1_question,
-        quiz_1_options: segmentContent.quiz_1_options,
-        quiz_1_correct_answer: segmentContent.quiz_1_correct_answer,
-        quiz_1_explanation: segmentContent.quiz_1_explanation,
-        quiz_2_type: segmentContent.quiz_2_type,
-        quiz_2_question: segmentContent.quiz_2_question,
-        quiz_2_correct_answer: segmentContent.quiz_2_correct_answer,
-        quiz_2_explanation: segmentContent.quiz_2_explanation
-      })
-      .select();
-
-    if (error) {
-      console.error('Error saving segment content to database:', error);
+    try {
+      // Generate content
+      const content = await generateSegmentContent(
+        lectureId,
+        segmentNumber,
+        segmentTitle,
+        segmentDescription,
+        lectureContent,
+        contentLanguage
+      );
+      
+      // Record execution data
+      const executionTime = Date.now() - startTime;
+      await saveFunctionExecutionData(
+        lectureId, 
+        segmentNumber, 
+        executionTime, 
+        true, 
+        "Success"
+      );
+      
+      return new Response(
+        JSON.stringify({ content }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    } catch (error) {
+      // Record execution failure
+      const executionTime = Date.now() - startTime;
+      await saveFunctionExecutionData(
+        lectureId, 
+        segmentNumber, 
+        executionTime, 
+        false, 
+        error.message
+      );
+      
       throw error;
     }
-
-    console.log('Content saved to segments_content table successfully');
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        content: segmentContent
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    );
   } catch (error) {
-    console.error('Error in generate-segment-content function:', error);
+    console.error("Error in generate-segment-content function:", error);
     
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
-      }),
+      JSON.stringify({ error: error.message }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
-      },
+      }
     );
   }
 });

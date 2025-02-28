@@ -109,6 +109,7 @@ export const StoryContainer = ({
       courseId={String(currentSegment)}
       onContinue={onContinue}
       onCorrectAnswer={() => {
+        setCurrentScore(prev => prev + 5);
         setShowCompletionScreen(true);
         onCorrectAnswer();
       }}

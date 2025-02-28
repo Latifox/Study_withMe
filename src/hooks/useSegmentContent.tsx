@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 export const useSegmentContent = (numericLectureId: number | null) => {
   return useQuery({
     queryKey: ['segment-content', numericLectureId],
-    queryFn: async () => {
+    queryFn: async () => {      
       console.log('useSegmentContent: Starting fetch for lecture:', numericLectureId);
 
       if (!numericLectureId) {
@@ -82,9 +82,24 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           continue;
         }
 
-        console.log(`Generating content for segment ${segment.sequence_number}: ${segment.title}`);
+        // Log the segment data to debug
+        console.log(`Generating content for segment ${segment.sequence_number}:`, {
+          title: segment.title,
+          description: segment.segment_description
+        });
         
         try {
+          // Make sure we're passing the correct values to the edge function
+          if (!segment.title || !segment.segment_description) {
+            console.error(`Missing title or description for segment ${segment.sequence_number}`, segment);
+            toast({
+              title: "Error with segment data",
+              description: `Missing title or description for segment ${segment.sequence_number}`,
+              variant: "destructive",
+            });
+            continue; // Skip this segment
+          }
+
           // Call the edge function only once per segment - don't implement retry logic here
           // as the edge function should handle its own retries if needed
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {

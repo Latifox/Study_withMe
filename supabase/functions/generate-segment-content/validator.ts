@@ -1,73 +1,61 @@
 
-import { SegmentContent } from './types.ts';
-
-export interface ValidationResult {
-  valid: boolean;
-  errors: string[];
+interface SegmentParameters {
+  lectureId: number;
+  segmentNumber: number;
+  segmentTitle: string;
+  segmentDescription: string;
+  lectureContent: string;
+  contentLanguage: string;
 }
 
-export function validateSegmentContent(content: SegmentContent): ValidationResult {
-  const errors: string[] = [];
-
-  // Check theory slides
-  if (!content.theory_slide_1 || typeof content.theory_slide_1 !== 'string' || content.theory_slide_1.length < 10) {
-    errors.push('Theory slide 1 is missing or too short');
+export function verifyParameters(requestBody: any): SegmentParameters {
+  console.log("Validating parameters...");
+  
+  if (!requestBody) {
+    throw new Error("Missing request body");
   }
 
-  if (!content.theory_slide_2 || typeof content.theory_slide_2 !== 'string' || content.theory_slide_2.length < 10) {
-    errors.push('Theory slide 2 is missing or too short');
+  const { 
+    lectureId, 
+    segmentNumber, 
+    segmentTitle, 
+    segmentDescription, 
+    lectureContent, 
+    contentLanguage 
+  } = requestBody;
+
+  // Check required parameters
+  if (!lectureId || typeof lectureId !== "number") {
+    throw new Error("Invalid or missing lectureId");
   }
 
-  // Check quiz 1
-  if (!content.quiz_1_type || !['multiple_choice', 'true_false'].includes(content.quiz_1_type)) {
-    errors.push('Quiz 1 type is missing or invalid');
+  if (!segmentNumber || typeof segmentNumber !== "number") {
+    throw new Error("Invalid or missing segmentNumber");
   }
 
-  if (!content.quiz_1_question || typeof content.quiz_1_question !== 'string' || content.quiz_1_question.length < 5) {
-    errors.push('Quiz 1 question is missing or too short');
+  if (!segmentTitle || typeof segmentTitle !== "string") {
+    throw new Error(`Invalid or missing segmentTitle: ${String(segmentTitle)}`);
   }
 
-  if (content.quiz_1_type === 'multiple_choice') {
-    if (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length < 2) {
-      errors.push('Quiz 1 options are missing or invalid');
-    }
-
-    if (!content.quiz_1_correct_answer || typeof content.quiz_1_correct_answer !== 'string') {
-      errors.push('Quiz 1 correct answer is missing or invalid');
-    } else {
-      // Check if the correct answer is in the options
-      if (Array.isArray(content.quiz_1_options) && 
-          !content.quiz_1_options.some(option => option === content.quiz_1_correct_answer)) {
-        errors.push('Quiz 1 correct answer is not in the options');
-      }
-    }
+  if (!segmentDescription || typeof segmentDescription !== "string") {
+    throw new Error(`Invalid or missing segmentDescription: ${String(segmentDescription)}`);
   }
 
-  if (!content.quiz_1_explanation || typeof content.quiz_1_explanation !== 'string' || content.quiz_1_explanation.length < 5) {
-    errors.push('Quiz 1 explanation is missing or too short');
+  if (!lectureContent || typeof lectureContent !== "string") {
+    throw new Error("Invalid or missing lectureContent");
   }
 
-  // Check quiz 2
-  if (!content.quiz_2_type || !['multiple_choice', 'true_false'].includes(content.quiz_2_type)) {
-    errors.push('Quiz 2 type is missing or invalid');
-  }
+  // Use default language if not provided
+  const language = contentLanguage || "english";
 
-  if (!content.quiz_2_question || typeof content.quiz_2_question !== 'string' || content.quiz_2_question.length < 5) {
-    errors.push('Quiz 2 question is missing or too short');
-  }
-
-  if (content.quiz_2_type === 'true_false') {
-    if (typeof content.quiz_2_correct_answer !== 'boolean') {
-      errors.push('Quiz 2 correct answer is not a boolean');
-    }
-  }
-
-  if (!content.quiz_2_explanation || typeof content.quiz_2_explanation !== 'string' || content.quiz_2_explanation.length < 5) {
-    errors.push('Quiz 2 explanation is missing or too short');
-  }
-
+  console.log("Parameters validated successfully");
+  
   return {
-    valid: errors.length === 0,
-    errors
+    lectureId,
+    segmentNumber,
+    segmentTitle,
+    segmentDescription,
+    lectureContent,
+    contentLanguage: language,
   };
 }
