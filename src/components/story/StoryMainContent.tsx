@@ -1,4 +1,5 @@
 
+import { useParams } from "react-router-dom";
 import { StoryContainer } from "./StoryContainer";
 
 interface StoryMainContentProps {
@@ -32,10 +33,16 @@ const StoryMainContent = ({
   onCorrectAnswer,
   onWrongAnswer
 }: StoryMainContentProps) => {
+  // Use the nodeId from URL params to get the current segment number
+  const { nodeId } = useParams();
+  const segmentNumber = nodeId ? parseInt(nodeId.split('_')[1]) : 1;
+
+  console.log("StoryMainContent - Using segment number:", segmentNumber);
+
   return (
     <StoryContainer
       storyContent={content}
-      currentSegment={1}
+      currentSegment={segmentNumber}
       currentStep={currentStep}
       segmentScores={segmentScores}
       onContinue={onContinue}

@@ -40,11 +40,10 @@ export const StoryContainer = ({
   onWrongAnswer
 }: StoryContainerProps) => {
   const { nodeId } = useParams();
-  const sequenceNumber = nodeId ? parseInt(nodeId.split('_')[1]) : 1;
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
 
-  console.log('StoryContainer - Current segment:', sequenceNumber);
+  console.log('StoryContainer - Current segment:', currentSegment);
   console.log('StoryContainer - Story content:', storyContent);
   console.log('StoryContainer - Current step:', currentStep);
 
@@ -68,15 +67,17 @@ export const StoryContainer = ({
     );
   }
 
-  // Get current segment data
-  const currentSegmentData = storyContent.segments[sequenceNumber - 1];
+  // Get current segment data, using 0-indexed array with 1-indexed currentSegment
+  const currentSegmentIndex = currentSegment - 1;
+  const currentSegmentData = storyContent.segments[currentSegmentIndex];
+  console.log('StoryContainer - Current segment index:', currentSegmentIndex);
   console.log('StoryContainer - Current segment data:', currentSegmentData);
 
   if (!currentSegmentData) {
-    console.error('No segment data found for sequence:', sequenceNumber);
+    console.error('No segment data found for segment:', currentSegment, 'index:', currentSegmentIndex);
     toast({
       title: "Missing segment data",
-      description: "Unable to find content for this segment. Please try again.",
+      description: `Unable to find content for segment ${currentSegment}. Please try again.`,
       variant: "destructive",
     });
     return (
@@ -98,7 +99,7 @@ export const StoryContainer = ({
   return (
     <ContentDisplay
       currentSegmentData={currentSegmentData}
-      currentSegment={sequenceNumber}
+      currentSegment={currentSegment}
       currentStep={currentStep}
       totalSegments={storyContent.segments.length}
       currentScore={currentScore}
