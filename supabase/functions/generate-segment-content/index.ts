@@ -1,92 +1,66 @@
-
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { validateRequest } from './validator.ts';
 import { generateSegmentContent } from './generator.ts';
-import { ApiResponse } from './types.ts';
+import { corsHeaders } from "../_shared/cors.ts";
 
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+console.log("Generate Segment Content function started");
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Parse the request body
-    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage } = await req.json();
-    
-    // Validate required parameters
-    if (!lectureId || !segmentNumber || !segmentTitle || !segmentDescription || !lectureContent) {
-      console.error('Missing required parameters:', { lectureId, segmentNumber, segmentTitle, segmentDescription });
-      
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Missing required parameters'
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    const requestBody = await req.json();
+    console.log('Request body:', requestBody);
+
+    // Validate the request body
+    const validationResult = validateRequest(requestBody);
+    if (!validationResult.valid) {
+      console.error('Validation error:', validationResult.error);
+      return new Response(JSON.stringify({ error: validationResult.error }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    
-    console.log(`Processing request for lecture ${lectureId}, segment ${segmentNumber}`);
-    
-    // Generate content for the segment
-    const result: ApiResponse = await generateSegmentContent(
+
+    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage } = requestBody;
+
+    // Generate the segment content
+    const result = await generateSegmentContent(
       lectureId,
       segmentNumber,
       segmentTitle,
       segmentDescription,
       lectureContent,
-      contentLanguage || 'english'
+      contentLanguage
     );
-    
+
     if (!result.success) {
-      console.error(`Failed to generate content: ${result.error}`);
-      
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: result.error
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      console.error('Content generation error:', result.error);
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    
-    console.log('Successfully generated content');
-    
-    // Return the successful response
+
+    // Respond with the generated content
+    console.log('Content generated successfully');
     return new Response(
-      JSON.stringify({
-        success: true,
-        content: result.content
-      }),
+      JSON.stringify({ data: result.content }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
+
   } catch (error) {
-    console.error('Unexpected error in generate-segment-content:', error);
-    
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: `Unexpected error: ${error.message}`
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    console.error('Unexpected error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

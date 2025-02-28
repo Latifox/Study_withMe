@@ -67,7 +67,6 @@ export function validateRequest(payload: any): { valid: boolean; error?: string 
   return { valid: true };
 }
 
-// Add the missing validateContent function
 export function validateContent(content: any): ValidationResult {
   const errors: string[] = [];
   
