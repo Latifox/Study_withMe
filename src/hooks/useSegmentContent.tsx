@@ -137,6 +137,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             continue; // Skip this segment but continue with others
           }
 
+          console.log(`Successfully generated content for segment ${segmentToGenerate.sequence_number}:`, generatedContent);
+
           const contentToStore = {
             lecture_id: numericLectureId,
             sequence_number: segmentToGenerate.sequence_number,
@@ -153,7 +155,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             quiz_2_explanation: generatedContent.content.quiz_2_explanation
           };
 
-          // Store the generated content
+          // Store the generated content with better error handling
           const { data: storedContent, error: insertError } = await supabase
             .from('segments_content')
             .upsert(contentToStore)
@@ -162,25 +164,55 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
           if (insertError) {
             console.error(`Error storing content for segment ${segmentToGenerate.sequence_number}:`, insertError);
-            continue; // Skip this segment but continue with others
+            console.error('Content that failed to store:', contentToStore);
+            
+            // Try with a more basic insert as fallback
+            const { error: basicInsertError } = await supabase
+              .from('segments_content')
+              .insert(contentToStore);
+              
+            if (basicInsertError) {
+              console.error(`Fallback insert also failed for segment ${segmentToGenerate.sequence_number}:`, basicInsertError);
+              continue; // Skip this segment but continue with others
+            } else {
+              console.log(`Fallback insert succeeded for segment ${segmentToGenerate.sequence_number}`);
+              // Get the content we just inserted
+              const { data: fetchedContent } = await supabase
+                .from('segments_content')
+                .select('*')
+                .eq('lecture_id', numericLectureId)
+                .eq('sequence_number', segmentToGenerate.sequence_number)
+                .single();
+                
+              if (fetchedContent) {
+                generatedContents.push(fetchedContent);
+                existingContentMap.set(segmentToGenerate.sequence_number, fetchedContent);
+                console.log(`Retrieved and added content for segment ${segmentToGenerate.sequence_number} after fallback insert`);
+              }
+            }
+          } else {
+            // Add the successfully stored content
+            generatedContents.push(storedContent);
+            
+            // Also add to our map for immediate reference
+            existingContentMap.set(segmentToGenerate.sequence_number, storedContent);
+            
+            console.log(`Successfully stored content for segment ${segmentToGenerate.sequence_number}:`, storedContent);
           }
-
-          // Add the successfully stored content
-          generatedContents.push(storedContent || contentToStore);
-          
-          // Also add to our map for immediate reference
-          existingContentMap.set(segmentToGenerate.sequence_number, storedContent || contentToStore);
-          
-          console.log(`Successfully generated and stored content for segment ${segmentToGenerate.sequence_number}`);
         }
         
-        // Get updated content again to ensure we have all segments
-        const { data: updatedContent } = await supabase
+        // Get updated content again to ensure we have all segments, with logging to verify
+        const { data: updatedContent, error: fetchError } = await supabase
           .from('segments_content')
           .select('*')
           .eq('lecture_id', numericLectureId);
           
-        console.log('All content after generation:', updatedContent);
+        if (fetchError) {
+          console.error('Error fetching updated content:', fetchError);
+        } else {
+          console.log('All content after generation:', updatedContent);
+          console.log(`Expected ${segmentData.length} segments, found ${updatedContent?.length || 0} in segments_content`);
+        }
         
         if (generatedContents.length > 0) {
           toast({
@@ -188,8 +220,12 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             description: `Generated content for ${generatedContents.length} segments`,
           });
         }
+
+        // Use the updatedContent if available, otherwise fallback to our tracked content
+        const finalContent = updatedContent || [...generatedContents, ...(Array.from(existingContentMap.values()))];
+        console.log('Final content being returned:', finalContent);
         
-        return { segments: updatedContent || [...generatedContents, ...(Array.from(existingContentMap.values()))] };
+        return { segments: finalContent };
 
       } catch (error) {
         console.error('Error processing segments:', error);
@@ -199,8 +235,10 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           variant: "destructive",
         });
         // Return whatever content we have
+        const fallbackContent = [...generatedContents, ...(Array.from(existingContentMap.values()))];
+        console.log('Returning fallback content after error:', fallbackContent);
         return { 
-          segments: [...generatedContents, ...(Array.from(existingContentMap.values()))] 
+          segments: fallbackContent
         };
       }
     },
