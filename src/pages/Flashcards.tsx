@@ -102,14 +102,14 @@ const Flashcards = () => {
             <Button 
               variant="ghost" 
               onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}`)}
-              className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
+              className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none shadow-md"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Lecture
             </Button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-purple-500" />
               <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
-                <BookOpen className="w-5 h-5 inline mr-1" />
                 Flashcards
               </span>
             </h1>
@@ -127,11 +127,11 @@ const Flashcards = () => {
                     flippedCards.has(index) ? 'rotate-y-180' : ''
                   }`}
                 >
-                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-white/90 backdrop-blur-sm border border-white/30 shadow-md">
-                    <p className="text-lg">{flashcard.question}</p>
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-white/90 backdrop-blur-sm border border-purple-200/30 shadow-md">
+                    <p className="text-lg font-medium text-gray-800">{flashcard.question}</p>
                   </Card>
-                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-purple-50 to-indigo-50 rotate-y-180 backface-hidden border border-white/30 shadow-md">
-                    <p className="text-lg">{flashcard.answer}</p>
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-purple-50 to-indigo-50 rotate-y-180 backface-hidden border border-purple-200/30 shadow-md">
+                    <p className="text-lg text-gray-800">{flashcard.answer}</p>
                   </Card>
                 </div>
               </div>
@@ -141,7 +141,7 @@ const Flashcards = () => {
           <div className="flex justify-center">
             <Button 
               onClick={generateMoreFlashcards}
-              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
+              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none shadow-md font-medium px-6 py-2"
               size="lg"
             >
               Generate More Flashcards
