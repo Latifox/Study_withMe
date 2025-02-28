@@ -71,10 +71,6 @@ serve(async (req) => {
           {
             role: 'user',
             content: `Given this lecture titled "${lectureTitle}", create a logical segments structure.
-            
-            Content to analyze:
-            ${lectureContent.substring(0, 8000)}
-            
             Create a list of segments (3-7 segments). Each segment should contain:
             1. A clear title focusing on one main concept
             2. A brief description of what will be covered
@@ -90,7 +86,9 @@ serve(async (req) => {
                 },
                 ...
               ]
-            }`
+            }
+              Content to analyze:
+            ${lectureContent}`
           }
         ],
       }),
