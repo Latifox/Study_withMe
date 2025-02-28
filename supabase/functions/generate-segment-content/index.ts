@@ -1,161 +1,174 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { validateContent } from "./validator.ts";
+import { saveSegmentContent } from "./db.ts";
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import * as postgres from 'https://deno.land/x/postgres@v0.14.2/mod.ts'
-import { corsHeaders } from "../_shared/cors.ts"
-import { generateSegmentContent } from "./generator.ts"
-import { validateRequest } from "./validator.ts"
-import { db } from "./db.ts"
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") as string;
 
-console.log("Segment content generator function started!")
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
-  // Handle CORS for browser preflight requests
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("Processing request...")
+    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage = 'english' } = await req.json();
     
-    // Parse the request payload
-    let payload
-    try {
-      payload = await req.json()
-      console.log("Request payload received:", JSON.stringify(payload))
-    } catch (err) {
-      console.error("Error parsing request JSON:", err.message)
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON payload' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
+    console.log(`Generating content for segment ${segmentNumber}: ${segmentTitle}`);
+    console.log(`Content language: ${contentLanguage}`);
 
-    // Validate the request parameters
-    try {
-      console.log("Validating request parameters...")
-      const validationResult = validateRequest(payload)
-      if (!validationResult.valid) {
-        console.error("Validation failed:", validationResult.error)
-        return new Response(
-          JSON.stringify({ error: `Invalid request: ${validationResult.error}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        )
-      }
-      console.log("Request validation successful")
-    } catch (err) {
-      console.error("Unexpected error during validation:", err)
-      return new Response(
-        JSON.stringify({ error: `Validation error: ${err.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
+    // Generate theory content with updated prompt
+    const theoryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an educational content generator. Generate theory content in JSON format only. Focus on clear, concise explanations."
+          },
+          {
+            role: "user",
+            content: `I'd like you to create theory slides using the following guidelines:
+1. Create two theory slides: 
+   - theory_slide_1: First slide covering the basic concepts
+   - theory_slide_2: Second slide covering more advanced materials
+2. Each theory slide focus on the following topic from the lecture: ${segmentTitle}
+3. Use the following description to guide the focus of your slides: ${segmentDescription}
+4. The content should be clear and concise, tailored to university-level students.
+5. You will be acting as a professor teaching the subject with clarity.
+6. Write content in this language: ${contentLanguage}
+7. Use markdown format such as lists, bullet points, bolds, italics, quotes etc.
+8. IMPORTANT: Focus ONLY on content related to the segment description and title, only use the following lecture content as a source: ${lectureContent}
 
-    // Extract parameters from the payload
-    const { 
-      lectureId, 
-      segmentNumber, 
-      segmentTitle, 
-      segmentDescription, 
-      lectureContent,
-      contentLanguage = 'english'  // Default to English if not specified
-    } = payload
+Return ONLY a JSON object with the following format:
+{
+  "theory_slide_1": "First slide content explaining core concepts",
+  "theory_slide_2": "Second slide content with examples and applications"
+}
+
+Keep each slide content concise and focused. Only include the requested fields.`
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    const theoryData = await theoryResponse.json();
+    let theoryContent;
     
-    console.log(`Processing segment ${segmentNumber} (${segmentTitle}) for lecture ${lectureId}`)
-    console.log(`Content language: ${contentLanguage}`)
-    console.log(`Segment description length: ${segmentDescription ? segmentDescription.length : 0}`)
-    console.log(`Lecture content length: ${lectureContent ? lectureContent.length : 0}`)
-
-    // Initialize database connection
     try {
-      console.log("Initializing database connection...")
-      await db.connect()
-      console.log("Database connection established")
-    } catch (err) {
-      console.error("Database connection error:", err)
-      return new Response(
-        JSON.stringify({ error: `Database connection error: ${err.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
+      theoryContent = JSON.parse(theoryData.choices[0].message.content);
+    } catch (error) {
+      console.error("Error parsing theory content:", error);
+      theoryContent = {
+        theory_slide_1: theoryData.choices[0].message.content.includes("theory_slide_1") 
+          ? theoryData.choices[0].message.content 
+          : "Error generating content. Please try again.",
+        theory_slide_2: "Error parsing the generated content. Please try again."
+      };
     }
 
-    // Check if content already exists
-    try {
-      console.log("Checking for existing content...")
-      const { data: existingContent } = await db.getExistingContent(lectureId, segmentNumber)
+    // Generate quiz content (keeping the existing prompt)
+    const quizResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an educational quiz generator. Generate quiz questions in JSON format only. Focus on testing understanding of key concepts."
+          },
+          {
+            role: "user",
+            content: `Generate two quiz questions for a segment with title "${segmentTitle}" and description "${segmentDescription}". 
+      Use this lecture content as reference: "${lectureContent.substring(0, 2000)}..."
       
-      if (existingContent) {
-        console.log("Found existing content, returning it")
-        return new Response(
-          JSON.stringify({ success: true, content: existingContent, id: existingContent.id }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      console.log("No existing content found, proceeding with generation")
-    } catch (err) {
-      console.error("Error checking existing content:", err)
-      // Continue with generation if check fails
+      Return ONLY a JSON object with the following format:
+      {
+        "quiz_1_type": "multiple-choice",
+        "quiz_1_question": "Question text",
+        "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+        "quiz_1_correct_answer": "Correct option text",
+        "quiz_1_explanation": "Explanation for the correct answer",
+        "quiz_2_type": "true-false",
+        "quiz_2_question": "Question text",
+        "quiz_2_correct_answer": true or false,
+        "quiz_2_explanation": "Explanation for the correct answer"
+      }`
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    const quizData = await quizResponse.json();
+    let quizContent;
+    
+    try {
+      quizContent = JSON.parse(quizData.choices[0].message.content);
+    } catch (error) {
+      console.error("Error parsing quiz content:", error);
+      quizContent = {
+        quiz_1_type: "multiple-choice",
+        quiz_1_question: "Error generating quiz. Please try again.",
+        quiz_1_options: ["Option 1", "Option 2", "Option 3", "Option 4"],
+        quiz_1_correct_answer: "Option 1",
+        quiz_1_explanation: "Error generating content. Please try again.",
+        quiz_2_type: "true-false",
+        quiz_2_question: "Error generating quiz. Please try again.",
+        quiz_2_correct_answer: true,
+        quiz_2_explanation: "Error generating content. Please try again."
+      };
     }
 
-    // Generate the content
-    console.log("Starting content generation...")
-    try {
-      const content = await generateSegmentContent({
-        segmentTitle,
-        segmentDescription,
-        lectureContent,
-        contentLanguage
-      })
-      
-      console.log("Content generated successfully")
-      
-      // Insert the generated content into the database
-      try {
-        console.log("Storing generated content in database...")
-        const { data: contentRecord, error: insertError } = await db.storeContent({
-          lecture_id: lectureId,
-          sequence_number: segmentNumber,
-          ...content
-        })
-        
-        if (insertError) {
-          console.error("Error storing content:", insertError)
-          throw insertError
-        }
-        
-        console.log("Content stored successfully with ID:", contentRecord?.id)
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            content: content,
-            id: contentRecord?.id 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      } catch (storeErr) {
-        console.error("Error in database storage:", storeErr)
-        throw storeErr
-      }
-    } catch (genErr) {
-      console.error("Content generation error:", genErr)
-      return new Response(
-        JSON.stringify({ error: `Content generation failed: ${genErr.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
-    } finally {
-      // Close database connection
-      try {
-        await db.end()
-        console.log("Database connection closed")
-      } catch (err) {
-        console.error("Error closing database connection:", err)
-      }
+    // Combine the content
+    const content = {
+      ...theoryContent,
+      ...quizContent
+    };
+
+    // Validate the generated content
+    const validationResult = validateContent(content);
+    if (!validationResult.valid) {
+      throw new Error(`Invalid content generated: ${validationResult.errors.join(", ")}`);
     }
-  } catch (err) {
-    console.error("Unhandled error in edge function:", err)
+
+    // Save content to the database
+    await saveSegmentContent(parseInt(lectureId), parseInt(segmentNumber), content);
+
+    console.log("Content generated successfully");
     return new Response(
-      JSON.stringify({ error: `Server error: ${err.message}` }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+      JSON.stringify({ 
+        success: true, 
+        content 
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error generating content:", error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      }
+    );
   }
-})
+});
