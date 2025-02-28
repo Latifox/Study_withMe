@@ -67,7 +67,7 @@ export async function generateTheoryContent(openAIApiKey: string, segmentTitle: 
       }
       
       Keep each slide content concise and focused. Include markdown format for bold, lists, bullet points, quotes, italics etc.
-      Make sure the Markdown formatting is valid and does not interfere with the structure of the JSON. Specifically, avoid using any code blocks with backticks "(`)" and do not include any non-JSON characters or syntax. The result should be properly formatted for Markdown rendering, with no extra characters or syntax errors. Use this lecture content as your only information source: "${lectureContent}"`
+      Please generate the segment content using Markdown syntax for formatting (e.g., # for headings, ** for bold, * for italics, and - for lists), but DO NOT wrap the content in a Markdown code block or include backticks "(`)" or any other special characters that would create a Markdown window. The content should look like normal text. Use this lecture content as your only information source: "${lectureContent}"`
     }
   ];
 
