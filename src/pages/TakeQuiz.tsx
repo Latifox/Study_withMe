@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,7 @@ const TakeQuiz = () => {
   return (
     <BackgroundGradient>
       <div className="container mx-auto p-4">
-        <div className="sticky top-0 bg-white z-10 p-4 border-b mb-4">
+        <div className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 p-4 border-b mb-4 rounded-lg shadow-sm">
           <div className="flex justify-between items-center">
             <div className="text-xl font-bold">
               Time Remaining: {formatTime(quizState.timeRemaining)}
@@ -220,7 +221,7 @@ const TakeQuiz = () => {
 
         <div className="space-y-6">
           {quizState.questions.map((question, index) => (
-            <Card key={index} className="p-6">
+            <Card key={index} className="p-6 bg-white/90 backdrop-blur-sm border border-white/30 shadow-md">
               <div className="space-y-4">
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-semibold">
@@ -290,7 +291,7 @@ const TakeQuiz = () => {
 
         {!quizState.showResults && (
           <div className="fixed bottom-4 right-4">
-            <Button onClick={submitQuiz} size="lg">
+            <Button onClick={submitQuiz} size="lg" className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-lg">
               Submit Quiz
             </Button>
           </div>
