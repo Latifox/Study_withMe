@@ -87,48 +87,53 @@ const LectureChat = () => {
 
   return (
     <BackgroundGradient>
-      <div className="container mx-auto p-4 h-screen">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(`/course/${courseId}`)}
-          className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Lectures
-        </Button>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[calc(100vh-8rem)]">
-          <div className="h-full">
-            <PDFViewer lectureId={lectureId} />
-          </div>
-          <div className="h-full bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
-            <div className="flex-1 overflow-auto mb-4 px-2">
-              <div className="space-y-3">
-                {messages.map((message, index) => (
-                  <ChatMessage key={index} message={message} />
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
+      <div className="flex flex-col h-screen max-h-screen">
+        <div className="container mx-auto p-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(`/course/${courseId}`)}
+            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black mb-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Lectures
+          </Button>
+        </div>
+        
+        <div className="container mx-auto flex-1 pb-4 px-4 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+            <div className="h-full max-h-full overflow-hidden">
+              <PDFViewer lectureId={lectureId} />
             </div>
-            <div className="flex gap-2 items-center bg-white/50 backdrop-blur-sm rounded-full border border-white/30 pl-4 pr-2 py-1">
-              <Input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type your message..."
-                onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-                disabled={isLoading}
-                className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500"
-              />
-              <Button 
-                onClick={handleSendMessage} 
-                disabled={isLoading}
-                size="icon"
-                className="rounded-full h-9 w-9 bg-blue-500 hover:bg-blue-600 flex items-center justify-center"
-              >
-                {isLoading ? 
-                  <Loader className="w-4 h-4 animate-spin" /> : 
-                  <Send className="w-4 h-4" />
-                }
-              </Button>
+            <div className="h-full max-h-full bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
+              <div className="flex-1 overflow-auto mb-4 px-2">
+                <div className="space-y-3">
+                  {messages.map((message, index) => (
+                    <ChatMessage key={index} message={message} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+              <div className="mt-auto flex gap-2 items-center bg-white/50 backdrop-blur-sm rounded-full border border-white/30 pl-4 pr-2 py-1">
+                <Input
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+                  disabled={isLoading}
+                  className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500"
+                />
+                <Button 
+                  onClick={handleSendMessage} 
+                  disabled={isLoading}
+                  size="icon"
+                  className="rounded-full h-9 w-9 bg-blue-500 hover:bg-blue-600 flex items-center justify-center"
+                >
+                  {isLoading ? 
+                    <Loader className="w-4 h-4 animate-spin" /> : 
+                    <Send className="w-4 h-4" />
+                  }
+                </Button>
+              </div>
             </div>
           </div>
         </div>
