@@ -75,7 +75,7 @@ const Resources = () => {
         <div className="relative p-8">
           <div className="max-w-[1400px] mx-auto">
             <div className="flex items-center gap-4 mb-8">
-              <Button variant="ghost" onClick={() => navigate(`/course/${courseId}`)} className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black">
+              <Button variant="ghost" onClick={() => navigate(`/course/${courseId}`)} className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Lectures
               </Button>
