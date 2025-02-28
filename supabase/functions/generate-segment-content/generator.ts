@@ -1,311 +1,249 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.4.0';
+import { SegmentContent } from './types.ts';
+
+// Create a Supabase client with the service role key
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY') || '';
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-interface GenerateContentResult {
-  success: boolean;
-  content?: any;
-  error?: string;
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing environment variables SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
 }
 
-export async function generateSegmentContent(
-  lectureId: number,
-  segmentNumber: number,
+// Initialize the Supabase client
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+export const generateContent = async (
+  lectureContent: string,
   segmentTitle: string,
   segmentDescription: string,
-  lectureContent: string,
-  contentLanguage: string
-): Promise<GenerateContentResult> {
+  contentLanguage: string = 'english'
+): Promise<SegmentContent> => {
   try {
-    console.log(`Generating content for segment ${segmentNumber}: "${segmentTitle}"`);
+    console.log(`Generating content for segment: ${segmentTitle}`);
     
-    // Generate theory slides content
-    const theoryResult = await generateTheoryContent(
+    // Generate theory content first
+    const theoryContent = await generateTheoryContent(
+      lectureContent,
       segmentTitle,
       segmentDescription,
-      lectureContent,
       contentLanguage
     );
     
-    if (!theoryResult.success) {
-      return { success: false, error: theoryResult.error };
-    }
+    console.log('Theory content generated successfully');
     
-    // Generate quiz content
-    const quizResult = await generateQuizContent(
+    // Then generate quiz content
+    const quizContent = await generateQuizContent(
+      lectureContent,
       segmentTitle,
       segmentDescription,
-      lectureContent,
       contentLanguage
     );
     
-    if (!quizResult.success) {
-      return { success: false, error: quizResult.error };
-    }
+    console.log('Quiz content generated successfully');
     
     // Combine theory and quiz content
-    const combinedContent = {
-      theory_slide_1: theoryResult.content.slide1,
-      theory_slide_2: theoryResult.content.slide2,
-      quiz_1_type: quizResult.content.quiz1.type,
-      quiz_1_question: quizResult.content.quiz1.question,
-      quiz_1_options: quizResult.content.quiz1.options,
-      quiz_1_correct_answer: quizResult.content.quiz1.correctAnswer,
-      quiz_1_explanation: quizResult.content.quiz1.explanation,
-      quiz_2_type: quizResult.content.quiz2.type,
-      quiz_2_question: quizResult.content.quiz2.question,
-      quiz_2_correct_answer: quizResult.content.quiz2.correctAnswer,
-      quiz_2_explanation: quizResult.content.quiz2.explanation
-    };
-    
-    console.log("Successfully generated theory and quiz content");
-    
     return {
-      success: true,
-      content: combinedContent
+      ...theoryContent,
+      ...quizContent
     };
   } catch (error) {
-    console.error("Error in generateSegmentContent:", error);
-    return {
-      success: false,
-      error: `Content generation failed: ${error.message || error}`
-    };
+    console.error('Error generating content:', error);
+    throw error;
   }
-}
+};
 
+// Function to generate theory content
 async function generateTheoryContent(
+  lectureContent: string,
   segmentTitle: string,
   segmentDescription: string,
-  lectureContent: string,
   contentLanguage: string
-): Promise<GenerateContentResult> {
-  try {
-    const maxContentLength = 1500;
-    const truncatedContent = lectureContent.length > maxContentLength 
-      ? lectureContent.substring(0, maxContentLength) + "..." 
-      : lectureContent;
-    
-    const prompt = `
-    Create educational content for a segment titled "${segmentTitle}" with the description: "${segmentDescription}".
-    
-    Use this lecture content as reference: "${truncatedContent}"
-    
-    Generate two theory slides in ${contentLanguage}. Each slide should have:
-    1. Clear, concise explanations
-    2. Well-structured content using proper Markdown formatting
-    3. Use bullet points, numbering, bold/italic emphasis where appropriate
-    4. Include 2-3 key points per slide
-    5. Make it engaging and educational
-    
-    Format your response as follows:
-    
-    SLIDE 1:
-    [First slide content with proper Markdown formatting]
-    
-    SLIDE 2:
-    [Second slide content with proper Markdown formatting]
-    `;
-    
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are an educational content creator specialized in creating engaging theory slides with proper Markdown formatting."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
-    }
-    
-    const data = await response.json();
-    const generatedText = data.choices[0].message.content;
-    
-    // Extract slides from the generated text
-    const slidePattern = /SLIDE 1:([\s\S]*?)(?=SLIDE 2:|$)SLIDE 2:([\s\S]*?)(?=$)/;
-    const matches = generatedText.match(slidePattern);
-    
-    if (!matches || matches.length < 3) {
-      throw new Error("Failed to parse theory slides content correctly");
-    }
-    
-    const slide1 = matches[1].trim();
-    const slide2 = matches[2].trim();
-    
-    return {
-      success: true,
-      content: {
-        slide1,
-        slide2
-      }
-    };
-  } catch (error) {
-    console.error("Error in generateTheoryContent:", error);
-    return {
-      success: false,
-      error: `Theory content generation failed: ${error.message || error}`
-    };
+): Promise<Partial<SegmentContent>> {
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openaiApiKey) {
+    throw new Error('Missing OPENAI_API_KEY environment variable');
   }
-}
 
-async function generateQuizContent(
-  segmentTitle: string,
-  segmentDescription: string,
-  lectureContent: string,
-  contentLanguage: string
-): Promise<GenerateContentResult> {
   try {
-    const maxContentLength = 1500;
-    const truncatedContent = lectureContent.length > maxContentLength 
-      ? lectureContent.substring(0, maxContentLength) + "..." 
-      : lectureContent;
-    
     const prompt = `
-    Create two quiz questions for a segment titled "${segmentTitle}" with the description: "${segmentDescription}".
-    
-    Use this lecture content as reference: "${truncatedContent}"
-    
-    Question 1 should be multiple choice with 4 options.
-    Question 2 should be true/false.
-    
-    All content should be in ${contentLanguage} language.
-    
-    Format your response EXACTLY as follows with clear separation between sections:
-    
-    QUIZ_1_TYPE: multiple_choice
-    QUIZ_1_QUESTION: [Write the question]
-    QUIZ_1_OPTIONS: ["Option 1", "Option 2", "Option 3", "Option 4"]
-    QUIZ_1_CORRECT_ANSWER: [Exact text of the correct answer option]
-    QUIZ_1_EXPLANATION: [Explanation why this is the correct answer]
-    
-    QUIZ_2_TYPE: true_false
-    QUIZ_2_QUESTION: [Write the true/false question]
-    QUIZ_2_CORRECT_ANSWER: [true or false - lowercase]
-    QUIZ_2_EXPLANATION: [Explanation why this is the correct answer]
-    `;
-    
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+Create two comprehensive theory slides about "${segmentTitle}". The content should be based on this lecture segment description: "${segmentDescription}" and should reflect the following lecture content: "${lectureContent.substring(0, 2000)}..."
+
+Create your response in ${contentLanguage}.
+
+Format your response as:
+THEORY_SLIDE_1: [Detailed content for the first slide, focusing on introducing the topic]
+THEORY_SLIDE_2: [Detailed content for the second slide, focusing on deeper aspects]
+
+Be concise but comprehensive, aim for around 150-200 words per slide. Use markdown formatting for headers and bullet points.
+`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: 'gpt-4o-mini',
         messages: [
-          {
-            role: "system",
-            content: "You are an educational quiz creator specialized in creating assessment questions."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
+          { role: 'system', content: 'You are an expert educator creating learning materials.' },
+          { role: 'user', content: prompt }
         ],
         temperature: 0.7,
         max_tokens: 1000
       })
     });
+
+    const data = await response.json();
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI API');
     }
     
-    const data = await response.json();
     const generatedText = data.choices[0].message.content;
     
-    // Improved extraction of quiz data with better regex patterns
-    // Quiz 1 extraction
+    // Parse theory content
+    const slide1Match = generatedText.match(/THEORY_SLIDE_1:(.*?)(?=THEORY_SLIDE_2:|$)/s);
+    const slide2Match = generatedText.match(/THEORY_SLIDE_2:(.*?)(?=$)/s);
+    
+    if (!slide1Match || !slide2Match) {
+      throw new Error('Failed to parse theory content');
+    }
+    
+    return {
+      theory_slide_1: slide1Match[1].trim(),
+      theory_slide_2: slide2Match[1].trim()
+    };
+  } catch (error) {
+    console.error('Error generating theory content:', error);
+    throw error;
+  }
+}
+
+// Function to generate quiz content
+async function generateQuizContent(
+  lectureContent: string,
+  segmentTitle: string,
+  segmentDescription: string,
+  contentLanguage: string
+): Promise<Partial<SegmentContent>> {
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openaiApiKey) {
+    throw new Error('Missing OPENAI_API_KEY environment variable');
+  }
+
+  try {
+    const prompt = `
+Create two quiz questions about "${segmentTitle}" based on this lecture segment description: "${segmentDescription}" and using this lecture content: "${lectureContent.substring(0, 2000)}..."
+
+Create your response in ${contentLanguage}.
+
+The first quiz should be a multiple-choice question with 4 options.
+The second quiz should be a true/false question.
+
+Format your response EXACTLY as follows:
+QUIZ_1_TYPE: multiple_choice
+QUIZ_1_QUESTION: [Clear, concise question]
+QUIZ_1_OPTIONS: ["Option 1", "Option 2", "Option 3", "Option 4"]
+QUIZ_1_CORRECT_ANSWER: [One of the exact options from above]
+QUIZ_1_EXPLANATION: [Brief explanation of why the answer is correct]
+
+QUIZ_2_TYPE: true_false
+QUIZ_2_QUESTION: [Clear statement that is either true or false]
+QUIZ_2_CORRECT_ANSWER: [true or false - lowercase]
+QUIZ_2_EXPLANATION: [Brief explanation of why the statement is true or false]
+`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are an expert educator creating assessment materials.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      })
+    });
+
+    const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI API');
+    }
+    
+    const generatedText = data.choices[0].message.content;
+    console.log("Generated quiz text:", generatedText);
+    
+    // Improved regex patterns for parsing quiz content
     const quiz1TypeMatch = generatedText.match(/QUIZ_1_TYPE:\s*(.*?)(?=\n|$)/);
     const quiz1QuestionMatch = generatedText.match(/QUIZ_1_QUESTION:\s*(.*?)(?=\n|$)/);
     const quiz1OptionsMatch = generatedText.match(/QUIZ_1_OPTIONS:\s*(\[.*?\])(?=\n|$)/);
     const quiz1CorrectAnswerMatch = generatedText.match(/QUIZ_1_CORRECT_ANSWER:\s*(.*?)(?=\n|$)/);
     const quiz1ExplanationMatch = generatedText.match(/QUIZ_1_EXPLANATION:\s*(.*?)(?=\n|QUIZ_2|$)/s);
     
-    // Quiz 2 extraction
     const quiz2TypeMatch = generatedText.match(/QUIZ_2_TYPE:\s*(.*?)(?=\n|$)/);
     const quiz2QuestionMatch = generatedText.match(/QUIZ_2_QUESTION:\s*(.*?)(?=\n|$)/);
     const quiz2CorrectAnswerMatch = generatedText.match(/QUIZ_2_CORRECT_ANSWER:\s*(.*?)(?=\n|$)/);
     const quiz2ExplanationMatch = generatedText.match(/QUIZ_2_EXPLANATION:\s*(.*?)(?=$)/s);
     
-    if (!quiz1TypeMatch || !quiz1QuestionMatch || !quiz1OptionsMatch || !quiz1CorrectAnswerMatch || !quiz1ExplanationMatch ||
-        !quiz2TypeMatch || !quiz2QuestionMatch || !quiz2CorrectAnswerMatch || !quiz2ExplanationMatch) {
-      console.error("Failed to parse quiz content, generated text:", generatedText);
-      throw new Error("Failed to parse quiz content correctly");
+    if (!quiz1TypeMatch || !quiz1QuestionMatch || !quiz1OptionsMatch || 
+        !quiz1CorrectAnswerMatch || !quiz1ExplanationMatch || !quiz2TypeMatch || 
+        !quiz2QuestionMatch || !quiz2CorrectAnswerMatch || !quiz2ExplanationMatch) {
+      console.error('Quiz parsing failed', {
+        quiz1TypeMatch,
+        quiz1QuestionMatch,
+        quiz1OptionsMatch,
+        quiz1CorrectAnswerMatch,
+        quiz1ExplanationMatch,
+        quiz2TypeMatch,
+        quiz2QuestionMatch,
+        quiz2CorrectAnswerMatch,
+        quiz2ExplanationMatch
+      });
+      throw new Error('Failed to parse quiz content');
     }
     
-    let quiz1Options;
+    // For Quiz 1 options, parse the JSON array
+    let quiz1Options: string[] = [];
     try {
-      // Handle various formats of options that might be returned
-      const optionsText = quiz1OptionsMatch[1].trim();
-      if (optionsText.startsWith('[') && optionsText.endsWith(']')) {
-        // Try to parse as JSON array
-        quiz1Options = JSON.parse(optionsText);
-      } else {
-        // Fall back to splitting by commas and cleaning up
-        quiz1Options = optionsText.split(',').map(opt => opt.trim());
-      }
+      // Clean the options string and parse it
+      const optionsString = quiz1OptionsMatch[1].trim();
+      quiz1Options = JSON.parse(optionsString);
     } catch (error) {
-      console.error("Error parsing quiz options:", error);
-      // Fallback if JSON parsing fails
-      quiz1Options = quiz1OptionsMatch[1].replace(/[\[\]"']/g, '').split(',').map(opt => opt.trim());
+      console.error('Error parsing quiz options:', error);
+      console.log('Raw options string:', quiz1OptionsMatch[1]);
+      // Fallback to a simpler parsing method if JSON.parse fails
+      const optionsText = quiz1OptionsMatch[1].replace(/^\[|\]$/g, '');
+      quiz1Options = optionsText.split(',').map(option => 
+        option.trim().replace(/^"|"$/g, '')
+      );
     }
     
-    // Create formatted quiz objects
-    const quiz1 = {
-      type: quiz1TypeMatch[1].trim(),
-      question: quiz1QuestionMatch[1].trim(),
-      options: quiz1Options,
-      correctAnswer: quiz1CorrectAnswerMatch[1].trim(),
-      explanation: quiz1ExplanationMatch[1].trim()
-    };
-    
-    // For quiz 2, convert string 'true'/'false' to actual boolean
-    let quiz2CorrectAnswer;
-    const answerText = quiz2CorrectAnswerMatch[1].trim().toLowerCase();
-    // Keep as string for compatibility with the UI component
-    quiz2CorrectAnswer = answerText === 'true';
-    
-    const quiz2 = {
-      type: quiz2TypeMatch[1].trim(),
-      question: quiz2QuestionMatch[1].trim(),
-      correctAnswer: quiz2CorrectAnswer,
-      explanation: quiz2ExplanationMatch[1].trim()
-    };
+    // For Quiz 2, parse boolean value properly
+    let quiz2CorrectAnswer: boolean;
+    const quiz2AnswerText = quiz2CorrectAnswerMatch[1].trim().toLowerCase();
+    quiz2CorrectAnswer = quiz2AnswerText === 'true';
     
     return {
-      success: true,
-      content: {
-        quiz1,
-        quiz2
-      }
+      quiz_1_type: quiz1TypeMatch[1].trim(),
+      quiz_1_question: quiz1QuestionMatch[1].trim(),
+      quiz_1_options: quiz1Options,
+      quiz_1_correct_answer: quiz1CorrectAnswerMatch[1].trim(),
+      quiz_1_explanation: quiz1ExplanationMatch[1].trim(),
+      quiz_2_type: quiz2TypeMatch[1].trim(),
+      quiz_2_question: quiz2QuestionMatch[1].trim(),
+      quiz_2_correct_answer: quiz2CorrectAnswer,
+      quiz_2_explanation: quiz2ExplanationMatch[1].trim()
     };
   } catch (error) {
-    console.error("Error in generateQuizContent:", error);
-    return {
-      success: false,
-      error: `Quiz content generation failed: ${error.message || error}`
-    };
+    console.error('Error generating quiz content:', error);
+    throw error;
   }
 }
