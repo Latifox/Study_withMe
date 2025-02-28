@@ -33,6 +33,41 @@ export type Database = {
         }
         Relationships: []
       }
+      flashcards: {
+        Row: {
+          answer: string
+          created_at: string
+          id: number
+          lecture_id: number | null
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: never
+          lecture_id?: number | null
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: never
+          lecture_id?: number | null
+          question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lecture_additional_resources: {
         Row: {
           content: string
