@@ -48,6 +48,9 @@ async function generateTheoryContent(
   language: string
 ): Promise<Partial<SegmentContent>> {
   try {
+    // Add null check for content and provide a default empty string if undefined
+    const safeContent = content || '';
+    
     const prompt = `
     You are an educational content creator. Create two theory slides about the following topic:
     
@@ -55,7 +58,7 @@ async function generateTheoryContent(
     Description: ${description}
     
     Reference content:
-    ${content.substring(0, 8000)}
+    ${safeContent.substring(0, Math.min(safeContent.length, 8000))}
     
     Instructions:
     1. Create two concise theory slides in ${language} language.
@@ -68,6 +71,8 @@ async function generateTheoryContent(
     THEORY_SLIDE_2: [content of the second slide]
     `;
 
+    console.log('Sending theory content prompt to OpenAI...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -129,6 +134,9 @@ async function generateQuizContent(
   language: string
 ): Promise<Partial<SegmentContent>> {
   try {
+    // Add null check for content and provide a default empty string if undefined
+    const safeContent = content || '';
+    
     const prompt = `
     You are an educational quiz creator. Create two quiz questions about the following topic:
     
@@ -136,7 +144,7 @@ async function generateQuizContent(
     Description: ${description}
     
     Reference content:
-    ${content.substring(0, 8000)}
+    ${safeContent.substring(0, Math.min(safeContent.length, 8000))}
     
     Instructions:
     1. Create one multiple-choice question with 4 options and one true/false question in ${language} language.
@@ -154,6 +162,8 @@ async function generateQuizContent(
     QUIZ_2_EXPLANATION: [explanation of the correct answer]
     `;
 
+    console.log('Sending quiz content prompt to OpenAI...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {

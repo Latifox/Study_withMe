@@ -2,3 +2,5 @@
 # project_id must be the first line in the file
 project_id = "bjpawnertrqwtgyvrhml"
 
+[functions.generate-segment-content]
+verify_jwt = false
