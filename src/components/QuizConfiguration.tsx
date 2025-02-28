@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -143,7 +143,12 @@ const QuizConfiguration = () => {
         
         <Card className="w-full max-w-2xl mx-auto bg-white/20 backdrop-blur-md border border-white/30 shadow-lg rounded-xl">
           <CardContent className="p-8">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800">Quiz Configuration</h2>
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+              <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
+                <BookOpen className="w-5 h-5 inline mr-1" />
+                Quiz Configuration
+              </span>
+            </h2>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
@@ -280,4 +285,3 @@ const QuizConfiguration = () => {
 };
 
 export default QuizConfiguration;
-
