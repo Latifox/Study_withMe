@@ -55,10 +55,14 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       console.log('Using content language:', contentLanguage);
 
       // Check if content already exists for all segments
-      const { data: allExistingContent } = await supabase
+      const { data: allExistingContent, error: contentError } = await supabase
         .from('segments_content')
         .select('*')
         .eq('lecture_id', numericLectureId);
+      
+      if (contentError) {
+        console.error('Error fetching existing segments content:', contentError);
+      }
         
       // If we have content for all segments, return it immediately
       if (allExistingContent && allExistingContent.length >= segmentData.length) {
@@ -139,73 +143,87 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
           console.log(`Successfully generated content for segment ${segmentToGenerate.sequence_number}:`, generatedContent);
 
+          // Prepare content for storage
           const contentToStore = {
             lecture_id: numericLectureId,
             sequence_number: segmentToGenerate.sequence_number,
-            theory_slide_1: generatedContent.content.theory_slide_1,
-            theory_slide_2: generatedContent.content.theory_slide_2,
-            quiz_1_type: generatedContent.content.quiz_1_type,
-            quiz_1_question: generatedContent.content.quiz_1_question,
-            quiz_1_options: generatedContent.content.quiz_1_options,
-            quiz_1_correct_answer: generatedContent.content.quiz_1_correct_answer,
-            quiz_1_explanation: generatedContent.content.quiz_1_explanation,
-            quiz_2_type: generatedContent.content.quiz_2_type,
-            quiz_2_question: generatedContent.content.quiz_2_question,
-            quiz_2_correct_answer: generatedContent.content.quiz_2_correct_answer,
-            quiz_2_explanation: generatedContent.content.quiz_2_explanation
+            theory_slide_1: generatedContent.content.theory_slide_1 || '',
+            theory_slide_2: generatedContent.content.theory_slide_2 || '',
+            quiz_1_type: generatedContent.content.quiz_1_type || 'multiple_choice',
+            quiz_1_question: generatedContent.content.quiz_1_question || '',
+            quiz_1_options: generatedContent.content.quiz_1_options || [],
+            quiz_1_correct_answer: generatedContent.content.quiz_1_correct_answer || '',
+            quiz_1_explanation: generatedContent.content.quiz_1_explanation || '',
+            quiz_2_type: generatedContent.content.quiz_2_type || 'true_false',
+            quiz_2_question: generatedContent.content.quiz_2_question || '',
+            quiz_2_correct_answer: generatedContent.content.quiz_2_correct_answer === true || 
+              generatedContent.content.quiz_2_correct_answer === 'true' ? true : false,
+            quiz_2_explanation: generatedContent.content.quiz_2_explanation || ''
           };
 
-          // Store the generated content with better error handling
-          const { data: storedContent, error: insertError } = await supabase
+          // First try an insert (instead of upsert) to avoid potential conflicts
+          const { data: insertedContent, error: insertError } = await supabase
             .from('segments_content')
-            .upsert(contentToStore)
-            .select()
-            .single();
+            .insert(contentToStore)
+            .select();
 
           if (insertError) {
-            console.error(`Error storing content for segment ${segmentToGenerate.sequence_number}:`, insertError);
-            console.error('Content that failed to store:', contentToStore);
+            console.error(`Error inserting content for segment ${segmentToGenerate.sequence_number}:`, insertError);
             
-            // Try with a more basic insert as fallback
-            const { error: basicInsertError } = await supabase
+            // Try with upsert as a fallback
+            const { data: upsertContent, error: upsertError } = await supabase
               .from('segments_content')
-              .insert(contentToStore);
+              .upsert(contentToStore)
+              .select();
               
-            if (basicInsertError) {
-              console.error(`Fallback insert also failed for segment ${segmentToGenerate.sequence_number}:`, basicInsertError);
-              continue; // Skip this segment but continue with others
-            } else {
-              console.log(`Fallback insert succeeded for segment ${segmentToGenerate.sequence_number}`);
-              // Get the content we just inserted
-              const { data: fetchedContent } = await supabase
+            if (upsertError) {
+              console.error(`Both insert and upsert failed for segment ${segmentToGenerate.sequence_number}:`, upsertError);
+              
+              // Try a direct update if both insert and upsert fail
+              const { error: updateError } = await supabase
                 .from('segments_content')
-                .select('*')
+                .update(contentToStore)
                 .eq('lecture_id', numericLectureId)
-                .eq('sequence_number', segmentToGenerate.sequence_number)
-                .single();
+                .eq('sequence_number', segmentToGenerate.sequence_number);
                 
-              if (fetchedContent) {
-                generatedContents.push(fetchedContent);
-                existingContentMap.set(segmentToGenerate.sequence_number, fetchedContent);
-                console.log(`Retrieved and added content for segment ${segmentToGenerate.sequence_number} after fallback insert`);
+              if (updateError) {
+                console.error(`All storage attempts failed for segment ${segmentToGenerate.sequence_number}:`, updateError);
+                continue; // Continue with other segments
+              } else {
+                // If update succeeds, fetch the updated content
+                const { data: fetchedContent } = await supabase
+                  .from('segments_content')
+                  .select('*')
+                  .eq('lecture_id', numericLectureId)
+                  .eq('sequence_number', segmentToGenerate.sequence_number)
+                  .single();
+                  
+                if (fetchedContent) {
+                  console.log(`Successfully updated and fetched content for segment ${segmentToGenerate.sequence_number}`);
+                  generatedContents.push(fetchedContent);
+                  existingContentMap.set(segmentToGenerate.sequence_number, fetchedContent);
+                }
               }
+            } else if (upsertContent && upsertContent.length > 0) {
+              // Add the successfully stored content from upsert
+              console.log(`Successfully upserted content for segment ${segmentToGenerate.sequence_number}`);
+              generatedContents.push(upsertContent[0]);
+              existingContentMap.set(segmentToGenerate.sequence_number, upsertContent[0]);
             }
-          } else {
-            // Add the successfully stored content
-            generatedContents.push(storedContent);
-            
-            // Also add to our map for immediate reference
-            existingContentMap.set(segmentToGenerate.sequence_number, storedContent);
-            
-            console.log(`Successfully stored content for segment ${segmentToGenerate.sequence_number}:`, storedContent);
+          } else if (insertedContent && insertedContent.length > 0) {
+            // Add the successfully stored content from insert
+            console.log(`Successfully inserted content for segment ${segmentToGenerate.sequence_number}`);
+            generatedContents.push(insertedContent[0]);
+            existingContentMap.set(segmentToGenerate.sequence_number, insertedContent[0]);
           }
         }
         
-        // Get updated content again to ensure we have all segments, with logging to verify
+        // Get updated content again to ensure we have all segments
         const { data: updatedContent, error: fetchError } = await supabase
           .from('segments_content')
           .select('*')
-          .eq('lecture_id', numericLectureId);
+          .eq('lecture_id', numericLectureId)
+          .order('sequence_number');
           
         if (fetchError) {
           console.error('Error fetching updated content:', fetchError);
@@ -222,9 +240,20 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         }
 
         // Use the updatedContent if available, otherwise fallback to our tracked content
-        const finalContent = updatedContent || [...generatedContents, ...(Array.from(existingContentMap.values()))];
-        console.log('Final content being returned:', finalContent);
+        let finalContent;
+        if (updatedContent && updatedContent.length > 0) {
+          finalContent = updatedContent;
+        } else {
+          // Combine newly generated content with existing content
+          finalContent = Array.from(existingContentMap.values());
+          
+          // If we still have no content, use whatever we generated
+          if (finalContent.length === 0) {
+            finalContent = generatedContents;
+          }
+        }
         
+        console.log('Final content being returned:', finalContent);
         return { segments: finalContent };
 
       } catch (error) {
@@ -235,14 +264,16 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           variant: "destructive",
         });
         // Return whatever content we have
-        const fallbackContent = [...generatedContents, ...(Array.from(existingContentMap.values()))];
+        const fallbackContent = Array.from(existingContentMap.values());
+        if (fallbackContent.length === 0 && generatedContents.length > 0) {
+          console.log('Returning generated content after error:', generatedContents);
+          return { segments: generatedContents };
+        }
         console.log('Returning fallback content after error:', fallbackContent);
-        return { 
-          segments: fallbackContent
-        };
+        return { segments: fallbackContent };
       }
     },
-    retry: false, // Disable retries completely
+    retry: 1, // Allow one retry only
     retryOnMount: false, // Prevent retrying when component remounts
     staleTime: Infinity, // Prevent automatic refetching
     gcTime: Infinity, // Keep the data cached indefinitely
