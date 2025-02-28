@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,9 +79,11 @@ const Resources = () => {
                 <ArrowLeft className="w-4 h-4" />
                 Back to Lectures
               </Button>
-              <h1 className="text-2xl font-bold text-black flex items-center gap-2">
-                
-                Additional Resources
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
+                  <BookOpen className="w-5 h-5 inline mr-1" />
+                  Additional Resources
+                </span>
               </h1>
             </div>
 
