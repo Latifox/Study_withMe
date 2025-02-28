@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
 const Resources = () => {
   const {
     courseId,
@@ -19,6 +20,7 @@ const Resources = () => {
   } = useParams();
   const navigate = useNavigate();
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  
   console.log('Resources page params:', {
     courseId,
     lectureId
@@ -60,8 +62,10 @@ const Resources = () => {
     isLoading: resourcesLoading,
     error: resourcesError
   } = useGenerateResources(selectedSegment);
+  
   console.log('Selected segment:', selectedSegment);
   console.log('Resources content:', resourcesContent);
+  
   if (segmentsError) {
     console.error('Error loading segments:', segmentsError);
     toast({
@@ -70,6 +74,7 @@ const Resources = () => {
       variant: "destructive"
     });
   }
+  
   return <div className="relative min-h-screen">
       <BackgroundGradient>
         <div className="relative p-8">
@@ -98,7 +103,7 @@ const Resources = () => {
               </Card> : <div className="grid grid-cols-1 md:grid-cols-[350px,1fr] gap-8">
                 {/* Left column - Segment cards */}
                 <div className="space-y-4">
-                  {segments.map(segment => <Card key={segment.id} className={`transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20 hover:shadow-xl hover:bg-white/20 cursor-pointer ${selectedSegmentId === segment.id.toString() ? 'ring-2 ring-black' : ''}`} onClick={() => setSelectedSegmentId(segment.id.toString())}>
+                  {segments.map(segment => <Card key={segment.id} className={`transition-all duration-300 bg-white/10 backdrop-blur-md border border-black/20 hover:shadow-xl hover:bg-white/20 cursor-pointer shadow-md ${selectedSegmentId === segment.id.toString() ? 'ring-2 ring-black' : ''}`} onClick={() => setSelectedSegmentId(segment.id.toString())}>
                       <CardHeader>
                         <CardTitle className="text-lg text-black">
                           {segment.title}
@@ -111,15 +116,15 @@ const Resources = () => {
                 <div className="min-h-[calc(100vh-200px)]">
                   {!selectedSegmentId ? <div className="h-full flex items-center justify-center text-black/60">
                       Select a segment to view its resources
-                    </div> : resourcesLoading ? <Card className="h-full bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
+                    </div> : resourcesLoading ? <Card className="h-full bg-white/10 backdrop-blur-md border border-black/20 shadow-md">
                       <CardContent className="h-full flex items-center justify-center">
                         <Loader2 className="w-8 h-8 animate-spin text-black" />
                       </CardContent>
-                    </Card> : resourcesError ? <Card className="h-full bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
+                    </Card> : resourcesError ? <Card className="h-full bg-white/10 backdrop-blur-md border border-black/20 shadow-md">
                       <CardContent className="h-full flex items-center justify-center">
                         <p className="text-red-500">Error loading resources. Please try again.</p>
                       </CardContent>
-                    </Card> : <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
+                    </Card> : <Card className="bg-white/10 backdrop-blur-md border border-black/20 shadow-md">
                       <CardHeader className="border-b border-white/20">
                         <CardTitle className="text-xl text-black">
                           {selectedSegment?.title}
@@ -157,4 +162,5 @@ const Resources = () => {
       </BackgroundGradient>
     </div>;
 };
+
 export default Resources;
