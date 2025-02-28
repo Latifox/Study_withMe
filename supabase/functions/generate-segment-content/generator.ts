@@ -105,3 +105,36 @@ export async function generateQuizContent(openAIApiKey: string, segmentTitle: st
   const content = await makeOpenAIRequest(openAIApiKey, messages);
   return JSON.parse(content);
 }
+
+// This is the main function that the index.ts file is trying to import
+export async function generateSegmentContent({ segmentTitle, segmentDescription, lectureContent, contentLanguage = 'english' }) {
+  console.log('Starting segment content generation for:', segmentTitle);
+  console.log('Content language:', contentLanguage);
+  
+  // Get OpenAI API key from environment variable
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openAIApiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+  
+  try {
+    // Generate theory content
+    console.log('Generating theory content...');
+    const theoryContent = await generateTheoryContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent);
+    
+    // Generate quiz content
+    console.log('Generating quiz content...');
+    const quizContent = await generateQuizContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent);
+    
+    // Combine the results
+    console.log('Content generation completed successfully');
+    return {
+      ...theoryContent,
+      ...quizContent
+    };
+  } catch (error) {
+    console.error('Error generating segment content:', error);
+    throw error;
+  }
+}
