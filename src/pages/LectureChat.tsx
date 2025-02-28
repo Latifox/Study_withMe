@@ -97,6 +97,8 @@ const LectureChat = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
           </Button>
+          
+          <h1 className="text-2xl font-bold text-center my-2">Chat with PDF</h1>
         </div>
         
         <div className="container mx-auto flex-1 pb-4 px-4 overflow-hidden">
