@@ -11,8 +11,15 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 export async function generateSegmentContent(input: SegmentInput): Promise<SegmentContent> {
   try {
-    // Extract input parameters
+    // Extract input parameters and log them for debugging
     const { content, title, description, language = 'en' } = input;
+    
+    console.log('Generator received input:', {
+      title: title,
+      description: description,
+      contentLength: content ? content.length : 0,
+      language: language
+    });
 
     // Generate theory slides
     const theorySlides = await generateTheoryContent(content, title, description, language);
@@ -51,11 +58,24 @@ async function generateTheoryContent(
     // Add null check for content and provide a default empty string if undefined
     const safeContent = content || '';
     
+    // Add null checks for title and description
+    const safeTitle = title || 'No title provided';
+    const safeDescription = description || 'No description provided';
+    
+    console.log('Theory content generation parameters:', {
+      titleLength: safeTitle.length,
+      title: safeTitle,
+      descriptionLength: safeDescription.length,
+      description: safeDescription,
+      contentLength: safeContent.length,
+      language: language
+    });
+
     const prompt = `
     You are an educational content creator. Create two theory slides about the following topic:
     
-    Topic: ${title}
-    Description: ${description}
+    Topic: ${safeTitle}
+    Description: ${safeDescription}
     
     Reference content:
     ${safeContent.substring(0, Math.min(safeContent.length, 8000))}
@@ -137,11 +157,24 @@ async function generateQuizContent(
     // Add null check for content and provide a default empty string if undefined
     const safeContent = content || '';
     
+    // Add null checks for title and description
+    const safeTitle = title || 'No title provided';
+    const safeDescription = description || 'No description provided';
+    
+    console.log('Quiz content generation parameters:', {
+      titleLength: safeTitle.length,
+      title: safeTitle,
+      descriptionLength: safeDescription.length,
+      description: safeDescription,
+      contentLength: safeContent.length,
+      language: language
+    });
+    
     const prompt = `
     You are an educational quiz creator. Create two quiz questions about the following topic:
     
-    Topic: ${title}
-    Description: ${description}
+    Topic: ${safeTitle}
+    Description: ${safeDescription}
     
     Reference content:
     ${safeContent.substring(0, Math.min(safeContent.length, 8000))}
