@@ -1,4 +1,11 @@
 
+export interface SegmentInput {
+  content: string;
+  title: string;
+  description: string;
+  language?: string;
+}
+
 export interface SegmentContent {
   theory_slide_1: string;
   theory_slide_2: string;
@@ -11,10 +18,4 @@ export interface SegmentContent {
   quiz_2_question: string;
   quiz_2_correct_answer: boolean;
   quiz_2_explanation: string;
-}
-
-export interface ApiResponse {
-  success: boolean;
-  content?: SegmentContent;
-  error?: string;
 }

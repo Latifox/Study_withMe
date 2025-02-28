@@ -1,95 +1,33 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.34.0'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.2';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+export async function saveSegmentContent(lectureId: number, segmentNumber: number, content: any) {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase credentials');
+    }
 
-export const db = {
-  client: null as any,
-  
-  connect: async function() {
-    console.log("DB: Initializing Supabase client");
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("DB: Missing environment variables for Supabase connection");
-      throw new Error("Missing Supabase connection parameters");
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('lecture_segments')
+      .update({
+        content,
+        is_generated: true,
+        updated_at: new Date().toISOString()
+      })
+      .match({ lecture_id: lectureId, sequence_number: segmentNumber });
+
+    if (error) {
+      throw error;
     }
-    
-    // Test connection by making a simple query
-    try {
-      const { data, error } = await supabaseClient.from('segments_content').select('id').limit(1);
-      if (error) throw error;
-      console.log("DB: Supabase connection test successful");
-    } catch (err) {
-      console.error("DB: Supabase connection test failed:", err);
-      throw new Error(`Failed to connect to Supabase: ${err.message}`);
-    }
-    
-    this.client = supabaseClient;
-    return this.client;
-  },
-  
-  getExistingContent: async function(lectureId: number, segmentNumber: number) {
-    console.log(`DB: Checking for existing content for lecture ${lectureId}, segment ${segmentNumber}`);
-    
-    try {
-      const { data, error } = await this.client
-        .from('segments_content')
-        .select('*')
-        .eq('lecture_id', lectureId)
-        .eq('sequence_number', segmentNumber)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is not an error for us
-        console.error("DB: Error fetching existing content:", error);
-        throw error;
-      }
-      
-      if (data) {
-        console.log(`DB: Found existing content with ID ${data.id}`);
-      } else {
-        console.log("DB: No existing content found");
-      }
-      
-      return { data, error: null };
-    } catch (err) {
-      console.error("DB: Unexpected error in getExistingContent:", err);
-      return { data: null, error: err };
-    }
-  },
-  
-  storeContent: async function(content: any) {
-    console.log(`DB: Storing content for lecture ${content.lecture_id}, segment ${content.sequence_number}`);
-    
-    try {
-      // Log content structure without the actual content
-      const contentKeys = Object.keys(content);
-      console.log(`DB: Content object has ${contentKeys.length} keys: ${contentKeys.join(', ')}`);
-      
-      const { data, error } = await this.client
-        .from('segments_content')
-        .upsert(content)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("DB: Error storing content:", error);
-        throw error;
-      }
-      
-      console.log(`DB: Content stored successfully with ID ${data?.id}`);
-      return { data, error: null };
-    } catch (err) {
-      console.error("DB: Unexpected error in storeContent:", err);
-      return { data: null, error: err };
-    }
-  },
-  
-  end: async function() {
-    console.log("DB: Closing connection");
-    // No explicit close needed for Supabase client
-    this.client = null;
-    return true;
+
+    return data;
+  } catch (error) {
+    console.error('Error saving segment content to database:', error);
+    throw error;
   }
-};
+}

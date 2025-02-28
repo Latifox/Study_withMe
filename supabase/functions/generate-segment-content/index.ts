@@ -1,67 +1,64 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { validateRequest } from './validator.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { generateSegmentContent } from './generator.ts';
-import { corsHeaders } from "../_shared/cors.ts";
+import { saveSegmentContent } from './db.ts';
 
-console.log("Generate Segment Content function started");
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const requestBody = await req.json();
-    console.log('Request body:', requestBody);
-
-    // Validate the request body
-    const validationResult = validateRequest(requestBody);
-    if (!validationResult.valid) {
-      console.error('Validation error:', validationResult.error);
-      return new Response(JSON.stringify({ error: validationResult.error }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage } = requestBody;
-
+    const { content, title, description, language, lectureId, segmentNumber } = await req.json();
+    
+    console.log(`Generating content for segment ${segmentNumber} of lecture ${lectureId}`);
+    console.log(`Title: ${title}, Description: ${description}, Language: ${language || 'en'}`);
+    
     // Generate the segment content
-    const result = await generateSegmentContent(
-      lectureId,
-      segmentNumber,
-      segmentTitle,
-      segmentDescription,
-      lectureContent,
-      contentLanguage
-    );
-
-    if (!result.success) {
-      console.error('Content generation error:', result.error);
-      return new Response(JSON.stringify({ error: result.error }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const segmentContent = await generateSegmentContent({
+      content,
+      title,
+      description,
+      language: language || 'en'
+    });
+    
+    console.log('Content generated successfully');
+    
+    // If lectureId and segmentNumber are provided, save to database
+    if (lectureId && segmentNumber) {
+      console.log(`Saving content to database for lecture ${lectureId}, segment ${segmentNumber}`);
+      await saveSegmentContent(lectureId, segmentNumber, segmentContent);
+      console.log('Content saved to database');
     }
 
-    // Respond with the generated content
-    console.log('Content generated successfully');
     return new Response(
-      JSON.stringify({ data: result.content }),
+      JSON.stringify({
+        success: true,
+        data: segmentContent
+      }),
       {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
-
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error('Error in generate-segment-content function:', error);
+    
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      },
+    );
   }
 });
