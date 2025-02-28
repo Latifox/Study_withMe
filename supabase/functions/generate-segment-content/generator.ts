@@ -53,12 +53,12 @@ export async function generateTheoryContent(openAIApiKey: string, segmentTitle: 
   const messages = [
     {
       role: 'system',
-      content: 'You are an educational content generator. Generate theory content in JSON format only. Focus on clear, concise explanations.'
+      content: 'You are an educational content generator. Generate theory content in JSON format only.'
     },
     {
       role: 'user',
       content: `Generate theory content for a segment with title "${segmentTitle}" and description "${segmentDescription}". 
-      Use this lecture content as reference: "${lectureContent.substring(0, 2000)}..."
+      Use this lecture content as your only information source: "${lectureContent}"
       
       Return ONLY a JSON object with the following format:
       {
@@ -66,7 +66,8 @@ export async function generateTheoryContent(openAIApiKey: string, segmentTitle: 
         "theory_slide_2": "Second slide content with examples and applications"
       }
       
-      Keep each slide content concise and focused. Do not include any markdown or special formatting.`
+      Keep each slide content concise and focused. Include markdown format for bold, lists, bullet points, quotes, italics etc.
+      Use this lecture content as your only information source: "${lectureContent}"`
     }
   ];
 
