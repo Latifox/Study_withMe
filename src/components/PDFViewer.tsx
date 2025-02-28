@@ -1,21 +1,21 @@
 
-import { useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+import { Viewer, Worker, SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
+import '@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css';
 
 interface PDFViewerProps {
   lectureId?: string;
 }
 
 const PDFViewer = ({ lectureId }: PDFViewerProps) => {
-  const [numPages, setNumPages] = useState<number>();
+  const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
+  const viewerRef = useRef<any>(null);
 
   const { data: pdfUrl, isLoading } = useQuery({
     queryKey: ['lecture-pdf', lectureId],
@@ -37,8 +37,14 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
     enabled: !!lectureId
   });
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
+  useEffect(() => {
+    if (viewerRef.current && pageNumber !== 1) {
+      viewerRef.current.getPagesContainer().children[pageNumber - 1].scrollIntoView();
+    }
+  }, [pageNumber]);
+
+  const handleDocumentLoad = (totalPages: number) => {
+    setNumPages(totalPages);
   };
 
   if (isLoading) {
@@ -47,20 +53,27 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
 
   return (
     <div className="h-full flex flex-col" ref={setContainerRef}>
-      <div className="flex-1 overflow-auto flex justify-center p-4">
-        <Document
-          file={pdfUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          className="max-w-full"
-        >
-          <Page
-            pageNumber={pageNumber}
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
-            width={containerRef?.clientWidth ? containerRef.clientWidth - 64 : undefined}
-            className="pdf-page"
-          />
-        </Document>
+      <div className="flex-1 overflow-auto flex justify-center">
+        <Worker workerUrl="https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js">
+          {pdfUrl && (
+            <div style={{ height: '100%', width: '100%' }}>
+              <Viewer
+                fileUrl={pdfUrl}
+                onDocumentLoad={handleDocumentLoad}
+                ref={viewerRef}
+                defaultScale={SpecialZoomLevel.PageFit}
+                renderPage={(props) => {
+                  const { index } = props;
+                  // When a new page is rendered, update our page number state if needed
+                  if (index === pageNumber - 1) {
+                    setTimeout(() => props.pageRef?.current?.scrollIntoView(), 0);
+                  }
+                  return props.canvasLayer;
+                }}
+              />
+            </div>
+          )}
+        </Worker>
       </div>
       
       <div className="p-4 border-t bg-white flex justify-center items-center gap-4">
