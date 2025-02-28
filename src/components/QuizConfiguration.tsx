@@ -141,9 +141,9 @@ const QuizConfiguration = () => {
           Back to Course
         </Button>
         
-        <Card className="w-full max-w-2xl mx-auto bg-white/90 backdrop-blur-sm border border-white/30 shadow-md">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Quiz Configuration</h2>
+        <Card className="w-full max-w-2xl mx-auto bg-white/20 backdrop-blur-md border border-white/30 shadow-lg rounded-xl">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">Quiz Configuration</h2>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
@@ -151,7 +151,7 @@ const QuizConfiguration = () => {
                   name="difficulty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Difficulty Level</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">Difficulty Level</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -160,15 +160,15 @@ const QuizConfiguration = () => {
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="easy" id="easy" />
-                            <label htmlFor="easy">Easy</label>
+                            <label htmlFor="easy" className="text-gray-700">Easy</label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="medium" id="medium" />
-                            <label htmlFor="medium">Medium</label>
+                            <label htmlFor="medium" className="text-gray-700">Medium</label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="hard" id="hard" />
-                            <label htmlFor="hard">Hard</label>
+                            <label htmlFor="hard" className="text-gray-700">Hard</label>
                           </div>
                         </RadioGroup>
                       </FormControl>
@@ -181,7 +181,7 @@ const QuizConfiguration = () => {
                   name="questionTypes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Question Types</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">Question Types</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -190,15 +190,15 @@ const QuizConfiguration = () => {
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="multiple_choice" id="multiple_choice" />
-                            <label htmlFor="multiple_choice">Multiple Choice</label>
+                            <label htmlFor="multiple_choice" className="text-gray-700">Multiple Choice</label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="true_false" id="true_false" />
-                            <label htmlFor="true_false">True/False</label>
+                            <label htmlFor="true_false" className="text-gray-700">True/False</label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="mixed" id="mixed" />
-                            <label htmlFor="mixed">Mixed</label>
+                            <label htmlFor="mixed" className="text-gray-700">Mixed</label>
                           </div>
                         </RadioGroup>
                       </FormControl>
@@ -211,7 +211,7 @@ const QuizConfiguration = () => {
                   name="timeLimit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Time Limit (minutes)</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">Time Limit (minutes)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -219,6 +219,7 @@ const QuizConfiguration = () => {
                           onChange={(e) => field.onChange(Number(e.target.value))}
                           min={1}
                           max={30}
+                          className="bg-white/50 border-white/40"
                         />
                       </FormControl>
                     </FormItem>
@@ -230,7 +231,7 @@ const QuizConfiguration = () => {
                   name="numberOfQuestions"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Number of Questions</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">Number of Questions</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -238,6 +239,7 @@ const QuizConfiguration = () => {
                           onChange={(e) => field.onChange(Number(e.target.value))}
                           min={1}
                           max={15}
+                          className="bg-white/50 border-white/40"
                         />
                       </FormControl>
                     </FormItem>
@@ -250,7 +252,7 @@ const QuizConfiguration = () => {
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center justify-between">
-                        <FormLabel>Enable Hints</FormLabel>
+                        <FormLabel className="text-gray-700 font-medium">Enable Hints</FormLabel>
                         <FormControl>
                           <Switch
                             checked={field.value}
@@ -264,7 +266,7 @@ const QuizConfiguration = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg mt-4"
                 >
                   Generate Quiz
                 </Button>
