@@ -8,7 +8,7 @@ import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Loader, Send } from "lucide-react";
+import { ArrowLeft, Loader, Send, BookOpen } from "lucide-react";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 const LectureChat = () => {
@@ -89,16 +89,20 @@ const LectureChat = () => {
     <BackgroundGradient>
       <div className="flex flex-col h-screen max-h-screen">
         <div className="container mx-auto p-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black mb-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Lectures
-          </Button>
-          
-          <h1 className="text-2xl font-bold text-center my-2">Chat with PDF</h1>
+          <div className="flex items-center gap-4 mb-8">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Lectures
+            </Button>
+            <h1 className="text-2xl font-bold text-black flex items-center gap-2">
+              <BookOpen className="w-6 h-6" />
+              Chat with PDF
+            </h1>
+          </div>
         </div>
         
         <div className="container mx-auto flex-1 pb-4 px-4 overflow-hidden">
