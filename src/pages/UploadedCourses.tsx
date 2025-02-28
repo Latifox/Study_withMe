@@ -88,14 +88,16 @@ const UploadedCourses = () => {
               {courses.map((course) => (
                 <Card key={course.id} className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20">
                   <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-xl text-white">{course.title}</CardTitle>
+                    <div className="flex justify-between items-start w-full">
+                      <div className="text-left flex-1 mr-4">
+                        <CardTitle className="text-xl text-white mb-1">{course.title}</CardTitle>
                         <CardDescription className="text-white/70">
                           Created on {new Date(course.created_at).toLocaleDateString()}
                         </CardDescription>
                       </div>
-                      <DeleteCourseDialog courseId={course.id} courseTitle={course.title} />
+                      <div className="flex-shrink-0">
+                        <DeleteCourseDialog courseId={course.id} courseTitle={course.title} />
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
