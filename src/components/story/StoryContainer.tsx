@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import StoryCompletionScreen from "./StoryCompletionScreen";
 import ContentDisplay from "./content/ContentDisplay";
@@ -18,7 +18,7 @@ interface StoryContainerProps {
       quiz_1_explanation: string;
       quiz_2_type: string;
       quiz_2_question: string;
-      quiz_2_correct_answer: boolean | string;
+      quiz_2_correct_answer: boolean;
       quiz_2_explanation: string;
     }>;
   };
@@ -39,12 +39,12 @@ export const StoryContainer = ({
   onCorrectAnswer,
   onWrongAnswer
 }: StoryContainerProps) => {
-  const { nodeId, courseId, lectureId } = useParams();
-  const navigate = useNavigate();
+  const { nodeId } = useParams();
+  const sequenceNumber = nodeId ? parseInt(nodeId.split('_')[1]) : 1;
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
 
-  console.log('StoryContainer - Current segment:', currentSegment);
+  console.log('StoryContainer - Current segment:', sequenceNumber);
   console.log('StoryContainer - Story content:', storyContent);
   console.log('StoryContainer - Current step:', currentStep);
 
@@ -68,17 +68,15 @@ export const StoryContainer = ({
     );
   }
 
-  // Get current segment data, using 0-indexed array with 1-indexed currentSegment
-  const currentSegmentIndex = currentSegment - 1;
-  const currentSegmentData = storyContent.segments[currentSegmentIndex];
-  console.log('StoryContainer - Current segment index:', currentSegmentIndex);
+  // Get current segment data
+  const currentSegmentData = storyContent.segments[sequenceNumber - 1];
   console.log('StoryContainer - Current segment data:', currentSegmentData);
 
   if (!currentSegmentData) {
-    console.error('No segment data found for segment:', currentSegment, 'index:', currentSegmentIndex);
+    console.error('No segment data found for sequence:', sequenceNumber);
     toast({
       title: "Missing segment data",
-      description: `Unable to find content for segment ${currentSegment}. Please try again.`,
+      description: "Unable to find content for this segment. Please try again.",
       variant: "destructive",
     });
     return (
@@ -93,30 +91,6 @@ export const StoryContainer = ({
     );
   }
 
-  // Function to proceed to the next segment
-  const proceedToNextSegment = () => {
-    const nextSegment = currentSegment + 1;
-    
-    // Check if there is a next segment available
-    if (nextSegment <= storyContent.segments.length) {
-      // Navigate to the next segment
-      navigate(`/course/${courseId}/lecture/${lectureId}/story/content/segment_${nextSegment}`);
-      // Reset step to 0 for the new segment
-      onContinue();
-      toast({
-        title: "Segment Complete!",
-        description: "Moving to the next segment...",
-      });
-    } else {
-      // If this was the last segment, show completion screen
-      setShowCompletionScreen(true);
-      toast({
-        title: "All Segments Complete!",
-        description: "Congratulations on completing all segments!",
-      });
-    }
-  };
-
   if (showCompletionScreen) {
     return <StoryCompletionScreen onBack={() => window.history.back()} />;
   }
@@ -124,31 +98,19 @@ export const StoryContainer = ({
   return (
     <ContentDisplay
       currentSegmentData={currentSegmentData}
-      currentSegment={currentSegment}
+      currentSegment={sequenceNumber}
       currentStep={currentStep}
       totalSegments={storyContent.segments.length}
       currentScore={currentScore}
       isSlide={currentStep < 2}
       slideIndex={currentStep}
       questionIndex={currentStep - 2}
-      lectureId={String(lectureId)}
-      courseId={String(courseId)}
+      lectureId={String(currentSegment)}
+      courseId={String(currentSegment)}
       onContinue={onContinue}
       onCorrectAnswer={() => {
-        setCurrentScore(prev => prev + 5);
-        
-        // Check if this is the final quiz (currentStep === 3)
-        if (currentStep === 3) {
-          // Save the correct answer through the parent handler
-          onCorrectAnswer();
-          
-          // Instead of immediately showing completion, proceed to next segment
-          proceedToNextSegment();
-        } else {
-          // Not the final quiz, continue as usual
-          onCorrectAnswer();
-          onContinue();
-        }
+        setShowCompletionScreen(true);
+        onCorrectAnswer();
       }}
       onWrongAnswer={onWrongAnswer}
     />
@@ -156,3 +118,4 @@ export const StoryContainer = ({
 };
 
 export default StoryContainer;
+

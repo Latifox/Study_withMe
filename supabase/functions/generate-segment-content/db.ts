@@ -1,96 +1,95 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.2';
-import type { SegmentContent } from './types.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.34.0'
 
-export async function saveSegmentContent(lectureId: number, segmentNumber: number, content: Partial<SegmentContent>) {
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+export const db = {
+  client: null as any,
+  
+  connect: async function() {
+    console.log("DB: Initializing Supabase client");
     
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase credentials');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("DB: Missing environment variables for Supabase connection");
+      throw new Error("Missing Supabase connection parameters");
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data, error } = await supabase
-      .from('segments_content')
-      .upsert({
-        lecture_id: lectureId,
-        sequence_number: segmentNumber,
-        theory_slide_1: content.theory_slide_1,
-        theory_slide_2: content.theory_slide_2,
-        quiz_1_type: content.quiz_1_type,
-        quiz_1_question: content.quiz_1_question,
-        quiz_1_options: content.quiz_1_options,
-        quiz_1_correct_answer: content.quiz_1_correct_answer,
-        quiz_1_explanation: content.quiz_1_explanation,
-        quiz_2_type: content.quiz_2_type,
-        quiz_2_question: content.quiz_2_question,
-        quiz_2_correct_answer: content.quiz_2_correct_answer,
-        quiz_2_explanation: content.quiz_2_explanation
-      })
-      .select();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error saving segment content to database:', error);
-    throw error;
-  }
-}
-
-// Add the missing function
-export async function saveFunctionExecutionData(
-  lectureId: number, 
-  segmentNumber: number, 
-  executionTime: number, 
-  success: boolean, 
-  message: string
-) {
-  try {
-    // This function can be used to log execution data for analytics/debugging
-    console.log(`Execution data for lecture ${lectureId}, segment ${segmentNumber}:`);
-    console.log(`- Execution time: ${executionTime}ms`);
-    console.log(`- Success: ${success}`);
-    console.log(`- Message: ${message}`);
     
-    // You can uncomment this to actually store the execution data in a table if desired
-    /*
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase credentials');
+    // Test connection by making a simple query
+    try {
+      const { data, error } = await supabaseClient.from('segments_content').select('id').limit(1);
+      if (error) throw error;
+      console.log("DB: Supabase connection test successful");
+    } catch (err) {
+      console.error("DB: Supabase connection test failed:", err);
+      throw new Error(`Failed to connect to Supabase: ${err.message}`);
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { error } = await supabase
-      .from('segment_function_executions')  // You would need to create this table
-      .insert({
-        lecture_id: lectureId,
-        segment_number: segmentNumber,
-        execution_time_ms: executionTime,
-        success: success,
-        message: message,
-        executed_at: new Date()
-      });
-
-    if (error) {
-      console.error('Error saving execution data:', error);
-    }
-    */
     
-    // Just returning true for now since we're just logging
+    this.client = supabaseClient;
+    return this.client;
+  },
+  
+  getExistingContent: async function(lectureId: number, segmentNumber: number) {
+    console.log(`DB: Checking for existing content for lecture ${lectureId}, segment ${segmentNumber}`);
+    
+    try {
+      const { data, error } = await this.client
+        .from('segments_content')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .eq('sequence_number', segmentNumber)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is not an error for us
+        console.error("DB: Error fetching existing content:", error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log(`DB: Found existing content with ID ${data.id}`);
+      } else {
+        console.log("DB: No existing content found");
+      }
+      
+      return { data, error: null };
+    } catch (err) {
+      console.error("DB: Unexpected error in getExistingContent:", err);
+      return { data: null, error: err };
+    }
+  },
+  
+  storeContent: async function(content: any) {
+    console.log(`DB: Storing content for lecture ${content.lecture_id}, segment ${content.sequence_number}`);
+    
+    try {
+      // Log content structure without the actual content
+      const contentKeys = Object.keys(content);
+      console.log(`DB: Content object has ${contentKeys.length} keys: ${contentKeys.join(', ')}`);
+      
+      const { data, error } = await this.client
+        .from('segments_content')
+        .upsert(content)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("DB: Error storing content:", error);
+        throw error;
+      }
+      
+      console.log(`DB: Content stored successfully with ID ${data?.id}`);
+      return { data, error: null };
+    } catch (err) {
+      console.error("DB: Unexpected error in storeContent:", err);
+      return { data: null, error: err };
+    }
+  },
+  
+  end: async function() {
+    console.log("DB: Closing connection");
+    // No explicit close needed for Supabase client
+    this.client = null;
     return true;
-  } catch (error) {
-    console.error('Error in saveFunctionExecutionData:', error);
-    // Don't throw the error - we don't want this auxiliary function to break
-    // the main functionality if it fails
-    return false;
   }
-}
+};

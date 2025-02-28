@@ -1,73 +1,161 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { generateSegmentContent } from "./generator.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import * as postgres from 'https://deno.land/x/postgres@v0.14.2/mod.ts'
+import { corsHeaders } from "../_shared/cors.ts"
+import { generateSegmentContent } from "./generator.ts"
+import { validateRequest } from "./validator.ts"
+import { db } from "./db.ts"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+console.log("Segment content generator function started!")
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS for browser preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage = 'english' } = await req.json();
+    console.log("Processing request...")
     
-    // Log the input parameters for debugging
-    console.log('Received parameters:', { 
+    // Parse the request payload
+    let payload
+    try {
+      payload = await req.json()
+      console.log("Request payload received:", JSON.stringify(payload))
+    } catch (err) {
+      console.error("Error parsing request JSON:", err.message)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON payload' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    // Validate the request parameters
+    try {
+      console.log("Validating request parameters...")
+      const validationResult = validateRequest(payload)
+      if (!validationResult.valid) {
+        console.error("Validation failed:", validationResult.error)
+        return new Response(
+          JSON.stringify({ error: `Invalid request: ${validationResult.error}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+      console.log("Request validation successful")
+    } catch (err) {
+      console.error("Unexpected error during validation:", err)
+      return new Response(
+        JSON.stringify({ error: `Validation error: ${err.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    // Extract parameters from the payload
+    const { 
       lectureId, 
       segmentNumber, 
       segmentTitle, 
-      segmentDescription,
-      contentLength: lectureContent ? lectureContent.length : 0,
-      contentLanguage 
-    });
+      segmentDescription, 
+      lectureContent,
+      contentLanguage = 'english'  // Default to English if not specified
+    } = payload
+    
+    console.log(`Processing segment ${segmentNumber} (${segmentTitle}) for lecture ${lectureId}`)
+    console.log(`Content language: ${contentLanguage}`)
+    console.log(`Segment description length: ${segmentDescription ? segmentDescription.length : 0}`)
+    console.log(`Lecture content length: ${lectureContent ? lectureContent.length : 0}`)
 
-    // Validate input parameters
-    if (!lectureId || segmentNumber === undefined || !segmentTitle || !segmentDescription) {
-      console.error('Missing required parameters:', { lectureId, segmentNumber, segmentTitle, segmentDescription });
+    // Initialize database connection
+    try {
+      console.log("Initializing database connection...")
+      await db.connect()
+      console.log("Database connection established")
+    } catch (err) {
+      console.error("Database connection error:", err)
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing required parameters',
-          missingParams: {
-            lectureId: !lectureId,
-            segmentNumber: segmentNumber === undefined,
-            segmentTitle: !segmentTitle,
-            segmentDescription: !segmentDescription
-          }
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+        JSON.stringify({ error: `Database connection error: ${err.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
     }
 
-    // Generate content using the provided parameters
-    const content = await generateSegmentContent({
-      content: lectureContent,
-      title: segmentTitle,
-      description: segmentDescription,
-      language: contentLanguage
-    });
-
-    // Return the generated content
-    return new Response(
-      JSON.stringify({ content }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error in generate-segment-content:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    // Check if content already exists
+    try {
+      console.log("Checking for existing content...")
+      const { data: existingContent } = await db.getExistingContent(lectureId, segmentNumber)
+      
+      if (existingContent) {
+        console.log("Found existing content, returning it")
+        return new Response(
+          JSON.stringify({ success: true, content: existingContent, id: existingContent.id }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
-    );
+      console.log("No existing content found, proceeding with generation")
+    } catch (err) {
+      console.error("Error checking existing content:", err)
+      // Continue with generation if check fails
+    }
+
+    // Generate the content
+    console.log("Starting content generation...")
+    try {
+      const content = await generateSegmentContent({
+        segmentTitle,
+        segmentDescription,
+        lectureContent,
+        contentLanguage
+      })
+      
+      console.log("Content generated successfully")
+      
+      // Insert the generated content into the database
+      try {
+        console.log("Storing generated content in database...")
+        const { data: contentRecord, error: insertError } = await db.storeContent({
+          lecture_id: lectureId,
+          sequence_number: segmentNumber,
+          ...content
+        })
+        
+        if (insertError) {
+          console.error("Error storing content:", insertError)
+          throw insertError
+        }
+        
+        console.log("Content stored successfully with ID:", contentRecord?.id)
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            content: content,
+            id: contentRecord?.id 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (storeErr) {
+        console.error("Error in database storage:", storeErr)
+        throw storeErr
+      }
+    } catch (genErr) {
+      console.error("Content generation error:", genErr)
+      return new Response(
+        JSON.stringify({ error: `Content generation failed: ${genErr.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    } finally {
+      // Close database connection
+      try {
+        await db.end()
+        console.log("Database connection closed")
+      } catch (err) {
+        console.error("Error closing database connection:", err)
+      }
+    }
+  } catch (err) {
+    console.error("Unhandled error in edge function:", err)
+    return new Response(
+      JSON.stringify({ error: `Server error: ${err.message}` }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})
