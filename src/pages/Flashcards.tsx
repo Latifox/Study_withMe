@@ -8,31 +8,23 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
+
 interface Flashcard {
   question: string;
   answer: string;
 }
+
 const Flashcards = () => {
-  const {
-    courseId,
-    lectureId
-  } = useParams();
+  const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [additionalCards, setAdditionalCards] = useState<Flashcard[]>([]);
-  const {
-    data: initialFlashcards,
-    isLoading
-  } = useQuery({
+
+  const { data: initialFlashcards, isLoading } = useQuery({
     queryKey: ['flashcards', lectureId],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('generate-flashcards', {
+      const { data, error } = await supabase.functions.invoke('generate-flashcards', {
         body: {
           lectureId: parseInt(lectureId!)
         }
@@ -53,7 +45,9 @@ const Flashcards = () => {
       }
     }
   });
+
   const allFlashcards = [...(initialFlashcards || []), ...additionalCards];
+
   const handleCardClick = (index: number) => {
     setFlippedCards(prev => {
       const newSet = new Set(prev);
@@ -65,12 +59,10 @@ const Flashcards = () => {
       return newSet;
     });
   };
+
   const generateMoreFlashcards = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('generate-flashcards', {
+      const { data, error } = await supabase.functions.invoke('generate-flashcards', {
         body: {
           lectureId: parseInt(lectureId!),
           count: 3
@@ -90,6 +82,7 @@ const Flashcards = () => {
       });
     }
   };
+
   if (isLoading) {
     return <BackgroundGradient>
         <div className="container mx-auto p-4">
@@ -100,19 +93,18 @@ const Flashcards = () => {
         </div>
       </BackgroundGradient>;
   }
+
   return <BackgroundGradient>
       <div className="container mx-auto p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}`)} className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none shadow-md">
+          <div className="flex items-center mb-8">
+            <Button variant="ghost" onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}`)} className="mr-4 gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none shadow-md">
               <ArrowLeft className="w-4 h-4" />
               Back to Lecture
             </Button>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-purple-500" />
-              <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
-                Flashcards
-              </span>
+              Flashcards
             </h1>
           </div>
 
@@ -138,4 +130,5 @@ const Flashcards = () => {
       </div>
     </BackgroundGradient>;
 };
+
 export default Flashcards;
