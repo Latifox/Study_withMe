@@ -143,7 +143,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
           console.log(`Successfully generated content for segment ${segmentToGenerate.sequence_number}:`, generatedContent);
 
-          // Prepare content for storage
+          // Prepare content for storage with proper type handling
           const contentToStore = {
             lecture_id: numericLectureId,
             sequence_number: segmentToGenerate.sequence_number,
@@ -151,70 +151,67 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             theory_slide_2: generatedContent.content.theory_slide_2 || '',
             quiz_1_type: generatedContent.content.quiz_1_type || 'multiple_choice',
             quiz_1_question: generatedContent.content.quiz_1_question || '',
-            quiz_1_options: generatedContent.content.quiz_1_options || [],
+            quiz_1_options: Array.isArray(generatedContent.content.quiz_1_options) 
+              ? generatedContent.content.quiz_1_options 
+              : [],
             quiz_1_correct_answer: generatedContent.content.quiz_1_correct_answer || '',
             quiz_1_explanation: generatedContent.content.quiz_1_explanation || '',
             quiz_2_type: generatedContent.content.quiz_2_type || 'true_false',
             quiz_2_question: generatedContent.content.quiz_2_question || '',
             quiz_2_correct_answer: generatedContent.content.quiz_2_correct_answer === true || 
-              generatedContent.content.quiz_2_correct_answer === 'true' ? true : false,
+              generatedContent.content.quiz_2_correct_answer === 'true',
             quiz_2_explanation: generatedContent.content.quiz_2_explanation || ''
           };
 
-          // First try an insert (instead of upsert) to avoid potential conflicts
-          const { data: insertedContent, error: insertError } = await supabase
+          // More robust storage approach: First check if entry exists
+          const { data: existingEntry } = await supabase
             .from('segments_content')
-            .insert(contentToStore)
-            .select();
-
-          if (insertError) {
-            console.error(`Error inserting content for segment ${segmentToGenerate.sequence_number}:`, insertError);
+            .select('id')
+            .eq('lecture_id', numericLectureId)
+            .eq('sequence_number', segmentToGenerate.sequence_number)
+            .maybeSingle();
+          
+          let storageResult;
+          
+          if (existingEntry) {
+            // If entry exists, update it
+            console.log(`Entry exists for segment ${segmentToGenerate.sequence_number}, updating...`);
+            storageResult = await supabase
+              .from('segments_content')
+              .update(contentToStore)
+              .eq('id', existingEntry.id)
+              .select();
+          } else {
+            // If no entry exists, insert new one
+            console.log(`No entry exists for segment ${segmentToGenerate.sequence_number}, inserting...`);
+            storageResult = await supabase
+              .from('segments_content')
+              .insert(contentToStore)
+              .select();
+          }
+          
+          // Check result of storage operation
+          if (storageResult.error) {
+            console.error(`Error storing content for segment ${segmentToGenerate.sequence_number}:`, storageResult.error);
             
-            // Try with upsert as a fallback
+            // Try a direct upsert as last resort
             const { data: upsertContent, error: upsertError } = await supabase
               .from('segments_content')
               .upsert(contentToStore)
               .select();
               
             if (upsertError) {
-              console.error(`Both insert and upsert failed for segment ${segmentToGenerate.sequence_number}:`, upsertError);
-              
-              // Try a direct update if both insert and upsert fail
-              const { error: updateError } = await supabase
-                .from('segments_content')
-                .update(contentToStore)
-                .eq('lecture_id', numericLectureId)
-                .eq('sequence_number', segmentToGenerate.sequence_number);
-                
-              if (updateError) {
-                console.error(`All storage attempts failed for segment ${segmentToGenerate.sequence_number}:`, updateError);
-                continue; // Continue with other segments
-              } else {
-                // If update succeeds, fetch the updated content
-                const { data: fetchedContent } = await supabase
-                  .from('segments_content')
-                  .select('*')
-                  .eq('lecture_id', numericLectureId)
-                  .eq('sequence_number', segmentToGenerate.sequence_number)
-                  .single();
-                  
-                if (fetchedContent) {
-                  console.log(`Successfully updated and fetched content for segment ${segmentToGenerate.sequence_number}`);
-                  generatedContents.push(fetchedContent);
-                  existingContentMap.set(segmentToGenerate.sequence_number, fetchedContent);
-                }
-              }
+              console.error(`Final upsert also failed for segment ${segmentToGenerate.sequence_number}:`, upsertError);
+              continue; // Continue with other segments
             } else if (upsertContent && upsertContent.length > 0) {
-              // Add the successfully stored content from upsert
-              console.log(`Successfully upserted content for segment ${segmentToGenerate.sequence_number}`);
+              console.log(`Successfully upserted content for segment ${segmentToGenerate.sequence_number} after prior failures`);
               generatedContents.push(upsertContent[0]);
               existingContentMap.set(segmentToGenerate.sequence_number, upsertContent[0]);
             }
-          } else if (insertedContent && insertedContent.length > 0) {
-            // Add the successfully stored content from insert
-            console.log(`Successfully inserted content for segment ${segmentToGenerate.sequence_number}`);
-            generatedContents.push(insertedContent[0]);
-            existingContentMap.set(segmentToGenerate.sequence_number, insertedContent[0]);
+          } else if (storageResult.data && storageResult.data.length > 0) {
+            console.log(`Successfully stored content for segment ${segmentToGenerate.sequence_number} using primary method`);
+            generatedContents.push(storageResult.data[0]);
+            existingContentMap.set(segmentToGenerate.sequence_number, storageResult.data[0]);
           }
         }
         
