@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
@@ -54,9 +55,10 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
         >
           <Page
             pageNumber={pageNumber}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
+            renderTextLayer={true}
+            renderAnnotationLayer={true}
             width={containerRef?.clientWidth ? containerRef.clientWidth - 64 : undefined}
+            className="pdf-page"
           />
         </Document>
       </div>
