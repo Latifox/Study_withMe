@@ -271,7 +271,7 @@ const QuizConfiguration = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg mt-4"
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-lg mt-4"
                 >
                   Generate Quiz
                 </Button>
