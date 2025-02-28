@@ -143,7 +143,7 @@ const QuizConfiguration = () => {
         
         <Card className="w-full max-w-2xl mx-auto bg-white/20 backdrop-blur-md border border-white/30 shadow-lg rounded-xl">
           <CardContent className="p-8">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <h2 className="text-2xl font-bold mb-6 flex items-center justify-center text-center">
               <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
                 <BookOpen className="w-5 h-5 inline mr-1" />
                 Quiz Configuration
