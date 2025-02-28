@@ -8,8 +8,9 @@ import Viewer, { SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
 import '@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css';
 import * as pdfjs from 'pdfjs-dist';
 
-// Set the worker source path globally
-pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js';
+// Make sure we're using the same version for both API and worker
+// Using version 3.11.174 for both to match the API version mentioned in the error
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 interface PDFViewerProps {
   lectureId?: string;
