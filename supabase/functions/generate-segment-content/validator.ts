@@ -1,4 +1,9 @@
 
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
 export interface SegmentContentRequest {
   lectureId: number;
   segmentNumber: number;
@@ -60,4 +65,66 @@ export function validateRequest(payload: any): { valid: boolean; error?: string 
   
   console.log("Request validation passed successfully");
   return { valid: true };
+}
+
+// Add the missing validateContent function
+export function validateContent(content: any): ValidationResult {
+  const errors: string[] = [];
+  
+  // Check if content is defined
+  if (!content) {
+    return { valid: false, errors: ['Content is undefined or null'] };
+  }
+  
+  // Validate theory slide content
+  if (!content.theory_slide_1 || typeof content.theory_slide_1 !== 'string' || content.theory_slide_1.trim() === '') {
+    errors.push('Theory slide 1 is missing or invalid');
+  }
+  
+  if (!content.theory_slide_2 || typeof content.theory_slide_2 !== 'string' || content.theory_slide_2.trim() === '') {
+    errors.push('Theory slide 2 is missing or invalid');
+  }
+  
+  // Validate quiz 1
+  if (!content.quiz_1_type || typeof content.quiz_1_type !== 'string') {
+    errors.push('Quiz 1 type is missing or invalid');
+  }
+  
+  if (!content.quiz_1_question || typeof content.quiz_1_question !== 'string') {
+    errors.push('Quiz 1 question is missing or invalid');
+  }
+  
+  if (content.quiz_1_type === 'multiple-choice' && (!Array.isArray(content.quiz_1_options) || content.quiz_1_options.length < 2)) {
+    errors.push('Quiz 1 options are missing or invalid for multiple-choice quiz');
+  }
+  
+  if (!content.quiz_1_correct_answer) {
+    errors.push('Quiz 1 correct answer is missing');
+  }
+  
+  if (!content.quiz_1_explanation || typeof content.quiz_1_explanation !== 'string') {
+    errors.push('Quiz 1 explanation is missing or invalid');
+  }
+  
+  // Validate quiz 2
+  if (!content.quiz_2_type || typeof content.quiz_2_type !== 'string') {
+    errors.push('Quiz 2 type is missing or invalid');
+  }
+  
+  if (!content.quiz_2_question || typeof content.quiz_2_question !== 'string') {
+    errors.push('Quiz 2 question is missing or invalid');
+  }
+  
+  if (content.quiz_2_correct_answer === undefined || content.quiz_2_correct_answer === null) {
+    errors.push('Quiz 2 correct answer is missing');
+  }
+  
+  if (!content.quiz_2_explanation || typeof content.quiz_2_explanation !== 'string') {
+    errors.push('Quiz 2 explanation is missing or invalid');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 }
