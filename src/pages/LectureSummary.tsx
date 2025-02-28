@@ -128,7 +128,7 @@ const LectureSummary = () => {
           <Button
             variant="outline"
             onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 bg-white/80 hover:bg-white"
+            className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
