@@ -262,6 +262,7 @@ const QuizConfiguration = () => {
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
+                            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-500 data-[state=checked]:to-indigo-600"
                           />
                         </FormControl>
                       </div>
