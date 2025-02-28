@@ -87,20 +87,18 @@ const UploadedCourses = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((course) => (
                 <Card key={course.id} className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20">
-                  <CardHeader>
-                    <div className="flex justify-between items-start w-full">
-                      <div className="text-left flex-1 mr-4">
-                        <CardTitle className="text-xl text-white mb-1">{course.title}</CardTitle>
-                        <CardDescription className="text-white/70">
-                          Created on {new Date(course.created_at).toLocaleDateString()}
-                        </CardDescription>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <DeleteCourseDialog courseId={course.id} courseTitle={course.title} />
-                      </div>
+                  <CardHeader className="relative pb-2">
+                    <div className="absolute top-4 right-4">
+                      <DeleteCourseDialog courseId={course.id} courseTitle={course.title} />
+                    </div>
+                    <div className="text-center w-full pr-8">
+                      <CardTitle className="text-xl text-white mb-1">{course.title}</CardTitle>
+                      <CardDescription className="text-white/70">
+                        Created on {new Date(course.created_at).toLocaleDateString()}
+                      </CardDescription>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
+                  <CardContent className="space-y-2 pt-4">
                     <Button 
                       className="w-full bg-white/20 hover:bg-white/30 text-white border-white/10"
                       onClick={() => navigate(`/course/${course.id}`)}
