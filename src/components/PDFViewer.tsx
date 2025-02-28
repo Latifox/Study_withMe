@@ -6,6 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Viewer, { SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
 import '@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css';
+import * as pdfjs from 'pdfjs-dist';
+
+// Set the worker source path globally
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js';
 
 interface PDFViewerProps {
   lectureId?: string;
@@ -15,7 +19,7 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
-  const viewerRef = useRef<any>(null);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: pdfUrl, isLoading } = useQuery({
     queryKey: ['lecture-pdf', lectureId],
@@ -38,17 +42,19 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
   });
 
   useEffect(() => {
-    if (viewerRef.current && pageNumber !== 1) {
-      viewerRef.current.getPagesContainer().children[pageNumber - 1].scrollIntoView();
+    if (viewerContainerRef.current && pageNumber > 1) {
+      // Try to find the page elements after they've been rendered
+      const pages = viewerContainerRef.current.querySelectorAll('.rpv-page');
+      if (pages.length >= pageNumber) {
+        pages[pageNumber - 1].scrollIntoView({ behavior: 'smooth' });
+      }
     }
   }, [pageNumber]);
 
-  // Updated to match the DocumentLoadEvent type
+  // Updated to match the DocumentLoadEvent type correctly
   const handleDocumentLoad = (e: any) => {
     if (e && e.doc) {
-      e.doc.getMetadata().then((meta: any) => {
-        setNumPages(e.doc.numPages || 0);
-      });
+      setNumPages(e.doc.numPages || 0);
     }
   };
 
@@ -56,23 +62,15 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
     return <div className="flex justify-center items-center h-full">Loading PDF...</div>;
   }
 
-  // Need to set worker externally instead of as a component
-  if (pdfUrl) {
-    // Set the worker URL globally
-    (window as any).pdfjsWorker = 'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js';
-  }
-
   return (
     <div className="h-full flex flex-col" ref={setContainerRef}>
       <div className="flex-1 overflow-auto flex justify-center">
         {pdfUrl && (
-          <div style={{ height: '100%', width: '100%' }}>
+          <div ref={viewerContainerRef} style={{ height: '100%', width: '100%' }}>
             <Viewer
               fileUrl={pdfUrl}
               onDocumentLoad={handleDocumentLoad}
-              ref={viewerRef}
               defaultScale={SpecialZoomLevel.PageFit}
-              // Remove the custom renderPage prop that was causing errors
             />
           </div>
         )}
