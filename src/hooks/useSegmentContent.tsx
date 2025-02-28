@@ -85,6 +85,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         console.log(`Generating content for segment ${segment.sequence_number}: ${segment.title}`);
         
         try {
+          // Call the edge function only once per segment - don't implement retry logic here
+          // as the edge function should handle its own retries if needed
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke('generate-segment-content', {
             body: {
               lectureId: numericLectureId,
@@ -128,9 +130,11 @@ export const useSegmentContent = (numericLectureId: number | null) => {
           };
 
           // Store the generated content
-          const { error: insertError } = await supabase
+          const { data: storedContent, error: insertError } = await supabase
             .from('segments_content')
-            .upsert(contentToStore);
+            .upsert(contentToStore)
+            .select()
+            .single();
 
           if (insertError) {
             console.error(`Error storing content for segment ${segment.sequence_number}:`, insertError);
@@ -138,10 +142,8 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             return { segments: results };
           }
 
-          results.push({
-            ...contentToStore,
-            id: generatedContent.id
-          });
+          // Add the newly stored content to results
+          results.push(storedContent || contentToStore);
 
         } catch (error) {
           console.error(`Error processing segment ${segment.sequence_number}:`, error);
