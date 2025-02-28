@@ -87,7 +87,7 @@ const LectureChat = () => {
 
   return (
     <BackgroundGradient>
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-4 h-screen">
         <Button 
           variant="ghost" 
           onClick={() => navigate(`/course/${courseId}`)}
@@ -96,11 +96,11 @@ const LectureChat = () => {
           <ArrowLeft className="w-4 h-4" />
           Back to Lectures
         </Button>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-[calc(100vh-2rem)]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[calc(100vh-8rem)]">
+          <div className="h-full">
             <PDFViewer lectureId={lectureId} />
           </div>
-          <div className="h-[calc(100vh-2rem)] bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
+          <div className="h-full bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
             <div className="flex-1 overflow-auto mb-4 px-2">
               <div className="space-y-3">
                 {messages.map((message, index) => (
