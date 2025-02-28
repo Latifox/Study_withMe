@@ -88,14 +88,18 @@ const LectureChat = () => {
   return (
     <BackgroundGradient>
       <div className="container mx-auto h-screen flex flex-col p-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(`/course/${courseId}`)}
-          className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Lectures
-        </Button>
+        <div className="max-w-[1400px] mx-auto">
+          <div className="flex items-center gap-4 mb-8">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Lectures
+            </Button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
           <div className="h-full">
             <PDFViewer lectureId={lectureId} />
