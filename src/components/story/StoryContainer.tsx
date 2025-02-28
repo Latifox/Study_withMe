@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import StoryCompletionScreen from "./StoryCompletionScreen";
 import ContentDisplay from "./content/ContentDisplay";
@@ -39,7 +39,8 @@ export const StoryContainer = ({
   onCorrectAnswer,
   onWrongAnswer
 }: StoryContainerProps) => {
-  const { nodeId } = useParams();
+  const { nodeId, courseId, lectureId } = useParams();
+  const navigate = useNavigate();
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(segmentScores[nodeId || ''] || 0);
 
@@ -92,6 +93,30 @@ export const StoryContainer = ({
     );
   }
 
+  // Function to proceed to the next segment
+  const proceedToNextSegment = () => {
+    const nextSegment = currentSegment + 1;
+    
+    // Check if there is a next segment available
+    if (nextSegment <= storyContent.segments.length) {
+      // Navigate to the next segment
+      navigate(`/course/${courseId}/lecture/${lectureId}/story/content/segment_${nextSegment}`);
+      // Reset step to 0 for the new segment
+      onContinue();
+      toast({
+        title: "Segment Complete!",
+        description: "Moving to the next segment...",
+      });
+    } else {
+      // If this was the last segment, show completion screen
+      setShowCompletionScreen(true);
+      toast({
+        title: "All Segments Complete!",
+        description: "Congratulations on completing all segments!",
+      });
+    }
+  };
+
   if (showCompletionScreen) {
     return <StoryCompletionScreen onBack={() => window.history.back()} />;
   }
@@ -106,13 +131,24 @@ export const StoryContainer = ({
       isSlide={currentStep < 2}
       slideIndex={currentStep}
       questionIndex={currentStep - 2}
-      lectureId={String(currentSegment)}
-      courseId={String(currentSegment)}
+      lectureId={String(lectureId)}
+      courseId={String(courseId)}
       onContinue={onContinue}
       onCorrectAnswer={() => {
         setCurrentScore(prev => prev + 5);
-        setShowCompletionScreen(true);
-        onCorrectAnswer();
+        
+        // Check if this is the final quiz (currentStep === 3)
+        if (currentStep === 3) {
+          // Save the correct answer through the parent handler
+          onCorrectAnswer();
+          
+          // Instead of immediately showing completion, proceed to next segment
+          proceedToNextSegment();
+        } else {
+          // Not the final quiz, continue as usual
+          onCorrectAnswer();
+          onContinue();
+        }
       }}
       onWrongAnswer={onWrongAnswer}
     />
