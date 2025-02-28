@@ -224,7 +224,7 @@ const QuizConfiguration = () => {
                           onChange={(e) => field.onChange(Number(e.target.value))}
                           min={1}
                           max={30}
-                          className="bg-white/50 border-white/40"
+                          className="bg-white/50 border-white/40 border border-black/20"
                         />
                       </FormControl>
                     </FormItem>
@@ -244,7 +244,7 @@ const QuizConfiguration = () => {
                           onChange={(e) => field.onChange(Number(e.target.value))}
                           min={1}
                           max={15}
-                          className="bg-white/50 border-white/40"
+                          className="bg-white/50 border-white/40 border border-black/20"
                         />
                       </FormControl>
                     </FormItem>
