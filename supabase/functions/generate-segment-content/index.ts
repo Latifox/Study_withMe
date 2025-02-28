@@ -1,161 +1,180 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import * as postgres from 'https://deno.land/x/postgres@v0.14.2/mod.ts'
-import { corsHeaders } from "../_shared/cors.ts"
-import { generateSegmentContent } from "./generator.ts"
-import { validateRequest } from "./validator.ts"
-import { db } from "./db.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { validateRequest } from "./validator.ts";
+import { saveSegmentContent } from "./db.ts";
 
-console.log("Segment content generator function started!")
+console.log("Edge function for generating segment content is running!");
+
+async function generateSegmentContent({ segmentTitle, segmentDescription, lectureContent, contentLanguage = 'english' }) {
+  console.log('Starting segment content generation for:', segmentTitle);
+  console.log('Content language:', contentLanguage);
+  
+  // Get OpenAI API key from environment variable
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openAIApiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+  
+  try {
+    // Generate theory content
+    console.log('Generating theory content...');
+    const theoryContent = await generateTheoryContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent, contentLanguage);
+    
+    // Generate quiz content
+    console.log('Generating quiz content...');
+    const quizContent = await generateQuizContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent, contentLanguage);
+    
+    // Combine the results
+    console.log('Content generation completed successfully');
+    return {
+      ...theoryContent,
+      ...quizContent
+    };
+  } catch (error) {
+    console.error('Error generating segment content:', error);
+    throw error;
+  }
+}
+
+async function generateTheoryContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent, contentLanguage) {
+  console.log('Generating theory content for segment:', segmentTitle);
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an educational content generator. Generate theory content in JSON format only. Focus on clear, concise explanations.
+          
+          When creating theory slides, make the content engaging and well-formatted using Markdown syntax:
+          - Use **bold text** for important concepts
+          - Use *italics* for emphasis
+          - Organize information with bulleted lists and numbered lists
+          - Highlight key information using > for blockquotes
+          - Structure content with clear headings (using # for titles)
+          - Use examples to illustrate complex ideas
+          
+          The content will be rendered using React-Markdown, so ensure proper Markdown formatting.`
+        },
+        {
+          role: 'user',
+          content: `Generate theory content for a segment with title "${segmentTitle}" and description "${segmentDescription}" in ${contentLanguage} language. 
+          Use this lecture content as reference: "${lectureContent.substring(0, 2000)}..."
+          
+          Return ONLY a JSON object with the following format:
+          {
+            "theory_slide_1": "First slide content explaining core concepts with proper Markdown formatting",
+            "theory_slide_2": "Second slide content with examples and applications using Markdown formatting"
+          }`
+        }
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+  return JSON.parse(content);
+}
+
+async function generateQuizContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent, contentLanguage) {
+  console.log('Generating quiz content for segment:', segmentTitle);
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an educational quiz generator. Generate quiz questions in JSON format only. Focus on testing understanding of key concepts.'
+        },
+        {
+          role: 'user',
+          content: `Generate two quiz questions for a segment with title "${segmentTitle}" and description "${segmentDescription}" in ${contentLanguage} language. 
+          Use this lecture content as reference: "${lectureContent.substring(0, 2000)}..."
+          
+          Return ONLY a JSON object with the following format:
+          {
+            "quiz_1_type": "multiple-choice",
+            "quiz_1_question": "Question text",
+            "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+            "quiz_1_correct_answer": "Correct option text",
+            "quiz_1_explanation": "Explanation for the correct answer",
+            "quiz_2_type": "true-false",
+            "quiz_2_question": "Question text",
+            "quiz_2_correct_answer": true or false,
+            "quiz_2_explanation": "Explanation for the correct answer"
+          }`
+        }
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+  return JSON.parse(content);
+}
 
 serve(async (req) => {
-  // Handle CORS for browser preflight requests
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
 
   try {
-    console.log("Processing request...")
+    // Validate and extract request parameters
+    const { lectureId, segmentNumber, segmentTitle, segmentDescription, lectureContent, contentLanguage } = await validateRequest(req);
     
-    // Parse the request payload
-    let payload
-    try {
-      payload = await req.json()
-      console.log("Request payload received:", JSON.stringify(payload))
-    } catch (err) {
-      console.error("Error parsing request JSON:", err.message)
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON payload' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Validate the request parameters
-    try {
-      console.log("Validating request parameters...")
-      const validationResult = validateRequest(payload)
-      if (!validationResult.valid) {
-        console.error("Validation failed:", validationResult.error)
-        return new Response(
-          JSON.stringify({ error: `Invalid request: ${validationResult.error}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        )
-      }
-      console.log("Request validation successful")
-    } catch (err) {
-      console.error("Unexpected error during validation:", err)
-      return new Response(
-        JSON.stringify({ error: `Validation error: ${err.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Extract parameters from the payload
-    const { 
-      lectureId, 
-      segmentNumber, 
+    console.log(`Generating content for lecture ${lectureId}, segment ${segmentNumber}: ${segmentTitle}`);
+    
+    // Generate content using OpenAI
+    const content = await generateSegmentContent({ 
       segmentTitle, 
       segmentDescription, 
       lectureContent,
-      contentLanguage = 'english'  // Default to English if not specified
-    } = payload
+      contentLanguage
+    });
     
-    console.log(`Processing segment ${segmentNumber} (${segmentTitle}) for lecture ${lectureId}`)
-    console.log(`Content language: ${contentLanguage}`)
-    console.log(`Segment description length: ${segmentDescription ? segmentDescription.length : 0}`)
-    console.log(`Lecture content length: ${lectureContent ? lectureContent.length : 0}`)
-
-    // Initialize database connection
-    try {
-      console.log("Initializing database connection...")
-      await db.connect()
-      console.log("Database connection established")
-    } catch (err) {
-      console.error("Database connection error:", err)
-      return new Response(
-        JSON.stringify({ error: `Database connection error: ${err.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
-    }
-
-    // Check if content already exists
-    try {
-      console.log("Checking for existing content...")
-      const { data: existingContent } = await db.getExistingContent(lectureId, segmentNumber)
-      
-      if (existingContent) {
-        console.log("Found existing content, returning it")
-        return new Response(
-          JSON.stringify({ success: true, content: existingContent, id: existingContent.id }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      console.log("No existing content found, proceeding with generation")
-    } catch (err) {
-      console.error("Error checking existing content:", err)
-      // Continue with generation if check fails
-    }
-
-    // Generate the content
-    console.log("Starting content generation...")
-    try {
-      const content = await generateSegmentContent({
-        segmentTitle,
-        segmentDescription,
-        lectureContent,
-        contentLanguage
-      })
-      
-      console.log("Content generated successfully")
-      
-      // Insert the generated content into the database
-      try {
-        console.log("Storing generated content in database...")
-        const { data: contentRecord, error: insertError } = await db.storeContent({
-          lecture_id: lectureId,
-          sequence_number: segmentNumber,
-          ...content
-        })
-        
-        if (insertError) {
-          console.error("Error storing content:", insertError)
-          throw insertError
-        }
-        
-        console.log("Content stored successfully with ID:", contentRecord?.id)
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            content: content,
-            id: contentRecord?.id 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      } catch (storeErr) {
-        console.error("Error in database storage:", storeErr)
-        throw storeErr
-      }
-    } catch (genErr) {
-      console.error("Content generation error:", genErr)
-      return new Response(
-        JSON.stringify({ error: `Content generation failed: ${genErr.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
-    } finally {
-      // Close database connection
-      try {
-        await db.end()
-        console.log("Database connection closed")
-      } catch (err) {
-        console.error("Error closing database connection:", err)
-      }
-    }
-  } catch (err) {
-    console.error("Unhandled error in edge function:", err)
-    return new Response(
-      JSON.stringify({ error: `Server error: ${err.message}` }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    console.log(`Content generation successful for lecture ${lectureId}, segment ${segmentNumber}`);
+    
+    // Store in database
+    const savedContent = await saveSegmentContent({
+      lectureId, 
+      segmentNumber, 
+      content
+    });
+    
+    return new Response(JSON.stringify({
+      id: savedContent.id,
+      content
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+  } catch (error) {
+    console.error('Error in segment content generation:', error.message);
+    
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    });
   }
-})
+});
