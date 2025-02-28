@@ -16,7 +16,7 @@ interface ContentDisplayProps {
     quiz_1_explanation: string;
     quiz_2_type: string;
     quiz_2_question: string;
-    quiz_2_correct_answer: boolean;
+    quiz_2_correct_answer: boolean | string;
     quiz_2_explanation: string;
   };
   currentSegment: number;
