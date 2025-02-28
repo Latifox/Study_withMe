@@ -14,7 +14,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw new Error('Invalid parameters');
       }
 
-      // First get all segments to understand what we need to generate
+      // Step 1: Get all segments to understand what we need to generate
       const { data: segmentData, error: segmentError } = await supabase
         .from('lecture_segments')
         .select('sequence_number, title, segment_description')
@@ -33,18 +33,24 @@ export const useSegmentContent = (numericLectureId: number | null) => {
 
       console.log(`Found ${segmentData.length} segments for lecture ${numericLectureId}`);
 
-      // Get the lecture content
-      const { data: lecture } = await supabase
+      // Step 2: Get the lecture content needed for generation
+      const { data: lecture, error: lectureError } = await supabase
         .from('lectures')
         .select('content')
         .eq('id', numericLectureId)
         .single();
+      
+      if (lectureError) {
+        console.error('Error fetching lecture content:', lectureError);
+        throw lectureError;
+      }
 
       if (!lecture?.content) {
+        console.error('No lecture content found');
         throw new Error('No lecture content found');
       }
 
-      // Get the content language from AI config if it exists
+      // Step 3: Get the content language preference if it exists
       const { data: aiConfig } = await supabase
         .from('lecture_ai_configs')
         .select('content_language')
@@ -54,7 +60,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
       const contentLanguage = aiConfig?.content_language || 'english';
       console.log('Using content language:', contentLanguage);
 
-      // Check if content already exists for segments
+      // Step 4: Check what content already exists in the database
       const { data: existingContent, error: contentError } = await supabase
         .from('segments_content')
         .select('*')
@@ -65,7 +71,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         throw contentError;
       }
       
-      // Create a map of existing content by sequence number for quick lookup
+      // Create an easy lookup map of existing content by sequence number
       const existingContentMap = new Map();
       if (existingContent && existingContent.length > 0) {
         console.log(`Found ${existingContent.length} existing content entries`);
@@ -76,48 +82,34 @@ export const useSegmentContent = (numericLectureId: number | null) => {
         console.log('No existing content found, will generate for all segments');
       }
       
-      // If we have content for all segments, return it immediately
+      // Step 5: Return early if all segments already have content
       if (existingContent && existingContent.length >= segmentData.length) {
-        console.log('Found existing content for all segments, returning immediately');
-        return { segments: existingContent };
+        console.log('All segments already have content, no generation needed');
+        const sortedContent = [...existingContent].sort((a, b) => a.sequence_number - b.sequence_number);
+        return { segments: sortedContent };
       }
       
-      // Find all segments that need content generation
-      const segmentsToGenerate = segmentData.filter(segment => 
-        !existingContentMap.has(segment.sequence_number)
-      );
+      // Step 6: Process segments that need content generation
+      console.log('Starting content generation for segments without content');
+      const allContent = [...(existingContent || [])];
       
-      console.log(`Need to generate content for ${segmentsToGenerate.length} segments:`, 
-        segmentsToGenerate.map(s => s.sequence_number));
-      
-      // Array to store all generated content
-      const allContent = existingContent ? [...existingContent] : [];
-      
-      try {
-        // Process each segment sequentially
-        for (const segment of segmentsToGenerate) {
-          console.log(`Processing segment ${segment.sequence_number}: ${segment.title}`);
-          
-          // Skip if we already have content for this segment (double-check)
-          if (existingContentMap.has(segment.sequence_number)) {
-            console.log(`Already have content for segment ${segment.sequence_number}, skipping`);
-            continue;
-          }
-          
-          if (!segment.title || !segment.segment_description) {
-            console.error(`Missing title or description for segment ${segment.sequence_number}`, segment);
-            toast({
-              title: "Error with segment data",
-              description: `Missing title or description for segment ${segment.sequence_number}`,
-              variant: "destructive",
-            });
-            continue;
-          }
-
-          // Generate content for this segment
-          console.log(`Generating content for segment ${segment.sequence_number}`);
-          
-          // Call the edge function to generate content
+      // Process each segment one by one
+      for (const segment of segmentData) {
+        // Skip segments that already have content
+        if (existingContentMap.has(segment.sequence_number)) {
+          console.log(`Segment ${segment.sequence_number} already has content, skipping generation`);
+          continue;
+        }
+        
+        console.log(`Generating content for segment ${segment.sequence_number}: ${segment.title}`);
+        
+        if (!segment.title || !segment.segment_description) {
+          console.error(`Missing title or description for segment ${segment.sequence_number}`);
+          continue;
+        }
+        
+        try {
+          // Generate content using the edge function
           const { data: generatedContent, error: generationError } = await supabase.functions.invoke(
             'generate-segment-content', 
             {
@@ -147,9 +139,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             continue;
           }
 
-          console.log(`Successfully generated content for segment ${segment.sequence_number}`);
-
-          // Prepare content for storage
+          // Prepare the content for storage
           const contentToStore = {
             lecture_id: numericLectureId,
             sequence_number: segment.sequence_number,
@@ -169,114 +159,78 @@ export const useSegmentContent = (numericLectureId: number | null) => {
             quiz_2_explanation: generatedContent.content.quiz_2_explanation || ''
           };
 
-          let storageSuccessful = false;
-          let storedContent = null;
-
-          // Try all three methods of storage in sequence
+          console.log(`Storing content for segment ${segment.sequence_number}`);
           
-          // 1. Try direct insert first
-          console.log(`Attempting INSERT for segment ${segment.sequence_number}`);
+          // Try to insert the content directly
           const { data: insertedContent, error: insertError } = await supabase
             .from('segments_content')
             .insert(contentToStore)
-            .select();
+            .select()
+            .single();
           
-          if (!insertError && insertedContent && insertedContent.length > 0) {
-            console.log(`Successfully inserted content for segment ${segment.sequence_number}`);
-            storedContent = insertedContent[0];
-            storageSuccessful = true;
-          } else if (insertError) {
-            console.error(`Insert error for segment ${segment.sequence_number}:`, insertError);
+          if (insertError) {
+            console.error(`Failed to insert content for segment ${segment.sequence_number}:`, insertError);
             
-            // 2. Try upsert if insert fails
-            console.log(`Attempting UPSERT for segment ${segment.sequence_number}`);
-            const { data: upsertContent, error: upsertError } = await supabase
+            // If insert fails, try to update in case it exists but wasn't found earlier
+            const { data: updatedContent, error: updateError } = await supabase
               .from('segments_content')
-              .upsert(contentToStore)
-              .select();
+              .update(contentToStore)
+              .eq('lecture_id', numericLectureId)
+              .eq('sequence_number', segment.sequence_number)
+              .select()
+              .single();
             
-            if (!upsertError && upsertContent && upsertContent.length > 0) {
-              console.log(`Successfully upserted content for segment ${segment.sequence_number}`);
-              storedContent = upsertContent[0];
-              storageSuccessful = true;
-            } else if (upsertError) {
-              console.error(`Upsert error for segment ${segment.sequence_number}:`, upsertError);
-              
-              // 3. Try update as last resort
-              console.log(`Attempting UPDATE for segment ${segment.sequence_number}`);
-              const { data: updatedContent, error: updateError } = await supabase
-                .from('segments_content')
-                .update(contentToStore)
-                .eq('lecture_id', numericLectureId)
-                .eq('sequence_number', segment.sequence_number)
-                .select();
-              
-              if (!updateError && updatedContent && updatedContent.length > 0) {
-                console.log(`Successfully updated content for segment ${segment.sequence_number}`);
-                storedContent = updatedContent[0];
-                storageSuccessful = true;
-              } else if (updateError) {
-                console.error(`Update error for segment ${segment.sequence_number}:`, updateError);
-              }
+            if (updateError) {
+              console.error(`Failed to update content for segment ${segment.sequence_number}:`, updateError);
+              toast({
+                title: "Storage error",
+                description: `Could not save content for segment ${segment.sequence_number}`,
+                variant: "destructive",
+              });
+              continue;
             }
-          }
-          
-          if (storageSuccessful && storedContent) {
-            allContent.push(storedContent);
-            existingContentMap.set(segment.sequence_number, storedContent);
             
-            console.log(`Content for segment ${segment.sequence_number} successfully stored`);
+            allContent.push(updatedContent);
+            console.log(`Updated content for segment ${segment.sequence_number}`);
           } else {
-            console.error(`Failed to store content for segment ${segment.sequence_number} after all attempts`);
-            toast({
-              title: "Storage error",
-              description: `Could not save content for segment ${segment.sequence_number}`,
-              variant: "destructive",
-            });
+            allContent.push(insertedContent);
+            console.log(`Inserted content for segment ${segment.sequence_number}`);
           }
           
-          // Add a short delay between segments to prevent race conditions
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-        
-        // Final check to make sure we have all segments
-        if (allContent.length < segmentData.length) {
-          console.log(`WARNING: Only generated ${allContent.length} segments out of ${segmentData.length}`);
+          // Add a delay between segments to prevent rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // Fetch all content one last time to ensure we have the latest data
-          const { data: finalContent, error: finalError } = await supabase
-            .from('segments_content')
-            .select('*')
-            .eq('lecture_id', numericLectureId)
-            .order('sequence_number');
-            
-          if (!finalError && finalContent && finalContent.length > 0) {
-            console.log(`Final fetch returned ${finalContent.length} segments`);
-            return { segments: finalContent };
-          }
+        } catch (error) {
+          console.error(`Error processing segment ${segment.sequence_number}:`, error);
+          toast({
+            title: "Error",
+            description: `Failed to process segment ${segment.sequence_number}`,
+            variant: "destructive",
+          });
         }
-        
-        // Sort segments by sequence number before returning
-        allContent.sort((a, b) => a.sequence_number - b.sequence_number);
-        
-        console.log(`Returning ${allContent.length} segments of content`);
-        return { segments: allContent };
-
-      } catch (error) {
-        console.error('Error processing segments:', error);
-        toast({
-          title: "Error generating content",
-          description: "An unexpected error occurred. Please try again later.",
-          variant: "destructive",
-        });
-        
-        // Return whatever content we have so far
-        if (allContent.length > 0) {
-          return { segments: allContent };
-        }
-        
-        throw error;
       }
+      
+      // Step 7: Final verification to ensure we have all content
+      if (allContent.length < segmentData.length) {
+        console.log(`Only generated ${allContent.length} out of ${segmentData.length} segments`);
+        
+        // One final fetch to get the latest content
+        const { data: finalContent, error: finalError } = await supabase
+          .from('segments_content')
+          .select('*')
+          .eq('lecture_id', numericLectureId)
+          .order('sequence_number');
+          
+        if (!finalError && finalContent && finalContent.length > 0) {
+          console.log(`Final fetch returned ${finalContent.length} segments`);
+          return { segments: finalContent };
+        }
+      }
+      
+      // Sort the content by sequence number
+      allContent.sort((a, b) => a.sequence_number - b.sequence_number);
+      console.log(`Returning ${allContent.length} segments of content`);
+      return { segments: allContent };
     },
     retry: 1,
     staleTime: Infinity, 
@@ -284,7 +238,7 @@ export const useSegmentContent = (numericLectureId: number | null) => {
     enabled: !!numericLectureId,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false, 
+    refetchOnReconnect: false,
     refetchInterval: false,
   });
 };
