@@ -106,7 +106,7 @@ const QuizConfiguration = () => {
               </p>
               <Button onClick={handleBack} variant="outline">
                 <ArrowLeft className="mr-2" />
-                Back to Course
+                Back to Lectures
               </Button>
             </CardContent>
           </Card>
@@ -135,10 +135,10 @@ const QuizConfiguration = () => {
         <Button
           variant="ghost"
           onClick={handleBack}
-          className="mb-4 bg-white/70 backdrop-blur-sm hover:bg-white/90"
+          className="mb-4 gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-black text-black"
         >
           <ArrowLeft className="mr-2" />
-          Back to Course
+          Back to Lectures
         </Button>
         
         <Card className="w-full max-w-2xl mx-auto bg-white/20 backdrop-blur-md border border-white/30 shadow-lg rounded-xl">
@@ -280,3 +280,4 @@ const QuizConfiguration = () => {
 };
 
 export default QuizConfiguration;
+
