@@ -97,15 +97,20 @@ const Flashcards = () => {
   return <BackgroundGradient>
       <div className="container mx-auto p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center mb-8">
-            <Button variant="ghost" onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}`)} className="mr-4 gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none shadow-md">
+          <div className="flex items-center justify-start space-x-4 mb-8">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}`)} 
+              className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-md flex items-center gap-2"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back to Lecture
             </Button>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-purple-500" />
-              Flashcards
-            </h1>
+            
+            <div className="flex items-center gap-2 text-2xl font-bold">
+              <BookOpen className="w-6 h-6 text-purple-500" />
+              <span className="text-purple-500">Flashcards</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -122,7 +127,10 @@ const Flashcards = () => {
           </div>
 
           <div className="flex justify-center">
-            <Button onClick={generateMoreFlashcards} className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none shadow-md font-medium px-6 py-2" size="lg">
+            <Button 
+              onClick={generateMoreFlashcards} 
+              className="bg-purple-500 hover:bg-purple-600 text-white font-medium px-6 py-2 rounded-md"
+            >
               Generate More Flashcards
             </Button>
           </div>
