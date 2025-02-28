@@ -43,8 +43,13 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
     }
   }, [pageNumber]);
 
-  const handleDocumentLoad = (totalPages: number) => {
-    setNumPages(totalPages);
+  // Updated to match the DocumentLoadEvent type
+  const handleDocumentLoad = (e: any) => {
+    if (e && e.doc) {
+      e.doc.getMetadata().then((meta: any) => {
+        setNumPages(e.doc.numPages || 0);
+      });
+    }
   };
 
   if (isLoading) {
@@ -52,7 +57,6 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
   }
 
   // Need to set worker externally instead of as a component
-  // The Worker component usage was incorrect in the previous version
   if (pdfUrl) {
     // Set the worker URL globally
     (window as any).pdfjsWorker = 'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js';
@@ -68,14 +72,7 @@ const PDFViewer = ({ lectureId }: PDFViewerProps) => {
               onDocumentLoad={handleDocumentLoad}
               ref={viewerRef}
               defaultScale={SpecialZoomLevel.PageFit}
-              renderPage={(props) => {
-                const { index } = props;
-                // When a new page is rendered, update our page number state if needed
-                if (index === pageNumber - 1) {
-                  setTimeout(() => props.pageRef?.current?.scrollIntoView(), 0);
-                }
-                return props.canvasLayer;
-              }}
+              // Remove the custom renderPage prop that was causing errors
             />
           </div>
         )}
