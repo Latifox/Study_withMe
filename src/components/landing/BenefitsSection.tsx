@@ -37,7 +37,7 @@ const BenefitsSection = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
-        <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-purple-100 transform transition-all hover:scale-105">
+        <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-8 rounded-xl shadow-lg border border-gray-200 transform transition-all hover:scale-105">
           <div className="flex items-center mb-6">
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
               <GraduationCap className="h-6 w-6 text-purple-600" />
@@ -58,7 +58,7 @@ const BenefitsSection = () => {
           </ul>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-purple-100 transform transition-all hover:scale-105">
+        <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-8 rounded-xl shadow-lg border border-gray-200 transform transition-all hover:scale-105">
           <div className="flex items-center mb-6">
             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
               <School className="h-6 w-6 text-indigo-600" />
