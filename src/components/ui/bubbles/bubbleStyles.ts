@@ -22,9 +22,48 @@ export const bubbleAnimationStyles = `
   transition-property: background, box-shadow, opacity;
 }
 
-/* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */
-[data-bubble-type="purple"].hide-behind-cards {
+/* All bubbles fade out at feature section level */
+[data-bubble-type].hide-behind-cards,
+[data-bubble-type="star"].fade-transform-effect,
+[data-bubble-type="flame"].fade-transform-effect {
   transition: opacity 0.5s ease-out;
+}
+
+/* Features section level fade out - expanded range to ensure complete coverage */
+[data-bubble-type].hide-behind-cards[style*="top: 65"],
+[data-bubble-type].hide-behind-cards[style*="top: 66"],
+[data-bubble-type].hide-behind-cards[style*="top: 67"],
+[data-bubble-type].hide-behind-cards[style*="top: 68"],
+[data-bubble-type].hide-behind-cards[style*="top: 69"],
+[data-bubble-type].hide-behind-cards[style*="top: 70"],
+[data-bubble-type].hide-behind-cards[style*="top: 71"],
+[data-bubble-type].hide-behind-cards[style*="top: 72"],
+[data-bubble-type].hide-behind-cards[style*="top: 73"],
+[data-bubble-type].hide-behind-cards[style*="top: 74"],
+[data-bubble-type].hide-behind-cards[style*="top: 75"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 65"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 66"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 67"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 68"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 69"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 70"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 71"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 72"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 73"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 74"],
+[data-bubble-type="star"].fade-transform-effect[style*="top: 75"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 65"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 66"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 67"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 68"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 69"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 70"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 71"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 72"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 73"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 74"],
+[data-bubble-type="flame"].fade-transform-effect[style*="top: 75"] {
+  opacity: 0 !important; /* Force complete invisibility */
 }
 
 /* Target all purple bubbles in the range where cards appear with more inclusive selectors */
