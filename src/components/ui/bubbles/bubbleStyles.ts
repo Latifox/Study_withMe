@@ -22,6 +22,66 @@ export const bubbleAnimationStyles = `
   transition-property: background, box-shadow, opacity;
 }
 
+/* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */
+[data-bubble-type="purple"].hide-behind-cards {
+  transition: opacity 0.5s ease-out;
+}
+
+/* Target all purple bubbles in the range where cards appear with more inclusive selectors */
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 15"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 16"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 17"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 18"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 19"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 20"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 21"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 22"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 23"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 24"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 25"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 26"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 27"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 28"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 29"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 30"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 31"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 32"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 33"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 34"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 35"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 36"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 37"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 38"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 39"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 40"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 41"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 42"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 43"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 44"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 45"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 46"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 47"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 48"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 49"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 50"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 51"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 52"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 53"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 54"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 55"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 56"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 57"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 58"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 59"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 60"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 61"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 62"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 63"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 64"],
+[data-bubble-type="purple"].hide-behind-cards[style*="top: 65"] {
+  opacity: 0 !important; /* Force complete invisibility */
+}
+
 /* Star transitions - allow pass through */
 .bubble-star.star-transition.pass-through-left:hover {
   box-shadow: 0 8px 15px rgba(255, 204, 0, 0.3);

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Bubble } from './types';
+import PurpleBubble from './PurpleBubble';
 import StarBubble from './StarBubble';
 import FlameBubble from './FlameBubble';
 
@@ -13,11 +14,15 @@ const BubbleRenderer: React.FC<BubbleRendererProps> = ({ bubbles }) => {
     <>
       {bubbles.map((bubble) => {
         // Apply appropriate CSS classes based on bubble type
-        const additionalClasses = bubble.type === 'star'
-          ? 'bubble-star star-transition pass-through-left'
-          : 'bubble-flame flame-transition pass-through-right';
+        const additionalClasses = bubble.type === 'purple' 
+          ? 'bubble-purple hide-behind-cards'  // Apply hide-behind-cards to all purple bubbles
+          : bubble.type === 'star'
+            ? 'bubble-star star-transition pass-through-left'
+            : 'bubble-flame flame-transition pass-through-right';
         
         switch (bubble.type) {
+          case 'purple':
+            return <PurpleBubble key={bubble.id} bubble={bubble} additionalClasses={additionalClasses} />;
           case 'star':
             return <StarBubble key={bubble.id} bubble={bubble} additionalClasses={additionalClasses} />;
           case 'flame':
