@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -27,22 +27,51 @@ import {
 import useEmblaCarousel from "embla-carousel-react";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 
+/** Generate an array of "bubble" configs for a single column. */
+function generateBubbles(count) {
+  const bubbleColors = [
+    "bg-purple-300/70",
+    "bg-indigo-300/70",
+    "bg-pink-300/70",
+    "bg-blue-300/70",
+    "bg-violet-400/60",
+    "bg-fuchsia-300/70",
+    "bg-sky-300/70",
+    "bg-teal-300/70",
+    "bg-purple-400/70",
+    "bg-indigo-400/70",
+    "bg-pink-400/70",
+    "bg-blue-400/70",
+  ];
+  return Array(count)
+    .fill(0)
+    .map(() => {
+      const colorClass = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+      const size = 30 + Math.random() * 40; // random 30-70px
+      const duration = 7 + Math.random() * 3; // 7-10s for faster flow
+      const delay = Math.random() * 5; // 0-5s
+      const horizontalOffset = Math.random() * 50; // random left offset within the column
+      return { colorClass, size, duration, delay, horizontalOffset };
+    });
+}
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isHovering, setIsHovering] = useState(false);
 
-  // Embla Carousel
+  // Embla carousel
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
     dragFree: true,
     containScroll: "trimSnaps",
   });
+
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
 
-  // Auto-scroll the Embla carousel
+  // Auto-scroll the carousel
   useEffect(() => {
     if (!emblaApi) return;
     const autoScrollInterval = setInterval(() => {
@@ -60,14 +89,14 @@ const LandingPage = () => {
     navigate("/auth?tab=register");
   };
 
-  // Bubble Refs for the static (big) bubbles
-  const bubbleRefs = useRef([]);
-  useEffect(() => {
-    // Maintain exactly 16 refs for the big bubbles
-    bubbleRefs.current = bubbleRefs.current.slice(0, 16);
-  }, []);
+  // Bubbles: 2 columns on left, 2 columns on right
+  // You can tweak the "count" for more/less bubbles per column
+  const leftColumn1Bubbles = generateBubbles(6);
+  const leftColumn2Bubbles = generateBubbles(6);
+  const rightColumn1Bubbles = generateBubbles(6);
+  const rightColumn2Bubbles = generateBubbles(6);
 
-  // Example data for features, benefits, etc.
+  // Content arrays
   const features = [
     {
       icon: <Users className="h-6 w-6 text-purple-600" />,
@@ -157,7 +186,13 @@ const LandingPage = () => {
       price: "$0",
       period: "forever",
       description: "Basic features to get you started",
-      features: ["5 AI chat messages per day", "Basic study plans", "Limited highlights & summaries", "Standard quiz generation", "Basic flashcards"],
+      features: [
+        "5 AI chat messages per day",
+        "Basic study plans",
+        "Limited highlights & summaries",
+        "Standard quiz generation",
+        "Basic flashcards",
+      ],
       ctaText: "Get Started Now",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
@@ -203,44 +238,84 @@ const LandingPage = () => {
     },
   ];
 
-  // Continuously flowing bubbles (smaller, repeated)
-  const bubbleColors = [
-    "bg-purple-300/70",
-    "bg-indigo-300/70",
-    "bg-pink-300/70",
-    "bg-blue-300/70",
-    "bg-violet-400/60",
-    "bg-fuchsia-300/70",
-    "bg-sky-300/70",
-    "bg-teal-300/70",
-    "bg-purple-400/70",
-    "bg-indigo-400/70",
-    "bg-pink-400/70",
-    "bg-blue-400/70",
-  ];
-
-  const leftFlowingBubbles = Array(6)
-    .fill(0)
-    .map((_, index) => ({
-      size: 40 + Math.random() * 40,
-      color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)],
-      left: 5 + Math.random() * 25 + "%",
-      delay: index,
-    }));
-
-  const rightFlowingBubbles = Array(6)
-    .fill(0)
-    .map((_, index) => ({
-      size: 40 + Math.random() * 40,
-      color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)],
-      right: 5 + Math.random() * 25 + "%",
-      delay: index,
-    }));
-
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Background Gradient & Mesh */}
-      <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100">
+    <div className="min-h-screen relative overflow-visible">
+      {/* 
+        Fixed container for bubble columns 
+        (two columns on left, two on right)
+      */}
+      <div className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none">
+        {/* Column 1 (left side) */}
+        <div className="absolute top-0 bottom-0 left-0 w-[80px] overflow-hidden">
+          {leftColumn1Bubbles.map((bubble, i) => (
+            <div
+              key={`left1-${i}`}
+              className={`absolute rounded-full ${bubble.colorClass}`}
+              style={{
+                width: bubble.size,
+                height: bubble.size,
+                left: `${bubble.horizontalOffset}%`,
+                animation: `columnFlow ${bubble.duration}s linear infinite`,
+                animationDelay: `${bubble.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Column 2 (left side) */}
+        <div className="absolute top-0 bottom-0 left-[80px] w-[80px] overflow-hidden">
+          {leftColumn2Bubbles.map((bubble, i) => (
+            <div
+              key={`left2-${i}`}
+              className={`absolute rounded-full ${bubble.colorClass}`}
+              style={{
+                width: bubble.size,
+                height: bubble.size,
+                left: `${bubble.horizontalOffset}%`,
+                animation: `columnFlow ${bubble.duration}s linear infinite`,
+                animationDelay: `${bubble.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Column 1 (right side) */}
+        <div className="absolute top-0 bottom-0 right-0 w-[80px] overflow-hidden">
+          {rightColumn1Bubbles.map((bubble, i) => (
+            <div
+              key={`right1-${i}`}
+              className={`absolute rounded-full ${bubble.colorClass}`}
+              style={{
+                width: bubble.size,
+                height: bubble.size,
+                left: `${bubble.horizontalOffset}%`, // we still use "left" offset inside the column
+                animation: `columnFlow ${bubble.duration}s linear infinite`,
+                animationDelay: `${bubble.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Column 2 (right side) */}
+        <div className="absolute top-0 bottom-0 right-[80px] w-[80px] overflow-hidden">
+          {rightColumn2Bubbles.map((bubble, i) => (
+            <div
+              key={`right2-${i}`}
+              className={`absolute rounded-full ${bubble.colorClass}`}
+              style={{
+                width: bubble.size,
+                height: bubble.size,
+                left: `${bubble.horizontalOffset}%`,
+                animation: `columnFlow ${bubble.duration}s linear infinite`,
+                animationDelay: `${bubble.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Background gradient + mesh (z-0 or z-1) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100 z-0">
         <div className="absolute inset-0 opacity-10">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -251,114 +326,11 @@ const LandingPage = () => {
             <rect width="100%" height="100%" fill="url(#grid)" className="text-purple-500" />
           </svg>
         </div>
-
-        {/* Static bubbles on the left */}
-        <div
-          ref={(el) => (bubbleRefs.current[0] = el)}
-          className="animate-bubble top-10 left-20 w-72 h-72 bg-purple-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[1] = el)}
-          className="animate-bubble top-20 left-[10%] w-72 h-72 bg-indigo-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[2] = el)}
-          className="animate-bubble top-30 left-40 w-72 h-72 bg-pink-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[3] = el)}
-          className="animate-bubble top-40 left-1/3 w-56 h-56 bg-blue-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[4] = el)}
-          className="animate-bubble top-50 left-1/4 w-64 h-64 bg-violet-400/60 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[5] = el)}
-          className="animate-bubble top-60 left-1/5 w-48 h-48 bg-fuchsia-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[6] = el)}
-          className="animate-bubble top-70 left-10 w-52 h-52 bg-sky-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[7] = el)}
-          className="animate-bubble top-80 left-[15%] w-60 h-60 bg-teal-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-
-        {/* Static bubbles on the right */}
-        <div
-          ref={(el) => (bubbleRefs.current[8] = el)}
-          className="animate-bubble top-15 right-20 w-72 h-72 bg-purple-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[9] = el)}
-          className="animate-bubble top-25 right-[10%] w-72 h-72 bg-indigo-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[10] = el)}
-          className="animate-bubble top-35 right-40 w-72 h-72 bg-pink-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[11] = el)}
-          className="animate-bubble top-45 right-1/3 w-56 h-56 bg-blue-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[12] = el)}
-          className="animate-bubble top-55 right-1/4 w-64 h-64 bg-violet-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[13] = el)}
-          className="animate-bubble top-65 right-1/5 w-48 h-48 bg-fuchsia-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[14] = el)}
-          className="animate-bubble top-75 right-10 w-52 h-52 bg-sky-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-        <div
-          ref={(el) => (bubbleRefs.current[15] = el)}
-          className="animate-bubble top-85 right-[15%] w-60 h-60 bg-teal-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        ></div>
-
-        {/* Continuously flowing smaller bubbles (left side) */}
-        {leftFlowingBubbles.map((bubble, index) => (
-          <div
-            key={`left-flow-${index}`}
-            className="bubble-flow z-0 rounded-full mix-blend-multiply blur-xl opacity-70"
-            style={{
-              width: `${bubble.size}px`,
-              height: `${bubble.size}px`,
-              left: bubble.left,
-              animationDelay: `-${bubble.delay * 5}s`,
-              backgroundImage: `radial-gradient(circle at center, ${bubble.color.replace(
-                "/70",
-                "/90"
-              )}, transparent)`,
-            }}
-          ></div>
-        ))}
-
-        {/* Continuously flowing smaller bubbles (right side) */}
-        {rightFlowingBubbles.map((bubble, index) => (
-          <div
-            key={`right-flow-${index}`}
-            className="bubble-flow z-0 rounded-full mix-blend-multiply blur-xl opacity-70"
-            style={{
-              width: `${bubble.size}px`,
-              height: `${bubble.size}px`,
-              right: bubble.right,
-              animationDelay: `-${bubble.delay * 5 + 2.5}s`,
-              backgroundImage: `radial-gradient(circle at center, ${bubble.color.replace(
-                "/70",
-                "/90"
-              )}, transparent)`,
-            }}
-          ></div>
-        ))}
       </div>
 
+      {/* Main content (above the bubbles) */}
       <div className="relative z-10">
-        {/* Nav Bar */}
+        {/* Navbar */}
         <nav className="px-8 py-4 flex justify-between items-center backdrop-blur-sm bg-white/30">
           <div className="flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-purple-600" />
@@ -411,7 +383,7 @@ const LandingPage = () => {
           </Button>
         </div>
 
-        {/* Gamification Section */}
+        {/* Gamification */}
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="text-center mb-12 bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl border-2 border-purple-300">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -420,8 +392,8 @@ const LandingPage = () => {
               </span>
             </h2>
             <p className="text-lg text-gray-700">
-              Our gamified learning approach keeps you motivated and tracks your progress through your educational
-              journey
+              Our gamified learning approach keeps you motivated and tracks your progress through your
+              educational journey
             </p>
           </div>
 
@@ -577,50 +549,18 @@ const LandingPage = () => {
       </div>
 
       {/* 
-        Inline keyframes & classes for the bubble animations.
-        If you're using Next.js, replace <style> with <style jsx global> or move these to a global CSS file.
+        Inline keyframes for faster downward flow in an infinite loop.
+        Move to a global CSS file if needed. 
       */}
       <style>
         {`
-          @keyframes fall {
+          @keyframes columnFlow {
             0% {
-              transform: translateY(0);
-              opacity: 1;
-            }
-            90% {
-              transform: translateY(100vh);
-              opacity: 1;
+              transform: translateY(-120%);
             }
             100% {
-              transform: translateY(0);
-              opacity: 0;
+              transform: translateY(120%);
             }
-          }
-          @keyframes flowDown {
-            0% {
-              transform: translateY(-50px);
-              opacity: 0;
-            }
-            50% {
-              transform: translateY(50vh);
-              opacity: 1;
-            }
-            100% {
-              transform: translateY(100vh);
-              opacity: 0;
-            }
-          }
-
-          /* For the big static bubbles */
-          .animate-bubble {
-            position: absolute;
-            animation: fall 20s linear infinite;
-          }
-
-          /* For the small continuously flowing bubbles */
-          .bubble-flow {
-            position: absolute;
-            animation: flowDown 15s linear infinite;
           }
         `}
       </style>
