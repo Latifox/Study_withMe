@@ -9,7 +9,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
   const [bubbles, setBubbles] = useState<Array<{
     id: number;
     size: number;
-    position: { left?: string; right?: string; top?: string; bottom?: string };
+    position: { left?: string; right?: string; top: string };
     opacity: number;
     gradient: string;
     animationDuration: string;
@@ -21,25 +21,25 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       const newBubbles = [];
       const totalBubbles = 40; // Total number of bubbles (20 per side)
       
-      // Define more sophisticated gradients for bubbles
+      // Define more subtle gradients for bubbles
       const bubbleGradients = [
-        "bg-gradient-to-br from-purple-300 to-indigo-500",
-        "bg-gradient-to-r from-pink-300 via-purple-400 to-indigo-400",
-        "bg-gradient-to-tr from-blue-300 via-sky-400 to-purple-400",
-        "bg-gradient-to-r from-indigo-300 via-purple-400 to-fuchsia-400",
-        "bg-gradient-to-br from-violet-300 via-purple-400 to-fuchsia-500",
-        "bg-gradient-to-r from-sky-300 via-blue-400 to-indigo-500",
-        "bg-gradient-to-tr from-fuchsia-300 via-pink-400 to-purple-500",
-        "bg-gradient-to-br from-pink-200 via-pink-400 to-pink-500",
-        "bg-gradient-to-r from-purple-200 via-purple-400 to-purple-600",
+        "bg-gradient-to-br from-purple-200 to-indigo-300",
+        "bg-gradient-to-r from-pink-200 via-purple-200 to-indigo-200",
+        "bg-gradient-to-tr from-blue-200 via-sky-200 to-purple-200",
+        "bg-gradient-to-r from-indigo-200 via-purple-200 to-fuchsia-200",
+        "bg-gradient-to-br from-violet-200 via-purple-200 to-fuchsia-300",
+        "bg-gradient-to-r from-sky-200 via-blue-200 to-indigo-300",
+        "bg-gradient-to-tr from-fuchsia-200 via-pink-200 to-purple-300",
+        "bg-gradient-to-br from-pink-100 via-pink-200 to-pink-300",
+        "bg-gradient-to-r from-purple-100 via-purple-200 to-purple-400",
       ];
       
-      // Generate bubbles for left side - positioned in designated columns
+      // Generate bubbles for left side
       for (let i = 0; i < totalBubbles / 2; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
-        const leftPos = Math.random() * 15; // Random position between 0-15%
-        const bottom = -100 - Math.random() * 100; // Start below viewport
-        const opacity = 0.3 + Math.random() * 0.4; // Random opacity between 0.3-0.7
+        const leftPos = Math.random() * 15; // Random position between 0-15% from left
+        const topPos = Math.random() * 15 - 20; // Start above viewport or just entering
+        const opacity = 0.2 + Math.random() * 0.3; // Random opacity between 0.2-0.5
         const gradientIndex = Math.floor(Math.random() * bubbleGradients.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         
@@ -48,7 +48,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           size,
           position: { 
             left: `${leftPos}%`, 
-            bottom: `${bottom}%` 
+            top: `${topPos}%` 
           },
           opacity,
           gradient: bubbleGradients[gradientIndex],
@@ -56,12 +56,12 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         });
       }
       
-      // Generate bubbles for right side - positioned in designated columns
+      // Generate bubbles for right side
       for (let i = totalBubbles / 2; i < totalBubbles; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
-        const rightPos = Math.random() * 15; // Random position between 0-15%
-        const bottom = -100 - Math.random() * 100; // Start below viewport
-        const opacity = 0.3 + Math.random() * 0.4; // Random opacity between 0.3-0.7
+        const rightPos = Math.random() * 15; // Random position between 0-15% from right
+        const topPos = Math.random() * 15 - 20; // Start above viewport or just entering
+        const opacity = 0.2 + Math.random() * 0.3; // Random opacity between 0.2-0.5
         const gradientIndex = Math.floor(Math.random() * bubbleGradients.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         
@@ -70,7 +70,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           size,
           position: { 
             right: `${rightPos}%`, 
-            bottom: `${bottom}%` 
+            top: `${topPos}%` 
           },
           opacity,
           gradient: bubbleGradients[gradientIndex],
@@ -85,20 +85,23 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/30 to-indigo-50/30"></div>
+      
       {/* Bubbles */}
       {bubbles.map((bubble) => (
         <div
           key={bubble.id}
-          className={`absolute rounded-full ${bubble.gradient} bubble-flow shadow-md`}
+          className={`absolute rounded-full ${bubble.gradient} bubble-flow shadow-sm`}
           style={{
             width: `${bubble.size}px`,
             height: `${bubble.size}px`,
             left: bubble.position.left,
             right: bubble.position.right,
-            bottom: bubble.position.bottom,
+            top: bubble.position.top,
             opacity: bubble.opacity,
-            animation: `bubble-flow ${bubble.animationDuration} linear infinite`,
+            animation: `bubble-down ${bubble.animationDuration} linear infinite`,
           }}
         />
       ))}
@@ -111,19 +114,19 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       {/* Add keyframes for bubble flow animation */}
       <style>
         {`
-        @keyframes bubble-flow {
+        @keyframes bubble-down {
           0% {
             transform: translateY(0);
             opacity: 0;
           }
           10% {
-            opacity: 0.7;
+            opacity: 0.5;
           }
-          90% {
-            opacity: 0.7;
+          85% {
+            opacity: 0.5;
           }
           100% {
-            transform: translateY(-120vh);
+            transform: translateY(120vh);
             opacity: 0;
           }
         }
