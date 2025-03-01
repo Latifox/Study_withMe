@@ -14,6 +14,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
     gradient: string;
     animationDuration: string;
     transitionDuration: string;
+    type: 'purple' | 'star' | 'flame'; // Added bubble type property
   }>>([]);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       const totalBubbles = 80; // Increased for better coverage
       
       // Define more bold gradients with increased saturation for top section (purple/indigo)
-      const topGradients = [
+      const purpleGradients = [
         "bg-gradient-to-br from-purple-400 to-indigo-500",
         "bg-gradient-to-r from-purple-500 to-indigo-400",
         "bg-gradient-to-tr from-indigo-400 to-purple-600",
@@ -60,19 +61,13 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         "bg-gradient-to-r from-orange-500 via-red-500 to-orange-600",
       ];
       
-      // Transition threshold positions (% of screen height)
-      const transitionThreshold = {
-        starBegin: 20, // Start transitioning to star color at 20% of screen height
-        flameBegin: 20, // Start transitioning to flame color at 20% of screen height
-      };
-      
       // Generate bubbles for left side (top section - purple/indigo)
       for (let i = 0; i < totalBubbles / 4; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
         const leftPos = Math.random() * 15; // Random position between 0-15% from left
         const topPos = Math.random() * 5 - 20; // Start above viewport or just entering
         const opacity = 0.5 + Math.random() * 0.3; // Random opacity between 0.5-0.8
-        const gradientIndex = Math.floor(Math.random() * topGradients.length);
+        const gradientIndex = Math.floor(Math.random() * purpleGradients.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         const transitionDuration = `${1.5 + Math.random()}s`; // Random transition between 1.5-2.5s
         
@@ -84,9 +79,10 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
             top: `${topPos}%` 
           },
           opacity,
-          gradient: topGradients[gradientIndex],
+          gradient: purpleGradients[gradientIndex],
           animationDuration,
-          transitionDuration
+          transitionDuration,
+          type: 'purple' // Mark as purple bubble
         });
       }
       
@@ -96,7 +92,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         const rightPos = Math.random() * 15; // Random position between 0-15% from right
         const topPos = Math.random() * 5 - 20; // Start above viewport or just entering
         const opacity = 0.5 + Math.random() * 0.3; // Random opacity between 0.5-0.8
-        const gradientIndex = Math.floor(Math.random() * topGradients.length);
+        const gradientIndex = Math.floor(Math.random() * purpleGradients.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         const transitionDuration = `${1.5 + Math.random()}s`; // Random transition between 1.5-2.5s
         
@@ -108,23 +104,24 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
             top: `${topPos}%` 
           },
           opacity,
-          gradient: topGradients[gradientIndex],
+          gradient: purpleGradients[gradientIndex],
           animationDuration,
-          transitionDuration
+          transitionDuration,
+          type: 'purple' // Mark as purple bubble
         });
       }
       
-      // Generate bubbles for left side (middle to bottom section - transition to star yellow)
+      // Generate bubbles for left side (Star bubbles)
       for (let i = totalBubbles / 2; i < 3 * totalBubbles / 4; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
         const leftPos = Math.random() * 15; // Random position between 0-15% from left
         const topPos = Math.random() * 40 + 15; // Middle to bottom section positioning
         const opacity = 0.5 + Math.random() * 0.3; // Random opacity between 0.5-0.8
-        const gradientIndex = Math.floor(Math.random() * topGradients.length);
+        const starGradientIndex = Math.floor(Math.random() * starGradients.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration
         const transitionDuration = `${1.5 + Math.random()}s`; // Random transition between 1.5-2.5s
-        
-        // Start with top gradients but will transition to star gradients via CSS animations
+
+        // Create a star bubble with initial purple gradient that will transition
         newBubbles.push({
           id: i,
           size,
@@ -133,23 +130,24 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
             top: `${topPos}%` 
           },
           opacity,
-          gradient: topGradients[gradientIndex],
+          gradient: purpleGradients[Math.floor(Math.random() * purpleGradients.length)], // Start with purple
           animationDuration,
-          transitionDuration
+          transitionDuration,
+          type: 'star' // Mark as star bubble
         });
       }
       
-      // Generate bubbles for right side (middle to bottom section - transition to flame red)
+      // Generate bubbles for right side (Flame bubbles)
       for (let i = 3 * totalBubbles / 4; i < totalBubbles; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
         const rightPos = Math.random() * 15; // Random position between 0-15% from right
         const topPos = Math.random() * 40 + 15; // Middle to bottom section positioning
         const opacity = 0.5 + Math.random() * 0.3; // Random opacity between 0.5-0.8
-        const gradientIndex = Math.floor(Math.random() * topGradients.length);
+        const flameGradientIndex = Math.floor(Math.random() * flameGradients.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration
         const transitionDuration = `${1.5 + Math.random()}s`; // Random transition between 1.5-2.5s
         
-        // Start with top gradients but will transition to flame gradients via CSS animations
+        // Create a flame bubble with initial purple gradient that will transition
         newBubbles.push({
           id: i,
           size,
@@ -158,9 +156,10 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
             top: `${topPos}%` 
           },
           opacity,
-          gradient: topGradients[gradientIndex],
+          gradient: purpleGradients[Math.floor(Math.random() * purpleGradients.length)], // Start with purple
           animationDuration,
-          transitionDuration
+          transitionDuration,
+          type: 'flame' // Mark as flame bubble
         });
       }
       
@@ -180,14 +179,17 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         // Determine if this is a left or right bubble
         const isLeftBubble = bubble.position.left !== undefined;
         
-        // Get the star or flame gradients based on position
-        const targetGradients = isLeftBubble ? 'starGradients' : 'flameGradients';
-        const bubbleClass = isLeftBubble ? 'bubble-transition-star' : 'bubble-transition-flame';
+        // Apply appropriate CSS classes based on bubble type
+        const additionalClasses = bubble.type === 'purple' 
+          ? 'bubble-purple fade-at-cards'
+          : bubble.type === 'star'
+            ? 'bubble-star star-transition'
+            : 'bubble-flame flame-transition';
         
         return (
           <div
             key={bubble.id}
-            className={`absolute rounded-full ${bubble.gradient} bubble-flow ${bubbleClass} shadow-lg`}
+            className={`absolute rounded-full ${bubble.gradient} bubble-flow ${additionalClasses} shadow-lg`}
             style={{
               width: `${bubble.size}px`,
               height: `${bubble.size}px`,
@@ -198,7 +200,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
               animation: `bubble-down ${bubble.animationDuration} linear infinite`,
               transition: `all ${bubble.transitionDuration} ease-in-out`,
             }}
-            data-initial-gradient={bubble.gradient}
+            data-bubble-type={bubble.type}
           />
         );
       })}
@@ -228,74 +230,144 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           }
         }
         
-        /* Define star gradients for left-side bubbles */
-        .bubble-transition-star {
+        /* Base transition properties */
+        .bubble-flow {
           transition-property: background, box-shadow, opacity;
         }
         
-        .bubble-transition-star:hover {
+        /* Purple bubbles fade behind cards at icon sections */
+        .bubble-purple.fade-at-cards[style*="top: 20"],
+        .bubble-purple.fade-at-cards[style*="top: 21"],
+        .bubble-purple.fade-at-cards[style*="top: 22"],
+        .bubble-purple.fade-at-cards[style*="top: 23"],
+        .bubble-purple.fade-at-cards[style*="top: 24"],
+        .bubble-purple.fade-at-cards[style*="top: 25"],
+        .bubble-purple.fade-at-cards[style*="top: 26"],
+        .bubble-purple.fade-at-cards[style*="top: 27"],
+        .bubble-purple.fade-at-cards[style*="top: 28"],
+        .bubble-purple.fade-at-cards[style*="top: 29"],
+        .bubble-purple.fade-at-cards[style*="top: 30"],
+        .bubble-purple.fade-at-cards[style*="top: 31"],
+        .bubble-purple.fade-at-cards[style*="top: 32"],
+        .bubble-purple.fade-at-cards[style*="top: 33"],
+        .bubble-purple.fade-at-cards[style*="top: 34"],
+        .bubble-purple.fade-at-cards[style*="top: 35"],
+        .bubble-purple.fade-at-cards[style*="top: 36"],
+        .bubble-purple.fade-at-cards[style*="top: 37"],
+        .bubble-purple.fade-at-cards[style*="top: 38"],
+        .bubble-purple.fade-at-cards[style*="top: 39"],
+        .bubble-purple.fade-at-cards[style*="top: 40"],
+        .bubble-purple.fade-at-cards[style*="top: 41"],
+        .bubble-purple.fade-at-cards[style*="top: 42"],
+        .bubble-purple.fade-at-cards[style*="top: 43"],
+        .bubble-purple.fade-at-cards[style*="top: 44"],
+        .bubble-purple.fade-at-cards[style*="top: 45"] {
+          opacity: 0 !important;
+          transition: opacity 1.5s ease-out;
+        }
+        
+        /* Star transitions */
+        .bubble-star.star-transition:hover {
           box-shadow: 0 8px 15px rgba(255, 204, 0, 0.3);
         }
         
-        /* At position thresholds, apply transition for left bubbles (Star) */
-        .bubble-flow.bubble-transition-star[style*="top: 20"] {
+        /* Star bubbles at specified positions transition to yellow/amber */
+        .bubble-star.star-transition[style*="top: 20"],
+        .bubble-star.star-transition[style*="top: 21"],
+        .bubble-star.star-transition[style*="top: 22"],
+        .bubble-star.star-transition[style*="top: 23"],
+        .bubble-star.star-transition[style*="top: 24"] {
           background: linear-gradient(to bottom right, #ffd700, #ffaa00);
           box-shadow: 0 4px 12px rgba(255, 204, 0, 0.25);
+          opacity: 0.7;
         }
         
-        .bubble-flow.bubble-transition-star[style*="top: 21"],
-        .bubble-flow.bubble-transition-star[style*="top: 22"],
-        .bubble-flow.bubble-transition-star[style*="top: 23"],
-        .bubble-flow.bubble-transition-star[style*="top: 24"],
-        .bubble-flow.bubble-transition-star[style*="top: 25"],
-        .bubble-flow.bubble-transition-star[style*="top: 26"],
-        .bubble-flow.bubble-transition-star[style*="top: 27"],
-        .bubble-flow.bubble-transition-star[style*="top: 28"],
-        .bubble-flow.bubble-transition-star[style*="top: 29"] {
+        .bubble-star.star-transition[style*="top: 25"],
+        .bubble-star.star-transition[style*="top: 26"],
+        .bubble-star.star-transition[style*="top: 27"],
+        .bubble-star.star-transition[style*="top: 28"],
+        .bubble-star.star-transition[style*="top: 29"] {
           background: linear-gradient(to bottom right, #ffd700, #ffaa00);
           box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
+          opacity: 0.75;
         }
         
-        .bubble-flow.bubble-transition-star[style*="top: 3"],
-        .bubble-flow.bubble-transition-star[style*="top: 4"],
-        .bubble-flow.bubble-transition-star[style*="top: 5"] {
+        .bubble-star.star-transition[style*="top: 30"],
+        .bubble-star.star-transition[style*="top: 31"],
+        .bubble-star.star-transition[style*="top: 32"],
+        .bubble-star.star-transition[style*="top: 33"],
+        .bubble-star.star-transition[style*="top: 34"],
+        .bubble-star.star-transition[style*="top: 35"] {
           background: linear-gradient(to bottom right, #ffcc00, #ff9900);
           box-shadow: 0 4px 12px rgba(255, 180, 0, 0.35);
+          opacity: 0.8;
         }
         
-        /* Define flame gradients for right-side bubbles */
-        .bubble-transition-flame {
-          transition-property: background, box-shadow, opacity;
+        .bubble-star.star-transition[style*="top: 36"],
+        .bubble-star.star-transition[style*="top: 37"],
+        .bubble-star.star-transition[style*="top: 38"],
+        .bubble-star.star-transition[style*="top: 39"],
+        .bubble-star.star-transition[style*="top: 40"],
+        .bubble-star.star-transition[style*="top: 41"],
+        .bubble-star.star-transition[style*="top: 42"],
+        .bubble-star.star-transition[style*="top: 43"],
+        .bubble-star.star-transition[style*="top: 44"],
+        .bubble-star.star-transition[style*="top: 45"] {
+          background: linear-gradient(to bottom right, #ffbc00, #ff8800);
+          box-shadow: 0 4px 12px rgba(255, 150, 0, 0.4);
+          opacity: 0.85;
         }
         
-        .bubble-transition-flame:hover {
+        /* Flame transitions */
+        .bubble-flame.flame-transition:hover {
           box-shadow: 0 8px 15px rgba(255, 80, 0, 0.3);
         }
         
-        /* At position thresholds, apply transition for right bubbles (Flame) */
-        .bubble-flow.bubble-transition-flame[style*="top: 20"] {
+        /* Flame bubbles at specified positions transition to red/orange */
+        .bubble-flame.flame-transition[style*="top: 20"],
+        .bubble-flame.flame-transition[style*="top: 21"],
+        .bubble-flame.flame-transition[style*="top: 22"],
+        .bubble-flame.flame-transition[style*="top: 23"],
+        .bubble-flame.flame-transition[style*="top: 24"] {
           background: linear-gradient(to bottom right, #ff4500, #ff7800);
           box-shadow: 0 4px 12px rgba(255, 80, 0, 0.25);
+          opacity: 0.7;
         }
         
-        .bubble-flow.bubble-transition-flame[style*="top: 21"],
-        .bubble-flow.bubble-transition-flame[style*="top: 22"],
-        .bubble-flow.bubble-transition-flame[style*="top: 23"],
-        .bubble-flow.bubble-transition-flame[style*="top: 24"],
-        .bubble-flow.bubble-transition-flame[style*="top: 25"],
-        .bubble-flow.bubble-transition-flame[style*="top: 26"],
-        .bubble-flow.bubble-transition-flame[style*="top: 27"],
-        .bubble-flow.bubble-transition-flame[style*="top: 28"],
-        .bubble-flow.bubble-transition-flame[style*="top: 29"] {
+        .bubble-flame.flame-transition[style*="top: 25"],
+        .bubble-flame.flame-transition[style*="top: 26"],
+        .bubble-flame.flame-transition[style*="top: 27"],
+        .bubble-flame.flame-transition[style*="top: 28"],
+        .bubble-flame.flame-transition[style*="top: 29"] {
           background: linear-gradient(to bottom right, #ff4500, #ff7800);
           box-shadow: 0 4px 12px rgba(255, 80, 0, 0.3);
+          opacity: 0.75;
         }
         
-        .bubble-flow.bubble-transition-flame[style*="top: 3"],
-        .bubble-flow.bubble-transition-flame[style*="top: 4"],
-        .bubble-flow.bubble-transition-flame[style*="top: 5"] {
+        .bubble-flame.flame-transition[style*="top: 30"],
+        .bubble-flame.flame-transition[style*="top: 31"],
+        .bubble-flame.flame-transition[style*="top: 32"],
+        .bubble-flame.flame-transition[style*="top: 33"],
+        .bubble-flame.flame-transition[style*="top: 34"],
+        .bubble-flame.flame-transition[style*="top: 35"] {
           background: linear-gradient(to bottom right, #ff3300, #ff6600);
           box-shadow: 0 4px 12px rgba(255, 60, 0, 0.35);
+          opacity: 0.8;
+        }
+        
+        .bubble-flame.flame-transition[style*="top: 36"],
+        .bubble-flame.flame-transition[style*="top: 37"],
+        .bubble-flame.flame-transition[style*="top: 38"],
+        .bubble-flame.flame-transition[style*="top: 39"],
+        .bubble-flame.flame-transition[style*="top: 40"],
+        .bubble-flame.flame-transition[style*="top: 41"],
+        .bubble-flame.flame-transition[style*="top: 42"],
+        .bubble-flame.flame-transition[style*="top: 43"],
+        .bubble-flame.flame-transition[style*="top: 44"],
+        .bubble-flame.flame-transition[style*="top: 45"] {
+          background: linear-gradient(to bottom right, #ff2500, #ff5500);
+          box-shadow: 0 4px 12px rgba(255, 40, 0, 0.4);
+          opacity: 0.85;
         }
         `}
       </style>
