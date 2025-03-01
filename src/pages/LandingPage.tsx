@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -29,15 +30,22 @@ const LandingPage = () => {
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
+      const viewportHeight = window.innerHeight;
       
       bubbleRefs.current.forEach((bubble, index) => {
         if (bubble) {
+          // Calculate the bubble's position relative to the viewport
+          const bubbleRect = bubble.getBoundingClientRect();
+          const bubbleTop = bubbleRect.top;
+          const bubbleBottom = bubbleRect.bottom;
+          
+          // Calculate scroll-based movement (different speeds for different bubbles)
           const speed = 0.05 + (index % 3) * 0.02;
           const yPos = scrollY * speed;
-          
           bubble.style.transform = `translateY(${-yPos}px)`;
           
-          if (scrollY > 100 && !bubble.classList.contains('bubble-bounce')) {
+          // Check if bubble is entering viewport from the top
+          if (bubbleTop < viewportHeight && bubbleTop > 0 && !bubble.classList.contains('bubble-bounce')) {
             bubble.classList.add('bubble-bounce');
             
             setTimeout(() => {
@@ -48,39 +56,10 @@ const LandingPage = () => {
       });
     };
 
-    const handleMouseMove = (e) => {
-      if (!backgroundRef.current) return;
-      
-      const { clientX, clientY } = e;
-      const { width, height } = backgroundRef.current.getBoundingClientRect();
-      
-      const xPos = (clientX / width - 0.5) * 2;
-      const yPos = (clientY / height - 0.5) * 2;
-      
-      bubbleRefs.current.forEach((bubble, index) => {
-        if (bubble) {
-          const sensitivity = 15 + (index % 5) * 5;
-          const xMove = xPos * sensitivity;
-          const yMove = yPos * sensitivity;
-          
-          const currentTransform = bubble.style.transform || '';
-          const translateRegex = /translateY\([^)]+\)/;
-          
-          const newTransform = currentTransform.match(translateRegex) 
-            ? currentTransform.replace(translateRegex, `translateY(${translateRegex.exec(currentTransform)[0].slice(11, -1)}) translateX(${xMove}px)`) 
-            : `translateX(${xMove}px) translateY(${yMove}px)`;
-            
-          bubble.style.transform = newTransform;
-        }
-      });
-    };
-
     window.addEventListener('scroll', handleScroll);
-    document.addEventListener('mousemove', handleMouseMove);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
@@ -239,7 +218,11 @@ const LandingPage = () => {
     'bg-violet-400/60',
     'bg-fuchsia-300/70',
     'bg-sky-300/70',
-    'bg-teal-300/70'
+    'bg-teal-300/70',
+    'bg-purple-400/70',
+    'bg-indigo-400/70',
+    'bg-pink-400/70',
+    'bg-blue-400/70'
   ];
 
   return (
@@ -256,38 +239,57 @@ const LandingPage = () => {
           </svg>
         </div>
         
+        {/* Original bubbles with updated positioning and sizing */}
         <div 
           ref={el => bubbleRefs.current[0] = el}
-          className="bubble parallax-bubble animate-bubble bubble-1 top-20 left-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-1 top-20 left-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[1] = el}
-          className="bubble parallax-bubble animate-bubble bubble-2 top-40 right-20 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-2 top-40 right-20 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[2] = el}
-          className="bubble parallax-bubble animate-bubble bubble-3 -bottom-8 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-3 -bottom-8 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         
         <div 
           ref={el => bubbleRefs.current[3] = el}
-          className="bubble parallax-bubble animate-bubble bubble-4 top-60 left-1/3 w-56 h-56 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-4 top-60 left-1/3 w-56 h-56 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[4] = el}
-          className="bubble parallax-bubble animate-bubble bubble-5 bottom-1/4 right-1/4 w-64 h-64 bg-violet-400 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-5 bottom-1/4 right-1/4 w-64 h-64 bg-violet-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[5] = el}
-          className="bubble parallax-bubble animate-bubble bubble-6 top-1/3 right-1/3 w-48 h-48 bg-fuchsia-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-6 top-1/3 right-1/3 w-48 h-48 bg-fuchsia-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[6] = el}
-          className="bubble parallax-bubble animate-bubble bubble-1 bottom-60 left-10 w-52 h-52 bg-sky-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-1 bottom-60 left-10 w-52 h-52 bg-sky-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[7] = el}
-          className="bubble parallax-bubble animate-bubble bubble-2 bottom-40 right-10 w-60 h-60 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-40"
+          className="bubble animate-bubble bubble-2 bottom-40 right-10 w-60 h-60 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        ></div>
+        
+        {/* Additional bubbles with varied sizes and positions */}
+        <div 
+          ref={el => bubbleRefs.current.push(el)}
+          className="bubble animate-bubble bubble-3 top-1/2 left-1/4 w-80 h-80 bg-purple-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        ></div>
+        <div 
+          ref={el => bubbleRefs.current.push(el)}
+          className="bubble animate-bubble bubble-4 top-1/3 right-1/5 w-64 h-64 bg-indigo-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        ></div>
+        <div 
+          ref={el => bubbleRefs.current.push(el)}
+          className="bubble animate-bubble bubble-5 bottom-1/3 left-1/5 w-56 h-56 bg-pink-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+        ></div>
+        <div 
+          ref={el => bubbleRefs.current.push(el)}
+          className="bubble animate-bubble bubble-6 bottom-1/2 right-1/4 w-48 h-48 bg-blue-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
       </div>
       
