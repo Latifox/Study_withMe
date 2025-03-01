@@ -39,7 +39,7 @@ const GamificationSection = () => {
             className={`${element.gradient} p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 max-w-xs mx-auto w-full`}
           >
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-white/20 p-3 rounded-full flex items-center justify-center shadow-lg">
+              <div className={`${index === 0 ? 'bg-purple-600' : 'bg-orange-500'} p-3 rounded-full flex items-center justify-center shadow-lg`}>
                 {element.icon}
               </div>
             </div>
