@@ -10,51 +10,64 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
     id: number;
     size: number;
     color: string;
-    position: string;
+    position: { left?: string; right?: string; top: string };
     delay: number;
   }>>([]);
 
   // Generate bubbles on component mount
   useEffect(() => {
     const bubbleColors = [
-      'rgba(111, 207, 151, 0.7)',
-      'rgba(86, 180, 211, 0.7)',
-      'rgba(123, 104, 238, 0.7)',
-      'rgba(240, 128, 128, 0.7)',
-      'rgba(173, 216, 230, 0.7)',
-      'rgba(255, 182, 193, 0.7)',
+      'rgba(111, 207, 151, 0.7)',  // Light green
+      'rgba(86, 180, 211, 0.7)',   // Light blue
+      'rgba(123, 104, 238, 0.7)',  // Medium purple
+      'rgba(240, 128, 128, 0.7)',  // Light coral
+      'rgba(173, 216, 230, 0.7)',  // Light blue
+      'rgba(255, 182, 193, 0.7)',  // Light pink
+      'rgba(147, 112, 219, 0.7)',  // Medium purple
+      'rgba(135, 206, 235, 0.7)',  // Sky blue
     ];
     
     const generateBubbles = () => {
       const newBubbles = [];
-      // Generate 24 bubbles - 12 for left side, 12 for right side
-      for (let i = 0; i < 24; i++) {
-        const size = 30 + Math.random() * 60; // Random size between 30-90px
+      
+      // Generate bubbles for left side
+      for (let i = 0; i < 14; i++) {
+        const size = 25 + Math.random() * 70; // Random size between 25-95px
         const color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+        const leftPos = 2 + Math.random() * 25; // Random position between 2-27%
+        const topPos = Math.random() * 100; // Random initial vertical position
         
-        // Left side bubbles
-        if (i < 12) {
-          const leftPosition = 5 + Math.random() * 30; // Random position between 5-35%
-          newBubbles.push({
-            id: i,
-            size,
-            color,
-            position: `left: ${leftPosition}%;`,
-            delay: i % 6 // Create 6 different delay groups
-          });
-        } 
-        // Right side bubbles
-        else {
-          const rightPosition = 5 + Math.random() * 30; // Random position between 5-35%
-          newBubbles.push({
-            id: i,
-            size,
-            color,
-            position: `right: ${rightPosition}%;`,
-            delay: i % 6 // Create 6 different delay groups
-          });
-        }
+        newBubbles.push({
+          id: i,
+          size,
+          color,
+          position: { 
+            left: `${leftPos}%`, 
+            top: `${topPos}%` 
+          },
+          delay: i % 7 // Create 7 different delay groups
+        });
       }
+      
+      // Generate bubbles for right side
+      for (let i = 14; i < 28; i++) {
+        const size = 25 + Math.random() * 70; // Random size between 25-95px
+        const color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+        const rightPos = 2 + Math.random() * 25; // Random position between 2-27%
+        const topPos = Math.random() * 100; // Random initial vertical position
+        
+        newBubbles.push({
+          id: i,
+          size,
+          color,
+          position: { 
+            right: `${rightPos}%`, 
+            top: `${topPos}%` 
+          },
+          delay: i % 7 // Create 7 different delay groups
+        });
+      }
+      
       setBubbles(newBubbles);
     };
 
@@ -97,13 +110,18 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         {bubbles.map((bubble) => (
           <div
             key={bubble.id}
-            className={`bubble-flow flow-${bubble.delay + 1}`}
+            className={`bubble-animate flow-${bubble.delay + 1}`}
             style={{
+              position: 'absolute',
               width: `${bubble.size}px`,
               height: `${bubble.size}px`,
               backgroundColor: bubble.color,
-              [bubble.position.split(':')[0]]: bubble.position.split(':')[1].trim(),
-              animationDelay: `-${bubble.delay * 5}s`
+              borderRadius: '50%',
+              filter: 'blur(5px)',
+              ...(bubble.position.left && { left: bubble.position.left }),
+              ...(bubble.position.right && { right: bubble.position.right }),
+              top: bubble.position.top,
+              animationDelay: `-${bubble.delay * 4}s`
             }}
           ></div>
         ))}

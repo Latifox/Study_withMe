@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -77,25 +78,25 @@
   }
 }
 
-/* New continuous downward flow animation - improved */
-@keyframes bubble-flow-down {
+/* Improved continuous downward flow animation with slight horizontal movement */
+@keyframes bubble-flow {
   0% {
-    transform: translateY(-100%) translateX(0);
+    transform: translate3d(0, -10%, 0);
     opacity: 0;
   }
   10% {
     opacity: 0.7;
-    transform: translateY(-50%) translateX(10px);
+    transform: translate3d(10px, 10%, 0);
   }
-  50% {
-    transform: translateY(300%) translateX(-15px);
+  40% {
+    transform: translate3d(-15px, 40%, 0);
   }
-  90% {
+  70% {
     opacity: 0.7;
-    transform: translateY(700%) translateX(10px);
+    transform: translate3d(10px, 70%, 0);
   }
   100% {
-    transform: translateY(1000%) translateX(0);
+    transform: translate3d(0, 120%, 0);
     opacity: 0;
   }
 }
@@ -128,39 +129,40 @@
   animation-delay: 8s;
 }
 
-/* New continuous flow animation classes - improved */
-.bubble-flow {
-  animation: bubble-flow-down 30s linear infinite;
-  position: absolute;
-  border-radius: 50%;
+/* Continuous flow animation classes - improved */
+.bubble-animate {
+  animation: bubble-flow 25s linear infinite;
   opacity: 0.7;
-  filter: blur(5px);
   will-change: transform, opacity;
   z-index: 1;
 }
 
 .flow-1 {
-  animation-delay: 0s;
+  animation-duration: 20s;
 }
 
 .flow-2 {
-  animation-delay: -5s;
+  animation-duration: 22s;
 }
 
 .flow-3 {
-  animation-delay: -10s;
+  animation-duration: 24s;
 }
 
 .flow-4 {
-  animation-delay: -15s;
+  animation-duration: 26s;
 }
 
 .flow-5 {
-  animation-delay: -20s;
+  animation-duration: 28s;
 }
 
 .flow-6 {
-  animation-delay: -25s;
+  animation-duration: 30s;
+}
+
+.flow-7 {
+  animation-duration: 32s;
 }
 
 /* Enhanced bubble bounce animation with longer duration */
