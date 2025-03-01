@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -224,6 +225,21 @@ const LandingPage = () => {
     'bg-pink-400/70',
     'bg-blue-400/70'
   ];
+  
+  // Create arrays of flowing bubbles for left and right sides
+  const leftFlowingBubbles = Array(6).fill(0).map((_, index) => ({
+    size: 40 + Math.random() * 40,
+    color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)],
+    left: 5 + Math.random() * 25 + '%',
+    delay: index
+  }));
+  
+  const rightFlowingBubbles = Array(6).fill(0).map((_, index) => ({
+    size: 40 + Math.random() * 40,
+    color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)],
+    right: 5 + Math.random() * 25 + '%',
+    delay: index
+  }));
 
   return (
     <div className="min-h-screen relative overflow-hidden" ref={backgroundRef}>
@@ -306,6 +322,36 @@ const LandingPage = () => {
           ref={el => bubbleRefs.current[15] = el}
           className="bubble animate-bubble bubble-4 top-85 right-[15%] w-60 h-60 bg-teal-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
+        
+        {/* Continuously flowing bubbles - left side */}
+        {leftFlowingBubbles.map((bubble, index) => (
+          <div 
+            key={`left-flow-${index}`}
+            className={`bubble-flow flow-${index + 1} z-0`}
+            style={{
+              width: `${bubble.size}px`,
+              height: `${bubble.size}px`,
+              left: bubble.left,
+              animationDelay: `-${bubble.delay * 5}s`,
+              backgroundImage: `radial-gradient(circle at center, ${bubble.color.replace('/70', '/90')}, transparent)`,
+            }}
+          ></div>
+        ))}
+        
+        {/* Continuously flowing bubbles - right side */}
+        {rightFlowingBubbles.map((bubble, index) => (
+          <div 
+            key={`right-flow-${index}`}
+            className={`bubble-flow flow-${index + 1} z-0`}
+            style={{
+              width: `${bubble.size}px`,
+              height: `${bubble.size}px`,
+              right: bubble.right,
+              animationDelay: `-${bubble.delay * 5 + 2.5}s`,
+              backgroundImage: `radial-gradient(circle at center, ${bubble.color.replace('/70', '/90')}, transparent)`,
+            }}
+          ></div>
+        ))}
       </div>
       
       <div className="relative z-10">

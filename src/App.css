@@ -78,6 +78,24 @@
   }
 }
 
+/* New continuous downward flow animation */
+@keyframes bubble-flow-down {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.3;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(1000%);
+    opacity: 0.3;
+  }
+}
+
 .animate-bubble {
   animation: bubble-float 15s infinite;
 }
@@ -104,6 +122,40 @@
 
 .bubble-6 {
   animation-delay: 8s;
+}
+
+/* New continuous flow animation classes */
+.bubble-flow {
+  animation: bubble-flow-down 30s linear infinite;
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.7;
+  filter: blur(5px);
+  will-change: transform, opacity;
+}
+
+.flow-1 {
+  animation-delay: 0s;
+}
+
+.flow-2 {
+  animation-delay: -5s;
+}
+
+.flow-3 {
+  animation-delay: -10s;
+}
+
+.flow-4 {
+  animation-delay: -15s;
+}
+
+.flow-5 {
+  animation-delay: -20s;
+}
+
+.flow-6 {
+  animation-delay: -25s;
 }
 
 /* Enhanced bubble bounce animation with longer duration */
