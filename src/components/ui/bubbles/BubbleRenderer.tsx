@@ -17,8 +17,8 @@ const BubbleRenderer: React.FC<BubbleRendererProps> = ({ bubbles }) => {
         const additionalClasses = bubble.type === 'purple' 
           ? 'bubble-purple hide-behind-cards'
           : bubble.type === 'star'
-            ? 'bubble-star star-transition fade-transform-effect pass-through-left'
-            : 'bubble-flame flame-transition fade-transform-effect pass-through-right';
+            ? 'bubble-star star-transition fade-transform-effect pass-through-left hide-behind-cards'
+            : 'bubble-flame flame-transition fade-transform-effect pass-through-right hide-behind-cards';
         
         switch (bubble.type) {
           case 'purple':

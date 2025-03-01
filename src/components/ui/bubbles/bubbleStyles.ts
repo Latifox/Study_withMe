@@ -27,6 +27,22 @@ export const bubbleAnimationStyles = `
   transition: opacity 0.5s ease-out;
 }
 
+/* Target all bubbles that should fade out at the end of hero section */
+[data-bubble-type].hide-behind-cards[style*="top: 85"],
+[data-bubble-type].hide-behind-cards[style*="top: 86"],
+[data-bubble-type].hide-behind-cards[style*="top: 87"],
+[data-bubble-type].hide-behind-cards[style*="top: 88"],
+[data-bubble-type].hide-behind-cards[style*="top: 89"],
+[data-bubble-type].hide-behind-cards[style*="top: 90"],
+[data-bubble-type].hide-behind-cards[style*="top: 91"],
+[data-bubble-type].hide-behind-cards[style*="top: 92"],
+[data-bubble-type].hide-behind-cards[style*="top: 93"],
+[data-bubble-type].hide-behind-cards[style*="top: 94"],
+[data-bubble-type].hide-behind-cards[style*="top: 95"] {
+  opacity: 0 !important;
+  transition: opacity 0.7s ease-out;
+}
+
 /* Target all purple bubbles in the range where cards appear with more inclusive selectors */
 [data-bubble-type="purple"].hide-behind-cards[style*="top: 15"],
 [data-bubble-type="purple"].hide-behind-cards[style*="top: 16"],
