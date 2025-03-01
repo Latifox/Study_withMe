@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,55 +23,17 @@ const LandingPage = () => {
   const bubbleRefs = useRef([]);
 
   useEffect(() => {
-    bubbleRefs.current = bubbleRefs.current.slice(0, 16); // Maintaining 16 bubbles
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const viewportHeight = window.innerHeight;
-      
-      bubbleRefs.current.forEach((bubble, index) => {
-        if (bubble) {
-          // Calculate the bubble's position relative to the viewport
-          const bubbleRect = bubble.getBoundingClientRect();
-          const bubbleTop = bubbleRect.top;
-          
-          // Calculate scroll-based movement (different speeds for different bubbles)
-          const speed = 0.05 + (index % 3) * 0.02;
-          const yPos = scrollY * speed;
-          
-          // Apply downward flow animation 
-          bubble.style.transform = `translateY(${yPos}px)`;
-          
-          // Check if bubble is entering viewport from the top
-          if (bubbleTop < viewportHeight && bubbleTop > 0 && !bubble.classList.contains('bubble-bounce')) {
-            bubble.classList.add('bubble-bounce');
-            
-            setTimeout(() => {
-              if (bubble) bubble.classList.remove('bubble-bounce');
-            }, 2000);
-          }
-        }
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    // Maintaining 16 bubble refs for the static bubbles
+    bubbleRefs.current = bubbleRefs.current.slice(0, 16);
   }, []);
 
   useEffect(() => {
     if (!emblaApi) return;
-
     const autoScrollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         scrollNext();
       }
     }, 5000);
-
     return () => clearInterval(autoScrollInterval);
   }, [emblaApi, scrollNext]);
 
@@ -226,7 +187,7 @@ const LandingPage = () => {
     'bg-blue-400/70'
   ];
   
-  // Create arrays of flowing bubbles for left and right sides
+  // Create arrays for continuously flowing bubbles on left and right sides
   const leftFlowingBubbles = Array(6).fill(0).map((_, index) => ({
     size: 40 + Math.random() * 40,
     color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)],
@@ -255,7 +216,7 @@ const LandingPage = () => {
           </svg>
         </div>
         
-        {/* Left side bubbles - updated with slight downward initial positions to enhance flow effect */}
+        {/* Static bubbles on the left side */}
         <div 
           ref={el => bubbleRefs.current[0] = el}
           className="bubble animate-bubble bubble-1 top-10 left-20 w-72 h-72 bg-purple-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
@@ -289,7 +250,7 @@ const LandingPage = () => {
           className="bubble animate-bubble bubble-2 top-80 left-[15%] w-60 h-60 bg-teal-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         
-        {/* Right side bubbles - updated with slight downward initial positions to enhance flow effect */}
+        {/* Static bubbles on the right side */}
         <div 
           ref={el => bubbleRefs.current[8] = el}
           className="bubble animate-bubble bubble-3 top-15 right-20 w-72 h-72 bg-purple-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
@@ -323,11 +284,11 @@ const LandingPage = () => {
           className="bubble animate-bubble bubble-4 top-85 right-[15%] w-60 h-60 bg-teal-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         
-        {/* Continuously flowing bubbles - left side */}
+        {/* Continuously flowing bubbles – left side */}
         {leftFlowingBubbles.map((bubble, index) => (
           <div 
             key={`left-flow-${index}`}
-            className={`bubble-flow flow-${index + 1} z-0`}
+            className={`bubble-flow z-0`}
             style={{
               width: `${bubble.size}px`,
               height: `${bubble.size}px`,
@@ -338,11 +299,11 @@ const LandingPage = () => {
           ></div>
         ))}
         
-        {/* Continuously flowing bubbles - right side */}
+        {/* Continuously flowing bubbles – right side */}
         {rightFlowingBubbles.map((bubble, index) => (
           <div 
             key={`right-flow-${index}`}
-            className={`bubble-flow flow-${index + 1} z-0`}
+            className={`bubble-flow z-0`}
             style={{
               width: `${bubble.size}px`,
               height: `${bubble.size}px`,
@@ -379,7 +340,9 @@ const LandingPage = () => {
               AI-Powered Education
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12">Upload your course materials and let our AI guide you on a journey of discovery, transforming learning into a meaningful exploration of growth and understanding!</p>
+          <p className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12">
+            Upload your course materials and let our AI guide you on a journey of discovery, transforming learning into a meaningful exploration of growth and understanding!
+          </p>
           <Button size="lg" onClick={handleGetStarted} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
             Get Started {isHovering ? <Sparkles className="ml-2 h-5 w-5 animate-pulse" /> : <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>
@@ -398,63 +361,23 @@ const LandingPage = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {gamificationElements.map((element, index) => <div key={index} className="bg-white/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/20 transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1">
+            {gamificationElements.map((element, index) => (
+              <div key={index} className="bg-white/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/20 transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1">
                 <div className="flex items-center justify-center mb-6">
                   <div className={`${element.color} p-4 rounded-full flex items-center justify-center shadow-lg mr-0`}>
                     {element.icon}
                   </div>
                 </div>
-                
                 <p className={`font-bold ${element.gradientText} text-center`}>
                   {element.description}
                 </p>
-              </div>)}
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-8 md:py-12">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                Powerful Learning Tools
-              </span>
-            </h2>
-            <p className="text-lg text-gray-700 text-center">
-              Explore our range of AI-powered features designed to enhance your educational experience
-            </p>
-          </div>
-          
-          <div className="relative overflow-hidden">
-            <Button variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10" onClick={scrollPrev}>
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            
-            <Button variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90 shadow-md rounded-full h-10 w-10" onClick={scrollNext}>
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-            
-            <div className="overflow-visible" ref={emblaRef}>
-              <div className="flex py-6 ml-0">
-                {features.map((feature, index) => (
-                  <div key={index} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-4 py-2">
-                    <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-xl hover:shadow-2xl transition-shadow border border-purple-100 h-full transform hover:scale-105 duration-300">
-                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                        {feature.icon}
-                      </div>
-                      <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                      <p className="text-gray-700">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-500">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
               Who Benefits from <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">EduSync AI</span>
             </h2>
@@ -473,12 +396,14 @@ const LandingPage = () => {
               </div>
               
               <ul className="space-y-3">
-                {studentBenefits.map((benefit, index) => <li key={index} className="flex items-start">
+                {studentBenefits.map((benefit, index) => (
+                  <li key={index} className="flex items-start">
                     <div className="mt-1 min-w-6 min-h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
                       <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
                     </div>
                     <span className="text-gray-700">{benefit}</span>
-                  </li>)}
+                  </li>
+                ))}
               </ul>
             </div>
             
@@ -491,12 +416,14 @@ const LandingPage = () => {
               </div>
               
               <ul className="space-y-3">
-                {teacherBenefits.map((benefit, index) => <li key={index} className="flex items-start">
+                {teacherBenefits.map((benefit, index) => (
+                  <li key={index} className="flex items-start">
                     <div className="mt-1 min-w-6 min-h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
                       <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
                     </div>
                     <span className="text-gray-700">{benefit}</span>
-                  </li>)}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -515,12 +442,14 @@ const LandingPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {subscriptionPlans.map((plan, index) => <div key={index} className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}>
-                <Card className={`overflow-hidden h-full flex flex-col shadow-lg transition-all duration-300 hover:shadow-xl border-0`}>
-                  {plan.recommended && <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
+            {subscriptionPlans.map((plan, index) => (
+              <div key={index} className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}>
+                <Card className="overflow-hidden h-full flex flex-col shadow-lg transition-all duration-300 hover:shadow-xl border-0">
+                  {plan.recommended && (
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                       MOST POPULAR
-                    </div>}
-                  
+                    </div>
+                  )}
                   <CardHeader className={`${plan.headerBg} pb-8`}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`p-2 rounded-full bg-white/30 ${plan.iconColor}`}>
@@ -528,33 +457,32 @@ const LandingPage = () => {
                       </div>
                       <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
                     </div>
-                    
                     <div className="mb-2">
                       <span className={`text-3xl font-bold ${plan.textColor}`}>{plan.price}</span>
                       <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
                     </div>
-                    
                     <p className={`${plan.textColor} opacity-90`}>{plan.description}</p>
                   </CardHeader>
-                  
                   <CardContent className="bg-white flex-grow">
                     <ul className="space-y-3 mb-6">
-                      {plan.features.map((feature, i) => <li key={i} className="flex items-start">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start">
                           <div className="text-purple-600 flex-shrink-0 mt-0.5 mr-2">
                             <Check className="h-5 w-5" />
                           </div>
                           <span className="text-gray-700">{feature}</span>
-                        </li>)}
+                        </li>
+                      ))}
                     </ul>
                   </CardContent>
-                  
                   <CardFooter className="bg-white pt-0 pb-6 px-6">
                     <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white" onClick={() => plan.recommended ? handleSignUp() : navigate("/auth")}>
                       {plan.ctaText}
                     </Button>
                   </CardFooter>
                 </Card>
-              </div>)}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -572,6 +500,45 @@ const LandingPage = () => {
           </div>
         </footer>
       </div>
+      {/* CSS for infinite downward bubble animations */}
+      <style jsx global>{`
+        @keyframes fall {
+          0% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          90% {
+            transform: translateY(100vh);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 0;
+          }
+        }
+        .animate-bubble {
+          position: absolute;
+          animation: fall 20s linear infinite;
+        }
+        @keyframes flowDown {
+          0% {
+            transform: translateY(-50px);
+            opacity: 0;
+          }
+          50% {
+            transform: translateY(50vh);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(100vh);
+            opacity: 0;
+          }
+        }
+        .bubble-flow {
+          position: absolute;
+          animation: flowDown 15s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
