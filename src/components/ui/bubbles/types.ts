@@ -11,7 +11,7 @@ export interface Bubble {
   gradient: string;
   animationDuration: string;
   transitionDuration: string;
-  type: 'purple' | 'star' | 'flame';
+  type: 'star' | 'flame';
 }
 
 export interface BubbleProps {
