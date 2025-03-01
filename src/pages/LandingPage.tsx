@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ const LandingPage = () => {
   const bubbleRefs = useRef([]);
 
   useEffect(() => {
-    bubbleRefs.current = bubbleRefs.current.slice(0, 16); // Increased for more bubbles
+    bubbleRefs.current = bubbleRefs.current.slice(0, 16); // Maintaining 16 bubbles
   }, []);
 
   useEffect(() => {
@@ -37,7 +36,6 @@ const LandingPage = () => {
           // Calculate the bubble's position relative to the viewport
           const bubbleRect = bubble.getBoundingClientRect();
           const bubbleTop = bubbleRect.top;
-          const bubbleBottom = bubbleRect.bottom;
           
           // Calculate scroll-based movement (different speeds for different bubbles)
           const speed = 0.05 + (index % 3) * 0.02;
@@ -242,35 +240,35 @@ const LandingPage = () => {
         {/* Left side bubbles */}
         <div 
           ref={el => bubbleRefs.current[0] = el}
-          className="bubble animate-bubble bubble-1 top-20 left-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-1 top-20 left-20 w-72 h-72 bg-purple-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[1] = el}
-          className="bubble animate-bubble bubble-2 top-40 left-[10%] w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-2 top-40 left-[10%] w-72 h-72 bg-indigo-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[2] = el}
-          className="bubble animate-bubble bubble-3 -bottom-8 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-3 -bottom-8 left-40 w-72 h-72 bg-pink-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[3] = el}
-          className="bubble animate-bubble bubble-4 top-60 left-1/3 w-56 h-56 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-4 top-60 left-1/3 w-56 h-56 bg-blue-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[4] = el}
-          className="bubble animate-bubble bubble-5 bottom-1/4 left-1/4 w-64 h-64 bg-violet-400 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-5 bottom-1/4 left-1/4 w-64 h-64 bg-violet-400/60 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[5] = el}
-          className="bubble animate-bubble bubble-6 top-1/3 left-1/3 w-48 h-48 bg-fuchsia-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-6 top-1/3 left-1/5 w-48 h-48 bg-fuchsia-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[6] = el}
-          className="bubble animate-bubble bubble-1 bottom-60 left-10 w-52 h-52 bg-sky-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-1 bottom-60 left-10 w-52 h-52 bg-sky-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[7] = el}
-          className="bubble animate-bubble bubble-2 bottom-40 left-[15%] w-60 h-60 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-2 bottom-40 left-[15%] w-60 h-60 bg-teal-300/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         
         {/* Right side bubbles */}
@@ -296,7 +294,7 @@ const LandingPage = () => {
         ></div>
         <div 
           ref={el => bubbleRefs.current[13] = el}
-          className="bubble animate-bubble bubble-2 top-1/3 right-1/3 w-48 h-48 bg-fuchsia-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+          className="bubble animate-bubble bubble-2 top-1/3 right-1/5 w-48 h-48 bg-fuchsia-400/70 rounded-full mix-blend-multiply filter blur-xl opacity-70"
         ></div>
         <div 
           ref={el => bubbleRefs.current[14] = el}
