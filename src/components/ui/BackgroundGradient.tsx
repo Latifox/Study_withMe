@@ -9,9 +9,9 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
   const [bubbles, setBubbles] = useState<Array<{
     id: number;
     size: number;
-    position: { left?: string; right?: string; top: string };
+    position: { left?: string; right?: string; top?: string; bottom?: string };
     opacity: number;
-    animationDelay: string;
+    color: string;
     animationDuration: string;
   }>>([]);
 
@@ -21,13 +21,23 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       const newBubbles = [];
       const totalBubbles = 40; // Total number of bubbles (20 per side)
       
+      const bubbleColors = [
+        "bg-purple-300/70",
+        "bg-indigo-300/70",
+        "bg-pink-300/70",
+        "bg-blue-300/70",
+        "bg-violet-400/60",
+        "bg-fuchsia-300/70",
+        "bg-sky-300/70",
+      ];
+      
       // Generate bubbles for left side
       for (let i = 0; i < totalBubbles / 2; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
-        const leftPos = Math.random() * 30; // Random position between 0-30%
-        const topPos = Math.random() * 100; // Random initial vertical position
+        const leftPos = Math.random() * 15; // Random position between 0-15%
+        const bottom = -100 - Math.random() * 100; // Start below viewport
         const opacity = 0.1 + Math.random() * 0.4; // Random opacity between 0.1-0.5
-        const animationDelay = `${Math.random() * 15}s`; // Random delay up to 15s
+        const colorIndex = Math.floor(Math.random() * bubbleColors.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         
         newBubbles.push({
@@ -35,10 +45,10 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           size,
           position: { 
             left: `${leftPos}%`, 
-            top: `${topPos}%` 
+            bottom: `${bottom}%` 
           },
           opacity,
-          animationDelay,
+          color: bubbleColors[colorIndex],
           animationDuration
         });
       }
@@ -46,10 +56,10 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       // Generate bubbles for right side
       for (let i = totalBubbles / 2; i < totalBubbles; i++) {
         const size = 30 + Math.random() * 100; // Random size between 30-130px
-        const rightPos = Math.random() * 30; // Random position between 0-30%
-        const topPos = Math.random() * 100; // Random initial vertical position
+        const rightPos = Math.random() * 15; // Random position between 0-15%
+        const bottom = -100 - Math.random() * 100; // Start below viewport
         const opacity = 0.1 + Math.random() * 0.4; // Random opacity between 0.1-0.5
-        const animationDelay = `${Math.random() * 15}s`; // Random delay up to 15s
+        const colorIndex = Math.floor(Math.random() * bubbleColors.length);
         const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         
         newBubbles.push({
@@ -57,10 +67,10 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           size,
           position: { 
             right: `${rightPos}%`, 
-            top: `${topPos}%` 
+            bottom: `${bottom}%` 
           },
           opacity,
-          animationDelay,
+          color: bubbleColors[colorIndex],
           animationDuration
         });
       }
@@ -72,18 +82,48 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* White background */}
-      <div 
-        className="absolute inset-0 z-0 bg-white"
-      >
-        {/* No mesh grid overlay on white background */}
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-white">
+      {/* Bubbles */}
+      {bubbles.map((bubble) => (
+        <div
+          key={bubble.id}
+          className={`absolute rounded-full ${bubble.color} bubble-flow`}
+          style={{
+            width: `${bubble.size}px`,
+            height: `${bubble.size}px`,
+            left: bubble.position.left,
+            right: bubble.position.right,
+            bottom: bubble.position.bottom,
+            opacity: bubble.opacity,
+            animation: `bubble-flow ${bubble.animationDuration} linear infinite`,
+          }}
+        />
+      ))}
 
       {/* Content container */}
       <div className="relative z-10">
         {children}
       </div>
+
+      {/* Add keyframes for bubble flow animation */}
+      <style jsx global>{`
+        @keyframes bubble-flow {
+          0% {
+            transform: translateY(0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.7;
+          }
+          90% {
+            opacity: 0.7;
+          }
+          100% {
+            transform: translateY(-120vh);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 };
