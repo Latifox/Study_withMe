@@ -73,57 +73,11 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Background gradient */}
+      {/* White background */}
       <div 
-        className="absolute inset-0 z-0"
-        style={{
-          background: 'linear-gradient(135deg, rgba(176, 153, 245, 0.4) 0%, rgba(243, 243, 253, 0.6) 50%, rgba(163, 191, 250, 0.4) 100%)',
-        }}
+        className="absolute inset-0 z-0 bg-white"
       >
-        {/* Mesh grid overlay */}
-        <div className="absolute inset-0" style={{ opacity: 0.15 }}>
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern 
-                id="grid" 
-                width="40" 
-                height="40" 
-                patternUnits="userSpaceOnUse"
-              >
-                <path 
-                  d="M 40 0 L 0 0 0 40" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="1"
-                />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" className="text-purple-800" />
-          </svg>
-        </div>
-
-        {/* Flowing bubbles */}
-        {bubbles.map((bubble) => (
-          <div
-            key={bubble.id}
-            className="bubble-flow"
-            style={{
-              position: 'absolute',
-              width: `${bubble.size}px`,
-              height: `${bubble.size}px`,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle at 30% 30%, rgba(176, 153, 245, 0.9), rgba(163, 191, 250, 0.6))',
-              filter: 'blur(8px)',
-              ...(bubble.position.left && { left: bubble.position.left }),
-              ...(bubble.position.right && { right: bubble.position.right }),
-              top: bubble.position.top,
-              opacity: bubble.opacity,
-              animationDelay: bubble.animationDelay,
-              animationDuration: bubble.animationDuration,
-              zIndex: 0
-            }}
-          ></div>
-        ))}
+        {/* No mesh grid overlay on white background */}
       </div>
 
       {/* Content container */}
