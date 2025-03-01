@@ -21,17 +21,18 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       const newBubbles = [];
       const totalBubbles = 40; // Total number of bubbles (20 per side)
       
-      // Define more subtle gradients for bubbles
+      // Define more subtle purple-to-indigo gradients for bubbles
+      // These are inspired by the "AI-Powered Education" text gradient but toned down
       const bubbleGradients = [
-        "bg-gradient-to-br from-purple-200 to-indigo-300",
-        "bg-gradient-to-r from-pink-200 via-purple-200 to-indigo-200",
-        "bg-gradient-to-tr from-blue-200 via-sky-200 to-purple-200",
-        "bg-gradient-to-r from-indigo-200 via-purple-200 to-fuchsia-200",
-        "bg-gradient-to-br from-violet-200 via-purple-200 to-fuchsia-300",
-        "bg-gradient-to-r from-sky-200 via-blue-200 to-indigo-300",
-        "bg-gradient-to-tr from-fuchsia-200 via-pink-200 to-purple-300",
-        "bg-gradient-to-br from-pink-100 via-pink-200 to-pink-300",
-        "bg-gradient-to-r from-purple-100 via-purple-200 to-purple-400",
+        "bg-gradient-to-br from-purple-100 to-indigo-200",
+        "bg-gradient-to-r from-purple-100 to-indigo-100",
+        "bg-gradient-to-tr from-indigo-100 to-purple-200",
+        "bg-gradient-to-br from-violet-100 to-indigo-200",
+        "bg-gradient-to-r from-fuchsia-100 to-purple-200",
+        "bg-gradient-to-tr from-purple-100 to-indigo-300/70",
+        "bg-gradient-to-br from-violet-50 to-indigo-200",
+        "bg-gradient-to-r from-fuchsia-100 to-indigo-100",
+        "bg-gradient-to-tr from-indigo-100 to-fuchsia-200",
       ];
       
       // Generate bubbles for left side
@@ -87,7 +88,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/30 to-indigo-50/30"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/20 to-indigo-50/20"></div>
       
       {/* Bubbles */}
       {bubbles.map((bubble) => (
