@@ -9,7 +9,7 @@ const FlameBubble: React.FC<BubbleProps> = ({
   return (
     <div
       key={bubble.id}
-      className={`absolute rounded-full ${bubble.gradient} bubble-flow ${additionalClasses} shadow-lg`}
+      className={`absolute rounded-full bubble-flow ${additionalClasses} shadow-lg`}
       style={{
         width: `${bubble.size}px`,
         height: `${bubble.size}px`,

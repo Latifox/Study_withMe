@@ -13,12 +13,12 @@ const BubbleRenderer: React.FC<BubbleRendererProps> = ({ bubbles }) => {
   return (
     <>
       {bubbles.map((bubble) => {
-        // Apply appropriate CSS classes based on bubble type
+        // All bubbles start as purple, with transition classes based on type
         const additionalClasses = bubble.type === 'purple' 
-          ? 'bubble-purple hide-behind-cards'  // Apply hide-behind-cards to all purple bubbles
+          ? 'bubble-purple hide-behind-cards'
           : bubble.type === 'star'
-            ? 'bubble-star star-transition pass-through-left'
-            : 'bubble-flame flame-transition pass-through-right';
+            ? 'bubble-star star-transition fade-transform-effect pass-through-left'
+            : 'bubble-flame flame-transition fade-transform-effect pass-through-right';
         
         switch (bubble.type) {
           case 'purple':
