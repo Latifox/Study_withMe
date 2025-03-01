@@ -1,4 +1,3 @@
-
 import { Bubble } from './types';
 
 // Gradient definitions
@@ -40,10 +39,10 @@ export const flameGradients = [
 // Generate bubbles function
 export const generateBubbles = (): Bubble[] => {
   const newBubbles = [];
-  const totalBubbles = 80; // Increased for better coverage
+  const totalBubbles = 120; // Increased from 80 for better coverage
   
   // Generate bubbles for left side (top section - purple/indigo)
-  for (let i = 0; i < totalBubbles / 4; i++) {
+  for (let i = 0; i < totalBubbles / 6; i++) {
     const size = 30 + Math.random() * 100; // Random size between 30-130px
     const leftPos = Math.random() * 15; // Random position between 0-15% from left
     const topPos = Math.random() * 5 - 20; // Start above viewport or just entering
@@ -68,7 +67,7 @@ export const generateBubbles = (): Bubble[] => {
   }
   
   // Generate bubbles for right side (top section - purple/indigo)
-  for (let i = totalBubbles / 4; i < totalBubbles / 2; i++) {
+  for (let i = totalBubbles / 6; i < totalBubbles / 3; i++) {
     const size = 30 + Math.random() * 100; // Random size between 30-130px
     const rightPos = Math.random() * 15; // Random position between 0-15% from right
     const topPos = Math.random() * 5 - 20; // Start above viewport or just entering
@@ -92,10 +91,10 @@ export const generateBubbles = (): Bubble[] => {
     });
   }
   
-  // Generate bubbles for left side (Star bubbles)
-  for (let i = totalBubbles / 2; i < 3 * totalBubbles / 4; i++) {
+  // Generate bubbles for left side (Star bubbles) - INCREASED QUANTITY
+  for (let i = totalBubbles / 3; i < 2 * totalBubbles / 3; i++) {
     const size = 30 + Math.random() * 100; // Random size between 30-130px
-    const leftPos = Math.random() * 15; // Random position between 0-15% from left
+    const leftPos = Math.random() * 25; // Increased from 15% to 25% for wider coverage
     const topPos = Math.random() * 40 + 15; // Middle to bottom section positioning
     const opacity = 0.5 + Math.random() * 0.3; // Random opacity between 0.5-0.8
     const animationDuration = `${15 + Math.random() * 20}s`; // Random duration
@@ -117,10 +116,10 @@ export const generateBubbles = (): Bubble[] => {
     });
   }
   
-  // Generate bubbles for right side (Flame bubbles)
-  for (let i = 3 * totalBubbles / 4; i < totalBubbles; i++) {
+  // Generate bubbles for right side (Flame bubbles) - INCREASED QUANTITY
+  for (let i = 2 * totalBubbles / 3; i < totalBubbles; i++) {
     const size = 30 + Math.random() * 100; // Random size between 30-130px
-    const rightPos = Math.random() * 15; // Random position between 0-15% from right
+    const rightPos = Math.random() * 25; // Increased from 15% to 25% for wider coverage
     const topPos = Math.random() * 40 + 15; // Middle to bottom section positioning
     const opacity = 0.5 + Math.random() * 0.3; // Random opacity between 0.5-0.8
     const animationDuration = `${15 + Math.random() * 20}s`; // Random duration
