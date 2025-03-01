@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface BackgroundGradientProps {
   children: React.ReactNode;
@@ -9,62 +9,59 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
   const [bubbles, setBubbles] = useState<Array<{
     id: number;
     size: number;
-    color: string;
     position: { left?: string; right?: string; top: string };
-    delay: number;
+    opacity: number;
+    animationDelay: string;
+    animationDuration: string;
   }>>([]);
 
-  // Generate bubbles on component mount
   useEffect(() => {
-    const bubbleColors = [
-      'rgba(111, 207, 151, 0.7)',  // Light green
-      'rgba(86, 180, 211, 0.7)',   // Light blue
-      'rgba(123, 104, 238, 0.7)',  // Medium purple
-      'rgba(240, 128, 128, 0.7)',  // Light coral
-      'rgba(173, 216, 230, 0.7)',  // Light blue
-      'rgba(255, 182, 193, 0.7)',  // Light pink
-      'rgba(147, 112, 219, 0.7)',  // Medium purple
-      'rgba(135, 206, 235, 0.7)',  // Sky blue
-    ];
-    
+    // Generate bubbles on component mount
     const generateBubbles = () => {
       const newBubbles = [];
+      const totalBubbles = 40; // Total number of bubbles (20 per side)
       
       // Generate bubbles for left side
-      for (let i = 0; i < 14; i++) {
-        const size = 25 + Math.random() * 70; // Random size between 25-95px
-        const color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
-        const leftPos = 2 + Math.random() * 25; // Random position between 2-27%
+      for (let i = 0; i < totalBubbles / 2; i++) {
+        const size = 30 + Math.random() * 100; // Random size between 30-130px
+        const leftPos = Math.random() * 30; // Random position between 0-30%
         const topPos = Math.random() * 100; // Random initial vertical position
+        const opacity = 0.1 + Math.random() * 0.4; // Random opacity between 0.1-0.5
+        const animationDelay = `${Math.random() * 15}s`; // Random delay up to 15s
+        const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         
         newBubbles.push({
           id: i,
           size,
-          color,
           position: { 
             left: `${leftPos}%`, 
             top: `${topPos}%` 
           },
-          delay: i % 7 // Create 7 different delay groups
+          opacity,
+          animationDelay,
+          animationDuration
         });
       }
       
       // Generate bubbles for right side
-      for (let i = 14; i < 28; i++) {
-        const size = 25 + Math.random() * 70; // Random size between 25-95px
-        const color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
-        const rightPos = 2 + Math.random() * 25; // Random position between 2-27%
+      for (let i = totalBubbles / 2; i < totalBubbles; i++) {
+        const size = 30 + Math.random() * 100; // Random size between 30-130px
+        const rightPos = Math.random() * 30; // Random position between 0-30%
         const topPos = Math.random() * 100; // Random initial vertical position
+        const opacity = 0.1 + Math.random() * 0.4; // Random opacity between 0.1-0.5
+        const animationDelay = `${Math.random() * 15}s`; // Random delay up to 15s
+        const animationDuration = `${15 + Math.random() * 20}s`; // Random duration between 15-35s
         
         newBubbles.push({
           id: i,
           size,
-          color,
           position: { 
             right: `${rightPos}%`, 
             top: `${topPos}%` 
           },
-          delay: i % 7 // Create 7 different delay groups
+          opacity,
+          animationDelay,
+          animationDuration
         });
       }
       
@@ -76,15 +73,14 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Background gradient container */}
+      {/* Background gradient */}
       <div 
-        className="absolute inset-0"
+        className="absolute inset-0 z-0"
         style={{
-          background: 'linear-gradient(135deg, #FFE5A3 0%, #FFFFFF 50%, #A7D1FF 100%)',
-          zIndex: 0
+          background: 'linear-gradient(135deg, rgba(176, 153, 245, 0.4) 0%, rgba(243, 243, 253, 0.6) 50%, rgba(163, 191, 250, 0.4) 100%)',
         }}
       >
-        {/* Mesh grid overlay - kept from original */}
+        {/* Mesh grid overlay */}
         <div className="absolute inset-0" style={{ opacity: 0.15 }}>
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -102,7 +98,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
                 />
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" className="text-black" />
+            <rect width="100%" height="100%" fill="url(#grid)" className="text-purple-800" />
           </svg>
         </div>
 
@@ -110,18 +106,21 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         {bubbles.map((bubble) => (
           <div
             key={bubble.id}
-            className={`bubble-animate flow-${bubble.delay + 1}`}
+            className="bubble-flow"
             style={{
               position: 'absolute',
               width: `${bubble.size}px`,
               height: `${bubble.size}px`,
-              backgroundColor: bubble.color,
               borderRadius: '50%',
-              filter: 'blur(5px)',
+              background: 'radial-gradient(circle at 30% 30%, rgba(176, 153, 245, 0.9), rgba(163, 191, 250, 0.6))',
+              filter: 'blur(8px)',
               ...(bubble.position.left && { left: bubble.position.left }),
               ...(bubble.position.right && { right: bubble.position.right }),
               top: bubble.position.top,
-              animationDelay: `-${bubble.delay * 4}s`
+              opacity: bubble.opacity,
+              animationDelay: bubble.animationDelay,
+              animationDuration: bubble.animationDuration,
+              zIndex: 0
             }}
           ></div>
         ))}
