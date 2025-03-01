@@ -121,6 +121,18 @@ export const bubbleAnimationStyles = `
   opacity: 0 !important; /* Force complete invisibility */
 }
 
+/* Block all bubbles from appearing below the Features section heading (around 75% top position) */
+[data-bubble-type][style*="top: 76"],
+[data-bubble-type][style*="top: 77"],
+[data-bubble-type][style*="top: 78"],
+[data-bubble-type][style*="top: 79"],
+[data-bubble-type][style*="top: 8"],
+[data-bubble-type][style*="top: 9"] {
+  display: none !important; /* Completely remove from rendering */
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 /* Fade transform effect - applied to non-purple bubbles */
 .fade-transform-effect {
   transition: all 0.8s ease-in-out;
