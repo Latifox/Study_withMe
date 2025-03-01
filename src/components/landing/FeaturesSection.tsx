@@ -97,7 +97,7 @@ const FeaturesSection = () => {
           <div className="flex gap-8">
             {features.map((feature, i) => (
               <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px]">
-                <div className="bg-white/50 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-purple-100 h-full">
+                <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-6 rounded-xl shadow-lg border border-gray-200 h-full">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
                       {feature.icon}
