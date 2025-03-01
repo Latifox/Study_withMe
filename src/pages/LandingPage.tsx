@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
@@ -15,15 +16,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { useMutation } from "@tanstack/react-query";
-import { createCourse } from "@/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createCourse, getCourses } from "@/lib/api";
 import { Course } from "@/lib/types";
-import { useQuery } from "@tanstack/react-query";
-import { getCourses } from "@/lib/api";
 import { Link } from 'react-router-dom';
 import { Skeleton } from "@/components/ui/skeleton"
 import { ModeToggle } from "@/components/ModeToggle"
-import { GithubLogoIcon } from '@radix-ui/react-icons';
+import { Github } from "lucide-react";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -60,7 +59,7 @@ const LandingPage = () => {
     },
   })
 
-  const { data: courses, isLoading, refetch } = useQuery({
+  const { data: courses = [], isLoading, refetch } = useQuery({
     queryKey: ['courses'],
     queryFn: getCourses,
   })
@@ -85,7 +84,7 @@ const LandingPage = () => {
           <div className="flex items-center gap-2">
             <ModeToggle />
             <a href="https://github.com/rohansx/lecture-chat-synthesizer" target="_blank" rel="noopener noreferrer">
-              <GithubLogoIcon className="h-6 w-6" />
+              <Github className="h-6 w-6" />
             </a>
           </div>
         </div>
