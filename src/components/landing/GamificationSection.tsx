@@ -8,13 +8,13 @@ const GamificationSection = () => {
       title: "Experience Points (XP)",
       description:
         "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
-      gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
+      gradient: "bg-gradient-to-r from-amber-200 to-amber-300",
     },
     {
       icon: <Flame className="h-8 w-8 text-white" />,
       title: "Learning Streaks",
       description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
-      gradient: "bg-gradient-to-r from-red-500 to-orange-500",
+      gradient: "bg-gradient-to-r from-orange-200 to-orange-300",
     },
   ];
 
@@ -43,8 +43,8 @@ const GamificationSection = () => {
                 {element.icon}
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white text-center mb-2">{element.title}</h3>
-            <p className="text-white text-center text-sm">{element.description}</p>
+            <h3 className="text-xl font-bold text-gray-700 text-center mb-2">{element.title}</h3>
+            <p className="text-gray-700 text-center text-sm">{element.description}</p>
           </div>
         ))}
       </div>
