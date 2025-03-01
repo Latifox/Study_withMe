@@ -181,10 +181,10 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
         
         // Apply appropriate CSS classes based on bubble type
         const additionalClasses = bubble.type === 'purple' 
-          ? 'bubble-purple fade-at-cards'
+          ? 'bubble-purple hide-behind-cards'  // Updated class name for purple bubbles
           : bubble.type === 'star'
-            ? 'bubble-star star-transition'
-            : 'bubble-flame flame-transition';
+            ? 'bubble-star star-transition pass-through-left'  // Added pass-through class for star bubbles
+            : 'bubble-flame flame-transition pass-through-right';  // Added pass-through class for flame bubbles
         
         return (
           <div
@@ -235,39 +235,39 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           transition-property: background, box-shadow, opacity;
         }
         
-        /* Purple bubbles fade behind cards at icon sections */
-        .bubble-purple.fade-at-cards[style*="top: 20"],
-        .bubble-purple.fade-at-cards[style*="top: 21"],
-        .bubble-purple.fade-at-cards[style*="top: 22"],
-        .bubble-purple.fade-at-cards[style*="top: 23"],
-        .bubble-purple.fade-at-cards[style*="top: 24"],
-        .bubble-purple.fade-at-cards[style*="top: 25"],
-        .bubble-purple.fade-at-cards[style*="top: 26"],
-        .bubble-purple.fade-at-cards[style*="top: 27"],
-        .bubble-purple.fade-at-cards[style*="top: 28"],
-        .bubble-purple.fade-at-cards[style*="top: 29"],
-        .bubble-purple.fade-at-cards[style*="top: 30"],
-        .bubble-purple.fade-at-cards[style*="top: 31"],
-        .bubble-purple.fade-at-cards[style*="top: 32"],
-        .bubble-purple.fade-at-cards[style*="top: 33"],
-        .bubble-purple.fade-at-cards[style*="top: 34"],
-        .bubble-purple.fade-at-cards[style*="top: 35"],
-        .bubble-purple.fade-at-cards[style*="top: 36"],
-        .bubble-purple.fade-at-cards[style*="top: 37"],
-        .bubble-purple.fade-at-cards[style*="top: 38"],
-        .bubble-purple.fade-at-cards[style*="top: 39"],
-        .bubble-purple.fade-at-cards[style*="top: 40"],
-        .bubble-purple.fade-at-cards[style*="top: 41"],
-        .bubble-purple.fade-at-cards[style*="top: 42"],
-        .bubble-purple.fade-at-cards[style*="top: 43"],
-        .bubble-purple.fade-at-cards[style*="top: 44"],
-        .bubble-purple.fade-at-cards[style*="top: 45"] {
-          opacity: 0 !important;
-          transition: opacity 1.5s ease-out;
+        /* Purple bubbles completely fade out behind the cards */
+        .bubble-purple.hide-behind-cards[style*="top: 20"],
+        .bubble-purple.hide-behind-cards[style*="top: 21"],
+        .bubble-purple.hide-behind-cards[style*="top: 22"],
+        .bubble-purple.hide-behind-cards[style*="top: 23"],
+        .bubble-purple.hide-behind-cards[style*="top: 24"],
+        .bubble-purple.hide-behind-cards[style*="top: 25"],
+        .bubble-purple.hide-behind-cards[style*="top: 26"],
+        .bubble-purple.hide-behind-cards[style*="top: 27"],
+        .bubble-purple.hide-behind-cards[style*="top: 28"],
+        .bubble-purple.hide-behind-cards[style*="top: 29"],
+        .bubble-purple.hide-behind-cards[style*="top: 30"],
+        .bubble-purple.hide-behind-cards[style*="top: 31"],
+        .bubble-purple.hide-behind-cards[style*="top: 32"],
+        .bubble-purple.hide-behind-cards[style*="top: 33"],
+        .bubble-purple.hide-behind-cards[style*="top: 34"],
+        .bubble-purple.hide-behind-cards[style*="top: 35"],
+        .bubble-purple.hide-behind-cards[style*="top: 36"],
+        .bubble-purple.hide-behind-cards[style*="top: 37"],
+        .bubble-purple.hide-behind-cards[style*="top: 38"],
+        .bubble-purple.hide-behind-cards[style*="top: 39"],
+        .bubble-purple.hide-behind-cards[style*="top: 40"],
+        .bubble-purple.hide-behind-cards[style*="top: 41"],
+        .bubble-purple.hide-behind-cards[style*="top: 42"],
+        .bubble-purple.hide-behind-cards[style*="top: 43"],
+        .bubble-purple.hide-behind-cards[style*="top: 44"],
+        .bubble-purple.hide-behind-cards[style*="top: 45"] {
+          opacity: 0 !important; /* Force complete invisibility */
+          transition: opacity 0.5s ease-out;
         }
         
-        /* Star transitions */
-        .bubble-star.star-transition:hover {
+        /* Star transitions - allow pass through */
+        .bubble-star.star-transition.pass-through-left:hover {
           box-shadow: 0 8px 15px rgba(255, 204, 0, 0.3);
         }
         
@@ -280,6 +280,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ffd700, #ffaa00);
           box-shadow: 0 4px 12px rgba(255, 204, 0, 0.25);
           opacity: 0.7;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
         .bubble-star.star-transition[style*="top: 25"],
@@ -290,6 +291,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ffd700, #ffaa00);
           box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
           opacity: 0.75;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
         .bubble-star.star-transition[style*="top: 30"],
@@ -301,6 +303,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ffcc00, #ff9900);
           box-shadow: 0 4px 12px rgba(255, 180, 0, 0.35);
           opacity: 0.8;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
         .bubble-star.star-transition[style*="top: 36"],
@@ -316,10 +319,11 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ffbc00, #ff8800);
           box-shadow: 0 4px 12px rgba(255, 150, 0, 0.4);
           opacity: 0.85;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
-        /* Flame transitions */
-        .bubble-flame.flame-transition:hover {
+        /* Flame transitions - allow pass through */
+        .bubble-flame.flame-transition.pass-through-right:hover {
           box-shadow: 0 8px 15px rgba(255, 80, 0, 0.3);
         }
         
@@ -332,6 +336,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ff4500, #ff7800);
           box-shadow: 0 4px 12px rgba(255, 80, 0, 0.25);
           opacity: 0.7;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
         .bubble-flame.flame-transition[style*="top: 25"],
@@ -342,6 +347,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ff4500, #ff7800);
           box-shadow: 0 4px 12px rgba(255, 80, 0, 0.3);
           opacity: 0.75;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
         .bubble-flame.flame-transition[style*="top: 30"],
@@ -353,6 +359,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ff3300, #ff6600);
           box-shadow: 0 4px 12px rgba(255, 60, 0, 0.35);
           opacity: 0.8;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         
         .bubble-flame.flame-transition[style*="top: 36"],
@@ -368,6 +375,7 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
           background: linear-gradient(to bottom right, #ff2500, #ff5500);
           box-shadow: 0 4px 12px rgba(255, 40, 0, 0.4);
           opacity: 0.85;
+          z-index: 5; /* Ensure these bubbles appear above cards */
         }
         `}
       </style>
