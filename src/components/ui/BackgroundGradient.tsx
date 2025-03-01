@@ -106,7 +106,8 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
       </div>
 
       {/* Add keyframes for bubble flow animation */}
-      <style jsx global>{`
+      <style>
+        {`
         @keyframes bubble-flow {
           0% {
             transform: translateY(0);
@@ -123,7 +124,8 @@ const BackgroundGradient = ({ children }: BackgroundGradientProps) => {
             opacity: 0;
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
