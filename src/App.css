@@ -1,4 +1,3 @@
-
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -78,21 +77,26 @@
   }
 }
 
-/* New continuous downward flow animation */
+/* New continuous downward flow animation - improved */
 @keyframes bubble-flow-down {
   0% {
-    transform: translateY(-100%);
-    opacity: 0.3;
+    transform: translateY(-100%) translateX(0);
+    opacity: 0;
   }
-  20% {
+  10% {
     opacity: 0.7;
+    transform: translateY(-50%) translateX(10px);
   }
-  80% {
+  50% {
+    transform: translateY(300%) translateX(-15px);
+  }
+  90% {
     opacity: 0.7;
+    transform: translateY(700%) translateX(10px);
   }
   100% {
-    transform: translateY(1000%);
-    opacity: 0.3;
+    transform: translateY(1000%) translateX(0);
+    opacity: 0;
   }
 }
 
@@ -124,7 +128,7 @@
   animation-delay: 8s;
 }
 
-/* New continuous flow animation classes */
+/* New continuous flow animation classes - improved */
 .bubble-flow {
   animation: bubble-flow-down 30s linear infinite;
   position: absolute;
@@ -132,6 +136,7 @@
   opacity: 0.7;
   filter: blur(5px);
   will-change: transform, opacity;
+  z-index: 1;
 }
 
 .flow-1 {
