@@ -13,15 +13,12 @@ const BubbleRenderer: React.FC<BubbleRendererProps> = ({ bubbles }) => {
   return (
     <>
       {bubbles.map((bubble) => {
-        // Determine if this is a left or right bubble
-        const isLeftBubble = bubble.position.left !== undefined;
-        
         // Apply appropriate CSS classes based on bubble type
         const additionalClasses = bubble.type === 'purple' 
-          ? 'bubble-purple hide-behind-cards'  // Updated class name for purple bubbles
+          ? 'bubble-purple hide-behind-cards'  // Apply hide-behind-cards to all purple bubbles
           : bubble.type === 'star'
-            ? 'bubble-star star-transition pass-through-left'  // Added pass-through class for star bubbles
-            : 'bubble-flame flame-transition pass-through-right';  // Added pass-through class for flame bubbles
+            ? 'bubble-star star-transition pass-through-left'
+            : 'bubble-flame flame-transition pass-through-right';
         
         switch (bubble.type) {
           case 'purple':
