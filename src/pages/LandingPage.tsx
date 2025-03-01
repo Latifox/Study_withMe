@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import useEmblaCarousel from "embla-carousel-react";
+
 import {
   ArrowRight,
   BookOpen,
@@ -24,10 +26,13 @@ import {
   Rocket,
   Crown,
 } from "lucide-react";
-import useEmblaCarousel from "embla-carousel-react";
+
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 
-/** Generate an array of "bubble" configs for a single column. */
+/**
+ * Generate an array of bubble configs for one column.
+ * Each bubble has random color, size, duration, delay, etc.
+ */
 function generateBubbles(count) {
   const bubbleColors = [
     "bg-purple-300/70",
@@ -43,14 +48,15 @@ function generateBubbles(count) {
     "bg-pink-400/70",
     "bg-blue-400/70",
   ];
+
   return Array(count)
     .fill(0)
     .map(() => {
       const colorClass = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
-      const size = 30 + Math.random() * 40; // random 30-70px
-      const duration = 7 + Math.random() * 3; // 7-10s for faster flow
-      const delay = Math.random() * 5; // 0-5s
-      const horizontalOffset = Math.random() * 50; // random left offset within the column
+      const size = 30 + Math.random() * 40; // 30–70px
+      const duration = 7 + Math.random() * 3; // 7–10s
+      const delay = Math.random() * 5; // 0–5s
+      const horizontalOffset = Math.random() * 50; // 0–50% within the column
       return { colorClass, size, duration, delay, horizontalOffset };
     });
 }
@@ -60,7 +66,7 @@ const LandingPage = () => {
   const { toast } = useToast();
   const [isHovering, setIsHovering] = useState(false);
 
-  // Embla carousel
+  // Embla Carousel
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
@@ -71,7 +77,6 @@ const LandingPage = () => {
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
 
-  // Auto-scroll the carousel
   useEffect(() => {
     if (!emblaApi) return;
     const autoScrollInterval = setInterval(() => {
@@ -82,21 +87,16 @@ const LandingPage = () => {
     return () => clearInterval(autoScrollInterval);
   }, [emblaApi, scrollNext]);
 
-  const handleGetStarted = () => {
-    navigate("/auth");
-  };
-  const handleSignUp = () => {
-    navigate("/auth?tab=register");
-  };
+  const handleGetStarted = () => navigate("/auth");
+  const handleSignUp = () => navigate("/auth?tab=register");
 
-  // Bubbles: 2 columns on left, 2 columns on right
-  // You can tweak the "count" for more/less bubbles per column
-  const leftColumn1Bubbles = generateBubbles(6);
-  const leftColumn2Bubbles = generateBubbles(6);
-  const rightColumn1Bubbles = generateBubbles(6);
-  const rightColumn2Bubbles = generateBubbles(6);
+  // Create two columns for the left side, two for the right
+  const leftColumn1 = generateBubbles(6);
+  const leftColumn2 = generateBubbles(6);
+  const rightColumn1 = generateBubbles(6);
+  const rightColumn2 = generateBubbles(6);
 
-  // Content arrays
+  // Example content
   const features = [
     {
       icon: <Users className="h-6 w-6 text-purple-600" />,
@@ -239,15 +239,33 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-visible">
+    <div className="relative min-h-screen overflow-x-hidden">
       {/* 
-        Fixed container for bubble columns 
-        (two columns on left, two on right)
+        1) Background behind everything (z-0)
       */}
-      <div className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none">
-        {/* Column 1 (left side) */}
+      <div className="absolute inset-0 z-0">
+        {/* Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100" />
+        {/* Mesh Grid */}
+        <div className="absolute inset-0 opacity-10">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" className="text-purple-500" />
+          </svg>
+        </div>
+      </div>
+
+      {/* 
+        2) Bubble columns in the middle layer (z-10), pinned (fixed) so they flow down the entire viewport
+      */}
+      <div className="fixed top-0 left-0 w-full h-full z-10 pointer-events-none">
+        {/* Left Column 1 */}
         <div className="absolute top-0 bottom-0 left-0 w-[80px] overflow-hidden">
-          {leftColumn1Bubbles.map((bubble, i) => (
+          {leftColumn1.map((bubble, i) => (
             <div
               key={`left1-${i}`}
               className={`absolute rounded-full ${bubble.colorClass}`}
@@ -262,9 +280,9 @@ const LandingPage = () => {
           ))}
         </div>
 
-        {/* Column 2 (left side) */}
+        {/* Left Column 2 */}
         <div className="absolute top-0 bottom-0 left-[80px] w-[80px] overflow-hidden">
-          {leftColumn2Bubbles.map((bubble, i) => (
+          {leftColumn2.map((bubble, i) => (
             <div
               key={`left2-${i}`}
               className={`absolute rounded-full ${bubble.colorClass}`}
@@ -279,16 +297,16 @@ const LandingPage = () => {
           ))}
         </div>
 
-        {/* Column 1 (right side) */}
-        <div className="absolute top-0 bottom-0 right-0 w-[80px] overflow-hidden">
-          {rightColumn1Bubbles.map((bubble, i) => (
+        {/* Right Column 1 */}
+        <div className="absolute top-0 bottom-0 right-[80px] w-[80px] overflow-hidden">
+          {rightColumn1.map((bubble, i) => (
             <div
               key={`right1-${i}`}
               className={`absolute rounded-full ${bubble.colorClass}`}
               style={{
                 width: bubble.size,
                 height: bubble.size,
-                left: `${bubble.horizontalOffset}%`, // we still use "left" offset inside the column
+                left: `${bubble.horizontalOffset}%`, // "left" offset within this 80px column
                 animation: `columnFlow ${bubble.duration}s linear infinite`,
                 animationDelay: `${bubble.delay}s`,
               }}
@@ -296,9 +314,9 @@ const LandingPage = () => {
           ))}
         </div>
 
-        {/* Column 2 (right side) */}
-        <div className="absolute top-0 bottom-0 right-[80px] w-[80px] overflow-hidden">
-          {rightColumn2Bubbles.map((bubble, i) => (
+        {/* Right Column 2 */}
+        <div className="absolute top-0 bottom-0 right-0 w-[80px] overflow-hidden">
+          {rightColumn2.map((bubble, i) => (
             <div
               key={`right2-${i}`}
               className={`absolute rounded-full ${bubble.colorClass}`}
@@ -314,23 +332,11 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Background gradient + mesh (z-0 or z-1) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-violet-50 to-indigo-100 z-0">
-        <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" className="text-purple-500" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Main content (above the bubbles) */}
-      <div className="relative z-10">
-        {/* Navbar */}
+      {/* 
+        3) Main content on top (z-20)
+      */}
+      <div className="relative z-20">
+        {/* Nav Bar */}
         <nav className="px-8 py-4 flex justify-between items-center backdrop-blur-sm bg-white/30">
           <div className="flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-purple-600" />
@@ -549,8 +555,8 @@ const LandingPage = () => {
       </div>
 
       {/* 
-        Inline keyframes for faster downward flow in an infinite loop.
-        Move to a global CSS file if needed. 
+        4) Keyframes for the downward flow.
+        Each bubble starts above the column (translateY(-120%)) and goes below (translateY(120%)), repeating infinitely.
       */}
       <style>
         {`
