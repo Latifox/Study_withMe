@@ -239,6 +239,22 @@
   }
 }
 
+/* Super strong pulse animation for the title box */
+@keyframes super-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+}
+
 .animate-energy {
   animation: energy-pulse 4s infinite ease-in-out;
 }

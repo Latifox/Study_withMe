@@ -25,14 +25,15 @@ const GamificationSection = () => {
       <Bubbles position="right" tint={gamificationElements[1].bubbleTint} />
       
       <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 relative overflow-hidden">
-        {/* Enhanced radiation effect behind the title box */}
+        {/* Dramatically enhanced radiation effect behind the title box */}
         <div 
-          className="absolute -inset-10 animate-pulse z-0" 
+          className="absolute -inset-10 z-0" 
           style={{
-            background: 'radial-gradient(circle at center, rgba(255, 215, 0, 0.8) 0%, rgba(255, 69, 0, 0.8) 40%, transparent 90%)',
-            filter: 'blur(40px)',
-            transform: 'scale(1.5)',
-            opacity: 0.9
+            background: 'radial-gradient(circle at center, rgba(255, 215, 0, 0.9) 0%, rgba(255, 100, 0, 0.9) 40%, transparent 100%)',
+            filter: 'blur(25px)',
+            transform: 'scale(1.8)',
+            opacity: 0.85,
+            animation: 'super-pulse 3s infinite ease-in-out'
           }}
         />
         
