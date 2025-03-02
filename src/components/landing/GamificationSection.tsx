@@ -25,16 +25,22 @@ const GamificationSection = () => {
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
-      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 border-purple-400">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 bg-clip-text text-transparent">
-            Learn with Purpose
-          </span>
-        </h2>
-        <p className="text-lg text-gray-700">
-          Our gamified learning approach keeps you motivated and tracks your progress through your
-          educational journey
-        </p>
+      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm relative overflow-hidden">
+        {/* Gradient border overlay */}
+        <div className="absolute inset-0 p-[2px] rounded-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl" />
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 bg-clip-text text-transparent">
+              Learn with Purpose
+            </span>
+          </h2>
+          <p className="text-lg text-gray-700">
+            Our gamified learning approach keeps you motivated and tracks your progress through your
+            educational journey
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20">
