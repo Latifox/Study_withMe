@@ -31,7 +31,7 @@ const GamificationSection = () => {
               Learn with Purpose
             </span>
           </h2>
-          <p className="text-lg text-gray-700">
+          <p className="text-lg text-white">
             Our gamified learning approach keeps you motivated and tracks your progress through your
             educational journey
           </p>
