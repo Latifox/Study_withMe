@@ -1,6 +1,7 @@
 
 import { Star, Flame } from "lucide-react";
 import Bubbles from "./Bubbles";
+
 const GamificationSection = () => {
   const gamificationElements = [{
     icon: <Star className="h-8 w-8 text-white" />,
@@ -13,21 +14,28 @@ const GamificationSection = () => {
     description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
     gradient: "bg-gradient-to-r from-red-500 to-orange-500"
   }];
+  
   return <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
       {/* Bubble effects */}
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
-      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 border-gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 bg-clip-text text-transparent">
-            Learn with Purpose
-          </span>
-        </h2>
-        <p className="text-lg text-gray-700">
-          Our gamified learning approach keeps you motivated and tracks your progress through your
-          educational journey
-        </p>
+      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 relative overflow-hidden">
+        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl -m-[1px]"></div>
+          <div className="absolute inset-[2px] bg-white/10 backdrop-blur-sm rounded-lg"></div>
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 bg-clip-text text-transparent">
+              Learn with Purpose
+            </span>
+          </h2>
+          <p className="text-lg text-gray-700">
+            Our gamified learning approach keeps you motivated and tracks your progress through your
+            educational journey
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20">
@@ -43,4 +51,5 @@ const GamificationSection = () => {
       </div>
     </div>;
 };
+
 export default GamificationSection;
