@@ -201,17 +201,20 @@ const TestimonialsSection = () => {
         </div>
       </div>
 
-      {/* Add CSS for backface visibility */}
-      <style jsx global>{`
-        .backface-hidden {
-          backface-visibility: hidden;
-          -webkit-backface-visibility: hidden;
-          transform-style: preserve-3d;
-          -webkit-transform-style: preserve-3d;
-        }
-      `}</style>
+      {/* Add CSS for backface visibility using regular style tag */}
+      <style>
+        {`
+          .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
+          }
+        `}
+      </style>
     </div>
   );
 };
 
 export default TestimonialsSection;
+
