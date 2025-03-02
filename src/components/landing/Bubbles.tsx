@@ -33,50 +33,50 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", opacity = 
   // Define vibrant color based on tint
   const getBubbleColor = (bubbleGradient: number) => {
     switch(tint) {
-      case "yellow": // XP card colors (yellows and ambers)
+      case "yellow": // XP card colors (bolder yellows and ambers)
         switch(bubbleGradient) {
           case 0:
             return {
-              background: `linear-gradient(135deg, rgba(245, 158, 11, ${opacity}) 0%, rgba(252, 211, 77, ${opacity}) 100%)`,
-              border: "1px solid rgba(245, 158, 11, 0.8)"
+              background: `linear-gradient(135deg, rgba(250, 170, 20, ${opacity}) 0%, rgba(255, 220, 60, ${opacity}) 100%)`,
+              border: "1px solid rgba(250, 170, 20, 0.8)"
             };
           case 1:
             return {
-              background: `linear-gradient(225deg, rgba(251, 191, 36, ${opacity}) 0%, rgba(217, 119, 6, ${opacity}) 100%)`,
-              border: "1px solid rgba(251, 191, 36, 0.8)"
+              background: `linear-gradient(225deg, rgba(255, 200, 40, ${opacity}) 0%, rgba(230, 140, 10, ${opacity}) 100%)`,
+              border: "1px solid rgba(255, 200, 40, 0.8)"
             };
           case 2:
             return {
-              background: `linear-gradient(45deg, rgba(252, 211, 77, ${opacity}) 0%, rgba(245, 158, 11, ${opacity}) 100%)`,
-              border: "1px solid rgba(252, 211, 77, 0.8)"
+              background: `linear-gradient(45deg, rgba(255, 220, 60, ${opacity}) 0%, rgba(250, 170, 20, ${opacity}) 100%)`,
+              border: "1px solid rgba(255, 220, 60, 0.8)"
             };
           default:
             return {
-              background: `linear-gradient(315deg, rgba(217, 119, 6, ${opacity}) 0%, rgba(251, 191, 36, ${opacity}) 100%)`,
-              border: "1px solid rgba(217, 119, 6, 0.8)"
+              background: `linear-gradient(315deg, rgba(230, 140, 10, ${opacity}) 0%, rgba(255, 200, 40, ${opacity}) 100%)`,
+              border: "1px solid rgba(230, 140, 10, 0.8)"
             };
         }
-      case "red": // Learning Streak colors (reds and oranges)
+      case "red": // Learning Streak colors (bolder reds and oranges)
         switch(bubbleGradient) {
           case 0:
             return {
-              background: `linear-gradient(135deg, rgba(239, 68, 68, ${opacity}) 0%, rgba(249, 115, 22, ${opacity}) 100%)`,
-              border: "1px solid rgba(239, 68, 68, 0.8)"
+              background: `linear-gradient(135deg, rgba(250, 60, 60, ${opacity}) 0%, rgba(255, 120, 60, ${opacity}) 100%)`,
+              border: "1px solid rgba(250, 60, 60, 0.8)"
             };
           case 1:
             return {
-              background: `linear-gradient(225deg, rgba(220, 38, 38, ${opacity}) 0%, rgba(234, 88, 12, ${opacity}) 100%)`,
-              border: "1px solid rgba(220, 38, 38, 0.8)"
+              background: `linear-gradient(225deg, rgba(240, 30, 30, ${opacity}) 0%, rgba(245, 90, 30, ${opacity}) 100%)`,
+              border: "1px solid rgba(240, 30, 30, 0.8)"
             };
           case 2:
             return {
-              background: `linear-gradient(45deg, rgba(249, 115, 22, ${opacity}) 0%, rgba(239, 68, 68, ${opacity}) 100%)`,
-              border: "1px solid rgba(249, 115, 22, 0.8)"
+              background: `linear-gradient(45deg, rgba(255, 120, 60, ${opacity}) 0%, rgba(250, 60, 60, ${opacity}) 100%)`,
+              border: "1px solid rgba(255, 120, 60, 0.8)"
             };
           default:
             return {
-              background: `linear-gradient(315deg, rgba(234, 88, 12, ${opacity}) 0%, rgba(220, 38, 38, ${opacity}) 100%)`,
-              border: "1px solid rgba(234, 88, 12, 0.8)"
+              background: `linear-gradient(315deg, rgba(245, 90, 30, ${opacity}) 0%, rgba(240, 30, 30, ${opacity}) 100%)`,
+              border: "1px solid rgba(245, 90, 30, 0.8)"
             };
         }
       case "purple":
