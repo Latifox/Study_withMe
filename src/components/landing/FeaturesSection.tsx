@@ -62,9 +62,9 @@ const FeaturesSection = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "center",
-    dragFree: true,
-    containScroll: "trimSnaps",
     slidesToScroll: 1,
+    containScroll: "trimSnaps",
+    slidesToShow: 3, // Explicitly set to show 3 slides
   });
 
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
@@ -97,11 +97,11 @@ const FeaturesSection = () => {
         </p>
       </div>
 
-      <div className="relative z-10 px-6">
+      <div className="relative z-10 px-6 max-w-6xl mx-auto">
         <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-6">
+          <div className="flex">
             {features.map((feature, i) => (
-              <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1 relative group">
+              <div key={i} className="flex-shrink-0 w-full md:w-1/3 px-4 relative group">
                 {/* Always visible enhanced glow effect */}
                 <div 
                   className="absolute inset-0 rounded-xl animate-energy-glow" 
