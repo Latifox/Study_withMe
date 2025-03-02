@@ -39,7 +39,7 @@ const GamificationSection = () => {
         
         <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl -m-[1px]"></div>
-          <div className="absolute inset-[2px] bg-white/10 backdrop-blur-sm rounded-lg"></div>
+          <div className="absolute inset-[2px] bg-white/20 backdrop-blur-md rounded-lg"></div>
         </div>
         <div className="relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
