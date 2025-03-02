@@ -8,13 +8,15 @@ const GamificationSection = () => {
     title: "Experience Points (XP)",
     description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
     gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
-    bubbleTint: "yellow" // Adding tint for XP card
+    bubbleTint: "yellow", // Adding tint for XP card
+    glowColor: "rgba(234, 179, 8, 0.2)" // Yellow glow color
   }, {
     icon: <Flame className="h-8 w-8 text-white" />,
     title: "Learning Streaks",
     description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
     gradient: "bg-gradient-to-r from-red-500 to-orange-500",
-    bubbleTint: "red" // Adding tint for Learning Streaks card
+    bubbleTint: "red", // Adding tint for Learning Streaks card
+    glowColor: "rgba(239, 68, 68, 0.2)" // Red glow color
   }];
   
   return <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
@@ -41,15 +43,29 @@ const GamificationSection = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20">
-        {gamificationElements.map((element, index) => <div key={index} className={`${element.gradient} p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 max-w-xs mx-auto w-full`}>
-            <div className="flex items-center justify-center mb-4">
-              <div className="bg-white/20 p-3 rounded-full flex items-center justify-center shadow-lg">
-                {element.icon}
+        {gamificationElements.map((element, index) => (
+          <div key={index} className="relative">
+            {/* Energy radiation effect for each card */}
+            <div 
+              className="absolute inset-0 rounded-xl animate-energy" 
+              style={{
+                background: `radial-gradient(circle at center, ${element.glowColor} 10%, transparent 70%)`,
+                filter: 'blur(15px)',
+                transform: 'scale(1.15)'
+              }}
+            />
+            
+            <div className={`${element.gradient} p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 max-w-xs mx-auto w-full relative z-10`}>
+              <div className="flex items-center justify-center mb-4">
+                <div className="bg-white/20 p-3 rounded-full flex items-center justify-center shadow-lg">
+                  {element.icon}
+                </div>
               </div>
+              <h3 className="text-xl font-bold text-white text-center mb-2">{element.title}</h3>
+              <p className="text-white text-center text-sm">{element.description}</p>
             </div>
-            <h3 className="text-xl font-bold text-white text-center mb-2">{element.title}</h3>
-            <p className="text-white text-center text-sm">{element.description}</p>
-          </div>)}
+          </div>
+        ))}
       </div>
     </div>;
 };
