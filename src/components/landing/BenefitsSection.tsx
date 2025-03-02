@@ -1,4 +1,3 @@
-
 import { GraduationCap, School } from "lucide-react";
 import Bubbles from "./Bubbles";
 
@@ -42,8 +41,18 @@ const BenefitsSection = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
-        <div className="flex justify-center">
-          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full">
+        <div className="flex justify-center relative">
+          <div 
+            className="absolute inset-0 rounded-xl animate-energy" 
+            style={{
+              background: 'radial-gradient(circle at center, rgba(96, 165, 250, 0.7) 0%, transparent 80%)',
+              filter: 'blur(20px)',
+              transform: 'scale(1.3)',
+              opacity: 0.85
+            }}
+          />
+          
+          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10">
             <div className="flex items-center mb-6">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
                 <GraduationCap className="h-6 w-6 text-white" />
@@ -65,8 +74,18 @@ const BenefitsSection = () => {
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full">
+        <div className="flex justify-center relative">
+          <div 
+            className="absolute inset-0 rounded-xl animate-energy" 
+            style={{
+              background: 'radial-gradient(circle at center, rgba(96, 165, 250, 0.7) 0%, transparent 80%)',
+              filter: 'blur(20px)',
+              transform: 'scale(1.3)',
+              opacity: 0.85
+            }}
+          />
+          
+          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10">
             <div className="flex items-center mb-6">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
                 <School className="h-6 w-6 text-white" />
