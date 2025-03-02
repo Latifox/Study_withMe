@@ -1,5 +1,6 @@
 
 import { GraduationCap, School } from "lucide-react";
+import Bubbles from "./Bubbles";
 
 const BenefitsSection = () => {
   const studentBenefits = [
@@ -23,7 +24,11 @@ const BenefitsSection = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
+    <div className="container mx-auto px-4 py-8 md:py-12 relative">
+      {/* Bubble effects */}
+      <Bubbles position="left" tint="purple" />
+      <Bubbles position="right" tint="indigo" />
+      
       <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Who Benefits from{" "}

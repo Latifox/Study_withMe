@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import Bubbles from "./Bubbles";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -11,7 +12,11 @@ const HeroSection = () => {
   const handleGetStarted = () => navigate("/auth");
   
   return (
-    <div className="container mx-auto px-4 py-16 md:py-32 flex flex-col items-center">
+    <div className="container mx-auto px-4 py-16 md:py-32 flex flex-col items-center relative">
+      {/* Bubble effects */}
+      <Bubbles position="left" sectionHeight="100%" tint="purple" />
+      <Bubbles position="right" sectionHeight="100%" tint="indigo" />
+      
       <h1 className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-6">
         Transform Your Learning Experience with{" "}
         <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
