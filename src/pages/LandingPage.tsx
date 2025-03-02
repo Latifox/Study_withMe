@@ -1,5 +1,4 @@
 
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import NavigationBar from "@/components/landing/NavigationBar";
 import HeroSection from "@/components/landing/HeroSection";
 import GamificationSection from "@/components/landing/GamificationSection";
@@ -10,7 +9,7 @@ import Footer from "@/components/landing/Footer";
 
 const LandingPage = () => {
   return (
-    <BackgroundGradient>
+    <div className="min-h-screen bg-white">
       <NavigationBar />
       <HeroSection />
       <GamificationSection />
@@ -18,7 +17,7 @@ const LandingPage = () => {
       <FeaturesSection />
       <SubscriptionPlansSection />
       <Footer />
-    </BackgroundGradient>
+    </div>
   );
 };
 
