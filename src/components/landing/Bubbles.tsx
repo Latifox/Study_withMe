@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 
 type BubbleProps = {
@@ -159,25 +158,13 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", opacity = 
   return (
     <div
       ref={containerRef}
-      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none`}
+      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none overflow-hidden`}
       style={{ 
         height: sectionHeight, 
         maxHeight: sectionHeight,
-        position: "relative"
+        overflow: "hidden"
       }}
     >
-      {/* Fade-out gradient overlay */}
-      <div 
-        className="absolute w-full bottom-0 z-10 pointer-events-none" 
-        style={{
-          height: "70%",
-          background: `linear-gradient(to bottom, 
-            rgba(255,255,255,0) 0%, 
-            rgba(255,255,255,0.5) 50%, 
-            rgba(255,255,255,1) 100%)`
-        }}
-      />
-      
       {bubbles.map((bubble) => {
         const bubbleStyle = getBubbleColor(bubble.gradient);
         return (
