@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Clock, Rocket, Crown, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import Bubbles from "./Bubbles";
 import { motion } from "framer-motion";
 
@@ -13,10 +13,9 @@ const SubscriptionPlansSection = () => {
 
   const subscriptionPlans = [
     {
-      name: "Free",
+      name: "BASIC PACK",
       price: "$0",
-      period: "forever",
-      description: "Basic features to get you started",
+      period: "FOREVER",
       features: [
         "5 AI chat messages per day",
         "Basic study plans",
@@ -24,22 +23,15 @@ const SubscriptionPlansSection = () => {
         "Standard quiz generation",
         "Basic flashcards",
       ],
-      ctaText: "Get Started Now",
-      recommended: false,
-      icon: <Clock className="h-8 w-8" />,
-      color: "bg-gradient-to-br from-red-400 to-red-500",
-      textColor: "text-white",
-      iconBg: "bg-white/20",
-      iconColor: "text-white",
-      borderColor: "border-red-400",
-      shadowColor: "shadow-red-300/30",
-      hoverShadow: "hover:shadow-red-400/40",
+      ctaText: "Get Started",
+      color: "bg-gradient-to-b from-purple-400 to-indigo-500",
+      circleBorderColor: "border-indigo-300",
+      checkColor: "text-indigo-400",
     },
     {
-      name: "Plus",
+      name: "STANDARD",
       price: "$4.99",
-      period: "month",
-      description: "Enhanced learning experience",
+      period: "MONTH",
       features: [
         "50 AI chat messages per day",
         "Personalized study paths",
@@ -50,31 +42,19 @@ const SubscriptionPlansSection = () => {
       ],
       ctaText: "Choose Plan",
       recommended: true,
-      icon: <Rocket className="h-8 w-8" />,
-      color: "bg-gradient-to-br from-blue-400 to-blue-500",
-      textColor: "text-white",
-      iconBg: "bg-white/20",
-      iconColor: "text-white",
-      borderColor: "border-blue-400",
-      shadowColor: "shadow-blue-300/40",
-      hoverShadow: "hover:shadow-blue-500/50",
+      color: "bg-gradient-to-b from-orange-400 to-red-500",
+      circleBorderColor: "border-orange-400",
+      checkColor: "text-orange-400",
     },
     {
-      name: "Premium",
+      name: "PREMIUM",
       price: "$9.99",
-      period: "month",
-      description: "Ultimate learning toolkit",
+      period: "MONTH",
       features: ["Unlimited access to all functionalities provided by EduSync AI"],
       ctaText: "Choose Plan",
-      recommended: false,
-      icon: <Crown className="h-8 w-8" />,
-      color: "bg-gradient-to-br from-purple-500 to-purple-600",
-      textColor: "text-white",
-      iconBg: "bg-white/20",
-      iconColor: "text-white",
-      borderColor: "border-purple-500",
-      shadowColor: "shadow-purple-400/40",
-      hoverShadow: "hover:shadow-purple-600/50",
+      color: "bg-gradient-to-b from-cyan-400 to-blue-500",
+      circleBorderColor: "border-blue-300",
+      checkColor: "text-blue-400",
     },
   ];
 
@@ -100,7 +80,6 @@ const SubscriptionPlansSection = () => {
     },
     hover: { 
       y: -8,
-      boxShadow: "0 10px 25px rgba(124, 58, 237, 0.3)",
       transition: {
         duration: 0.3,
         ease: "easeOut"
@@ -148,48 +127,41 @@ const SubscriptionPlansSection = () => {
         {subscriptionPlans.map((plan, index) => (
           <motion.div 
             key={index} 
-            className={`${plan.recommended ? "md:transform md:scale-105 z-10" : ""}`}
+            className={`${plan.recommended ? "md:transform md:-my-4 md:scale-110 z-10" : ""}`}
             variants={cardVariants}
             whileHover="hover"
           >
-            <Card className={`h-full flex flex-col border-0 overflow-hidden ${plan.shadowColor} shadow-xl transition-all duration-300 ${plan.hoverShadow} rounded-3xl`}>
-              {plan.recommended && (
-                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
-                  MOST POPULAR
-                </div>
-              )}
-              <CardHeader className={`${plan.color} py-8 px-8`}>
+            <Card className={`h-full flex flex-col border-0 overflow-hidden rounded-3xl shadow-xl ${plan.color}`}>
+              <CardHeader className="pt-6 pb-2 px-6">
                 <div className="flex flex-col items-center">
-                  <div className={`${plan.iconBg} rounded-full p-4 mb-4`}>
-                    {plan.icon}
-                  </div>
-                  <h3 className={`text-2xl font-bold uppercase tracking-wider ${plan.textColor} mb-2`}>{plan.name}</h3>
-                  <p className={`${plan.textColor} opacity-90 text-sm mb-4 text-center`}>{plan.description}</p>
-                  <div className={`h-px w-3/4 bg-white/20 mb-4`}></div>
-                  <div className="flex items-baseline">
-                    <span className={`text-5xl font-bold ${plan.textColor}`}>{plan.price}</span>
-                    <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
-                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-wider">{plan.name}</h3>
                 </div>
               </CardHeader>
-              <CardContent className={`${plan.color} flex-grow px-8 pt-6 pb-4`}>
+              
+              <CardContent className="flex-grow px-6 pt-2 pb-4">
                 <motion.ul 
-                  className="space-y-3"
+                  className="space-y-2 mb-8"
                   variants={featuresVariants}
                 >
                   {plan.features.map((feature, i) => (
                     <motion.li key={i} className="flex items-start" variants={featureItemVariants}>
-                      <div className={`${plan.iconBg} rounded-full p-1 flex-shrink-0 mt-0.5 mr-2`}>
-                        <Check className="h-3.5 w-3.5 text-white" />
-                      </div>
+                      <Check className={`h-4 w-4 ${plan.checkColor} mr-2 mt-0.5 flex-shrink-0`} />
                       <span className="text-white text-sm">{feature}</span>
                     </motion.li>
                   ))}
                 </motion.ul>
+                
+                <div className="flex justify-center mt-auto mb-6">
+                  <div className="bg-gray-900 text-white rounded-full p-4 flex flex-col items-center justify-center w-32 h-32 border-4 border-white/20">
+                    <div className="text-3xl font-bold">{plan.price}</div>
+                    <div className="text-xs font-medium mt-1">{plan.period}</div>
+                  </div>
+                </div>
               </CardContent>
-              <CardFooter className={`${plan.color} pt-0 pb-8 px-8`}>
+              
+              <CardFooter className="pt-0 pb-6 px-6">
                 <Button
-                  className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-6"
+                  className="w-full bg-white hover:bg-gray-100 text-gray-800 border-0 rounded-full py-5 font-medium"
                   onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
                 >
                   {plan.ctaText}
