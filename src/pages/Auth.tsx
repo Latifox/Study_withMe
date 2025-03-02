@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,6 @@ const Auth = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   
-  // Get the tab from URL query parameters
   const queryParams = new URLSearchParams(location.search);
   const tabParam = queryParams.get('tab');
   const [activeTab, setActiveTab] = useState<"login" | "register">(
@@ -33,7 +31,6 @@ const Auth = () => {
   );
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
     if (user && !loading) {
       navigate('/dashboard');
     }
@@ -77,6 +74,10 @@ const Auth = () => {
         title: "Success!",
         description: "Please check your email to confirm your account.",
       });
+      
+      if (data?.user) {
+        navigate("/account-type");
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -118,7 +119,7 @@ const Auth = () => {
       }
 
       if (data?.user) {
-        navigate("/dashboard");
+        navigate("/account-type");
       }
     } catch (error: any) {
       toast({
@@ -137,7 +138,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/account-type`,
         },
       });
 
