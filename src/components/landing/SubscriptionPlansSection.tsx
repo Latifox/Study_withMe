@@ -27,10 +27,13 @@ const SubscriptionPlansSection = () => {
       ctaText: "Get Started Now",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
-      color: "bg-gradient-to-br from-purple-200 to-indigo-100",
+      color: "bg-gradient-to-br from-indigo-100 to-purple-200",
       textColor: "text-purple-900",
-      iconColor: "text-purple-400",
-      borderColor: "border-purple-200",
+      iconBg: "bg-white/50",
+      iconColor: "text-purple-600",
+      borderColor: "border-purple-300",
+      shadowColor: "shadow-purple-100",
+      hoverShadow: "hover:shadow-purple-200/60",
     },
     {
       name: "Plus",
@@ -48,10 +51,13 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       recommended: true,
       icon: <Rocket className="h-7 w-7" />,
-      color: "bg-gradient-to-br from-purple-500 to-indigo-400",
+      color: "bg-gradient-to-br from-purple-600 to-indigo-500",
       textColor: "text-white",
+      iconBg: "bg-white/30",
       iconColor: "text-white",
-      borderColor: "border-purple-400",
+      borderColor: "border-indigo-400",
+      shadowColor: "shadow-indigo-200/50",
+      hoverShadow: "hover:shadow-purple-500/30",
     },
     {
       name: "Premium",
@@ -62,10 +68,13 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       recommended: false,
       icon: <Crown className="h-7 w-7" />,
-      color: "bg-gradient-to-br from-purple-800 to-indigo-700",
+      color: "bg-gradient-to-br from-indigo-900 to-purple-800",
       textColor: "text-white",
-      iconColor: "text-purple-300",
-      borderColor: "border-purple-700",
+      iconBg: "bg-white/20",
+      iconColor: "text-amber-300",
+      borderColor: "border-indigo-700",
+      shadowColor: "shadow-indigo-900/30",
+      hoverShadow: "hover:shadow-purple-800/40",
     },
   ];
 
@@ -145,7 +154,7 @@ const SubscriptionPlansSection = () => {
             variants={cardVariants}
             whileHover="hover"
           >
-            <Card className={`h-full flex flex-col shadow-lg border ${plan.borderColor} overflow-hidden`}>
+            <Card className={`h-full flex flex-col border-2 ${plan.borderColor} overflow-hidden ${plan.shadowColor} shadow-lg transition-all duration-300 ${plan.hoverShadow}`}>
               {plan.recommended && (
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                   MOST POPULAR
@@ -153,7 +162,7 @@ const SubscriptionPlansSection = () => {
               )}
               <CardHeader className={`${plan.color} pb-8`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-2 rounded-full ${plan.recommended ? "bg-white/30" : "bg-white/60"} ${plan.iconColor}`}>
+                  <div className={`p-2 rounded-full ${plan.iconBg} ${plan.iconColor}`}>
                     {plan.icon}
                   </div>
                   <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
@@ -164,7 +173,7 @@ const SubscriptionPlansSection = () => {
                 </div>
                 <p className={`${plan.textColor} opacity-90`}>{plan.description}</p>
               </CardHeader>
-              <CardContent className="bg-white flex-grow">
+              <CardContent className="bg-white/95 backdrop-blur-sm flex-grow">
                 <motion.ul 
                   className="space-y-3 mb-6"
                   variants={featuresVariants}
@@ -179,12 +188,12 @@ const SubscriptionPlansSection = () => {
                   ))}
                 </motion.ul>
               </CardContent>
-              <CardFooter className="bg-white pt-0 pb-6 px-6">
+              <CardFooter className="bg-white/95 backdrop-blur-sm pt-0 pb-6 px-6">
                 <Button
                   className={`w-full ${
                     plan.recommended 
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white" 
-                      : "bg-white border-2 border-purple-500 text-purple-700 hover:bg-purple-50"
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-300/30" 
+                      : "bg-white border-2 border-purple-500 text-purple-700 hover:bg-purple-50 shadow-sm"
                   }`}
                   onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
                 >
