@@ -66,7 +66,7 @@ const UploadedCourses = () => {
             <div className="flex gap-4">
               <Button 
                 variant="outline" 
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 className="bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
               >
                 Back to Home
