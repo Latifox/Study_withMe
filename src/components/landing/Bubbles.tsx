@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 
 type BubbleProps = {
@@ -159,11 +158,10 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", opacity = 
   return (
     <div
       ref={containerRef}
-      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none overflow-hidden`}
+      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none`}
       style={{ 
         height: sectionHeight, 
-        maxHeight: sectionHeight,
-        overflow: "hidden"
+        maxHeight: sectionHeight
       }}
     >
       {bubbles.map((bubble) => {
