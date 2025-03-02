@@ -159,8 +159,12 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", opacity = 
   return (
     <div
       ref={containerRef}
-      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 bottom-0 w-32 md:w-40 pointer-events-none h-full`}
-      style={{ minHeight: sectionHeight, overflow: "visible" }}
+      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none overflow-hidden`}
+      style={{ 
+        height: sectionHeight, 
+        maxHeight: sectionHeight,
+        overflow: "hidden"
+      }}
     >
       {bubbles.map((bubble) => {
         const bubbleStyle = getBubbleColor(bubble.gradient);

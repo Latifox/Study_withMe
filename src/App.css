@@ -78,7 +78,7 @@
   }
 }
 
-/* Improved continuous downward flow animation with slight horizontal movement */
+/* Improved continuous downward flow animation with earlier fade out */
 @keyframes bubble-flow {
   0% {
     transform: translateY(-5%);
@@ -87,11 +87,15 @@
   10% {
     opacity: 0.7;
   }
-  90% {
+  60% {
     opacity: 0.7;
   }
+  80% {
+    opacity: 0;
+    transform: translateY(70%);
+  }
   100% {
-    transform: translateY(105%);
+    transform: translateY(80%);
     opacity: 0;
   }
 }
