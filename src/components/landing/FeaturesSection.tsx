@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
@@ -64,7 +63,6 @@ const FeaturesSection = () => {
     align: "center",
     slidesToScroll: 1,
     containScroll: "trimSnaps",
-    slidesToShow: 3, // Explicitly set to show 3 slides
   });
 
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
@@ -102,19 +100,17 @@ const FeaturesSection = () => {
           <div className="flex">
             {features.map((feature, i) => (
               <div key={i} className="flex-shrink-0 w-full md:w-1/3 px-4 relative group">
-                {/* Always visible enhanced glow effect */}
                 <div 
                   className="absolute inset-0 rounded-xl animate-energy-glow" 
                   style={{
-                    background: 'radial-gradient(circle at center, rgba(147, 51, 234, 0.8) 0%, rgba(79, 70, 229, 0.8) 35%, transparent 70%)',
-                    filter: 'blur(20px)',
-                    transform: 'scale(1.2)',
-                    opacity: 0.9,
+                    background: 'radial-gradient(circle at center, rgba(147, 51, 234, 0.95) 0%, rgba(79, 70, 229, 0.95) 35%, transparent 70%)',
+                    filter: 'blur(18px)',
+                    transform: 'scale(1.25)',
+                    opacity: 0.95,
                     zIndex: 0
                   }}
                 />
                 
-                {/* Card with hover effects */}
                 <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full transform transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl relative z-10">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
