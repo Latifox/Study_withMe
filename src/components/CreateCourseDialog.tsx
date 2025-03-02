@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PlusCircle } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 interface CreateCourseDialogProps {
   isProfessorMode?: boolean;
@@ -19,12 +20,22 @@ export function CreateCourseDialog({ isProfessorMode = false }: CreateCourseDial
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const handleCreate = async () => {
     if (!title.trim()) {
       toast({
         title: "Error",
         description: "Please enter a course title",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a course",
         variant: "destructive"
       });
       return;
@@ -40,7 +51,10 @@ export function CreateCourseDialog({ isProfessorMode = false }: CreateCourseDial
       
       const { data, error } = await supabase
         .from(tableName)
-        .insert([{ title: title.trim() }])
+        .insert([{ 
+          title: title.trim(),
+          owner_id: user.id
+        }])
         .select();
       
       if (error) throw error;
