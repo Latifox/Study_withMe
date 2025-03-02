@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
   ChevronLeft, 
@@ -58,10 +58,9 @@ const FeaturesSection = () => {
     },
   ];
 
-  // Embla Carousel - Updated options to improve spacing and alignment
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
-    align: "center", // Change from "start" to "center" for better centering
+    align: "center",
     dragFree: true,
     containScroll: "trimSnaps",
     slidesToScroll: 1,
@@ -82,7 +81,6 @@ const FeaturesSection = () => {
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
-      {/* Bubble effects */}
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
@@ -97,11 +95,11 @@ const FeaturesSection = () => {
         </p>
       </div>
 
-      <div className="relative z-10 px-6"> {/* Added padding to ensure carousel doesn't get cut off */}
+      <div className="relative z-10 px-6">
         <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-6"> {/* Reduced gap between slides from 8 to 6 */}
+          <div className="flex gap-6">
             {features.map((feature, i) => (
-              <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1"> {/* Added mx-1 for more consistent spacing */}
+              <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1">
                 <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
