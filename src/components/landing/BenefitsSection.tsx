@@ -29,7 +29,7 @@ const BenefitsSection = () => {
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
-      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400">
+      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400 relative z-10">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Who Benefits from{" "}
           <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -41,7 +41,7 @@ const BenefitsSection = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
         <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-8 rounded-xl shadow-lg border border-gray-200 transform transition-all hover:scale-105">
           <div className="flex items-center mb-6">
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
