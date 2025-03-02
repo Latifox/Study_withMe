@@ -32,7 +32,7 @@ const BenefitsSection = () => {
       <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400 relative z-10">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Who Benefits from{" "}
-          <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
             EduSync AI
           </span>
         </h2>
