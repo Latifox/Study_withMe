@@ -207,27 +207,26 @@
   will-change: transform, opacity;
 }
 
-/* Energy radiation effect */
+/* Energy radiation effect - Enhanced with stronger animation */
 @keyframes energy-pulse {
   0% {
-    opacity: 0.5;
-    transform: scale(0.9);
+    opacity: 0.6;
+    transform: scale(0.95);
   }
   50% {
-    opacity: 0.7;
-    transform: scale(1.05);
+    opacity: 0.9;
+    transform: scale(1.1);
   }
   100% {
-    opacity: 0.5;
-    transform: scale(0.9);
+    opacity: 0.6;
+    transform: scale(0.95);
   }
 }
 
 .animate-energy {
-  animation: energy-pulse 8s infinite ease-in-out;
+  animation: energy-pulse 5s infinite ease-in-out;
 }
 
-/* Enhance button hover effect */
 .energy-button:hover::before {
   content: '';
   position: absolute;

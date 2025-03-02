@@ -9,14 +9,14 @@ const GamificationSection = () => {
     description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
     gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
     bubbleTint: "yellow", // Adding tint for XP card
-    glowColor: "rgba(234, 179, 8, 0.2)" // Yellow glow color
+    glowColor: "rgba(255, 215, 0, 0.6)" // Brighter yellow glow color with higher opacity
   }, {
     icon: <Flame className="h-8 w-8 text-white" />,
     title: "Learning Streaks",
     description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
     gradient: "bg-gradient-to-r from-red-500 to-orange-500",
     bubbleTint: "red", // Adding tint for Learning Streaks card
-    glowColor: "rgba(239, 68, 68, 0.2)" // Red glow color
+    glowColor: "rgba(255, 69, 0, 0.6)" // Brighter orange-red glow color with higher opacity
   }];
   
   return <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
@@ -45,13 +45,14 @@ const GamificationSection = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20">
         {gamificationElements.map((element, index) => (
           <div key={index} className="relative">
-            {/* Energy radiation effect for each card */}
+            {/* Enhanced energy radiation effect for each card */}
             <div 
               className="absolute inset-0 rounded-xl animate-energy" 
               style={{
-                background: `radial-gradient(circle at center, ${element.glowColor} 10%, transparent 70%)`,
-                filter: 'blur(15px)',
-                transform: 'scale(1.15)'
+                background: `radial-gradient(circle at center, ${element.glowColor} 0%, transparent 80%)`,
+                filter: 'blur(20px)',
+                transform: 'scale(1.3)',
+                opacity: 0.85
               }}
             />
             
