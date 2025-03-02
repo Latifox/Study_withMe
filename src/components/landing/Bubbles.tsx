@@ -5,9 +5,10 @@ type BubbleProps = {
   position: "left" | "right";
   sectionHeight?: string;
   tint?: string;
+  colorScheme?: "purple-indigo" | "indigo-purple" | "blue-indigo" | "default";
 };
 
-const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubbleProps) => {
+const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", colorScheme = "default" }: BubbleProps) => {
   const [bubbles, setBubbles] = useState<Array<{ id: number; size: number; delay: number; duration: number; opacity: number; top: number }>>([]);
 
   useEffect(() => {
@@ -27,6 +28,36 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
     generateBubbles();
   }, []);
 
+  // Determine bubble style based on colorScheme
+  const getBubbleStyle = (bubble: { opacity: number }) => {
+    switch (colorScheme) {
+      case "purple-indigo":
+        return {
+          background: "linear-gradient(to bottom right, rgba(147, 51, 234, 0.15), rgba(79, 70, 229, 0.15))",
+          border: "1px solid rgba(124, 58, 237, 0.3)",
+          opacity: bubble.opacity
+        };
+      case "indigo-purple":
+        return {
+          background: "linear-gradient(to bottom right, rgba(79, 70, 229, 0.15), rgba(147, 51, 234, 0.15))",
+          border: "1px solid rgba(99, 102, 241, 0.3)",
+          opacity: bubble.opacity
+        };
+      case "blue-indigo":
+        return {
+          background: "linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(79, 70, 229, 0.15))",
+          border: "1px solid rgba(79, 70, 229, 0.3)",
+          opacity: bubble.opacity
+        };
+      default:
+        return {
+          backgroundColor: tint === "purple" ? "rgba(147, 51, 234, 0.15)" : "rgba(79, 70, 229, 0.15)",
+          border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
+          opacity: bubble.opacity
+        };
+    }
+  };
+
   return (
     <div
       className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 bottom-0 w-32 md:w-40 overflow-hidden pointer-events-none h-full`}
@@ -41,10 +72,8 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
             height: bubble.size,
             [position]: `${Math.random() * 60}%`,
             top: `${bubble.top}%`,
-            backgroundColor: tint === "purple" ? "rgba(147, 51, 234, 0.15)" : "rgba(79, 70, 229, 0.15)",
-            border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
             animation: `bubble ${bubble.duration}s linear ${bubble.delay}s infinite`,
-            opacity: bubble.opacity,
+            ...getBubbleStyle(bubble)
           }}
         />
       ))}
