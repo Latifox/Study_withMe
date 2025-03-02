@@ -1,12 +1,11 @@
-
 export const bubbleAnimationStyles = `
 @keyframes bubble-down {
   0% {
     transform: translateY(0);
     opacity: 0;
   }
-  10% {
-    opacity: 0.8;
+  1% {
+    opacity: 0.8;  /* Start showing much faster */
   }
   85% {
     opacity: 0.8;
@@ -25,6 +24,8 @@ export const bubbleAnimationStyles = `
 /* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */
 [data-bubble-type="purple"].hide-behind-cards {
   transition: opacity 0.5s ease-out;
+  animation-play-state: running !important; /* Ensure animation starts immediately */
+  animation-delay: 0s !important; /* No delay for purple bubbles */
 }
 
 /* Target all bubbles that should fade out at the end of hero section */

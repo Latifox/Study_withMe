@@ -18,6 +18,8 @@ const PurpleBubble: React.FC<BubbleProps> = ({
         top: bubble.position.top,
         opacity: bubble.opacity,
         animation: `bubble-down ${bubble.animationDuration} linear infinite`,
+        animationDelay: "0s", // Ensure no delay for purple bubbles
+        animationPlayState: "running", // Start animation immediately
         transition: `all ${bubble.transitionDuration} ease-in-out`,
       }}
       data-bubble-type={bubble.type}
