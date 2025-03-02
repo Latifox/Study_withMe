@@ -214,8 +214,8 @@
     transform: scale(0.95);
   }
   50% {
-    opacity: 0.9;
-    transform: scale(1.1);
+    opacity: 1;
+    transform: scale(1.15);
   }
   100% {
     opacity: 0.6;
@@ -223,8 +223,28 @@
   }
 }
 
+/* More pronounced pulse animation */
+@keyframes enhanced-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+}
+
 .animate-energy {
-  animation: energy-pulse 5s infinite ease-in-out;
+  animation: energy-pulse 4s infinite ease-in-out;
+}
+
+.animate-pulse {
+  animation: enhanced-pulse 3s infinite ease-in-out;
 }
 
 .energy-button:hover::before {
