@@ -42,46 +42,50 @@ const BenefitsSection = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
-        <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105">
-          <div className="flex items-center mb-6">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
-              <GraduationCap className="h-6 w-6 text-white" />
+        <div className="flex justify-center">
+          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full">
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white">
+                For Students
+              </h3>
             </div>
-            <h3 className="text-2xl font-bold text-white">
-              For Students
-            </h3>
+            <ul className="space-y-3">
+              {studentBenefits.map((benefit, index) => (
+                <li key={index} className="flex items-start">
+                  <div className="mt-1 min-w-6 min-h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <span className="text-white">{benefit}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="space-y-3">
-            {studentBenefits.map((benefit, index) => (
-              <li key={index} className="flex items-start">
-                <div className="mt-1 min-w-6 min-h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <span className="text-white">{benefit}</span>
-              </li>
-            ))}
-          </ul>
         </div>
 
-        <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105">
-          <div className="flex items-center mb-6">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
-              <School className="h-6 w-6 text-white" />
+        <div className="flex justify-center">
+          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full">
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
+                <School className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white">
+                For Teachers
+              </h3>
             </div>
-            <h3 className="text-2xl font-bold text-white">
-              For Teachers
-            </h3>
+            <ul className="space-y-3">
+              {teacherBenefits.map((benefit, index) => (
+                <li key={index} className="flex items-start">
+                  <div className="mt-1 min-w-6 min-h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <span className="text-white">{benefit}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="space-y-3">
-            {teacherBenefits.map((benefit, index) => (
-              <li key={index} className="flex items-start">
-                <div className="mt-1 min-w-6 min-h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <span className="text-white">{benefit}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </div>
