@@ -81,7 +81,7 @@ const FeaturesSection = () => {
   }, [emblaApi, scrollNext]);
 
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
+    <div className="container mx-auto px-4 py-16 md:py-24 relative">
       {/* Bubble effects */}
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
