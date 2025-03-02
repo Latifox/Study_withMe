@@ -47,8 +47,8 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
             border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
             animation: `bubble ${bubble.duration}s linear ${bubble.delay}s infinite`,
             opacity: bubble.opacity,
-            /* Set a custom property for the bubble's opacity that will be used in the keyframes */
-            "--bubble-opacity": bubble.opacity,
+            // Apply the custom property as a CSS variable using proper TypeScript syntax
+            ["--bubble-opacity" as any]: bubble.opacity,
           }}
         />
       ))}
