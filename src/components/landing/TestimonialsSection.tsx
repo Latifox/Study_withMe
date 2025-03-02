@@ -1,4 +1,3 @@
-
 import { Quote } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -11,7 +10,6 @@ interface Testimonial {
 }
 
 const TestimonialsSection = () => {
-  // Expanded testimonials with front and back sides
   const testimonialPairs = [
     {
       front: {
@@ -51,17 +49,14 @@ const TestimonialsSection = () => {
     },
   ];
 
-  // State to track which cards are flipped
   const [flippedCards, setFlippedCards] = useState<boolean[]>([false, false, false]);
   
-  // Function to toggle a card's flip state manually
   const toggleFlip = (index: number) => {
     const newFlippedCards = [...flippedCards];
     newFlippedCards[index] = !newFlippedCards[index];
     setFlippedCards(newFlippedCards);
   };
 
-  // Auto-flip cards every 6 seconds, one at a time
   useEffect(() => {
     const intervals = testimonialPairs.map((_, index) => {
       return setInterval(() => {
@@ -70,7 +65,7 @@ const TestimonialsSection = () => {
           newState[index] = !newState[index];
           return newState;
         });
-      }, 6000 + (index * 2000)); // Stagger the flips by 2 seconds for each card
+      }, 8000 + (index * 2000));
     });
     
     return () => {
@@ -101,7 +96,6 @@ const TestimonialsSection = () => {
 
   return (
     <div className="py-16 md:py-24 relative overflow-hidden">
-      {/* Gradient blobs in background */}
       <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl opacity-50 animate-blob"></div>
       <div className="absolute top-32 -right-24 w-64 h-64 bg-orange-500/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
       <div className="absolute -bottom-24 left-48 w-64 h-64 bg-cyan-500/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
@@ -131,13 +125,12 @@ const TestimonialsSection = () => {
               key={index}
               variants={itemVariants}
               className="flex flex-col h-full"
-              style={{ perspective: "1000px" }}
+              style={{ perspective: "1500px" }}
             >
               <div 
                 className="relative w-full h-full min-h-[280px] cursor-pointer"
                 onClick={() => toggleFlip(index)}
               >
-                {/* Card Front */}
                 <motion.div 
                   className="absolute inset-0 w-full h-full backface-hidden"
                   animate={{ 
@@ -145,7 +138,12 @@ const TestimonialsSection = () => {
                     opacity: flippedCards[index] ? 0 : 1,
                     zIndex: flippedCards[index] ? 0 : 1
                   }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 80 }}
+                  transition={{ 
+                    duration: 1.2,
+                    type: "spring", 
+                    stiffness: 70,
+                    damping: 15
+                  }}
                 >
                   <div className="bg-gradient-to-b from-indigo-500/80 to-purple-600/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl h-full">
                     <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
@@ -164,7 +162,6 @@ const TestimonialsSection = () => {
                   </div>
                 </motion.div>
 
-                {/* Card Back */}
                 <motion.div 
                   className="absolute inset-0 w-full h-full backface-hidden"
                   animate={{ 
@@ -172,7 +169,12 @@ const TestimonialsSection = () => {
                     opacity: flippedCards[index] ? 1 : 0,
                     zIndex: flippedCards[index] ? 1 : 0
                   }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 80 }}
+                  transition={{ 
+                    duration: 1.2,
+                    type: "spring", 
+                    stiffness: 70,
+                    damping: 15
+                }}
                 >
                   <div className="bg-gradient-to-b from-purple-600/80 to-indigo-500/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl h-full">
                     <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
@@ -195,13 +197,11 @@ const TestimonialsSection = () => {
           ))}
         </motion.div>
         
-        {/* Decorative dots pattern */}
         <div className="absolute inset-0 pointer-events-none opacity-10">
           <div className="h-full w-full" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
         </div>
       </div>
 
-      {/* Add CSS for backface visibility using regular style tag */}
       <style>
         {`
           .backface-hidden {
@@ -209,6 +209,7 @@ const TestimonialsSection = () => {
             -webkit-backface-visibility: hidden;
             transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d;
+            transition: transform 1.2s;
           }
         `}
       </style>
@@ -217,4 +218,3 @@ const TestimonialsSection = () => {
 };
 
 export default TestimonialsSection;
-
