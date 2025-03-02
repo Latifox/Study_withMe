@@ -1,10 +1,10 @@
-
 import NavigationBar from "@/components/landing/NavigationBar";
 import HeroSection from "@/components/landing/HeroSection";
 import GamificationSection from "@/components/landing/GamificationSection";
 import BenefitsSection from "@/components/landing/BenefitsSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import SubscriptionPlansSection from "@/components/landing/SubscriptionPlansSection";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import Footer from "@/components/landing/Footer";
 
 const LandingPage = () => {
@@ -36,6 +36,7 @@ const LandingPage = () => {
         <BenefitsSection />
         <FeaturesSection />
         <SubscriptionPlansSection />
+        <TestimonialsSection />
         <Footer />
       </div>
     </div>
