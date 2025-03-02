@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  switchAccountType: (accountType: 'student' | 'teacher') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,7 +64,36 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const value: AuthContextType = { user, session, loading, signIn, signOut };
+  const switchAccountType = async (accountType: 'student' | 'teacher') => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.updateUser({
+        data: { account_type: accountType }
+      });
+      
+      if (error) throw error;
+      
+      // Update the local user object
+      setUser(data.user);
+      
+      // Refresh the page to ensure all components reflect the new account type
+      window.location.href = accountType === 'teacher' ? '/teacher-dashboard' : '/dashboard';
+      
+    } catch (error: any) {
+      alert(error.error_description || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const value: AuthContextType = { 
+    user, 
+    session, 
+    loading, 
+    signIn, 
+    signOut,
+    switchAccountType 
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
