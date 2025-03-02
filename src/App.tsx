@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
+import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import UploadedCourses from "./pages/UploadedCourses";
 import InvitedCourses from "./pages/InvitedCourses";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/index" element={<Index />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
             <Route path="/course/:courseId" element={<Course />} />
