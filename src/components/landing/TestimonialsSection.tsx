@@ -107,8 +107,8 @@ const TestimonialsSection = () => {
     <div className="py-16 md:py-24 relative overflow-hidden">
       {/* Gradient blobs in background */}
       <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl opacity-50 animate-blob"></div>
-      <div className="absolute top-32 -right-24 w-64 h-64 bg-orange-500/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-24 left-48 w-64 h-64 bg-cyan-500/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
+      <div className="absolute top-32 -right-24 w-64 h-64 bg-purple-400/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-24 left-48 w-64 h-64 bg-purple-300/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
       
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
@@ -134,7 +134,7 @@ const TestimonialsSection = () => {
             <motion.div 
               key={index}
               variants={itemVariants}
-              className="flex flex-col h-full"
+              className="h-full"
             >
               <div 
                 className="perspective-1000 cursor-pointer h-full" 
@@ -146,12 +146,12 @@ const TestimonialsSection = () => {
                   }`}
                 >
                   {/* Front of card */}
-                  <div className="bg-gradient-to-b from-indigo-500/80 to-purple-600/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl absolute w-full h-full backface-hidden">
+                  <div className="bg-gradient-to-b from-purple-500/80 to-indigo-600/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl absolute w-full h-full backface-hidden">
                     <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
-                      <Quote className="text-orange-400 w-10 h-10 mb-4" />
+                      <Quote className="text-purple-400 w-10 h-10 mb-4" />
                       <p className="text-white/90 italic mb-6 flex-grow">"{testimonial.front.quote}"</p>
                       <div className="flex items-center mt-auto">
-                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
+                        <div className="bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
                           {testimonial.front.author.charAt(0)}
                         </div>
                         <div className="ml-4">
@@ -163,12 +163,12 @@ const TestimonialsSection = () => {
                   </div>
                   
                   {/* Back of card */}
-                  <div className="bg-gradient-to-b from-purple-600/80 to-indigo-500/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl absolute w-full h-full backface-hidden rotate-y-180">
+                  <div className="bg-gradient-to-b from-indigo-600/80 to-purple-500/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl absolute w-full h-full backface-hidden rotate-y-180">
                     <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
-                      <Quote className="text-orange-400 w-10 h-10 mb-4" />
+                      <Quote className="text-purple-400 w-10 h-10 mb-4" />
                       <p className="text-white/90 italic mb-6 flex-grow">"{testimonial.back.quote}"</p>
                       <div className="flex items-center mt-auto">
-                        <div className="bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
+                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
                           {testimonial.back.author.charAt(0)}
                         </div>
                         <div className="ml-4">
