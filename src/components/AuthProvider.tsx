@@ -30,9 +30,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           setUser(session.user);
           
-          // If user is logged in and trying to access auth page or landing page,
+          // Check if the user has set an account type
+          const hasAccountType = session.user.user_metadata?.account_type;
+          
+          // If user is logged in but hasn't set account type, redirect to account type page
+          // Skip this redirect if already on the account type page
+          if (!hasAccountType && location.pathname !== '/account-type') {
+            navigate('/account-type');
+            return;
+          }
+          
+          // If user is logged in and has set account type but trying to access auth page or landing page,
           // redirect to dashboard
-          if (location.pathname === '/auth' || location.pathname === '/') {
+          if (hasAccountType && (location.pathname === '/auth' || location.pathname === '/')) {
             navigate('/dashboard');
           }
         } else {
@@ -61,7 +71,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (event === 'SIGNED_IN') {
           setUser(session?.user ?? null);
-          navigate('/dashboard');
+          
+          // Check if the user has set an account type
+          const hasAccountType = session?.user?.user_metadata?.account_type;
+          
+          if (!hasAccountType) {
+            navigate('/account-type');
+          } else {
+            navigate('/dashboard');
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           navigate('/');

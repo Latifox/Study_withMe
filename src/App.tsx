@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import AccountType from "./pages/AccountType";
 import UploadedCourses from "./pages/UploadedCourses";
 import InvitedCourses from "./pages/InvitedCourses";
 import Course from "./pages/Course";
@@ -35,6 +37,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/account-type" element={<AccountType />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/index" element={<LandingPage />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
