@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -107,7 +108,7 @@ const SubscriptionPlansSection = () => {
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
           Choose Your Plan
         </h2>
-        <p className="text-lg text-gray-700 text-center">
+        <p className="text-lg text-white text-center">
           Select the perfect subscription that fits your learning needs
         </p>
       </div>
