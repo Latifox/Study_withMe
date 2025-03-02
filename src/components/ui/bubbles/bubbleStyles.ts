@@ -32,6 +32,16 @@ export const bubbleAnimationStyles = `
   animation-delay: 0s !important;
 }
 
+/* Extra aggressive animation forcing for purple bubbles */
+.force-animation {
+  animation: bubble-down 30s linear infinite !important;
+  animation-play-state: running !important;
+  animation-delay: 0s !important;
+  will-change: transform, opacity !important;
+  visibility: visible !important;
+  opacity: 0.8 !important;
+}
+
 /* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */
 [data-bubble-type="purple"].hide-behind-cards {
   transition: opacity 0.5s ease-out;

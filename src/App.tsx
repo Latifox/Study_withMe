@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
@@ -38,7 +38,8 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/index" element={<Index />} />
+            {/* Redirect /index to dashboard since Index and Dashboard are duplicating functionality */}
+            <Route path="/index" element={<Navigate replace to="/dashboard" />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
             <Route path="/course/:courseId" element={<Course />} />
