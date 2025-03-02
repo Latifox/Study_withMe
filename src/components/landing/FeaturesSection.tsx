@@ -14,6 +14,7 @@ import {
   Settings 
 } from "lucide-react";
 import Bubbles from "./Bubbles";
+import { motion } from "framer-motion";
 
 const FeaturesSection = () => {
   const features = [
@@ -80,6 +81,29 @@ const FeaturesSection = () => {
     return () => clearInterval(autoScrollInterval);
   }, [emblaApi, scrollNext]);
 
+  // Animation variants for the cards
+  const cardVariants = {
+    initial: {
+      opacity: 0,
+      y: 20
+    },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    },
+    hover: {
+      y: -8,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
       <Bubbles position="left" tint="purple" />
@@ -101,17 +125,32 @@ const FeaturesSection = () => {
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex gap-6">
             {features.map((feature, i) => (
-              <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1">
-                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full">
-                  <div className="flex items-center mb-4">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
-                      {React.cloneElement(feature.icon, { className: "h-6 w-6 text-white" })}
+              <motion.div 
+                key={i} 
+                className="flex-shrink-0 w-[280px] md:w-[320px] mx-1"
+                variants={cardVariants}
+                initial="initial"
+                animate="animate"
+                whileHover="hover"
+              >
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full relative overflow-hidden group">
+                  {/* Glowing energy effects */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-purple-400 to-indigo-500 rounded-xl blur opacity-30 group-hover:opacity-70 transition duration-1000"></div>
+                  <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-purple-500 rounded-full blur-2xl opacity-40 group-hover:opacity-70 animate-pulse"></div>
+                  <div className="absolute -top-4 -left-4 w-20 h-20 bg-indigo-500 rounded-full blur-2xl opacity-40 group-hover:opacity-70 animate-pulse" style={{ animationDelay: "0.5s" }}></div>
+                  
+                  {/* Card content with relative positioning to stay above the glow */}
+                  <div className="relative">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                        {React.cloneElement(feature.icon, { className: "h-6 w-6 text-white" })}
+                      </div>
+                      <h3 className="font-bold text-lg text-white">{feature.title}</h3>
                     </div>
-                    <h3 className="font-bold text-lg text-white">{feature.title}</h3>
+                    <p className="text-white">{feature.description}</p>
                   </div>
-                  <p className="text-white">{feature.description}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
