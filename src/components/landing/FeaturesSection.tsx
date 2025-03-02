@@ -85,7 +85,7 @@ const FeaturesSection = () => {
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="purple" />
       
-      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500 relative z-10">
+      <div className="bg-white/10 backdrop-blur-sm p-6 shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500 relative z-10">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
             Feature Rich Learning Platform
