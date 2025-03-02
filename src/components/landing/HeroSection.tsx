@@ -14,8 +14,8 @@ const HeroSection = () => {
   return (
     <div className="container mx-auto px-4 py-16 md:py-32 flex flex-col items-center relative">
       {/* Bubble effects with bolder colors and constrained height */}
-      <Bubbles position="left" tint="purple" opacity={0.5} sectionHeight="100%" />
-      <Bubbles position="right" tint="indigo" opacity={0.5} sectionHeight="100%" />
+      <Bubbles position="left" tint="purple" opacity={0.5} sectionHeight="80vh" />
+      <Bubbles position="right" tint="indigo" opacity={0.5} sectionHeight="80vh" />
       
       <h1 className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-6 relative z-10">
         Transform Your Learning Experience with{" "}
