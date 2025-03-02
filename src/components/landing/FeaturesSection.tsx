@@ -97,6 +97,7 @@ const FeaturesSection = () => {
     },
     hover: {
       y: -8,
+      scale: 1.03,
       transition: {
         duration: 0.3,
         ease: "easeOut"
@@ -132,22 +133,28 @@ const FeaturesSection = () => {
                 initial="initial"
                 animate="animate"
                 whileHover="hover"
+                viewport={{ once: true }}
               >
-                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full relative overflow-hidden group">
-                  {/* Glowing energy effects */}
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-purple-400 to-indigo-500 rounded-xl blur opacity-30 group-hover:opacity-70 transition duration-1000"></div>
-                  <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-purple-500 rounded-full blur-2xl opacity-40 group-hover:opacity-70 animate-pulse"></div>
-                  <div className="absolute -top-4 -left-4 w-20 h-20 bg-indigo-500 rounded-full blur-2xl opacity-40 group-hover:opacity-70 animate-pulse" style={{ animationDelay: "0.5s" }}></div>
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg h-full relative overflow-hidden group">
+                  {/* Enhanced glowing effects */}
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-indigo-500 to-purple-600 rounded-xl blur-md opacity-0 group-hover:opacity-80 transition-opacity duration-700 -z-10"></div>
+                  
+                  {/* Additional energy glows */}
+                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-purple-500 rounded-full blur-3xl opacity-20 group-hover:opacity-50 animate-pulse-slow"></div>
+                  <div className="absolute -top-8 -left-8 w-28 h-28 bg-indigo-400 rounded-full blur-3xl opacity-20 group-hover:opacity-50 animate-pulse-slow" style={{ animationDelay: "1s" }}></div>
+                  
+                  {/* Highlight edge glow */}
+                  <div className="absolute inset-0 border border-purple-300/50 rounded-xl group-hover:border-purple-200/70 transition-colors duration-500"></div>
                   
                   {/* Card content with relative positioning to stay above the glow */}
-                  <div className="relative">
+                  <div className="relative z-10">
                     <div className="flex items-center mb-4">
-                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3 group-hover:bg-white/30 transition-colors duration-300">
                         {React.cloneElement(feature.icon, { className: "h-6 w-6 text-white" })}
                       </div>
-                      <h3 className="font-bold text-lg text-white">{feature.title}</h3>
+                      <h3 className="font-bold text-xl text-white">{feature.title}</h3>
                     </div>
-                    <p className="text-white">{feature.description}</p>
+                    <p className="text-white/90 group-hover:text-white transition-colors duration-300">{feature.description}</p>
                   </div>
                 </div>
               </motion.div>
@@ -157,14 +164,14 @@ const FeaturesSection = () => {
 
         <button
           onClick={scrollPrev}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-purple-100"
+          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-purple-100 hover:bg-white/95 transition-colors z-10"
           aria-label="Previous"
         >
           <ChevronLeft className="h-6 w-6 text-purple-600" />
         </button>
         <button
           onClick={scrollNext}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-purple-100"
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-purple-100 hover:bg-white/95 transition-colors z-10"
           aria-label="Next"
         >
           <ChevronRight className="h-6 w-6 text-purple-600" />
