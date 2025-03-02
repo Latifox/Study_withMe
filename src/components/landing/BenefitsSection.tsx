@@ -1,4 +1,3 @@
-
 import { GraduationCap, School } from "lucide-react";
 import Bubbles from "./Bubbles";
 
@@ -29,23 +28,16 @@ const BenefitsSection = () => {
       <Bubbles position="left" tint="blue" />
       <Bubbles position="right" tint="blue" />
       
-      <div className="relative mx-auto max-w-3xl mb-12 z-10">
-        {/* Gradient border effect */}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 p-[2px]">
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl h-full w-full">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-              Who Benefits from{" "}
-              <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-                EduSync AI
-              </span>
-            </h2>
-            <p className="text-lg text-gray-700 text-center">
-              Our platform serves both students and educators with specialized tools and features
-            </p>
-          </div>
-        </div>
-        {/* Shadow effect */}
-        <div className="relative shadow-xl hover:shadow-2xl transition-shadow p-6 rounded-xl z-10 min-h-[140px]"></div>
+      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400 relative z-10">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+          Who Benefits from{" "}
+          <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+            EduSync AI
+          </span>
+        </h2>
+        <p className="text-lg text-gray-700 text-center">
+          Our platform serves both students and educators with specialized tools and features
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
