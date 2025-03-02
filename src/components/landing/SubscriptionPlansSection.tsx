@@ -133,7 +133,7 @@ const SubscriptionPlansSection = () => {
                 </div>
               </CardHeader>
               
-              <CardContent className="flex-grow px-6 pt-2 pb-4">
+              <CardContent className="flex-grow px-6 pt-2 pb-4 flex flex-col">
                 <motion.ul 
                   className="space-y-2 mb-8"
                   variants={featuresVariants}
@@ -146,7 +146,7 @@ const SubscriptionPlansSection = () => {
                   ))}
                 </motion.ul>
                 
-                <div className="flex justify-center mt-auto mb-6">
+                <div className="flex justify-center mt-auto">
                   <div className="bg-gray-900 text-white rounded-full p-4 flex flex-col items-center justify-center w-32 h-32 border-4 border-white/20">
                     <div className="text-3xl font-bold">{plan.price}</div>
                     <div className="text-xs font-medium mt-1">{plan.period}</div>
