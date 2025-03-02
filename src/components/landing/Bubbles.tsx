@@ -14,7 +14,7 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
   useEffect(() => {
     // Generate random bubbles
     const generateBubbles = () => {
-      const newBubbles = Array.from({ length: 20 }, (_, i) => ({
+      const newBubbles = Array.from({ length: 35 }, (_, i) => ({
         id: i,
         size: Math.floor(Math.random() * 60) + 20, // Size between 20px and 80px
         delay: Math.random() * 5, // Random delay up to 5s

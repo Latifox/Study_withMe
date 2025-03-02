@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -116,6 +117,12 @@
   }
   70% {
     opacity: var(--bubble-opacity, 0.5);
+  }
+  85% {
+    opacity: calc(var(--bubble-opacity, 0.5) * 0.7);
+  }
+  95% {
+    opacity: calc(var(--bubble-opacity, 0.5) * 0.3);
   }
   100% {
     transform: translateY(100vh);
