@@ -20,11 +20,13 @@ export const bubbleAnimationStyles = `
 /* Base transition properties */
 .bubble-flow {
   transition-property: background, box-shadow, opacity;
+  animation-duration: inherit !important; /* Ensure the animation duration is respected */
 }
 
 /* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */
 [data-bubble-type="purple"].hide-behind-cards {
   transition: opacity 0.5s ease-out;
+  animation-duration: inherit !important; /* Ensure minimum duration of 15s */
 }
 
 /* Target all bubbles that should fade out at the end of hero section */
@@ -61,6 +63,7 @@ export const bubbleAnimationStyles = `
 [data-bubble-type].hide-behind-cards[style*="top: 95"] {
   opacity: 0 !important;
   transition: opacity 0.7s ease-out;
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 /* Target all purple bubbles in the range where cards appear with more inclusive selectors */
@@ -116,6 +119,7 @@ export const bubbleAnimationStyles = `
 [data-bubble-type="purple"].hide-behind-cards[style*="top: 64"],
 [data-bubble-type="purple"].hide-behind-cards[style*="top: 65"] {
   opacity: 0 !important; /* Force complete invisibility */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 /* Fade transform effect - applied to non-purple bubbles */
@@ -123,6 +127,7 @@ export const bubbleAnimationStyles = `
   transition: all 0.8s ease-in-out;
   opacity: 0.1; /* Start faded out */
   background: linear-gradient(to bottom right, #8b5cf6, #6366f1) !important; /* Start as purple */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 /* Star transitions - fade in with yellow color around cards */
@@ -138,6 +143,7 @@ export const bubbleAnimationStyles = `
 .bubble-star.star-transition.fade-transform-effect[style*="top: 19"] {
   opacity: 0 !important;
   transition: opacity 0.5s ease-out, background 0.5s ease-out;
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 /* Star bubbles just after cards - transition to yellow/amber */
@@ -150,6 +156,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 204, 0, 0.25);
   opacity: 0.7;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 .bubble-star.star-transition.fade-transform-effect[style*="top: 25"],
@@ -161,6 +168,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
   opacity: 0.75;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 .bubble-star.star-transition.fade-transform-effect[style*="top: 30"],
@@ -173,6 +181,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 180, 0, 0.35);
   opacity: 0.8;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 .bubble-star.star-transition.fade-transform-effect[style*="top: 36"],
@@ -189,6 +198,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 150, 0, 0.4);
   opacity: 0.85;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 /* Flame transitions - allow pass through */
@@ -204,6 +214,7 @@ export const bubbleAnimationStyles = `
 .bubble-flame.flame-transition.fade-transform-effect[style*="top: 19"] {
   opacity: 0 !important;
   transition: opacity 0.5s ease-out, background 0.5s ease-out;
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 /* Flame bubbles at specified positions transition to red/orange */
@@ -216,6 +227,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 80, 0, 0.25);
   opacity: 0.7;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 .bubble-flame.flame-transition.fade-transform-effect[style*="top: 25"],
@@ -227,6 +239,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 80, 0, 0.3);
   opacity: 0.75;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 .bubble-flame.flame-transition.fade-transform-effect[style*="top: 30"],
@@ -239,6 +252,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 60, 0, 0.35);
   opacity: 0.8;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 
 .bubble-flame.flame-transition.fade-transform-effect[style*="top: 36"],
@@ -255,5 +269,7 @@ export const bubbleAnimationStyles = `
   box-shadow: 0 4px 12px rgba(255, 40, 0, 0.4);
   opacity: 0.85;
   z-index: 5; /* Ensure these bubbles appear above cards */
+  animation-duration: inherit !important; /* Ensure animation duration is preserved */
 }
 `;
+
