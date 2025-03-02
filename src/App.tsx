@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
-import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import UploadedCourses from "./pages/UploadedCourses";
 import InvitedCourses from "./pages/InvitedCourses";
@@ -38,7 +36,6 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* Map /index to LandingPage since that's what it should be */}
             <Route path="/index" element={<LandingPage />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
