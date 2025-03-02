@@ -1,3 +1,4 @@
+
 import { Star, Flame } from "lucide-react";
 import Bubbles from "./Bubbles";
 const GamificationSection = () => {
@@ -17,7 +18,7 @@ const GamificationSection = () => {
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
-      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 border-purple-40gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl">
+      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 border-gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">
           <span className="bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 bg-clip-text text-transparent">
             Learn with Purpose
