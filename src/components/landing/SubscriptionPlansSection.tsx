@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -25,7 +26,7 @@ const SubscriptionPlansSection = () => {
       ],
       ctaText: "Get Started Now",
       recommended: false,
-      icon: <Clock className="h-7 w-7" />,
+      icon: <Clock className="h-8 w-8" />,
       color: "bg-gradient-to-br from-red-400 to-red-500",
       textColor: "text-white",
       iconBg: "bg-white/20",
@@ -49,7 +50,7 @@ const SubscriptionPlansSection = () => {
       ],
       ctaText: "Choose Plan",
       recommended: true,
-      icon: <Rocket className="h-7 w-7" />,
+      icon: <Rocket className="h-8 w-8" />,
       color: "bg-gradient-to-br from-blue-400 to-blue-500",
       textColor: "text-white",
       iconBg: "bg-white/20",
@@ -66,7 +67,7 @@ const SubscriptionPlansSection = () => {
       features: ["Unlimited access to all functionalities provided by EduSync AI"],
       ctaText: "Choose Plan",
       recommended: false,
-      icon: <Crown className="h-7 w-7" />,
+      icon: <Crown className="h-8 w-8" />,
       color: "bg-gradient-to-br from-purple-500 to-purple-600",
       textColor: "text-white",
       iconBg: "bg-white/20",
@@ -139,7 +140,7 @@ const SubscriptionPlansSection = () => {
       </div>
 
       <motion.div 
-        className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+        className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -157,16 +158,21 @@ const SubscriptionPlansSection = () => {
                   MOST POPULAR
                 </div>
               )}
-              <CardHeader className={`${plan.color} py-8 px-6`}>
-                <h3 className={`text-2xl font-bold uppercase tracking-wider ${plan.textColor} mb-6`}>{plan.name}</h3>
-                <div className="mb-6">
-                  <span className={`text-4xl font-bold ${plan.textColor}`}>{plan.price}</span>
-                  <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
+              <CardHeader className={`${plan.color} py-8 px-8`}>
+                <div className="flex flex-col items-center">
+                  <div className={`${plan.iconBg} rounded-full p-4 mb-4`}>
+                    {plan.icon}
+                  </div>
+                  <h3 className={`text-2xl font-bold uppercase tracking-wider ${plan.textColor} mb-2`}>{plan.name}</h3>
+                  <p className={`${plan.textColor} opacity-90 text-sm mb-4 text-center`}>{plan.description}</p>
+                  <div className={`h-px w-3/4 bg-white/20 mb-4`}></div>
+                  <div className="flex items-baseline">
+                    <span className={`text-5xl font-bold ${plan.textColor}`}>{plan.price}</span>
+                    <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
+                  </div>
                 </div>
-                <div className={`h-px w-full bg-white/20 mb-6`}></div>
-                <p className={`${plan.textColor} opacity-90 text-sm`}>{plan.description}</p>
               </CardHeader>
-              <CardContent className={`${plan.color} flex-grow px-6 pt-0 pb-4`}>
+              <CardContent className={`${plan.color} flex-grow px-8 pt-6 pb-4`}>
                 <motion.ul 
                   className="space-y-3"
                   variants={featuresVariants}
@@ -181,7 +187,7 @@ const SubscriptionPlansSection = () => {
                   ))}
                 </motion.ul>
               </CardContent>
-              <CardFooter className={`${plan.color} pt-0 pb-8 px-6`}>
+              <CardFooter className={`${plan.color} pt-0 pb-8 px-8`}>
                 <Button
                   className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-6"
                   onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
