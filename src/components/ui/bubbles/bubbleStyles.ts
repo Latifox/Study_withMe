@@ -19,6 +19,8 @@ export const bubbleAnimationStyles = `
 /* Base transition properties */
 .bubble-flow {
   transition-property: background, box-shadow, opacity;
+  animation-play-state: running !important; /* Force all bubbles to start immediately */
+  animation-delay: 0s !important; /* No delay for any bubbles */
 }
 
 /* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */

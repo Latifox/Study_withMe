@@ -1,13 +1,28 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { BubbleProps } from './types';
 
 const PurpleBubble: React.FC<BubbleProps> = ({ 
   bubble,
   additionalClasses
 }) => {
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  
+  // Force animation to start immediately on mount
+  useEffect(() => {
+    if (bubbleRef.current) {
+      // Trigger a reflow to force immediate animation
+      void bubbleRef.current.offsetHeight;
+      
+      // Ensure animation is running
+      bubbleRef.current.style.animationPlayState = "running";
+      bubbleRef.current.style.animationDelay = "0s";
+    }
+  }, []);
+  
   return (
     <div
+      ref={bubbleRef}
       key={bubble.id}
       className={`absolute rounded-full ${bubble.gradient} bubble-flow ${additionalClasses} shadow-lg`}
       style={{
@@ -23,6 +38,7 @@ const PurpleBubble: React.FC<BubbleProps> = ({
         transition: `all ${bubble.transitionDuration} ease-in-out`,
       }}
       data-bubble-type={bubble.type}
+      data-testid="purple-bubble"
     />
   );
 };
