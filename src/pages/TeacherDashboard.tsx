@@ -7,7 +7,6 @@ import { PlusCircle, BookOpen, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import Analytics from "@/components/Analytics";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -133,8 +132,6 @@ const TeacherDashboard = () => {
               </CardContent>
             </Card>
           </div>
-
-          <Analytics />
         </div>
       </div>
     </div>
