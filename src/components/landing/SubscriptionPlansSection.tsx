@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Clock, Rocket, Crown, Check } from "lucide-react";
 import Bubbles from "./Bubbles";
+import { motion } from "framer-motion";
 
 const SubscriptionPlansSection = () => {
   const navigate = useNavigate();
@@ -26,10 +27,10 @@ const SubscriptionPlansSection = () => {
       ctaText: "Get Started Now",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
-      color: "bg-white",
+      color: "bg-gradient-to-br from-purple-200 to-indigo-100",
       textColor: "text-purple-900",
       iconColor: "text-purple-400",
-      headerBg: "bg-gradient-to-b from-purple-100 via-purple-50/70 to-white",
+      borderColor: "border-purple-200",
     },
     {
       name: "Plus",
@@ -47,10 +48,10 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       recommended: true,
       icon: <Rocket className="h-7 w-7" />,
-      color: "bg-white",
-      textColor: "text-purple-900",
-      iconColor: "text-purple-600",
-      headerBg: "bg-gradient-to-b from-purple-300 via-purple-200/80 to-white",
+      color: "bg-gradient-to-br from-purple-500 to-indigo-400",
+      textColor: "text-white",
+      iconColor: "text-white",
+      borderColor: "border-purple-400",
     },
     {
       name: "Premium",
@@ -61,12 +62,58 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       recommended: false,
       icon: <Crown className="h-7 w-7" />,
-      color: "bg-white",
-      textColor: "text-purple-900",
+      color: "bg-gradient-to-br from-purple-800 to-indigo-700",
+      textColor: "text-white",
       iconColor: "text-purple-300",
-      headerBg: "bg-gradient-to-b from-purple-700 via-purple-500/80 to-white",
+      borderColor: "border-purple-700",
     },
   ];
+
+  // Animation variants for the framer-motion components
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5, 
+        ease: "easeOut"
+      }
+    },
+    hover: { 
+      y: -8,
+      boxShadow: "0 10px 25px rgba(124, 58, 237, 0.3)",
+      transition: {
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  const featuresVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const featureItemVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0 }
+  };
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 relative">
@@ -85,50 +132,69 @@ const SubscriptionPlansSection = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {subscriptionPlans.map((plan, index) => (
-          <div key={index} className={`${plan.recommended ? "md:transform md:scale-105" : ""}`}>
-            <Card className="overflow-hidden h-full flex flex-col shadow-lg transition-all duration-300 hover:shadow-xl border-0">
+          <motion.div 
+            key={index} 
+            className={`${plan.recommended ? "md:transform md:scale-105 z-10" : ""}`}
+            variants={cardVariants}
+            whileHover="hover"
+          >
+            <Card className={`h-full flex flex-col shadow-lg border ${plan.borderColor} overflow-hidden`}>
               {plan.recommended && (
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                   MOST POPULAR
                 </div>
               )}
-              <CardHeader className={`${plan.headerBg} pb-8`}>
+              <CardHeader className={`${plan.color} pb-8`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-2 rounded-full bg-white/30 ${plan.iconColor}`}>{plan.icon}</div>
+                  <div className={`p-2 rounded-full ${plan.recommended ? "bg-white/30" : "bg-white/60"} ${plan.iconColor}`}>
+                    {plan.icon}
+                  </div>
                   <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
                 </div>
-                <div className="mb-2">
+                <div className="mb-2 flex items-baseline">
                   <span className={`text-3xl font-bold ${plan.textColor}`}>{plan.price}</span>
                   <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
                 </div>
                 <p className={`${plan.textColor} opacity-90`}>{plan.description}</p>
               </CardHeader>
               <CardContent className="bg-white flex-grow">
-                <ul className="space-y-3 mb-6">
+                <motion.ul 
+                  className="space-y-3 mb-6"
+                  variants={featuresVariants}
+                >
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start">
+                    <motion.li key={i} className="flex items-start" variants={featureItemVariants}>
                       <div className="text-purple-600 flex-shrink-0 mt-0.5 mr-2">
                         <Check className="h-5 w-5" />
                       </div>
                       <span className="text-gray-700">{feature}</span>
-                    </li>
+                    </motion.li>
                   ))}
-                </ul>
+                </motion.ul>
               </CardContent>
               <CardFooter className="bg-white pt-0 pb-6 px-6">
                 <Button
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  className={`w-full ${
+                    plan.recommended 
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white" 
+                      : "bg-white border-2 border-purple-500 text-purple-700 hover:bg-purple-50"
+                  }`}
                   onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
                 >
                   {plan.ctaText}
                 </Button>
               </CardFooter>
             </Card>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 };
