@@ -148,34 +148,31 @@ const SubscriptionPlansSection = () => {
         {subscriptionPlans.map((plan, index) => (
           <motion.div 
             key={index} 
-            className={`${index === 1 ? "md:transform md:scale-110 z-10 md:mt-[-40px] md:mb-[-40px]" : ""}`}
+            className={`${plan.recommended ? "md:transform md:scale-105 z-10" : ""}`}
             variants={cardVariants}
             whileHover="hover"
           >
-            <Card 
-              className={`h-full flex flex-col border-0 overflow-hidden ${plan.shadowColor} shadow-xl transition-all duration-300 ${plan.hoverShadow} ${index === 1 ? "rounded-3xl" : "rounded-3xl"}`}
-            >
+            <Card className={`h-full flex flex-col border-0 overflow-hidden ${plan.shadowColor} shadow-xl transition-all duration-300 ${plan.hoverShadow} rounded-3xl`}>
               {plan.recommended && (
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                   MOST POPULAR
                 </div>
               )}
-              <CardHeader className={`${plan.color} pt-8 px-6 pb-6`}>
-                <div className="flex flex-col items-start">
-                  <h3 className={`text-3xl font-bold uppercase tracking-wider ${plan.textColor} mb-3`}>{plan.name}</h3>
-                  
-                  <div className="flex items-baseline mb-6">
-                    <span className={`text-6xl font-bold ${plan.textColor}`}>{plan.price}</span>
-                    <span className={`text-sm ml-1 ${plan.textColor} opacity-90`}>/{plan.period}</span>
+              <CardHeader className={`${plan.color} py-8 px-8`}>
+                <div className="flex flex-col items-center">
+                  <div className={`${plan.iconBg} rounded-full p-4 mb-4`}>
+                    {plan.icon}
                   </div>
-                  
-                  <div className={`h-px w-full bg-white/30 my-3`}></div>
-                  
-                  <p className={`${plan.textColor} opacity-90 text-sm mt-2`}>{plan.description}</p>
+                  <h3 className={`text-2xl font-bold uppercase tracking-wider ${plan.textColor} mb-2`}>{plan.name}</h3>
+                  <p className={`${plan.textColor} opacity-90 text-sm mb-4 text-center`}>{plan.description}</p>
+                  <div className={`h-px w-3/4 bg-white/20 mb-4`}></div>
+                  <div className="flex items-baseline">
+                    <span className={`text-5xl font-bold ${plan.textColor}`}>{plan.price}</span>
+                    <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
+                  </div>
                 </div>
               </CardHeader>
-              
-              <CardContent className={`${plan.color} flex-grow px-6 pt-2 pb-4`}>
+              <CardContent className={`${plan.color} flex-grow px-8 pt-6 pb-4`}>
                 <motion.ul 
                   className="space-y-3"
                   variants={featuresVariants}
@@ -190,40 +187,15 @@ const SubscriptionPlansSection = () => {
                   ))}
                 </motion.ul>
               </CardContent>
-              
-              <CardFooter className={`${plan.color} pt-0 pb-8 px-6`}>
+              <CardFooter className={`${plan.color} pt-0 pb-8 px-8`}>
                 <Button
-                  className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-5 font-medium text-lg"
+                  className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-6"
                   onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
                 >
                   {plan.ctaText}
                 </Button>
               </CardFooter>
             </Card>
-
-            {/* Add the distinctive bottom shape for the middle card */}
-            {index === 1 && (
-              <div className="relative h-16 md:h-24 -mt-4 hidden md:block">
-                <div className="absolute w-full overflow-hidden">
-                  <div className="w-full bg-blue-500 h-8 rounded-b-full"></div>
-                  <div className="absolute -top-4 left-0 right-0 h-8">
-                    <div className="relative w-full h-full">
-                      <div className="absolute h-24 w-full bg-gradient-to-br from-blue-400 to-blue-500 rounded-b-[100%]"></div>
-                    </div>
-                  </div>
-                  <div className="absolute left-2 bottom-0 w-4 h-4 rounded-full bg-blue-300 shadow-lg opacity-90"></div>
-                  <div className="absolute right-2 bottom-0 w-4 h-4 rounded-full bg-blue-300 shadow-lg opacity-90"></div>
-                  <div className="w-full mt-1 mx-auto flex justify-center">
-                    <Button
-                      className="w-3/4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-4 font-medium text-lg shadow-xl"
-                      onClick={handleSignUp}
-                    >
-                      {subscriptionPlans[1].ctaText}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
           </motion.div>
         ))}
       </motion.div>
