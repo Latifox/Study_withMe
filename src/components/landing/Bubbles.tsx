@@ -8,7 +8,7 @@ type BubbleProps = {
 };
 
 const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubbleProps) => {
-  const [bubbles, setBubbles] = useState<Array<{ id: number; size: number; delay: number; duration: number; opacity: number }>>([]);
+  const [bubbles, setBubbles] = useState<Array<{ id: number; size: number; delay: number; duration: number; opacity: number; top: number }>>([]);
 
   useEffect(() => {
     // Generate random bubbles
@@ -19,6 +19,7 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
         delay: Math.random() * 5, // Random delay up to 5s
         duration: Math.random() * 15 + 10, // Random duration between 10-25s
         opacity: Math.random() * 0.5 + 0.1, // Random opacity between 0.1 and 0.6
+        top: Math.random() * 40, // Random starting position from top 0-40%
       }));
       setBubbles(newBubbles);
     };
@@ -39,6 +40,7 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
             width: bubble.size,
             height: bubble.size,
             [position]: `${Math.random() * 60}%`,
+            top: `${bubble.top}%`,
             backgroundColor: tint === "purple" ? "rgba(147, 51, 234, 0.15)" : "rgba(79, 70, 229, 0.15)",
             border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
             animation: `bubble ${bubble.duration}s linear ${bubble.delay}s infinite`,
