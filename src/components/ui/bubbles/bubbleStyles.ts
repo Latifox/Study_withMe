@@ -1,3 +1,4 @@
+
 export const bubbleAnimationStyles = `
 @keyframes bubble-down {
   0% {
@@ -21,6 +22,14 @@ export const bubbleAnimationStyles = `
   transition-property: background, box-shadow, opacity;
   animation-play-state: running !important; /* Force all bubbles to start immediately */
   animation-delay: 0s !important; /* No delay for any bubbles */
+  will-change: transform, opacity; /* Optimize for animation performance */
+  visibility: visible !important; /* Ensure visibility at start */
+}
+
+/* Force immediate animation start class */
+.animate-now {
+  animation-play-state: running !important;
+  animation-delay: 0s !important;
 }
 
 /* Purple bubbles completely fade out behind the cards - expanded range to ensure complete coverage */

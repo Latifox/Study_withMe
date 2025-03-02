@@ -8,15 +8,25 @@ const PurpleBubble: React.FC<BubbleProps> = ({
 }) => {
   const bubbleRef = useRef<HTMLDivElement>(null);
   
-  // Force animation to start immediately on mount
+  // Enhanced animation start forcing on mount
   useEffect(() => {
     if (bubbleRef.current) {
-      // Trigger a reflow to force immediate animation
-      void bubbleRef.current.offsetHeight;
+      // Set inline styles to force immediate animation start
+      bubbleRef.current.style.visibility = 'visible';
+      bubbleRef.current.style.animationName = 'bubble-down';
+      bubbleRef.current.style.animationPlayState = 'running';
+      bubbleRef.current.style.animationDelay = '0s';
       
-      // Ensure animation is running
-      bubbleRef.current.style.animationPlayState = "running";
-      bubbleRef.current.style.animationDelay = "0s";
+      // Force reflow to kick-start the animation immediately
+      void bubbleRef.current.offsetWidth;
+      
+      // Double-check animation is running after a slight delay
+      // This helps ensure any potential browser inconsistency is addressed
+      setTimeout(() => {
+        if (bubbleRef.current) {
+          bubbleRef.current.style.animationPlayState = 'running';
+        }
+      }, 10);
     }
   }, []);
   
@@ -24,7 +34,7 @@ const PurpleBubble: React.FC<BubbleProps> = ({
     <div
       ref={bubbleRef}
       key={bubble.id}
-      className={`absolute rounded-full ${bubble.gradient} bubble-flow ${additionalClasses} shadow-lg`}
+      className={`absolute rounded-full ${bubble.gradient} bubble-flow ${additionalClasses} shadow-lg animate-now`}
       style={{
         width: `${bubble.size}px`,
         height: `${bubble.size}px`,
