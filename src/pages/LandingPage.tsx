@@ -6,21 +6,18 @@ import BenefitsSection from "@/components/landing/BenefitsSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import SubscriptionPlansSection from "@/components/landing/SubscriptionPlansSection";
 import Footer from "@/components/landing/Footer";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
 
 const LandingPage = () => {
   return (
-    <BackgroundGradient>
-      <div className="min-h-screen">
-        <NavigationBar />
-        <HeroSection />
-        <GamificationSection />
-        <BenefitsSection />
-        <FeaturesSection />
-        <SubscriptionPlansSection />
-        <Footer />
-      </div>
-    </BackgroundGradient>
+    <div className="min-h-screen bg-white">
+      <NavigationBar />
+      <HeroSection />
+      <GamificationSection />
+      <BenefitsSection />
+      <FeaturesSection />
+      <SubscriptionPlansSection />
+      <Footer />
+    </div>
   );
 };
 
