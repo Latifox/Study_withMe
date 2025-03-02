@@ -1,6 +1,7 @@
 
 import { Quote } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
 interface Testimonial {
   quote: string;
@@ -10,23 +11,72 @@ interface Testimonial {
 }
 
 const TestimonialsSection = () => {
-  const testimonials: Testimonial[] = [
+  // Expanded testimonials with front and back sides
+  const testimonialPairs = [
     {
-      quote: "EduSync AI completely changed how I study. Their personalized study plans helped me ace my finals!",
-      author: "Sarah Johnson",
-      role: "Computer Science Student",
+      front: {
+        quote: "EduSync AI completely changed how I study. Their personalized study plans helped me ace my finals!",
+        author: "Sarah Johnson",
+        role: "Computer Science Student",
+      },
+      back: {
+        quote: "The AI assistant feels like having a tutor available 24/7. It explains complex topics in ways I can understand.",
+        author: "James Wilson",
+        role: "Engineering Student",
+      }
     },
     {
-      quote: "The AI-powered flashcards and quizzes make learning so much more engaging. I'm retaining information better than ever.",
-      author: "Michael Chen",
-      role: "Medical Student",
+      front: {
+        quote: "The AI-powered flashcards and quizzes make learning so much more engaging. I'm retaining information better than ever.",
+        author: "Michael Chen",
+        role: "Medical Student",
+      },
+      back: {
+        quote: "I've tried many study apps, but EduSync AI is the first one that adapts to my learning style. Game changer!",
+        author: "Emma Rodriguez",
+        role: "Psychology Student",
+      }
     },
     {
-      quote: "As a working professional, I needed flexibility. EduSync AI adapts to my schedule and learning pace perfectly.",
-      author: "Aisha Patel",
-      role: "Business Analytics Professional",
+      front: {
+        quote: "As a working professional, I needed flexibility. EduSync AI adapts to my schedule and learning pace perfectly.",
+        author: "Aisha Patel",
+        role: "Business Analytics Professional",
+      },
+      back: {
+        quote: "The visualization tools helped me understand complex data structures that I struggled with for months.",
+        author: "Thomas Lee",
+        role: "Data Science Professional",
+      }
     },
   ];
+
+  // State to track which cards are flipped
+  const [flippedCards, setFlippedCards] = useState<boolean[]>([false, false, false]);
+  
+  // Function to toggle a card's flip state manually
+  const toggleFlip = (index: number) => {
+    const newFlippedCards = [...flippedCards];
+    newFlippedCards[index] = !newFlippedCards[index];
+    setFlippedCards(newFlippedCards);
+  };
+
+  // Auto-flip cards every 6 seconds, one at a time
+  useEffect(() => {
+    const intervals = testimonialPairs.map((_, index) => {
+      return setInterval(() => {
+        setFlippedCards(prev => {
+          const newState = [...prev];
+          newState[index] = !newState[index];
+          return newState;
+        });
+      }, 6000 + (index * 2000)); // Stagger the flips by 2 seconds for each card
+    });
+    
+    return () => {
+      intervals.forEach(interval => clearInterval(interval));
+    };
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -76,26 +126,70 @@ const TestimonialsSection = () => {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
         >
-          {testimonials.map((testimonial, index) => (
+          {testimonialPairs.map((pair, index) => (
             <motion.div 
               key={index}
               variants={itemVariants}
               className="flex flex-col h-full"
+              style={{ perspective: "1000px" }}
             >
-              <div className="bg-gradient-to-b from-indigo-500/80 to-purple-600/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl flex-grow h-full">
-                <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
-                  <Quote className="text-orange-400 w-10 h-10 mb-4" />
-                  <p className="text-white/90 italic mb-6 flex-grow">"{testimonial.quote}"</p>
-                  <div className="flex items-center mt-auto">
-                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
-                      {testimonial.author.charAt(0)}
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="text-white font-semibold">{testimonial.author}</h4>
-                      <p className="text-white/70 text-sm">{testimonial.role}</p>
+              <div 
+                className="relative w-full h-full min-h-[280px] cursor-pointer"
+                onClick={() => toggleFlip(index)}
+              >
+                {/* Card Front */}
+                <motion.div 
+                  className="absolute inset-0 w-full h-full backface-hidden"
+                  animate={{ 
+                    rotateY: flippedCards[index] ? 180 : 0,
+                    opacity: flippedCards[index] ? 0 : 1,
+                    zIndex: flippedCards[index] ? 0 : 1
+                  }}
+                  transition={{ duration: 0.6, type: "spring", stiffness: 80 }}
+                >
+                  <div className="bg-gradient-to-b from-indigo-500/80 to-purple-600/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl h-full">
+                    <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
+                      <Quote className="text-orange-400 w-10 h-10 mb-4" />
+                      <p className="text-white/90 italic mb-6 flex-grow">"{pair.front.quote}"</p>
+                      <div className="flex items-center mt-auto">
+                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
+                          {pair.front.author.charAt(0)}
+                        </div>
+                        <div className="ml-4">
+                          <h4 className="text-white font-semibold">{pair.front.author}</h4>
+                          <p className="text-white/70 text-sm">{pair.front.role}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
+
+                {/* Card Back */}
+                <motion.div 
+                  className="absolute inset-0 w-full h-full backface-hidden"
+                  animate={{ 
+                    rotateY: flippedCards[index] ? 0 : -180,
+                    opacity: flippedCards[index] ? 1 : 0,
+                    zIndex: flippedCards[index] ? 1 : 0
+                  }}
+                  transition={{ duration: 0.6, type: "spring", stiffness: 80 }}
+                >
+                  <div className="bg-gradient-to-b from-purple-600/80 to-indigo-500/80 backdrop-blur-sm p-1 rounded-2xl shadow-xl h-full">
+                    <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 h-full flex flex-col">
+                      <Quote className="text-orange-400 w-10 h-10 mb-4" />
+                      <p className="text-white/90 italic mb-6 flex-grow">"{pair.back.quote}"</p>
+                      <div className="flex items-center mt-auto">
+                        <div className="bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full h-12 w-12 flex items-center justify-center text-white font-bold text-lg">
+                          {pair.back.author.charAt(0)}
+                        </div>
+                        <div className="ml-4">
+                          <h4 className="text-white font-semibold">{pair.back.author}</h4>
+                          <p className="text-white/70 text-sm">{pair.back.role}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
             </motion.div>
           ))}
@@ -106,6 +200,16 @@ const TestimonialsSection = () => {
           <div className="h-full w-full" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
         </div>
       </div>
+
+      {/* Add CSS for backface visibility */}
+      <style jsx global>{`
+        .backface-hidden {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          transform-style: preserve-3d;
+          -webkit-transform-style: preserve-3d;
+        }
+      `}</style>
     </div>
   );
 };
