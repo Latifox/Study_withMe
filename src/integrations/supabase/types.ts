@@ -265,6 +265,30 @@ export type Database = {
           },
         ]
       }
+      professor_courses: {
+        Row: {
+          created_at: string
+          id: number
+          owner_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          owner_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          owner_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       quiz_progress: {
         Row: {
           completed_at: string | null

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
-import { DeleteCourseDialog } from "@/components/DeleteCourseDialog";
+import { DeleteProfessorCourseDialog } from "@/components/DeleteProfessorCourseDialog";
 import { Share, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
@@ -42,12 +42,12 @@ const ProfessorCourses = () => {
     queryFn: async () => {
       console.log('Fetching professor courses from Supabase...');
       const { data, error } = await supabase
-        .from('courses')
+        .from('professor_courses')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching courses:', error);
+        console.error('Error fetching professor courses:', error);
         throw error;
       }
       
@@ -81,7 +81,7 @@ const ProfessorCourses = () => {
                 <ArrowLeft className="w-4 h-4" />
                 Back to Dashboard
               </Button>
-              <CreateCourseDialog />
+              <CreateCourseDialog isProfessorMode={true} />
             </div>
           </div>
           
@@ -99,7 +99,7 @@ const ProfessorCourses = () => {
                 <Card key={course.id} className="group hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02]">
                   <CardHeader className="relative pb-2">
                     <div className="absolute top-4 right-4">
-                      <DeleteCourseDialog courseId={course.id} courseTitle={course.title} />
+                      <DeleteProfessorCourseDialog courseId={course.id} courseTitle={course.title} />
                     </div>
                     <div className="text-center w-full pr-8">
                       <CardTitle className="text-xl mb-1">{course.title}</CardTitle>
