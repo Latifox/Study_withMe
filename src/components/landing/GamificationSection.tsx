@@ -10,26 +10,20 @@ const GamificationSection = () => {
       description:
         "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
       gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
-      bubbleTint: "purple" // Matching XP card gradient
     },
     {
       icon: <Flame className="h-8 w-8 text-white" />,
       title: "Learning Streaks",
       description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
       gradient: "bg-gradient-to-r from-red-500 to-orange-500",
-      bubbleTint: "blue" // Matching Streak card gradient
     },
   ];
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-      {/* Bubble effects - positioned for each card */}
-      <div className="absolute left-0 top-0 bottom-0 w-1/2 pointer-events-none overflow-hidden">
-        <Bubbles position="left" tint={gamificationElements[0].bubbleTint} opacity={0.35} />
-      </div>
-      <div className="absolute right-0 top-0 bottom-0 w-1/2 pointer-events-none overflow-hidden">
-        <Bubbles position="right" tint={gamificationElements[1].bubbleTint} opacity={0.35} />
-      </div>
+      {/* Bubble effects */}
+      <Bubbles position="left" tint="purple" />
+      <Bubbles position="right" tint="indigo" />
       
       <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 border-purple-400">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">
