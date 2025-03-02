@@ -11,6 +11,17 @@ import LectureActionsDialog from "@/components/LectureActionsDialog";
 import { DeleteLectureDialog } from "@/components/DeleteLectureDialog";
 import LectureAIConfigDialog from "@/components/LectureAIConfigDialog";
 
+// Define interface for course data including course_code
+interface CourseData {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  owner_id: string;
+  course_code?: string;
+  isProfessor?: boolean;
+}
+
 const Course = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -38,7 +49,7 @@ const Course = () => {
       
       if (!regularError && regularCourse) {
         console.log('Found in regular courses:', regularCourse);
-        return { ...regularCourse, isProfessor: false };
+        return { ...regularCourse, isProfessor: false } as CourseData;
       }
       
       // Try professor courses next
@@ -50,7 +61,7 @@ const Course = () => {
       
       if (!professorError && professorCourse) {
         console.log('Found in professor courses:', professorCourse);
-        return { ...professorCourse, isProfessor: true };
+        return { ...professorCourse, isProfessor: true } as CourseData;
       }
       
       if (regularError && professorError) {

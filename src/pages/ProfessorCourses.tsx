@@ -11,6 +11,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
 
+// Define course interface to include course_code
+interface ProfessorCourse {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  owner_id: string;
+  course_code?: string;
+}
+
 const ProfessorCourses = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -52,7 +62,7 @@ const ProfessorCourses = () => {
       }
       
       console.log('Fetched professor courses:', data);
-      return data || [];
+      return data || [] as ProfessorCourse[];
     }
   });
 

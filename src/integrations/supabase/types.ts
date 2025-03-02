@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       courses: {
         Row: {
+          course_code: string | null
           created_at: string
           id: number
           owner_id: string | null
@@ -18,6 +19,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          course_code?: string | null
           created_at?: string
           id?: number
           owner_id?: string | null
@@ -25,6 +27,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          course_code?: string | null
           created_at?: string
           id?: number
           owner_id?: string | null
@@ -267,6 +270,7 @@ export type Database = {
       }
       professor_courses: {
         Row: {
+          course_code: string | null
           created_at: string
           id: number
           owner_id: string | null
@@ -274,6 +278,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          course_code?: string | null
           created_at?: string
           id?: number
           owner_id?: string | null
@@ -281,6 +286,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          course_code?: string | null
           created_at?: string
           id?: number
           owner_id?: string | null

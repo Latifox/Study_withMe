@@ -8,6 +8,16 @@ import { DeleteCourseDialog } from "@/components/DeleteCourseDialog";
 import { Share } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define course interface to include course_code
+interface Course {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  owner_id: string;
+  course_code?: string;
+}
+
 const UploadedCourses = () => {
   const navigate = useNavigate();
   
@@ -26,7 +36,7 @@ const UploadedCourses = () => {
       }
       
       console.log('Fetched courses:', data);
-      return data || [];
+      return data || [] as Course[];
     }
   });
 
