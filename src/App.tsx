@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
 import Auth from "./pages/Auth";
 import AccountType from "./pages/AccountType";
 import UploadedCourses from "./pages/UploadedCourses";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/account-type" element={<AccountType />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
             <Route path="/index" element={<LandingPage />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
