@@ -30,7 +30,7 @@ const BenefitsSection = () => {
       <Bubbles position="right" tint="blue" />
       
       <div 
-        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2"
+        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
         style={{ 
           borderImage: 'linear-gradient(to bottom, #60a5fa, #2563eb) 1',
           borderStyle: 'solid'
