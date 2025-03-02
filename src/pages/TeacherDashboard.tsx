@@ -90,7 +90,7 @@ const TeacherDashboard = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 max-w-4xl mx-auto">
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/uploaded-courses')}>
+            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/professor-courses')}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
                   <BookOpen className="w-6 h-6" />
