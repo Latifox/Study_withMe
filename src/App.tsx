@@ -24,6 +24,7 @@ import Resources from "./pages/Resources";
 import Story from "./pages/Story";
 import StoryNodes from "./pages/StoryNodes";
 import StoryContent from "./pages/StoryContent";
+import AIProfessorConfig from "./pages/AIProfessorConfig";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/index" element={<LandingPage />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
+            <Route path="/ai-professor-config" element={<AIProfessorConfig />} />
             <Route path="/course/:courseId" element={<Course />} />
             <Route path="/course/:courseId/lecture/:lectureId/chat" element={<LectureChat />} />
             <Route path="/course/:courseId/lecture/:lectureId/highlights" element={<LectureSummary />} />
