@@ -1,3 +1,4 @@
+
 import { GraduationCap, School } from "lucide-react";
 import Bubbles from "./Bubbles";
 
@@ -28,21 +29,26 @@ const BenefitsSection = () => {
       <Bubbles position="left" tint="blue" />
       <Bubbles position="right" tint="blue" />
       
-      {/* Title box with proper styling to match the image */}
-      <div className="mx-auto max-w-3xl mb-12 relative z-10 rounded-xl overflow-hidden">
-        <div className="bg-blue-500 absolute inset-0"></div>
-        <div className="bg-white/10 backdrop-blur-sm p-6 relative">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
-            Who Benefits from EduSync AI
+      <div className="mx-auto max-w-3xl mb-12 relative z-10 overflow-hidden rounded-xl">
+        <div 
+          className="absolute inset-0 bg-gradient-to-b from-blue-400 to-blue-600 rounded-xl"
+        ></div>
+        <div 
+          className="bg-white/10 backdrop-blur-sm p-6 shadow-xl hover:shadow-2xl transition-shadow relative"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+            Who Benefits from{" "}
+            <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+              EduSync AI
+            </span>
           </h2>
-          <p className="text-lg text-white text-center">
+          <p className="text-lg text-gray-700 text-center">
             Our platform serves both students and educators with specialized tools and features
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
-        {/* For Students card */}
         <div className="flex justify-center relative">
           <div 
             className="absolute inset-0 rounded-xl animate-energy" 
@@ -76,7 +82,6 @@ const BenefitsSection = () => {
           </div>
         </div>
 
-        {/* For Teachers card */}
         <div className="flex justify-center relative">
           <div 
             className="absolute inset-0 rounded-xl animate-energy" 
