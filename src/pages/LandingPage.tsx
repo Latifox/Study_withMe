@@ -15,7 +15,13 @@ const LandingPage = () => {
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="purple" strokeWidth="1" strokeLinecap="round" />
+              <path 
+                d="M40,5 Q40,0 35,0 L5,0 Q0,0 0,5 L0,35 Q0,40 5,40" 
+                fill="none" 
+                stroke="purple" 
+                strokeWidth="1" 
+                strokeLinecap="round"
+              />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
