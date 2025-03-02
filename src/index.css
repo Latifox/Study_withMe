@@ -115,17 +115,20 @@
   10% {
     opacity: var(--bubble-opacity, 0.5);
   }
-  70% {
+  60% {
     opacity: var(--bubble-opacity, 0.5);
   }
+  75% {
+    opacity: calc(var(--bubble-opacity, 0.5) * 0.8);
+  }
   85% {
-    opacity: calc(var(--bubble-opacity, 0.5) * 0.7);
+    opacity: calc(var(--bubble-opacity, 0.5) * 0.5);
   }
   95% {
-    opacity: calc(var(--bubble-opacity, 0.5) * 0.3);
+    opacity: calc(var(--bubble-opacity, 0.5) * 0.2);
   }
   100% {
-    transform: translateY(100vh);
+    transform: translateY(120vh);
     opacity: 0;
   }
 }

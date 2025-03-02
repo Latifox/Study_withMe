@@ -17,13 +17,13 @@ const HeroSection = () => {
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
-      <h1 className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-6">
+      <h1 className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-6 relative z-10">
         Transform Your Learning Experience with{" "}
         <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
           AI-Powered Education
         </span>
       </h1>
-      <p className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12">
+      <p className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12 relative z-10">
         Upload your course materials and let our AI guide you on a journey of discovery, transforming
         learning into a meaningful exploration of growth and understanding!
       </p>
@@ -32,7 +32,7 @@ const HeroSection = () => {
         onClick={handleGetStarted}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative z-10"
       >
         Get Started{" "}
         {isHovering ? (

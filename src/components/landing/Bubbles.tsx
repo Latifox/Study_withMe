@@ -14,7 +14,7 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
   useEffect(() => {
     // Generate random bubbles
     const generateBubbles = () => {
-      const newBubbles = Array.from({ length: 35 }, (_, i) => ({
+      const newBubbles = Array.from({ length: 50 }, (_, i) => ({
         id: i,
         size: Math.floor(Math.random() * 60) + 20, // Size between 20px and 80px
         delay: Math.random() * 5, // Random delay up to 5s
@@ -31,8 +31,8 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
   return (
     <div
       ref={containerRef}
-      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 bottom-0 w-32 md:w-40 overflow-hidden pointer-events-none h-full`}
-      style={{ maxHeight: sectionHeight }}
+      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 bottom-0 w-32 md:w-40 pointer-events-none h-full`}
+      style={{ minHeight: sectionHeight, overflow: "visible" }}
     >
       {bubbles.map((bubble) => (
         <div
@@ -47,8 +47,9 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
             border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
             animation: `bubble ${bubble.duration}s linear ${bubble.delay}s infinite`,
             opacity: bubble.opacity,
-            // Apply the custom property as a CSS variable using proper TypeScript syntax
+            // Apply the custom property as a CSS variable
             ["--bubble-opacity" as any]: bubble.opacity,
+            zIndex: 0,
           }}
         />
       ))}
