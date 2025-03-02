@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
@@ -82,7 +83,7 @@ const FeaturesSection = () => {
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
       <Bubbles position="left" tint="purple" />
-      <Bubbles position="right" tint="indigo" />
+      <Bubbles position="right" tint="purple" />
       
       <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500 relative z-10">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
