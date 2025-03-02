@@ -27,7 +27,7 @@ const GamificationSection = () => {
         </div>
         <div className="relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 bg-clip-text text-transparent">
+            <span className="text-white">
               Learn with Purpose
             </span>
           </h2>
