@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -93,24 +92,13 @@ export default {
         'pulse-slow': {
           '0%, 100%': { opacity: '0.4' },
           '50%': { opacity: '0.8' }
-        },
-        'glow': {
-          '0%, 100%': { 
-            opacity: '0.6',
-            transform: 'scale(0.95)'
-          },
-          '50%': { 
-            opacity: '1',
-            transform: 'scale(1.05)'
-          }
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.5s ease-out forwards',
-        'pulse-slow': 'pulse-slow 4s ease-in-out infinite',
-        'glow': 'glow 3s ease-in-out infinite'
+        'pulse-slow': 'pulse-slow 4s ease-in-out infinite'
       },
       typography: {
         DEFAULT: {
