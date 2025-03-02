@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -77,7 +78,7 @@
   }
 }
 
-/* Improved continuous downward flow animation with smoother fade out */
+/* Improved continuous downward flow animation with much faster fade out */
 @keyframes bubble-flow {
   0% {
     transform: translateY(-5%);
@@ -89,13 +90,17 @@
   60% {
     opacity: 0.7;
   }
+  70% {
+    opacity: 0.5;
+    transform: translateY(55%);
+  }
   75% {
-    opacity: 0.3;
+    opacity: 0.2;
     transform: translateY(60%);
   }
-  90% {
+  80% {
     opacity: 0;
-    transform: translateY(75%);
+    transform: translateY(65%);
   }
   100% {
     transform: translateY(85%);
