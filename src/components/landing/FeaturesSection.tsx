@@ -102,14 +102,14 @@ const FeaturesSection = () => {
           <div className="flex gap-6">
             {features.map((feature, i) => (
               <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1 relative group">
-                {/* Enhanced glow effect with stronger intensity */}
+                {/* Always visible enhanced glow effect */}
                 <div 
                   className="absolute inset-0 rounded-xl animate-energy-glow" 
                   style={{
-                    background: 'radial-gradient(circle at center, rgba(147, 51, 234, 0.7) 0%, rgba(79, 70, 229, 0.7) 35%, transparent 80%)',
+                    background: 'radial-gradient(circle at center, rgba(147, 51, 234, 0.8) 0%, rgba(79, 70, 229, 0.8) 35%, transparent 70%)',
                     filter: 'blur(20px)',
-                    transform: 'scale(1.3)',
-                    opacity: 0.85,
+                    transform: 'scale(1.2)',
+                    opacity: 0.9,
                     zIndex: 0
                   }}
                 />
