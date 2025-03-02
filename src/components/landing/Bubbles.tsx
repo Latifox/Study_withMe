@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 
 type BubbleProps = {
@@ -13,9 +12,9 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", opacity = 
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Generate random bubbles
+    // Generate random bubbles - doubling the count from 50 to 100
     const generateBubbles = () => {
-      const newBubbles = Array.from({ length: 50 }, (_, i) => ({
+      const newBubbles = Array.from({ length: 100 }, (_, i) => ({
         id: i,
         size: Math.floor(Math.random() * 60) + 20, // Size between 20px and 80px
         delay: Math.random() * 5, // Random delay up to 5s
@@ -181,7 +180,6 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", opacity = 
               border: bubbleStyle.border,
               animation: `bubble ${bubble.duration}s linear ${bubble.delay}s infinite`,
               opacity: bubble.opacity,
-              // Apply the custom property as a CSS variable
               ["--bubble-opacity" as any]: bubble.opacity,
               zIndex: 0,
             }}
