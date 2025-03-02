@@ -38,8 +38,8 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* Redirect /index to dashboard since Index and Dashboard are duplicating functionality */}
-            <Route path="/index" element={<Navigate replace to="/dashboard" />} />
+            {/* Map /index to LandingPage since that's what it should be */}
+            <Route path="/index" element={<LandingPage />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
             <Route path="/course/:courseId" element={<Course />} />
