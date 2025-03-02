@@ -200,6 +200,30 @@ const SubscriptionPlansSection = () => {
                 </Button>
               </CardFooter>
             </Card>
+
+            {/* Add the distinctive bottom shape for the middle card */}
+            {index === 1 && (
+              <div className="relative h-16 md:h-24 -mt-4 hidden md:block">
+                <div className="absolute w-full overflow-hidden">
+                  <div className="w-full bg-blue-500 h-8 rounded-b-full"></div>
+                  <div className="absolute -top-4 left-0 right-0 h-8">
+                    <div className="relative w-full h-full">
+                      <div className="absolute h-24 w-full bg-gradient-to-br from-blue-400 to-blue-500 rounded-b-[100%]"></div>
+                    </div>
+                  </div>
+                  <div className="absolute left-2 bottom-0 w-4 h-4 rounded-full bg-blue-300 shadow-lg opacity-90"></div>
+                  <div className="absolute right-2 bottom-0 w-4 h-4 rounded-full bg-blue-300 shadow-lg opacity-90"></div>
+                  <div className="w-full mt-1 mx-auto flex justify-center">
+                    <Button
+                      className="w-3/4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-4 font-medium text-lg shadow-xl"
+                      onClick={handleSignUp}
+                    >
+                      {subscriptionPlans[1].ctaText}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         ))}
       </motion.div>
