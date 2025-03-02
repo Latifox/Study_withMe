@@ -102,11 +102,20 @@ const FeaturesSection = () => {
           <div className="flex gap-6">
             {features.map((feature, i) => (
               <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1 relative group">
-                {/* Glow effect (positioned behind the card) */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-400/50 to-indigo-500/50 rounded-xl blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-500 -z-10 transform scale-[0.85] group-hover:scale-[1.05] transition-transform"></div>
+                {/* Enhanced glow effect with stronger intensity */}
+                <div 
+                  className="absolute inset-0 rounded-xl animate-energy-glow" 
+                  style={{
+                    background: 'radial-gradient(circle at center, rgba(147, 51, 234, 0.7) 0%, rgba(79, 70, 229, 0.7) 35%, transparent 80%)',
+                    filter: 'blur(20px)',
+                    transform: 'scale(1.3)',
+                    opacity: 0.85,
+                    zIndex: 0
+                  }}
+                />
                 
                 {/* Card with hover effects */}
-                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full transform transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl relative z-0">
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full transform transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl relative z-10">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
                       {React.cloneElement(feature.icon, { className: "h-6 w-6 text-white" })}
