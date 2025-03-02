@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -108,17 +109,22 @@
 
 @keyframes bubble {
   0% {
-    transform: translateY(0);
+    transform: translateY(0) rotate(0deg);
     opacity: 0;
   }
   10% {
     opacity: var(--bubble-opacity, 0.5);
+    transform: translateY(10%) rotate(5deg);
+  }
+  50% {
+    transform: translateY(50%) rotate(-5deg);
   }
   90% {
     opacity: var(--bubble-opacity, 0.5);
+    transform: translateY(90%) rotate(3deg);
   }
   100% {
-    transform: translateY(100vh);
+    transform: translateY(100vh) rotate(0deg);
     opacity: 0;
   }
 }

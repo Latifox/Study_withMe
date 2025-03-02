@@ -19,7 +19,7 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", colorSchem
         size: Math.floor(Math.random() * 60) + 20, // Size between 20px and 80px
         delay: Math.random() * 5, // Random delay up to 5s
         duration: Math.random() * 15 + 10, // Random duration between 10-25s
-        opacity: Math.random() * 0.5 + 0.1, // Random opacity between 0.1 and 0.6
+        opacity: Math.random() * 0.5 + 0.4, // Higher opacity between 0.4 and 0.9
         top: Math.random() * 40, // Random starting position from top 0-40%
       }));
       setBubbles(newBubbles);
@@ -28,31 +28,35 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple", colorSchem
     generateBubbles();
   }, []);
 
-  // Determine bubble style based on colorScheme
+  // Determine bubble style based on colorScheme with bolder colors
   const getBubbleStyle = (bubble: { opacity: number }) => {
     switch (colorScheme) {
       case "purple-indigo":
         return {
-          background: "linear-gradient(to bottom right, rgba(147, 51, 234, 0.15), rgba(79, 70, 229, 0.15))",
-          border: "1px solid rgba(124, 58, 237, 0.3)",
+          background: "linear-gradient(to bottom right, rgba(147, 51, 234, 0.4), rgba(79, 70, 229, 0.4))",
+          border: "1px solid rgba(124, 58, 237, 0.5)",
+          boxShadow: "0 4px 12px rgba(124, 58, 237, 0.15)",
           opacity: bubble.opacity
         };
       case "indigo-purple":
         return {
-          background: "linear-gradient(to bottom right, rgba(79, 70, 229, 0.15), rgba(147, 51, 234, 0.15))",
-          border: "1px solid rgba(99, 102, 241, 0.3)",
+          background: "linear-gradient(to bottom right, rgba(79, 70, 229, 0.4), rgba(147, 51, 234, 0.4))",
+          border: "1px solid rgba(99, 102, 241, 0.5)",
+          boxShadow: "0 4px 12px rgba(99, 102, 241, 0.15)",
           opacity: bubble.opacity
         };
       case "blue-indigo":
         return {
-          background: "linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(79, 70, 229, 0.15))",
-          border: "1px solid rgba(79, 70, 229, 0.3)",
+          background: "linear-gradient(to bottom right, rgba(59, 130, 246, 0.4), rgba(79, 70, 229, 0.4))",
+          border: "1px solid rgba(79, 70, 229, 0.5)",
+          boxShadow: "0 4px 12px rgba(79, 70, 229, 0.15)",
           opacity: bubble.opacity
         };
       default:
         return {
-          backgroundColor: tint === "purple" ? "rgba(147, 51, 234, 0.15)" : "rgba(79, 70, 229, 0.15)",
-          border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
+          backgroundColor: tint === "purple" ? "rgba(147, 51, 234, 0.4)" : "rgba(79, 70, 229, 0.4)",
+          border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.5)" : "1px solid rgba(79, 70, 229, 0.5)",
+          boxShadow: tint === "purple" ? "0 4px 12px rgba(147, 51, 234, 0.15)" : "0 4px 12px rgba(79, 70, 229, 0.15)",
           opacity: bubble.opacity
         };
     }
