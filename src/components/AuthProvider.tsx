@@ -1,8 +1,6 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: any | null;
@@ -22,7 +20,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<any | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   useEffect(() => {
     const getSession = async () => {
@@ -45,16 +42,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(true);
       const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
-      toast({
-        title: "Check your email",
-        description: "We've sent you a login link!"
-      });
+      alert('Check your email for the login link!');
     } catch (error: any) {
-      toast({
-        title: "Authentication error",
-        description: error.error_description || error.message,
-        variant: "destructive"
-      });
+      alert(error.error_description || error.message);
     } finally {
       setLoading(false);
     }
@@ -65,14 +55,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      return Promise.resolve();
     } catch (error: any) {
-      toast({
-        title: "Error signing out",
-        description: error.error_description || error.message,
-        variant: "destructive"
-      });
-      return Promise.reject(error);
+      alert(error.error_description || error.message);
     } finally {
       setLoading(false);
     }
