@@ -114,7 +114,7 @@
   10% {
     opacity: var(--bubble-opacity, 0.5);
   }
-  90% {
+  70% {
     opacity: var(--bubble-opacity, 0.5);
   }
   100% {

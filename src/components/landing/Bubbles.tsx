@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 type BubbleProps = {
   position: "left" | "right";
@@ -9,6 +9,7 @@ type BubbleProps = {
 
 const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubbleProps) => {
   const [bubbles, setBubbles] = useState<Array<{ id: number; size: number; delay: number; duration: number; opacity: number; top: number }>>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Generate random bubbles
@@ -29,6 +30,7 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
 
   return (
     <div
+      ref={containerRef}
       className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 bottom-0 w-32 md:w-40 overflow-hidden pointer-events-none h-full`}
       style={{ maxHeight: sectionHeight }}
     >
@@ -45,6 +47,8 @@ const Bubbles = ({ position, sectionHeight = "100%", tint = "purple" }: BubblePr
             border: tint === "purple" ? "1px solid rgba(147, 51, 234, 0.3)" : "1px solid rgba(79, 70, 229, 0.3)",
             animation: `bubble ${bubble.duration}s linear ${bubble.delay}s infinite`,
             opacity: bubble.opacity,
+            /* Set a custom property for the bubble's opacity that will be used in the keyframes */
+            "--bubble-opacity": bubble.opacity,
           }}
         />
       ))}
