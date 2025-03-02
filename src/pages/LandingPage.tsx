@@ -9,7 +9,7 @@ import Footer from "@/components/landing/Footer";
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen relative bg-gradient-to-b from-purple-50 via-indigo-50 to-blue-50">
+    <div className="min-h-screen bg-white relative">
       {/* Mesh pattern overlay */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
