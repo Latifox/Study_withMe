@@ -59,7 +59,7 @@ const TestimonialsSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl relative inline-block">
-            <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-indigo-500 via-orange-500 to-cyan-500 -z-10"></div>
+            <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-purple-700 via-purple-500 to-indigo-500 -z-10"></div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               What Our Users Say
             </h2>
