@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, BookOpen, Settings, LogOut } from "lucide-react";
+import { BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -89,8 +89,8 @@ const TeacherDashboard = () => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/uploaded-courses')}>
+          <div className="flex justify-center mb-12">
+            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20 max-w-md w-full" onClick={() => navigate('/uploaded-courses')}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
                   <BookOpen className="w-6 h-6" />
@@ -100,34 +100,6 @@ const TeacherDashboard = () => {
               <CardContent>
                 <p className="text-white/80 font-extrabold">
                   View and manage all your created courses
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/create-course')}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
-                  <PlusCircle className="w-6 h-6" />
-                  Create New Course
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-white/80 font-extrabold">
-                  Create a new course and add lectures
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/account-settings')}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
-                  <Settings className="w-6 h-6" />
-                  Account Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-white/80 font-extrabold">
-                  Manage your account preferences
                 </p>
               </CardContent>
             </Card>
