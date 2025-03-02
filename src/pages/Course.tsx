@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,17 +25,39 @@ const Course = () => {
     return null;
   }
   
-  const { data: course } = useQuery({
-    queryKey: ['course', parsedCourseId],
+  // Attempt to fetch course from both tables
+  const { data: course, isLoading: courseLoading } = useQuery({
+    queryKey: ['course-combined', parsedCourseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Try regular courses first
+      const { data: regularCourse, error: regularError } = await supabase
         .from('courses')
         .select('*')
         .eq('id', parsedCourseId)
         .single();
       
-      if (error) throw error;
-      return data;
+      if (!regularError && regularCourse) {
+        console.log('Found in regular courses:', regularCourse);
+        return { ...regularCourse, isProfessor: false };
+      }
+      
+      // Try professor courses next
+      const { data: professorCourse, error: professorError } = await supabase
+        .from('professor_courses')
+        .select('*')
+        .eq('id', parsedCourseId)
+        .single();
+      
+      if (!professorError && professorCourse) {
+        console.log('Found in professor courses:', professorCourse);
+        return { ...professorCourse, isProfessor: true };
+      }
+      
+      if (regularError && professorError) {
+        throw new Error('Course not found in either table');
+      }
+      
+      return null;
     }
   });
 
@@ -79,15 +102,22 @@ const Course = () => {
           <div className="flex items-center gap-4 mb-8">
             <Button 
               variant="outline" 
-              onClick={() => navigate('/uploaded-courses')}
+              onClick={() => navigate(course?.isProfessor ? '/professor-courses' : '/uploaded-courses')}
               className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Courses
             </Button>
-            <h1 className="text-4xl font-bold text-white">
-              {course?.title || 'Loading...'}
-            </h1>
+            <div>
+              <h1 className="text-4xl font-bold text-white">
+                {courseLoading ? 'Loading...' : course?.title || 'Course not found'}
+              </h1>
+              {course?.course_code && (
+                <div className="bg-white/20 text-white text-sm font-medium py-1 px-2 rounded mt-2 inline-block">
+                  Course Code: {course.course_code}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end mb-6">

@@ -69,8 +69,13 @@ const UploadedCourses = () => {
                     </div>
                     <div className="text-center w-full pr-8">
                       <CardTitle className="text-xl mb-1">{course.title}</CardTitle>
-                      <CardDescription>
-                        Created on {new Date(course.created_at).toLocaleDateString()}
+                      <CardDescription className="flex flex-col gap-1">
+                        <span>Created on {new Date(course.created_at).toLocaleDateString()}</span>
+                        {course.course_code && (
+                          <span className="bg-indigo-100 text-indigo-800 text-xs font-medium py-0.5 px-2 rounded inline-block mx-auto">
+                            Course Code: {course.course_code}
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                   </CardHeader>

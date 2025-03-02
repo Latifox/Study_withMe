@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PlusCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { generateCourseCode } from "@/utils/courseUtils";
 
 interface CreateCourseDialogProps {
   isProfessorMode?: boolean;
@@ -49,11 +50,15 @@ export function CreateCourseDialog({ isProfessorMode = false }: CreateCourseDial
       
       console.log(`Creating ${isProfessorMode ? 'professor' : 'student'} course:`, title);
       
+      // Generate a unique course code
+      const courseCode = generateCourseCode();
+      
       const { data, error } = await supabase
         .from(tableName)
         .insert([{ 
           title: title.trim(),
-          owner_id: user.id
+          owner_id: user.id,
+          course_code: courseCode
         }])
         .select();
       
