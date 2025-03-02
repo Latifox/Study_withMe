@@ -1,3 +1,4 @@
+
 import { GraduationCap, School } from "lucide-react";
 import Bubbles from "./Bubbles";
 
@@ -28,7 +29,13 @@ const BenefitsSection = () => {
       <Bubbles position="left" tint="blue" />
       <Bubbles position="right" tint="blue" />
       
-      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 border-2 border-purple-400 relative z-10">
+      <div 
+        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2"
+        style={{ 
+          borderImage: 'linear-gradient(to bottom, #60a5fa, #2563eb) 1',
+          borderStyle: 'solid'
+        }}
+      >
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Who Benefits from{" "}
           <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
