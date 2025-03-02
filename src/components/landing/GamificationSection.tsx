@@ -24,34 +24,23 @@ const GamificationSection = () => {
       <Bubbles position="left" tint={gamificationElements[0].bubbleTint} />
       <Bubbles position="right" tint={gamificationElements[1].bubbleTint} />
       
-      <div className="text-center mb-12 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl bg-white/10 backdrop-blur-sm border-2 relative overflow-hidden">
-        {/* Dramatically enhanced radiation effect behind the title box */}
-        <div 
-          className="absolute -inset-10 z-0" 
-          style={{
-            background: 'radial-gradient(circle at center, rgba(255, 215, 0, 0.9) 0%, rgba(255, 100, 0, 0.9) 40%, transparent 100%)',
-            filter: 'blur(25px)',
-            transform: 'scale(1.8)',
-            opacity: 0.85,
-            animation: 'super-pulse 3s infinite ease-in-out'
-          }}
-        />
-        
-        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-600 to-red-500 rounded-xl -m-[1px]"></div>
-          <div className="absolute inset-[2px] bg-white/10 backdrop-blur-sm rounded-lg"></div>
-        </div>
-        <div className="relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="text-white">
-              Learn with Purpose
-            </span>
-          </h2>
-          <p className="text-lg text-white">
-            Our gamified learning approach keeps you motivated and tracks your progress through your
-            educational journey
-          </p>
-        </div>
+      <div 
+        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
+        style={{ 
+          borderImage: 'linear-gradient(to bottom, #FFC107, #FF9800) 1',
+          borderStyle: 'solid'
+        }}
+      >
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+          Learn with{" "}
+          <span className="bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
+            Purpose
+          </span>
+        </h2>
+        <p className="text-lg text-gray-700 text-center">
+          Our gamified learning approach keeps you motivated and tracks your progress through your
+          educational journey
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20">
