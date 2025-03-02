@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
@@ -103,14 +102,14 @@ const FeaturesSection = () => {
           <div className="flex gap-6"> {/* Reduced gap between slides from 8 to 6 */}
             {features.map((feature, i) => (
               <div key={i} className="flex-shrink-0 w-[280px] md:w-[320px] mx-1"> {/* Added mx-1 for more consistent spacing */}
-                <div className="bg-gradient-to-b from-gray-100 to-gray-300 p-6 rounded-xl shadow-lg border border-gray-200 h-full">
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-xl shadow-lg border border-purple-300 h-full">
                   <div className="flex items-center mb-4">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                      {feature.icon}
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                      {React.cloneElement(feature.icon, { className: "h-6 w-6 text-white" })}
                     </div>
-                    <h3 className="font-bold text-lg">{feature.title}</h3>
+                    <h3 className="font-bold text-lg text-white">{feature.title}</h3>
                   </div>
-                  <p className="text-gray-700">{feature.description}</p>
+                  <p className="text-white">{feature.description}</p>
                 </div>
               </div>
             ))}
