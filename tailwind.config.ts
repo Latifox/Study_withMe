@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -15,6 +16,8 @@ export default {
     'to-red-600',
     'from-amber-500',
     'to-amber-600',
+    'from-purple-400',
+    'to-indigo-500',
   ],
   prefix: "",
   theme: {
@@ -92,13 +95,24 @@ export default {
         'pulse-slow': {
           '0%, 100%': { opacity: '0.4' },
           '50%': { opacity: '0.8' }
+        },
+        'energy-glow': {
+          '0%, 100%': { 
+            opacity: '0.6',
+            transform: 'scale(0.95)'
+          },
+          '50%': { 
+            opacity: '0.85',
+            transform: 'scale(1.05)'
+          }
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.5s ease-out forwards',
-        'pulse-slow': 'pulse-slow 4s ease-in-out infinite'
+        'pulse-slow': 'pulse-slow 4s ease-in-out infinite',
+        'energy-glow': 'energy-glow 3s ease-in-out infinite'
       },
       typography: {
         DEFAULT: {
