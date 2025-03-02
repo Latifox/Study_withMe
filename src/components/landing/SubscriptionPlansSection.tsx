@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -27,13 +26,13 @@ const SubscriptionPlansSection = () => {
       ctaText: "Get Started Now",
       recommended: false,
       icon: <Clock className="h-7 w-7" />,
-      color: "bg-gradient-to-br from-indigo-100 to-purple-200",
-      textColor: "text-purple-900",
-      iconBg: "bg-white/50",
-      iconColor: "text-purple-600",
-      borderColor: "border-purple-300",
-      shadowColor: "shadow-purple-100",
-      hoverShadow: "hover:shadow-purple-200/60",
+      color: "bg-gradient-to-br from-red-400 to-red-500",
+      textColor: "text-white",
+      iconBg: "bg-white/20",
+      iconColor: "text-white",
+      borderColor: "border-red-400",
+      shadowColor: "shadow-red-300/30",
+      hoverShadow: "hover:shadow-red-400/40",
     },
     {
       name: "Plus",
@@ -51,13 +50,13 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       recommended: true,
       icon: <Rocket className="h-7 w-7" />,
-      color: "bg-gradient-to-br from-purple-600 to-indigo-500",
+      color: "bg-gradient-to-br from-blue-400 to-blue-500",
       textColor: "text-white",
-      iconBg: "bg-white/30",
+      iconBg: "bg-white/20",
       iconColor: "text-white",
-      borderColor: "border-indigo-400",
-      shadowColor: "shadow-indigo-200/50",
-      hoverShadow: "hover:shadow-purple-500/30",
+      borderColor: "border-blue-400",
+      shadowColor: "shadow-blue-300/40",
+      hoverShadow: "hover:shadow-blue-500/50",
     },
     {
       name: "Premium",
@@ -68,17 +67,16 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       recommended: false,
       icon: <Crown className="h-7 w-7" />,
-      color: "bg-gradient-to-br from-indigo-900 to-purple-800",
+      color: "bg-gradient-to-br from-purple-500 to-purple-600",
       textColor: "text-white",
       iconBg: "bg-white/20",
-      iconColor: "text-amber-300",
-      borderColor: "border-indigo-700",
-      shadowColor: "shadow-indigo-900/30",
-      hoverShadow: "hover:shadow-purple-800/40",
+      iconColor: "text-white",
+      borderColor: "border-purple-500",
+      shadowColor: "shadow-purple-400/40",
+      hoverShadow: "hover:shadow-purple-600/50",
     },
   ];
 
-  // Animation variants for the framer-motion components
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -126,7 +124,6 @@ const SubscriptionPlansSection = () => {
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 relative">
-      {/* Bubble effects */}
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="indigo" />
       
@@ -154,47 +151,39 @@ const SubscriptionPlansSection = () => {
             variants={cardVariants}
             whileHover="hover"
           >
-            <Card className={`h-full flex flex-col border-2 ${plan.borderColor} overflow-hidden ${plan.shadowColor} shadow-lg transition-all duration-300 ${plan.hoverShadow}`}>
+            <Card className={`h-full flex flex-col border-0 overflow-hidden ${plan.shadowColor} shadow-xl transition-all duration-300 ${plan.hoverShadow} rounded-3xl`}>
               {plan.recommended && (
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-1.5 text-sm font-medium">
                   MOST POPULAR
                 </div>
               )}
-              <CardHeader className={`${plan.color} pb-8`}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-2 rounded-full ${plan.iconBg} ${plan.iconColor}`}>
-                    {plan.icon}
-                  </div>
-                  <h3 className={`text-2xl font-bold ${plan.textColor}`}>{plan.name}</h3>
-                </div>
-                <div className="mb-2 flex items-baseline">
-                  <span className={`text-3xl font-bold ${plan.textColor}`}>{plan.price}</span>
+              <CardHeader className={`${plan.color} py-8 px-6`}>
+                <h3 className={`text-2xl font-bold uppercase tracking-wider ${plan.textColor} mb-6`}>{plan.name}</h3>
+                <div className="mb-6">
+                  <span className={`text-4xl font-bold ${plan.textColor}`}>{plan.price}</span>
                   <span className={`text-sm ml-1 ${plan.textColor} opacity-80`}>/{plan.period}</span>
                 </div>
-                <p className={`${plan.textColor} opacity-90`}>{plan.description}</p>
+                <div className={`h-px w-full bg-white/20 mb-6`}></div>
+                <p className={`${plan.textColor} opacity-90 text-sm`}>{plan.description}</p>
               </CardHeader>
-              <CardContent className="bg-white/95 backdrop-blur-sm flex-grow">
+              <CardContent className={`${plan.color} flex-grow px-6 pt-0 pb-4`}>
                 <motion.ul 
-                  className="space-y-3 mb-6"
+                  className="space-y-3"
                   variants={featuresVariants}
                 >
                   {plan.features.map((feature, i) => (
                     <motion.li key={i} className="flex items-start" variants={featureItemVariants}>
-                      <div className="text-purple-600 flex-shrink-0 mt-0.5 mr-2">
-                        <Check className="h-5 w-5" />
+                      <div className={`${plan.iconBg} rounded-full p-1 flex-shrink-0 mt-0.5 mr-2`}>
+                        <Check className="h-3.5 w-3.5 text-white" />
                       </div>
-                      <span className="text-gray-700">{feature}</span>
+                      <span className="text-white text-sm">{feature}</span>
                     </motion.li>
                   ))}
                 </motion.ul>
               </CardContent>
-              <CardFooter className="bg-white/95 backdrop-blur-sm pt-0 pb-6 px-6">
+              <CardFooter className={`${plan.color} pt-0 pb-8 px-6`}>
                 <Button
-                  className={`w-full ${
-                    plan.recommended 
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-300/30" 
-                      : "bg-white border-2 border-purple-500 text-purple-700 hover:bg-purple-50 shadow-sm"
-                  }`}
+                  className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 rounded-full py-6"
                   onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
                 >
                   {plan.ctaText}
