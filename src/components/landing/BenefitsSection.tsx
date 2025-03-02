@@ -30,21 +30,26 @@ const BenefitsSection = () => {
       <Bubbles position="right" tint="blue" />
       
       <div 
-        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2"
+        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 overflow-hidden"
         style={{ 
-          borderImage: 'linear-gradient(to bottom, #60a5fa, #2563eb) 1',
-          borderStyle: 'solid'
+          position: 'relative',
         }}
       >
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-          Who Benefits from{" "}
-          <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-            EduSync AI
-          </span>
-        </h2>
-        <p className="text-lg text-gray-700 text-center">
-          Our platform serves both students and educators with specialized tools and features
-        </p>
+        <div className="absolute inset-0 rounded-xl border-2" style={{ 
+          borderImage: 'linear-gradient(to bottom, #60a5fa, #2563eb) 1',
+          borderRadius: '0.75rem' 
+        }}></div>
+        <div className="relative">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+            Who Benefits from{" "}
+            <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+              EduSync AI
+            </span>
+          </h2>
+          <p className="text-lg text-gray-700 text-center">
+            Our platform serves both students and educators with specialized tools and features
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
