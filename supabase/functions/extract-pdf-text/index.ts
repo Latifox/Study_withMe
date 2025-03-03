@@ -1,127 +1,112 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import pdfParse from "npm:pdf-parse@1.1.1";
-import { normalizeText } from './textProcessor.ts';
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { extractTextFromPDF } from "./textProcessor.ts";
+import { analyzePDFStructure } from "./gptAnalyzer.ts";
+import { validateSegments } from "./segmentValidator.ts";
 
+// Define CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Received request to extract PDF text');
-    
-    const { filePath, lectureId } = await req.json();
+    // Parse the request body
+    const { filePath, lectureId, isProfessorLecture = false } = await req.json();
     
     if (!filePath || !lectureId) {
-      throw new Error('No file path or lecture ID provided');
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameters: filePath or lectureId' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    console.log('Processing PDF file:', filePath);
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Download file from storage
-    const { data: fileData, error: downloadError } = await supabaseClient
-      .storage
+    // Download the PDF from storage
+    console.log(`Downloading PDF from path: ${filePath}`);
+    const { data: fileData, error: downloadError } = await supabase.storage
       .from('lecture_pdfs')
       .download(filePath);
 
-    if (downloadError) {
-      console.error('Download error:', downloadError);
-      throw new Error(`Failed to download PDF: ${downloadError.message}`);
+    if (downloadError || !fileData) {
+      console.error('Error downloading PDF:', downloadError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to download PDF file', details: downloadError }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
-    // Extract text from PDF
-    const buffer = Buffer.from(await fileData.arrayBuffer());
-    const data = await pdfParse(buffer);
-    const normalizedText = normalizeText(data.text);
+    // Extract text from the PDF
+    console.log('Extracting text from PDF...');
+    const extractedText = await extractTextFromPDF(fileData);
     
-    console.log('Successfully extracted and normalized text, length:', normalizedText.length);
-
-    // Detect language
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a language detection expert. Return ONLY the ISO language code (e.g., "en", "es", "de") for the primary language of the provided text. Reply with ONLY the language code, nothing else.'
-          },
-          {
-            role: 'user',
-            content: normalizedText.substring(0, 1000) // First 1000 characters should be enough
-          }
-        ],
-        temperature: 0.1
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to detect language');
+    if (!extractedText || extractedText.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'No text could be extracted from the PDF' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    const langData = await response.json();
-    const detectedLanguage = langData.choices[0].message.content.trim().toLowerCase();
-    
-    console.log('Detected language:', detectedLanguage);
+    console.log(`Extracted ${extractedText.length} characters from PDF`);
 
-    // Update lecture content and language
-    const { error: lectureError } = await supabaseClient
-      .from('lectures')
-      .update({ 
-        content: normalizedText,
-        original_language: detectedLanguage
-      })
-      .eq('id', parseInt(lectureId));
-
-    if (lectureError) {
-      console.error('Error updating lecture:', lectureError);
-      throw lectureError;
+    // Optional: Analyze PDF structure with GPT to improve parsing
+    let enhancedContent = extractedText;
+    try {
+      console.log('Analyzing PDF structure with GPT...');
+      enhancedContent = await analyzePDFStructure(extractedText);
+      console.log('PDF structure analysis complete');
+    } catch (error) {
+      console.error('Error analyzing PDF structure:', error);
+      // Continue with the raw extracted text if analysis fails
+      console.log('Proceeding with raw extracted text...');
     }
 
+    // Optional: Validate the segments to ensure they meet requirements
+    try {
+      console.log('Validating content segments...');
+      validateSegments(enhancedContent);
+      console.log('Content segments validated successfully');
+    } catch (error) {
+      console.error('Content validation warning:', error);
+      // Continue anyway as this is just a quality check
+    }
+
+    // Return the extracted and processed content
     return new Response(
       JSON.stringify({ 
-        success: true,
-        content: normalizedText,
-        language: detectedLanguage
+        content: enhancedContent,
+        original_length: extractedText.length,
+        processed_length: enhancedContent.length,
+        lecture_id: lectureId,
+        is_professor_lecture: isProfessorLecture
       }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error processing PDF:', error);
-    
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Failed to extract PDF content',
-        details: error.message 
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: 'Server error', details: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

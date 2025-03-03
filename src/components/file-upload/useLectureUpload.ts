@@ -119,7 +119,9 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
 
       // Generate segment structure (titles and descriptions)
       console.log('Generating segment structure...');
-      const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
+      const segmentsFunctionName = isProfessorCourse ? 'generate-professor-segments-structure' : 'generate-segments-structure';
+      
+      const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
         body: {
           lectureId: lectureData.id,
           lectureContent: extractionData.content,
