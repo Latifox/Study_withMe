@@ -98,104 +98,158 @@ Deno.serve(async (req) => {
     // Step 2: Convert PDF to ArrayBuffer for PDF.js
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Initialize PDF.js worker
-    console.log('Initializing PDF.js')
-    const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js`
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+    // Initialize PDF.js - Important change: Using a CDN path that works with Deno
+    console.log('Initializing PDF.js without worker')
     
-    // Step 3: Use PDF.js to extract text content
-    console.log('Loading PDF document')
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
-    const pdfDocument = await loadingTask.promise
+    // Set worker URL to null to use fake worker
+    // This approach uses the built-in "fake worker" in PDF.js when no worker is provided
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
     
-    console.log(`PDF loaded successfully. Number of pages: ${pdfDocument.numPages}`)
-    
-    // Extract text from all pages
-    let fullText = ''
-    for (let i = 1; i <= pdfDocument.numPages; i++) {
-      console.log(`Processing page ${i} of ${pdfDocument.numPages}`)
-      const page = await pdfDocument.getPage(i)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
+    try {
+      // Step 3: Use PDF.js to extract text content without requiring a worker
+      console.log('Loading PDF document')
+      // Disable worker to use main thread processing
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        disableWorker: true,
+        isEvalSupported: false,
+        useSystemFonts: true
+      })
       
-      fullText += pageText + '\n\n'
-    }
-    
-    console.log(`Text extraction complete. Extracted ${fullText.length} characters`)
-    
-    if (fullText.length === 0) {
-      console.error('No text content extracted from PDF')
+      const pdfDocument = await loadingTask.promise
+      
+      console.log(`PDF loaded successfully. Number of pages: ${pdfDocument.numPages}`)
+      
+      // Extract text from all pages
+      let fullText = ''
+      for (let i = 1; i <= pdfDocument.numPages; i++) {
+        console.log(`Processing page ${i} of ${pdfDocument.numPages}`)
+        const page = await pdfDocument.getPage(i)
+        const textContent = await page.getTextContent()
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ')
+        
+        fullText += pageText + '\n\n'
+      }
+      
+      console.log(`Text extraction complete. Extracted ${fullText.length} characters`)
+      
+      if (fullText.length === 0) {
+        console.error('No text content extracted from PDF')
+        return new Response(
+          JSON.stringify({ success: false, error: 'No text extracted from PDF' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 422 
+          }
+        )
+      }
+      
+      // Step 4: Determine language of the content (simple detection)
+      const detectLanguage = (text: string): string => {
+        // Very basic detection - this could be improved with actual language detection libraries
+        const commonEnglishWords = ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this'];
+        const commonSpanishWords = ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una'];
+        const commonFrenchWords = ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une'];
+        
+        const normalizedText = text.toLowerCase();
+        let englishCount = 0;
+        let spanishCount = 0;
+        let frenchCount = 0;
+        
+        commonEnglishWords.forEach(word => {
+          const regex = new RegExp(`\\b${word}\\b`, 'g');
+          const matches = normalizedText.match(regex);
+          if (matches) englishCount += matches.length;
+        });
+        
+        commonSpanishWords.forEach(word => {
+          const regex = new RegExp(`\\b${word}\\b`, 'g');
+          const matches = normalizedText.match(regex);
+          if (matches) spanishCount += matches.length;
+        });
+        
+        commonFrenchWords.forEach(word => {
+          const regex = new RegExp(`\\b${word}\\b`, 'g');
+          const matches = normalizedText.match(regex);
+          if (matches) frenchCount += matches.length;
+        });
+        
+        if (englishCount > spanishCount && englishCount > frenchCount) return 'english';
+        if (spanishCount > englishCount && spanishCount > frenchCount) return 'spanish';
+        if (frenchCount > englishCount && frenchCount > spanishCount) return 'french';
+        
+        return 'english'; // Default to English if unsure
+      };
+      
+      const detectedLanguage = detectLanguage(fullText);
+      console.log(`Detected language: ${detectedLanguage}`);
+      
+      // Step 5: Store the extracted text in the database
+      console.log('Storing extracted text in database')
+      
+      const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
+      
+      const { data: updateData, error: updateError } = await supabase
+        .from(tableName)
+        .update({ 
+          content: fullText,
+          original_language: detectedLanguage
+        })
+        .eq('id', numericLectureId)
+        .select()
+      
+      if (updateError) {
+        console.error(`Error updating ${tableName}:`, updateError)
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Failed to update lecture content: ${updateError.message}` 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        )
+      }
+      
+      if (!updateData || updateData.length === 0) {
+        console.error('No rows updated')
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `No rows updated. Lecture ID ${numericLectureId} not found in ${tableName} table.` 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 404 
+          }
+        )
+      }
+      
+      console.log('Text successfully stored in database')
+      
+      // Return success response
       return new Response(
-        JSON.stringify({ success: false, error: 'No text extracted from PDF' }),
+        JSON.stringify({ 
+          success: true, 
+          message: 'PDF extraction complete and content stored in database',
+          contentLength: fullText.length,
+          language: detectedLanguage,
+          lectureId: numericLectureId
+        }),
         { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 422 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
-    }
-    
-    // Step 4: Determine language of the content (simple detection)
-    const detectLanguage = (text: string): string => {
-      // Very basic detection - this could be improved with actual language detection libraries
-      const commonEnglishWords = ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this'];
-      const commonSpanishWords = ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una'];
-      const commonFrenchWords = ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une'];
       
-      const normalizedText = text.toLowerCase();
-      let englishCount = 0;
-      let spanishCount = 0;
-      let frenchCount = 0;
-      
-      commonEnglishWords.forEach(word => {
-        const regex = new RegExp(`\\b${word}\\b`, 'g');
-        const matches = normalizedText.match(regex);
-        if (matches) englishCount += matches.length;
-      });
-      
-      commonSpanishWords.forEach(word => {
-        const regex = new RegExp(`\\b${word}\\b`, 'g');
-        const matches = normalizedText.match(regex);
-        if (matches) spanishCount += matches.length;
-      });
-      
-      commonFrenchWords.forEach(word => {
-        const regex = new RegExp(`\\b${word}\\b`, 'g');
-        const matches = normalizedText.match(regex);
-        if (matches) frenchCount += matches.length;
-      });
-      
-      if (englishCount > spanishCount && englishCount > frenchCount) return 'english';
-      if (spanishCount > englishCount && spanishCount > frenchCount) return 'spanish';
-      if (frenchCount > englishCount && frenchCount > spanishCount) return 'french';
-      
-      return 'english'; // Default to English if unsure
-    };
-    
-    const detectedLanguage = detectLanguage(fullText);
-    console.log(`Detected language: ${detectedLanguage}`);
-    
-    // Step 5: Store the extracted text in the database
-    console.log('Storing extracted text in database')
-    
-    const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
-    
-    const { data: updateData, error: updateError } = await supabase
-      .from(tableName)
-      .update({ 
-        content: fullText,
-        original_language: detectedLanguage
-      })
-      .eq('id', numericLectureId)
-      .select()
-    
-    if (updateError) {
-      console.error(`Error updating ${tableName}:`, updateError)
+    } catch (pdfError) {
+      console.error('Error processing PDF:', pdfError)
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Failed to update lecture content: ${updateError.message}` 
+          error: `PDF processing error: ${pdfError.message || 'Unknown PDF processing error'}` 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -203,36 +257,6 @@ Deno.serve(async (req) => {
         }
       )
     }
-    
-    if (!updateData || updateData.length === 0) {
-      console.error('No rows updated')
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `No rows updated. Lecture ID ${numericLectureId} not found in ${tableName} table.` 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      )
-    }
-    
-    console.log('Text successfully stored in database')
-    
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'PDF extraction complete and content stored in database',
-        contentLength: fullText.length,
-        language: detectedLanguage,
-        lectureId: numericLectureId
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
     
   } catch (error) {
     console.error('Unexpected error:', error)

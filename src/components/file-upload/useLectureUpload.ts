@@ -17,7 +17,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Enhanced function to verify lecture content with robust retry mechanism
-  const verifyLectureContent = async (lectureId: number, isProfessor: boolean, maxRetries = 10): Promise<string | null> => {
+  const verifyLectureContent = async (lectureId: number, isProfessor: boolean, maxRetries = 15): Promise<string | null> => {
     console.log(`Verifying lecture content for lecture ID ${lectureId}, isProfessor: ${isProfessor}`);
     const tableName = isProfessor ? 'professor_lectures' : 'lectures';
     
@@ -149,11 +149,11 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         
         // Wait for content to be stored in the database with increased initial delay
         console.log('Waiting for content to be stored in the database...');
-        await delay(15000); // 15 seconds initial delay - increased from 10 to give more time
+        await delay(20000); // 20 seconds initial delay - increased to give more time
         
         // Verify content is saved and retry if needed with more retries
         console.log('Verifying lecture content...');
-        const lectureContent = await verifyLectureContent(lectureData.id, isProfessorCourse, 15); // Increased retries from 10 to 15
+        const lectureContent = await verifyLectureContent(lectureData.id, isProfessorCourse, 15);
         
         if (!lectureContent) {
           console.error('Unable to verify lecture content in the database after multiple attempts');
