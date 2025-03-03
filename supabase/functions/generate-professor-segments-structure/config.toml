@@ -6,5 +6,5 @@ version = "v1.67.2"
 
 [functions.generate-professor-segments-structure]
 verify_jwt = true
-memory = 1536
-max_timeout = 180
+memory = 2048
+max_timeout = 300

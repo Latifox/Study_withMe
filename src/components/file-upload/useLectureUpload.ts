@@ -13,6 +13,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   const handleUpload = async () => {
     if (!file || !title || !courseId) {
       toast({
@@ -106,14 +108,30 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
           throw new Error(`Failed to extract PDF content: ${extractionError.message || 'Unknown error'}`);
         }
         
-        if (!extractionData || !extractionData.success === false) {
+        if (!extractionData || extractionData.success === false) {
           throw new Error('PDF extraction failed: ' + (extractionData?.error || 'No content returned'));
         }
         
         console.log('PDF content extracted successfully');
         
         // Wait a moment to make sure the content has been saved to the database
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Waiting for database update to complete...');
+        await delay(2000);
+
+        // Verify that content is saved in the database
+        console.log('Verifying lecture content was saved...');
+        const tableName = isProfessorCourse ? 'professor_lectures' : 'lectures';
+        const { data: updatedLecture, error: verifyError } = await supabase
+          .from(tableName)
+          .select('content')
+          .eq('id', lectureData.id)
+          .single();
+        
+        if (verifyError) {
+          console.error('Error verifying lecture content:', verifyError);
+        } else {
+          console.log(`Lecture content verification: ${updatedLecture?.content ? 'Content present' : 'Content missing'}, Length: ${updatedLecture?.content?.length || 0} characters`);
+        }
 
         // Step 2: Generate segment structure
         console.log('Generating segment structure...');
@@ -127,12 +145,22 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         });
         
         try {
+          // If the lecture content is available from the verification step, include it in the request
+          const requestBody: any = {
+            lectureId: lectureData.id,
+            lectureTitle: title,
+            isProfessorLecture: isProfessorCourse
+          };
+          
+          if (updatedLecture?.content) {
+            requestBody.lectureContent = updatedLecture.content;
+            console.log('Including lecture content in segment structure request');
+          } else {
+            console.log('Lecture content not available, relying on edge function to fetch it');
+          }
+          
           const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
-            body: {
-              lectureId: lectureData.id,
-              lectureTitle: title,
-              isProfessorLecture: isProfessorCourse
-            }
+            body: requestBody
           });
 
           console.log('Response from segment generation:', { data: segmentData, error: segmentError });
@@ -151,7 +179,6 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
           // Step 3: Generate content for each segment
           console.log('Generating content for all segments...');
           const maxRetries = 3;
-          const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
           const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
             try {
@@ -209,7 +236,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
 
         await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
         
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await delay(500);
 
         toast({
           title: "Success",
