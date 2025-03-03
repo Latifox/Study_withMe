@@ -65,6 +65,8 @@ const StoryContent = () => {
     </div>
   );
 
+  // Only show completion screen when we're at the end (step 4) 
+  // AND have enough score
   if (currentStep >= 4 && currentScore >= 10) {
     return baseLayout(<StoryCompletionScreen onBack={handleBack} />);
   }

@@ -82,6 +82,13 @@ const ContentDisplay = ({
   } : null;
 
   console.log('ContentDisplay - Current question:', currentQuestion);
+  console.log('ContentDisplay - Current step (0-3):', currentStep);
+
+  // Add logging for the correct answer handler to debug flow
+  const handleCorrectAnswerWithLogging = () => {
+    console.log(`ContentDisplay - handleCorrectAnswer called at step ${currentStep}`);
+    onCorrectAnswer();
+  };
 
   // Check if we have valid content for the current state
   const hasValidSlide = isSlide && Boolean(currentSlideContent?.trim());
@@ -130,7 +137,7 @@ const ContentDisplay = ({
             lectureId={lectureId}
             courseId={courseId}
             currentScore={currentScore}
-            onCorrectAnswer={onCorrectAnswer}
+            onCorrectAnswer={handleCorrectAnswerWithLogging}
             onWrongAnswer={onWrongAnswer}
             onContinue={onContinue}
           />

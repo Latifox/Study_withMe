@@ -79,7 +79,6 @@ const QuizHandler = ({
       }
       
       console.log('Parsed segment number:', segmentNumber);
-      const quizNumber = questionIndex + 1;
 
       // Mark question as answered
       setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
@@ -91,20 +90,9 @@ const QuizHandler = ({
         setFailedQuestions(updatedFailedQuestions);
       }
 
-      if (quizNumber === 2) {
-        // Check if there are any failed questions that need to be retaken
-        if (failedQuestions.size > 0) {
-          setShowFailDialog(true);
-        } else {
-          toast({
-            title: "🌟 Node Complete!",
-            description: "Great job! You've mastered this node.",
-          });
-          onCorrectAnswer();
-        }
-      } else {
-        onCorrectAnswer();
-      }
+      // We should only show congratulations message after completing all quizzes
+      // Simply call onCorrectAnswer to move to the next step
+      onCorrectAnswer();
 
     } catch (error) {
       console.error('Error in handleCorrectAnswer:', error);

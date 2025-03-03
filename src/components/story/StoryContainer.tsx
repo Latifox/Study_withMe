@@ -95,6 +95,18 @@ export const StoryContainer = ({
     return <StoryCompletionScreen onBack={() => window.history.back()} />;
   }
 
+  // Fix: Only show completion screen after all 4 steps are completed
+  // This will prevent showing completion after first quiz
+  const handleCorrectAnswerWithCheck = () => {
+    // Only show completion screen if we're at the final quiz step
+    if (currentStep === 3) {
+      setShowCompletionScreen(true);
+    }
+    
+    // Always call the parent onCorrectAnswer to move to next step
+    onCorrectAnswer();
+  };
+
   return (
     <ContentDisplay
       currentSegmentData={currentSegmentData}
@@ -108,14 +120,10 @@ export const StoryContainer = ({
       lectureId={String(currentSegment)}
       courseId={String(currentSegment)}
       onContinue={onContinue}
-      onCorrectAnswer={() => {
-        setShowCompletionScreen(true);
-        onCorrectAnswer();
-      }}
+      onCorrectAnswer={handleCorrectAnswerWithCheck}
       onWrongAnswer={onWrongAnswer}
     />
   );
 };
 
 export default StoryContainer;
-
