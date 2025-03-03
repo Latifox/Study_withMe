@@ -1,11 +1,17 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "./cors.ts";
-import { validateRequest } from "./validator.ts";
+// Import necessary modules and functions
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { generateSegmentContent } from "./generator.ts";
-import { updateSegmentContent } from "./db.ts";
-import { SegmentContentRequest } from "./types.ts";
+import { validateRequest } from "./validator.ts";
+import { insertProfessorSegmentContent, insertSegmentContent } from "./db.ts";
 
+// Define CORS headers for cross-origin requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Start the server using the serve function
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -13,69 +19,72 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received request for segment content generation');
+    // Parse the request body as JSON
+    const requestData = await req.json();
     
-    // Parse request body
-    const requestData: SegmentContentRequest = await req.json();
-    console.log('Request data received:', {
-      lectureId: requestData.lectureId,
-      segmentNumber: requestData.segmentNumber,
-      isProfessorLecture: requestData.isProfessorLecture
-    });
-    
-    // Validate request data
+    // Validate the request data
     const validationResult = validateRequest(requestData);
-    if (!validationResult.isValid) {
-      console.error('Validation error:', validationResult.error);
+    if (!validationResult.valid) {
       return new Response(
         JSON.stringify({ error: validationResult.error }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
     
-    // Generate content using OpenAI
-    console.log('Generating content for segment', requestData.segmentNumber);
-    const { content, error: generationError } = await generateSegmentContent(requestData);
+    // Extract parameters from the validated request
+    const { 
+      lectureId, 
+      segmentNumber, 
+      segmentTitle, 
+      segmentDescription, 
+      lectureContent,
+      isProfessorLecture = false
+    } = requestData;
+
+    console.log(`Processing segment ${segmentNumber} for lecture ${lectureId} (Professor: ${isProfessorLecture})`);
+    console.log(`Title: ${segmentTitle}`);
+    console.log(`Description: ${segmentDescription}`);
     
-    if (generationError) {
-      console.error('Content generation error:', generationError);
-      return new Response(
-        JSON.stringify({ error: generationError }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // Generate content for the segment
+    const segmentContent = await generateSegmentContent(
+      segmentTitle,
+      segmentDescription,
+      lectureContent
+    );
+
+    // Save the generated content to the database
+    if (isProfessorLecture) {
+      await insertProfessorSegmentContent(
+        lectureId,
+        segmentNumber,
+        segmentContent
+      );
+    } else {
+      await insertSegmentContent(
+        lectureId,
+        segmentNumber,
+        segmentContent
       );
     }
-    
-    if (!content) {
-      console.error('No content generated');
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate content' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Update the database with generated content
-    console.log('Updating database with generated content');
-    const { error: dbError } = await updateSegmentContent(requestData, content);
-    
-    if (dbError) {
-      console.error('Database update error:', dbError);
-      return new Response(
-        JSON.stringify({ error: `Database error: ${dbError}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    console.log('Content generation and database update successful');
+
+    // Return a success response
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ 
+        success: true, 
+        message: `Content for segment ${segmentNumber} generated and saved successfully` 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
+
   } catch (error) {
-    console.error('Unhandled error in segment content generation:', error);
+    // Log and return any errors
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: `Server error: ${error.message}` }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: 'Failed to generate segment content', 
+        details: error.message 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

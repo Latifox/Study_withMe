@@ -1,41 +1,63 @@
 
-import { SegmentContentRequest } from "./types.ts";
-
-export interface ValidationResult {
-  isValid: boolean;
-  error?: string;
+export interface SegmentContentRequest {
+  lectureId: number;
+  segmentNumber: number;
+  segmentTitle: string;
+  segmentDescription: string;
+  lectureContent: string;
+  contentLanguage?: string;
 }
 
-export function validateRequest(data: SegmentContentRequest): ValidationResult {
-  // Check for required fields
-  if (!data.lectureId) {
-    return { isValid: false, error: 'Missing required field: lectureId' };
+export function validateRequest(payload: any): { valid: boolean; error?: string } {
+  console.log("Starting detailed request validation...")
+  
+  // Check if required fields exist
+  const requiredFields = ['lectureId', 'segmentNumber', 'segmentTitle', 'lectureContent'];
+  for (const field of requiredFields) {
+    if (payload[field] === undefined || payload[field] === null) {
+      console.error(`Missing required field: ${field}`);
+      return { valid: false, error: `Missing required field: ${field}` };
+    }
   }
   
-  if (data.segmentNumber === undefined || data.segmentNumber === null) {
-    return { isValid: false, error: 'Missing required field: segmentNumber' };
+  // Validate lectureId
+  if (typeof payload.lectureId !== 'number') {
+    console.error(`Invalid lectureId type: ${typeof payload.lectureId}, value: ${payload.lectureId}`);
+    return { valid: false, error: 'lectureId must be a number' };
   }
   
-  if (!data.segmentTitle) {
-    return { isValid: false, error: 'Missing required field: segmentTitle' };
+  // Validate segmentNumber
+  if (typeof payload.segmentNumber !== 'number') {
+    console.error(`Invalid segmentNumber type: ${typeof payload.segmentNumber}, value: ${payload.segmentNumber}`);
+    return { valid: false, error: 'segmentNumber must be a number' };
   }
   
-  if (!data.segmentDescription) {
-    return { isValid: false, error: 'Missing required field: segmentDescription' };
+  // Validate segmentTitle
+  if (typeof payload.segmentTitle !== 'string' || payload.segmentTitle.trim() === '') {
+    console.error(`Invalid segmentTitle: ${payload.segmentTitle}`);
+    return { valid: false, error: 'segmentTitle must be a non-empty string' };
   }
   
-  if (!data.lectureContent) {
-    return { isValid: false, error: 'Missing required field: lectureContent' };
+  // Validate lectureContent
+  if (typeof payload.lectureContent !== 'string' || payload.lectureContent.trim() === '') {
+    console.error(`Invalid lectureContent: ${typeof payload.lectureContent}, length: ${payload.lectureContent ? payload.lectureContent.length : 0}`);
+    return { valid: false, error: 'lectureContent must be a non-empty string' };
   }
   
-  // Additional validations
-  if (typeof data.segmentNumber !== 'number' || data.segmentNumber < 1) {
-    return { isValid: false, error: 'segmentNumber must be a positive number' };
+  // Validate segmentDescription (optional but should be string if present)
+  if (payload.segmentDescription !== undefined && 
+      (typeof payload.segmentDescription !== 'string')) {
+    console.error(`Invalid segmentDescription type: ${typeof payload.segmentDescription}`);
+    return { valid: false, error: 'segmentDescription must be a string' };
   }
   
-  if (typeof data.lectureContent !== 'string' || data.lectureContent.length < 10) {
-    return { isValid: false, error: 'lectureContent is too short or invalid' };
+  // Validate contentLanguage (optional)
+  if (payload.contentLanguage !== undefined && 
+      (typeof payload.contentLanguage !== 'string' || payload.contentLanguage.trim() === '')) {
+    console.error(`Invalid contentLanguage: ${payload.contentLanguage}`);
+    return { valid: false, error: 'contentLanguage must be a non-empty string' };
   }
   
-  return { isValid: true };
+  console.log("Request validation passed successfully");
+  return { valid: true };
 }

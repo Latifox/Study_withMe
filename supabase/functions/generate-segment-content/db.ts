@@ -1,95 +1,94 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { SegmentContentRequest } from "./types.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { SegmentContent } from "./types.ts";
 
-// Initialize Supabase client
-function getSupabaseClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  return createClient(supabaseUrl, supabaseKey);
-}
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-export async function updateSegmentContent(
-  request: SegmentContentRequest,
-  content: string
+export async function insertSegmentContent(
+  lectureId: number,
+  segmentNumber: number,
+  content: SegmentContent
 ) {
-  const supabase = getSupabaseClient();
-  const { lectureId, segmentNumber, isProfessorLecture } = request;
-  
-  console.log(`Updating ${isProfessorLecture ? 'professor' : 'regular'} segment content`);
-  console.log(`Lecture ID: ${lectureId}, Segment Number: ${segmentNumber}`);
-  
-  try {
-    // Choose the appropriate table based on the lecture type
-    const tableName = isProfessorLecture ? 'professor_segments_content' : 'segments_content';
-    
-    // First check if content already exists
-    const { data: existingContent, error: fetchError } = await supabase
-      .from(tableName)
-      .select('id')
-      .eq('lecture_id', lectureId)
-      .eq('segment_number', segmentNumber)
-      .maybeSingle();
-      
-    if (fetchError) {
-      console.error('Error checking existing content:', fetchError);
-      return { error: fetchError.message };
-    }
-    
-    if (existingContent) {
-      // Update existing content
-      console.log('Updating existing segment content');
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({ content, updated_at: new Date().toISOString() })
-        .eq('id', existingContent.id);
-        
-      if (updateError) {
-        console.error('Error updating content:', updateError);
-        return { error: updateError.message };
-      }
-    } else {
-      // Insert new content
-      console.log('Creating new segment content');
-      const { error: insertError } = await supabase
-        .from(tableName)
-        .insert({
-          lecture_id: lectureId,
-          segment_number: segmentNumber,
-          content
-        });
-        
-      if (insertError) {
-        console.error('Error inserting content:', insertError);
-        return { error: insertError.message };
-      }
-    }
-    
-    return { error: null };
-  } catch (error) {
-    console.error('Unexpected error in updateSegmentContent:', error);
-    return { error: error.message };
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase credentials not configured');
   }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Prepare data for insertion
+  const insertData = {
+    lecture_id: lectureId,
+    sequence_number: segmentNumber,
+    theory_slide_1: content.theorySlide1,
+    theory_slide_2: content.theorySlide2,
+    quiz_1_type: content.quiz1.type,
+    quiz_1_question: content.quiz1.question,
+    quiz_1_options: content.quiz1.options,
+    quiz_1_correct_answer: content.quiz1.correctAnswer,
+    quiz_1_explanation: content.quiz1.explanation,
+    quiz_2_type: content.quiz2.type,
+    quiz_2_question: content.quiz2.question,
+    quiz_2_correct_answer: content.quiz2.correctAnswer === 'true',
+    quiz_2_explanation: content.quiz2.explanation
+  };
+
+  console.log(`Inserting content for segment ${segmentNumber} into segments_content...`);
+  
+  const { data, error } = await supabase
+    .from('segments_content')
+    .insert(insertData)
+    .select();
+
+  if (error) {
+    console.error('Error inserting segment content:', error);
+    throw new Error(`Database error: ${error.message}`);
+  }
+
+  console.log(`Segment ${segmentNumber} content inserted successfully:`, data);
+  return data;
 }
 
-export async function getAIConfig(lectureId: number) {
-  try {
-    const supabase = getSupabaseClient();
-    
-    const { data, error } = await supabase
-      .from('lecture_ai_configs')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
-      
-    if (error) {
-      console.error('Error fetching AI config:', error);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Unexpected error in getAIConfig:', error);
-    return null;
+export async function insertProfessorSegmentContent(
+  lectureId: number,
+  segmentNumber: number,
+  content: SegmentContent
+) {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase credentials not configured');
   }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Prepare data for insertion
+  const insertData = {
+    lecture_id: lectureId,
+    sequence_number: segmentNumber,
+    theory_slide_1: content.theorySlide1,
+    theory_slide_2: content.theorySlide2,
+    quiz_1_type: content.quiz1.type,
+    quiz_1_question: content.quiz1.question,
+    quiz_1_options: content.quiz1.options,
+    quiz_1_correct_answer: content.quiz1.correctAnswer,
+    quiz_1_explanation: content.quiz1.explanation,
+    quiz_2_type: content.quiz2.type,
+    quiz_2_question: content.quiz2.question,
+    quiz_2_correct_answer: content.quiz2.correctAnswer === 'true',
+    quiz_2_explanation: content.quiz2.explanation
+  };
+
+  console.log(`Inserting content for segment ${segmentNumber} into professor_segments_content...`);
+  
+  const { data, error } = await supabase
+    .from('professor_segments_content')
+    .insert(insertData)
+    .select();
+
+  if (error) {
+    console.error('Error inserting professor segment content:', error);
+    throw new Error(`Database error: ${error.message}`);
+  }
+
+  console.log(`Professor segment ${segmentNumber} content inserted successfully:`, data);
+  return data;
 }

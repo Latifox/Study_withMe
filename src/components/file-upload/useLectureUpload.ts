@@ -26,6 +26,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
     setIsUploading(true);
 
     try {
+      // Upload PDF to storage first
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
       
@@ -37,11 +38,13 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       if (uploadError) throw uploadError;
       console.log('PDF uploaded successfully');
 
+      // Save lecture metadata to the appropriate table based on course type
       console.log(`Saving lecture to ${isProfessorCourse ? 'professor_lectures' : 'lectures'} table...`);
       
       let lectureData;
       
       if (isProfessorCourse) {
+        // Insert into professor_lectures table
         const { data, error } = await supabase
           .from('professor_lectures')
           .insert({
@@ -55,6 +58,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         if (error) throw error;
         lectureData = data;
       } else {
+        // Insert into regular lectures table
         const { data, error } = await supabase
           .from('lectures')
           .insert({
@@ -79,174 +83,129 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       setShowAIProfessor(true);
 
       console.log('Extracting PDF content...');
+      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
+        body: {
+          filePath,
+          lectureId: lectureData.id.toString(),
+          isProfessorLecture: isProfessorCourse
+        }
+      });
+
+      if (extractionError) throw extractionError;
+      if (!extractionData || !extractionData.content) {
+        throw new Error('No content returned from PDF extraction');
+      }
       
-      try {
-        const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
-          body: {
-            filePath,
-            lectureId: lectureData.id.toString(),
-            isProfessorLecture: isProfessorCourse
-          }
-        });
+      console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
+      console.log('Content length:', extractionData.content.length);
 
-        if (extractionError) throw extractionError;
-        if (!extractionData || !extractionData.content) {
-          throw new Error('No content returned from PDF extraction');
+      // Update the content column in the appropriate table
+      const updateContentError = isProfessorCourse
+        ? (await supabase
+            .from('professor_lectures')
+            .update({ content: extractionData.content })
+            .eq('id', lectureData.id)).error
+        : (await supabase
+            .from('lectures')
+            .update({ content: extractionData.content })
+            .eq('id', lectureData.id)).error;
+
+      if (updateContentError) {
+        console.error('Error updating lecture content:', updateContentError);
+        throw updateContentError;
+      }
+
+      console.log('Lecture content updated successfully');
+
+      // Generate segment structure (titles and descriptions)
+      console.log('Generating segment structure...');
+      const segmentsFunctionName = isProfessorCourse ? 'generate-professor-segments-structure' : 'generate-segments-structure';
+      
+      const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
+        body: {
+          lectureId: lectureData.id,
+          lectureContent: extractionData.content,
+          lectureTitle: title,
+          isProfessorLecture: isProfessorCourse
         }
-        
-        console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
-        console.log('Content length:', extractionData.content.length);
+      });
 
-        const updateContentError = isProfessorCourse
-          ? (await supabase
-              .from('professor_lectures')
-              .update({ content: extractionData.content })
-              .eq('id', lectureData.id)).error
-          : (await supabase
-              .from('lectures')
-              .update({ content: extractionData.content })
-              .eq('id', lectureData.id)).error;
+      if (segmentError) {
+        console.error('Segment generation error:', segmentError);
+        throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
+      }
+      
+      if (!segmentData || !segmentData.segments) {
+        throw new Error('No segments returned from generation');
+      }
+      
+      console.log('Segment structure generated:', segmentData);
 
-        if (updateContentError) {
-          console.error('Error updating lecture content:', updateContentError);
-          throw updateContentError;
-        }
+      // Generate content for each segment with proper error handling and retries
+      console.log('Generating content for all segments...');
+      const maxRetries = 3;
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        console.log('Lecture content updated successfully');
-
-        console.log('Generating segment structure...');
-        const segmentsFunctionName = isProfessorCourse ? 'generate-professor-segments-structure' : 'generate-segments-structure';
-        
+      const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
         try {
-          const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
+          const response = await supabase.functions.invoke('generate-segment-content', {
             body: {
               lectureId: lectureData.id,
+              segmentNumber: segment.sequence_number,
+              segmentTitle: segment.title,
+              segmentDescription: segment.segment_description,
               lectureContent: extractionData.content,
-              lectureTitle: title,
               isProfessorLecture: isProfessorCourse
             }
           });
 
-          if (segmentError) {
-            console.error('Segment generation error:', segmentError);
-            throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
-          }
-          
-          if (!segmentData || !segmentData.segments) {
-            throw new Error('No segments returned from generation');
-          }
-          
-          console.log('Segment structure generated:', segmentData);
-
-          console.log('Generating content for all segments...');
-          const maxRetries = 5;
-          const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-          const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
-            try {
-              console.log(`Generating content for segment ${segment.sequence_number}, attempt ${attemptCount + 1}`);
-              
-              const requestBody = {
-                lectureId: lectureData.id,
-                segmentNumber: segment.sequence_number,
-                segmentTitle: segment.title,
-                segmentDescription: segment.segment_description,
-                lectureContent: extractionData.content,
-                isProfessorLecture: isProfessorCourse,
-                contentLanguage: "english"
-              };
-              
-              console.log('Request body prepared for segment content generation');
-              
-              try {
-                console.log(`Calling edge function for segment ${segment.sequence_number}`);
-                const response = await supabase.functions.invoke('generate-segment-content', {
-                  body: requestBody
-                });
-
-                if (response.error) {
-                  console.error(`Edge function error for segment ${segment.sequence_number}:`, response.error);
-                  throw new Error(`Edge function error: ${response.error.message || 'Unknown error'}`);
-                }
-
-                console.log(`Response received for segment ${segment.sequence_number}:`, response.data);
-
-                if (!response.data?.success) {
-                  console.error(`Generation failure for segment ${segment.sequence_number}:`, response.data?.error);
-                  throw new Error(response.data?.error || 'Failed to generate segment content');
-                }
-
-                return response;
-              } catch (edgeFunctionError) {
-                console.error(`Edge function call failed for segment ${segment.sequence_number}:`, edgeFunctionError);
-                throw edgeFunctionError;
-              }
-            } catch (error) {
-              console.error(`Error generating segment ${segment.sequence_number}:`, error);
-              
-              if (attemptCount < maxRetries) {
-                const backoffTime = 2000 * Math.pow(1.5, attemptCount) + (Math.random() * 1000);
-                console.log(`Retrying segment ${segment.sequence_number} in ${backoffTime}ms, attempt ${attemptCount + 1}...`);
-                await delay(backoffTime);
-                return generateSegmentWithRetry(segment, attemptCount + 1);
-              }
-              throw error;
-            }
-          };
-
-          for (const segment of segmentData.segments) {
-            try {
-              console.log(`Processing segment ${segment.sequence_number}...`);
-              await generateSegmentWithRetry(segment);
-              console.log(`Segment ${segment.sequence_number} completed`);
-            } catch (error) {
-              console.error(`Failed to generate content for segment ${segment.sequence_number} after multiple retries:`, error);
-              toast({
-                title: "Warning",
-                description: `Failed to generate content for segment ${segment.sequence_number}. You may need to regenerate it later.`,
-                variant: "destructive",
-              });
-            }
+          if (response.error) {
+            throw response.error;
           }
 
-          console.log('All segment content generation attempts completed');
+          if (!response.data?.success) {
+            throw new Error(response.data?.error || 'Failed to generate segment content');
+          }
 
-          await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
-          
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          toast({
-            title: "Success",
-            description: "Lecture uploaded and processed successfully!",
-          });
-          onClose();
-        } catch (segmentError) {
-          console.error('Error during segment generation:', segmentError);
-          throw segmentError;
+          return response;
+        } catch (error) {
+          if (attemptCount < maxRetries) {
+            console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
+            await delay(2000 * (attemptCount + 1));
+            return generateSegmentWithRetry(segment, attemptCount + 1);
+          }
+          throw error;
         }
-      } catch (textExtractionError) {
-        console.error('Error during text extraction:', textExtractionError);
-        throw textExtractionError;
+      };
+
+      for (const segment of segmentData.segments) {
+        try {
+          console.log(`Processing segment ${segment.sequence_number}...`);
+          await generateSegmentWithRetry(segment);
+          console.log(`Segment ${segment.sequence_number} completed`);
+        } catch (error) {
+          console.error(`Failed to generate content for segment ${segment.sequence_number}:`, error);
+          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${error.message}`);
+        }
       }
+
+      console.log('All segment content generated successfully');
+
+      await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      toast({
+        title: "Success",
+        description: "Lecture uploaded and processed successfully!",
+      });
+      onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
       setIsUploading(false);
-      setShowAIProfessor(false);
-      
-      const errorMessage = error.message || "Failed to upload lecture";
-      let detailedMessage = errorMessage;
-      
-      if (errorMessage.includes("Edge function error") || errorMessage.includes("failed to send request")) {
-        detailedMessage = "Failed to communicate with AI processing service. Please try again later or contact support.";
-      } else if (errorMessage.includes("network")) {
-        detailedMessage = "Network error occurred. Please check your internet connection and try again.";
-      } else if (errorMessage.includes("timeout")) {
-        detailedMessage = "Request timed out. The server might be busy, please try again later.";
-      }
-      
       toast({
         title: "Error",
-        description: detailedMessage,
+        description: error.message || "Failed to upload lecture",
         variant: "destructive",
       });
     }
