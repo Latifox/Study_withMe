@@ -1,5 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.11.174'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -94,29 +95,44 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Extract text from PDF
-    // Convert Blob to ArrayBuffer and then to Uint8Array for text extraction
+    // Convert Blob to ArrayBuffer
     const arrayBuffer = await fileData.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
     
-    // Using a pure text-based approach without PDF.js
-    let extractedText = await extractReadableText(bytes);
-    console.log(`Extracted ${extractedText.length} characters of text`);
+    // Initialize PDF.js to properly parse the PDF
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     
-    if (extractedText.length < 200) {
-      console.log("First extraction method yielded limited results, trying alternative method");
-      extractedText = await extractTextFromPdfBytes(bytes);
-      console.log(`Alternative method extracted ${extractedText.length} characters`);
+    console.log('Loading PDF document with PDF.js');
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+    const pdfDocument = await loadingTask.promise;
+    
+    console.log('PDF document loaded successfully, number of pages:', pdfDocument.numPages);
+    
+    // Extract text from all pages
+    let fullText = '';
+    for (let i = 1; i <= pdfDocument.numPages; i++) {
+      console.log(`Extracting text from page ${i}/${pdfDocument.numPages}`);
+      const page = await pdfDocument.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      // Concatenate text items with proper spacing
+      const pageText = textContent.items
+        .map(item => 'str' in item ? item.str : '')
+        .join(' ');
+      
+      fullText += pageText + '\n\n';
     }
     
-    // Clean the extracted text to make it readable
-    extractedText = cleanExtractedText(extractedText);
+    // Clean the text
+    fullText = fullText
+      .replace(/\s+/g, ' ')  // Replace multiple spaces with a single space
+      .replace(/(\r\n|\n|\r)/gm, '\n')  // Normalize line breaks
+      .trim();
     
-    console.log(`Final cleaned text: ${extractedText.length} characters`);
-    console.log('First 200 characters:', extractedText.substring(0, 200));
+    console.log(`Extracted ${fullText.length} characters of text`);
+    console.log('First 200 characters:', fullText.substring(0, 200));
     
-    // Detect language (basic implementation)
-    const detectedLanguage = detectLanguage(extractedText);
+    // Simple language detection
+    const detectedLanguage = detectLanguage(fullText);
     
     // Store the extracted text in the database
     console.log('Storing extracted text in database');
@@ -125,7 +141,7 @@ Deno.serve(async (req) => {
     const { data: updateData, error: updateError } = await supabase
       .from(tableName)
       .update({ 
-        content: extractedText,
+        content: fullText,
         original_language: detectedLanguage
       })
       .eq('id', numericLectureId)
@@ -166,9 +182,9 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'PDF extraction complete',
-        contentLength: extractedText.length,
+        contentLength: fullText.length,
         language: detectedLanguage,
-        textPreview: extractedText.substring(0, 200) + '...',
+        textPreview: fullText.substring(0, 200) + '...',
         lectureId: numericLectureId
       }),
       { 
@@ -189,137 +205,6 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-// Extract readable text using UTF-8 decoding
-async function extractReadableText(bytes: Uint8Array): Promise<string> {
-  try {
-    // First try a simple UTF-8 decode of the entire file
-    const decoder = new TextDecoder('utf-8');
-    let fullText = decoder.decode(bytes);
-    
-    // Extract text that looks human-readable (3+ consecutive letters)
-    const textMatches = fullText.match(/[a-zA-Z]{3,}[a-zA-Z\s.,;:!?'"()]{5,}/g) || [];
-    const extractedText = textMatches.join(' ');
-    
-    return extractedText;
-  } catch (e) {
-    console.error("Error in extractReadableText:", e);
-    return "";
-  }
-}
-
-// Extract text by analyzing PDF byte patterns
-function extractTextFromPdfBytes(bytes: Uint8Array): Promise<string> {
-  return new Promise((resolve) => {
-    try {
-      const extractedParts: string[] = [];
-      
-      // Approach 1: Look for text between parentheses (PDF string objects)
-      // Convert bytes to string first
-      const pdfString = new TextDecoder('utf-8').decode(bytes);
-      const parenthesisRegex = /\(([^()\\]*(?:\\.[^()\\]*)*)\)/g;
-      let match;
-      
-      while ((match = parenthesisRegex.exec(pdfString)) !== null) {
-        if (match[1].length > 3) { // Only consider strings of reasonable length
-          let extractedText = match[1]
-            .replace(/\\n/g, ' ')
-            .replace(/\\r/g, ' ')
-            .replace(/\\\\/g, '\\')
-            .replace(/\\\(/g, '(')
-            .replace(/\\\)/g, ')')
-            .trim();
-          
-          if (extractedText.length > 0 && !/^\d+$/.test(extractedText)) {
-            extractedParts.push(extractedText);
-          }
-        }
-      }
-      
-      // Approach 2: Look for text blocks between BT and ET operators
-      const btIndex = [];
-      const etIndex = [];
-      
-      // Find all BT and ET positions
-      for (let i = 0; i < bytes.length - 1; i++) {
-        if (bytes[i] === 66 && bytes[i + 1] === 84) { // 'BT'
-          btIndex.push(i);
-        } else if (bytes[i] === 69 && bytes[i + 1] === 84) { // 'ET'
-          etIndex.push(i);
-        }
-      }
-      
-      // Process text blocks
-      for (let i = 0; i < Math.min(btIndex.length, etIndex.length); i++) {
-        if (etIndex[i] > btIndex[i]) {
-          const blockBytes = bytes.slice(btIndex[i] + 2, etIndex[i]);
-          const blockText = new TextDecoder('utf-8').decode(blockBytes);
-          
-          // Extract text objects (Tj, TJ operators)
-          const textMatches = blockText.match(/\([^)]+\)[\s]*T[jJ]/g);
-          if (textMatches) {
-            for (const match of textMatches) {
-              let text = match.substring(1, match.lastIndexOf(')'))
-                .replace(/\\n/g, ' ')
-                .replace(/\\r/g, ' ')
-                .replace(/\\\\/g, '\\')
-                .replace(/\\\(/g, '(')
-                .replace(/\\\)/g, ')')
-                .trim();
-              
-              if (text.length > 0) {
-                extractedParts.push(text);
-              }
-            }
-          }
-        }
-      }
-      
-      // Approach 3: Scan for ASCII text sequences
-      let currentText = '';
-      for (let i = 0; i < bytes.length; i++) {
-        // Only collect printable ASCII characters
-        if (bytes[i] >= 32 && bytes[i] <= 126) {
-          currentText += String.fromCharCode(bytes[i]);
-        } else {
-          if (currentText.length >= 4 && /[a-zA-Z]{2,}/.test(currentText)) {
-            extractedParts.push(currentText);
-          }
-          currentText = '';
-        }
-      }
-      
-      // Join all extracted parts and return
-      const result = extractedParts.join(' ');
-      resolve(result);
-    } catch (error) {
-      console.error("Error in extractTextFromPdfBytes:", error);
-      resolve("");
-    }
-  });
-}
-
-// Clean and normalize extracted text
-function cleanExtractedText(text: string): string {
-  if (!text) return "";
-  
-  return text
-    // Remove control characters
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
-    // Remove repeated whitespace
-    .replace(/\s+/g, ' ')
-    // Remove weird markers
-    .replace(/(\(cid:\d+\)|\[\d+\])/g, '')
-    // Remove single non-word characters surrounded by spaces
-    .replace(/\s[^\w\s]\s/g, ' ')
-    // Remove very short "words" that are likely not real words
-    .replace(/\s[a-zA-Z]{1,2}\s/g, ' ')
-    // Remove strings that are just numbers
-    .replace(/\s\d+\s/g, ' ')
-    // Replace multiple spaces with a single space
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
 
 // Basic language detection
 function detectLanguage(text: string): string {
