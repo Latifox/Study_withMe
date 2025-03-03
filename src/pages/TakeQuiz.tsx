@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,25 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader, RefreshCw, ArrowLeft } from "lucide-react";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
-
-interface Question {
-  question: string;
-  type: "multiple_choice" | "true_false";
-  options: string[];
-  correctAnswer: string;
-  hint?: string;
-}
+import { Question, QuizResponse, QuizData } from "@/types/quiz";
 
 interface QuizState {
   questions: Question[];
   userAnswers: Record<number, string>;
   showResults: boolean;
   timeRemaining: number;
-}
-
-interface QuizResponse {
-  quiz: Question[];
-  quizId?: number;
 }
 
 const TakeQuiz = () => {
@@ -91,20 +78,21 @@ const TakeQuiz = () => {
             console.log('Using existing quiz:', existingQuizzes[0]);
             setQuizId(existingQuizzes[0].id);
             
-            // Properly type and access the quiz data
-            const quizData = existingQuizzes[0].quiz_data as QuizResponse;
-            if (quizData && Array.isArray(quizData.quiz)) {
-              setQuizState(prev => ({ 
-                ...prev, 
-                questions: quizData.quiz 
-              }));
-            } else {
-              console.error('Invalid quiz data format:', quizData);
-              throw new Error('Invalid quiz data format');
+            // Properly parse and validate the quiz data
+            const rawQuizData = existingQuizzes[0].quiz_data;
+            if (typeof rawQuizData === 'object' && rawQuizData !== null && 'quiz' in rawQuizData) {
+              const quizData = rawQuizData as QuizData;
+              if (Array.isArray(quizData.quiz)) {
+                setQuizState(prev => ({ 
+                  ...prev, 
+                  questions: quizData.quiz 
+                }));
+                setIsLoading(false);
+                return;
+              }
             }
-            
-            setIsLoading(false);
-            return;
+            console.error('Invalid quiz data format:', rawQuizData);
+            throw new Error('Invalid quiz data format');
           }
           
           // Generate a new quiz
@@ -122,7 +110,7 @@ const TakeQuiz = () => {
           
           console.log('Quiz generation response:', data);
           
-          if (!data || !Array.isArray(data.quiz)) {
+          if (!data || !('quiz' in data) || !Array.isArray(data.quiz)) {
             throw new Error('Invalid quiz data returned');
           }
           
@@ -229,15 +217,15 @@ const TakeQuiz = () => {
 
         if (error) throw error;
         
-        if (data && data.quizId) {
+        if (!data || !('quiz' in data) || !Array.isArray(data.quiz)) {
+          throw new Error('Invalid quiz data returned');
+        }
+        
+        if (data.quizId) {
           setQuizId(data.quizId);
         }
         
-        if (data && Array.isArray(data.quiz)) {
-          setQuizState(prev => ({ ...prev, questions: data.quiz }));
-        } else {
-          throw new Error('Invalid quiz data format');
-        }
+        setQuizState(prev => ({ ...prev, questions: data.quiz }));
       } catch (error) {
         console.error('Error generating quiz:', error);
         toast({
