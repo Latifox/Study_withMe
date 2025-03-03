@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,12 +5,11 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
 import { DeleteProfessorCourseDialog } from "@/components/DeleteProfessorCourseDialog";
-import { Share, ArrowLeft, Copy } from "lucide-react";
+import { Share, ArrowLeft, Copy, BarChart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
 
-// Define course interface to include course_code
 interface ProfessorCourse {
   id: number;
   title: string;
@@ -26,13 +24,11 @@ const ProfessorCourses = () => {
   const { user, loading } = useAuth();
   const { toast } = useToast();
   
-  // Redirect if not authenticated or not a teacher
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
     
-    // Check if the user has the teacher role
     if (!loading && user) {
       const checkUserRole = async () => {
         const { data } = await supabase.auth.getUser();
@@ -91,7 +87,6 @@ const ProfessorCourses = () => {
 
   return (
     <div className="relative min-h-screen">
-      {/* Content */}
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -154,6 +149,14 @@ const ProfessorCourses = () => {
                     >
                       <Copy className="mr-2 h-4 w-4" />
                       Copy Course Code
+                    </Button>
+                    <Button 
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => navigate(`/course-stats/${course.id}`)}
+                    >
+                      <BarChart className="mr-2 h-4 w-4" />
+                      View Course Stats
                     </Button>
                   </CardContent>
                 </Card>
