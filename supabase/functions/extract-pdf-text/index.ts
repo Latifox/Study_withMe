@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.11.174'
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -98,10 +98,10 @@ Deno.serve(async (req) => {
     // Convert Blob to ArrayBuffer
     const arrayBuffer = await fileData.arrayBuffer();
     
-    // Initialize PDF.js to properly parse the PDF
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    
     console.log('Loading PDF document with PDF.js');
+    // IMPORTANT: For PDF.js in ESM format, we don't need to set workerSrc
+    // because the worker is included in the ESM build
+    
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
     const pdfDocument = await loadingTask.promise;
     
@@ -116,16 +116,23 @@ Deno.serve(async (req) => {
       
       // Concatenate text items with proper spacing
       const pageText = textContent.items
-        .map(item => 'str' in item ? item.str : '')
+        .map(item => {
+          // Check if the item has a 'str' property (text item)
+          if ('str' in item && typeof item.str === 'string') {
+            return item.str;
+          }
+          return '';
+        })
         .join(' ');
       
       fullText += pageText + '\n\n';
     }
     
-    // Clean the text
+    // Thoroughly clean the extracted text
     fullText = fullText
-      .replace(/\s+/g, ' ')  // Replace multiple spaces with a single space
-      .replace(/(\r\n|\n|\r)/gm, '\n')  // Normalize line breaks
+      .replace(/\s+/g, ' ')          // Replace multiple spaces with a single space
+      .replace(/(\r\n|\n|\r)/gm, '\n') // Normalize line breaks
+      .replace(/[^\x20-\x7E\n]/g, '') // Remove non-ASCII characters except newlines
       .trim();
     
     console.log(`Extracted ${fullText.length} characters of text`);
@@ -206,7 +213,7 @@ Deno.serve(async (req) => {
   }
 });
 
-// Basic language detection
+// Basic language detection function
 function detectLanguage(text: string): string {
   if (!text || text.length < 50) return "english"; // Default
   
