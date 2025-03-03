@@ -1,2 +1,10 @@
 
 project_id = "bjpawnertrqwtgyvrhml"
+
+[global]
+version = "v1.67.2"
+
+[functions.generate-professor-segments-structure]
+verify_jwt = true
+memory = 512
+max_timeout = 60
