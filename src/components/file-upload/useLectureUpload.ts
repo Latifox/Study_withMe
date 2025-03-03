@@ -13,9 +13,11 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Helper function to delay execution
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const verifyLectureContent = async (lectureId: number, isProfessor: boolean, maxRetries = 5): Promise<string | null> => {
+  // Enhanced function to verify lecture content with robust retry mechanism
+  const verifyLectureContent = async (lectureId: number, isProfessor: boolean, maxRetries = 10): Promise<string | null> => {
     console.log(`Verifying lecture content for lecture ID ${lectureId}, isProfessor: ${isProfessor}`);
     const tableName = isProfessor ? 'professor_lectures' : 'lectures';
     
@@ -35,7 +37,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       }
       
       if (attempt < maxRetries) {
-        const waitTime = 2000 * attempt; // Exponential backoff
+        const waitTime = 3000 * attempt; // Exponential backoff
         console.log(`Waiting ${waitTime}ms before next verification attempt...`);
         await delay(waitTime);
       }
@@ -69,7 +71,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        throw uploadError;
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
       }
       console.log('PDF uploaded successfully to path:', filePath);
 
@@ -90,7 +92,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) throw new Error(`Failed to save lecture metadata: ${error.message}`);
         lectureData = data;
       } else {
         // Insert into regular lectures table
@@ -104,7 +106,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) throw new Error(`Failed to save lecture metadata: ${error.message}`);
         lectureData = data;
       }
 
@@ -145,11 +147,12 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         
         console.log('PDF content extracted successfully, waiting for database update...');
         
-        // Important: Wait and verify that content is actually in the database before proceeding
-        console.log('Waiting to ensure content is stored in the database...');
-        await delay(5000); // Initial delay to allow the edge function to complete
+        // Wait longer to ensure content is stored in the database before proceeding
+        console.log('Waiting for content to be stored in the database...');
+        await delay(10000); // 10 seconds initial delay to allow the edge function to complete
         
         // Verify content is saved and retry if needed
+        console.log('Verifying lecture content...');
         const lectureContent = await verifyLectureContent(lectureData.id, isProfessorCourse);
         
         if (!lectureContent) {
@@ -206,6 +209,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
                   segmentNumber: segment.sequence_number,
                   segmentTitle: segment.title,
                   segmentDescription: segment.segment_description,
+                  lectureContent: lectureContent, // Explicitly pass lecture content
                   isProfessorLecture: isProfessorCourse
                 }
               });

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { FileUploadRequirements } from "./FileUploadRequirements";
 
 interface FileUploadFormProps {
@@ -25,6 +25,31 @@ export const FileUploadForm = ({
   isUploading, 
   onClose 
 }: FileUploadFormProps) => {
+  const [fileError, setFileError] = useState<string | null>(null);
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0] || null;
+    setFileError(null);
+    
+    if (selectedFile) {
+      // Check file type
+      if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
+        setFileError('Only PDF files are allowed');
+        setFile(null);
+        return;
+      }
+      
+      // Check file size (10MB limit)
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        setFileError('File size must be less than 10MB');
+        setFile(null);
+        return;
+      }
+    }
+    
+    setFile(selectedFile);
+  };
+  
   return (
     <div>
       <FileUploadRequirements />
@@ -38,6 +63,7 @@ export const FileUploadForm = ({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter lecture title"
             className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+            disabled={isUploading}
           />
         </div>
         <div className="grid gap-2">
@@ -46,9 +72,16 @@ export const FileUploadForm = ({
             id="file"
             type="file"
             accept=".pdf"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={handleFileChange}
             className="bg-slate-800 border-slate-700 text-white file:bg-slate-700 file:text-white file:border-0"
+            disabled={isUploading}
           />
+          {fileError && (
+            <p className="text-red-400 text-sm mt-1">{fileError}</p>
+          )}
+          {file && (
+            <p className="text-green-400 text-sm mt-1">Selected: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)}MB)</p>
+          )}
         </div>
       </div>
       <div className="flex justify-end gap-2">
@@ -56,17 +89,22 @@ export const FileUploadForm = ({
           variant="outline" 
           onClick={onClose}
           className="bg-transparent text-white border-slate-700 hover:bg-slate-800"
+          disabled={isUploading}
         >
           Cancel
         </Button>
         <Button
           onClick={onUpload}
-          disabled={isUploading}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          disabled={isUploading || !title || !file}
+          className={`${
+            !title || !file 
+              ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed'
+              : 'bg-emerald-600 hover:bg-emerald-700'
+          } text-white`}
         >
           {isUploading ? (
             <>
-              <Upload className="animate-spin mr-2" />
+              <Loader2 className="animate-spin mr-2" />
               Uploading...
             </>
           ) : (
