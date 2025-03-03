@@ -98,20 +98,25 @@ Deno.serve(async (req) => {
     // Step 2: Convert PDF to ArrayBuffer for PDF.js
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Initialize PDF.js - Critical fix: Explicitly set GlobalWorkerOptions before using it
-    console.log('Initializing PDF.js with built-in processing')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';  // Set to empty string to use fake worker
+    // Critical fix: Configure PDF.js to work in a Deno environment
+    console.log('Initializing PDF.js for serverless environment')
+    
+    // IMPORTANT: This is the crucial fix - set the workerSrc to null before any PDF.js operations
+    // This explicitly tells PDF.js to use the fake worker implementation
+    pdfjsLib.GlobalWorkerOptions.workerSrc = null;
     
     try {
-      // Step 3: Use PDF.js to extract text content
-      console.log('Loading PDF document with built-in processing')
+      // Step 3: Use PDF.js to extract text content with all network operations disabled
+      console.log('Loading PDF document with fake worker processing')
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        disableWorker: true, // Disable worker to use built-in processing
-        isEvalSupported: false,
-        useSystemFonts: true,
-        cMapUrl: undefined, // Don't try to load external cMap files
-        standardFontDataUrl: undefined // Don't try to load external font data
+        disableWorker: true,              // Force disable any worker usage
+        isEvalSupported: false,           // Disable eval for security
+        useSystemFonts: false,            // Don't try to use system fonts
+        cMapUrl: null,                    // Don't load character maps
+        standardFontDataUrl: null,        // Don't load font data
+        useWorkerFetch: false,            // Don't use fetch in worker (redundant with disableWorker, but being explicit)
+        verbosity: 1                      // Increase logging for debugging
       })
       
       const pdfDocument = await loadingTask.promise
