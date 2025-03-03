@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -98,15 +97,18 @@ Deno.serve(async (req) => {
     // Convert Blob to ArrayBuffer
     const arrayBuffer = await fileData.arrayBuffer();
     
-    console.log('Loading PDF document with PDF.js');
+    console.log('Loading PDF document');
     
-    // Make sure we're setting up PDF.js correctly
-    if (typeof pdfjsLib.getDocument !== 'function') {
-      console.error('PDF.js library loaded incorrectly - getDocument is not a function');
+    // Since we can't rely on importing PDF.js directly in Deno, let's use a different approach
+    // Dynamically import PDF.js via a CDN
+    const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.mjs');
+    
+    if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
+      console.error('PDF.js library not loaded correctly:', pdfjsLib);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'PDF.js library initialization failed' 
+          error: 'PDF.js library could not be loaded properly' 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
