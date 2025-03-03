@@ -1,12 +1,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1'
-import { pdfjs } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm'
+// Fix the PDF.js import - use the default export instead of named export
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm'
 import { corsHeaders } from '../_shared/cors.ts'
 // Fix import to use the correct export name from gptAnalyzer
 import { analyzeTextWithGPT } from './gptAnalyzer.ts'
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js'
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js'
 
 // Maximum text length that can be handled directly (1MB)
 const MAX_DIRECT_TEXT_LENGTH = 1000000;
@@ -59,7 +60,7 @@ export const handler = async (req: Request) => {
     
     // Extract text from PDF
     const pdfBytes = new Uint8Array(await fileData.arrayBuffer())
-    const pdf = await pdfjs.getDocument({ data: pdfBytes }).promise
+    const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise
     
     console.log(`PDF loaded successfully. Total pages: ${pdf.numPages}`)
     
