@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDF.js library from npm via esm.sh with a more standard path
-import * as pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs'
+// Import PDF.js with the correct namespace structure for Deno/Edge Functions
+import pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.min.mjs'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -101,10 +101,12 @@ Deno.serve(async (req) => {
     
     try {
       // Step 3: Create a custom document loading task with fixed configuration
-      console.log('Loading PDF document with custom configuration')
+      console.log('Loading PDF document with pdfjs.default')
       
-      // Using the PDF.js library
-      // Make sure to use getDocument from pdfjs correctly
+      // Debug the pdfjs library to see its structure
+      console.log('PDF.js library structure:', Object.keys(pdfjs))
+      
+      // Use pdfjs.default.getDocument for most bundled versions
       const loadingTask = pdfjs.getDocument({
         data: arrayBuffer,
         disableWorker: true,           // Critical: Disable worker usage completely
