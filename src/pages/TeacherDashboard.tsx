@@ -21,10 +21,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading, switchAccountType } = useAuth();
+  const { user, loading, accountSwitching, switchAccountType } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -73,10 +74,19 @@ const TeacherDashboard = () => {
     }
   };
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
-      Loading...
-    </div>;
+  if (loading || accountSwitching) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
+        <div className="text-center text-white mb-6">
+          {accountSwitching ? 'Switching to Student Mode...' : 'Loading...'}
+        </div>
+        <div className="space-y-3 w-64">
+          <Skeleton className="h-4 w-full bg-white/20" />
+          <Skeleton className="h-4 w-5/6 bg-white/20" />
+          <Skeleton className="h-4 w-4/6 bg-white/20" />
+        </div>
+      </div>
+    );
   }
 
   return (

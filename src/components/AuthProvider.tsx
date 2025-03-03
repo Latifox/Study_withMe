@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +6,7 @@ interface AuthContextType {
   user: any | null;
   session: Session | null;
   loading: boolean;
+  accountSwitching: boolean;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   switchAccountType: (accountType: 'student' | 'teacher') => Promise<void>;
@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<any | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountSwitching, setAccountSwitching] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -67,22 +68,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const switchAccountType = async (accountType: 'student' | 'teacher') => {
     try {
       setLoading(true);
+      setAccountSwitching(true);
       const { data, error } = await supabase.auth.updateUser({
         data: { account_type: accountType }
       });
       
       if (error) throw error;
       
-      // Update the local user object
       setUser(data.user);
       
-      // Refresh the page to ensure all components reflect the new account type
       window.location.href = accountType === 'teacher' ? '/teacher-dashboard' : '/dashboard';
       
     } catch (error: any) {
       alert(error.error_description || error.message);
+      setAccountSwitching(false);
     } finally {
-      setLoading(false);
+      // Note: We don't set loading to false here because we're redirecting
+      // The page will reload and the loading state will be reset
     }
   };
 
@@ -90,6 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user, 
     session, 
     loading, 
+    accountSwitching,
     signIn, 
     signOut,
     switchAccountType 

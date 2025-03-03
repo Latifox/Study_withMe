@@ -22,12 +22,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
     user,
     loading,
+    accountSwitching,
     signOut,
     switchAccountType
   } = useAuth();
@@ -84,10 +86,19 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-      Loading...
-    </div>;
+  if (loading || accountSwitching) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+        <div className="text-center text-white mb-6">
+          {accountSwitching ? 'Switching to Teacher Mode...' : 'Loading...'}
+        </div>
+        <div className="space-y-3 w-64">
+          <Skeleton className="h-4 w-full bg-white/20" />
+          <Skeleton className="h-4 w-5/6 bg-white/20" />
+          <Skeleton className="h-4 w-4/6 bg-white/20" />
+        </div>
+      </div>
+    );
   }
 
   return <div className="relative min-h-screen overflow-hidden">
