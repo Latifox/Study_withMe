@@ -75,14 +75,17 @@ const InvitedCourses = () => {
             <h1 className="text-4xl font-bold text-gray-800">Invited Courses</h1>
             <p className="text-gray-600 mt-2">Join courses you've been invited to</p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Button>
+          <div className="flex gap-4 items-center">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Home
+            </Button>
+            <EnterInviteCodeDialog />
+          </div>
         </div>
 
         {isLoading ? (
@@ -96,9 +99,7 @@ const InvitedCourses = () => {
           </div>
         ) : (
           <div>
-            <div className="flex justify-center mb-8">
-              <EnterInviteCodeDialog />
-            </div>
+            {/* Remove the dialog from here since it's now in the header */}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {enrolledCourses.map((enrollment) => (
