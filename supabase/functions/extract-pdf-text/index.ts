@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDF.js with the correct namespace structure for Deno/Edge Functions
+// Import PDF.js correctly and get both the main library and GlobalWorkerOptions
 import pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.min.mjs'
 
 // Configure CORS headers for browser requests
@@ -100,13 +100,10 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer()
     
     try {
-      // Step 3: Create a custom document loading task with fixed configuration
-      console.log('Loading PDF document with pdfjs.default')
+      console.log('Loading PDF document')
       
-      // Debug the pdfjs library to see its structure
-      console.log('PDF.js library structure:', Object.keys(pdfjs))
-      
-      // Use pdfjs.default.getDocument for most bundled versions
+      // This is the critical part - we create a completely worker-free processing environment
+      // No need to set GlobalWorkerOptions.workerSrc when we disable the worker completely
       const loadingTask = pdfjs.getDocument({
         data: arrayBuffer,
         disableWorker: true,           // Critical: Disable worker usage completely
@@ -114,6 +111,7 @@ Deno.serve(async (req) => {
         disableStream: true,           // Disable streaming
         disableRange: true,            // Disable range requests
         disableFontFace: true,         // Disable font face loading
+        isEvalSupported: false,        // Disable eval support
         nativeImageDecoderSupport: 'none',
         verbosity: 2                   // Increase logging for debugging
       })
