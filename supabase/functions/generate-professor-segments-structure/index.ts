@@ -1,156 +1,207 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Set up Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Set up OpenAI client
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+
 serve(async (req) => {
+  console.log("Request received for generate-professor-segments-structure");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log("Handling OPTIONS request (CORS preflight)");
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    });
+  }
+
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    console.log(`Method not allowed: ${req.method}`);
+    return new Response(JSON.stringify({
+      error: 'Method not allowed',
+      status: 405
+    }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   try {
-    const { lectureId, lectureContent, lectureTitle } = await req.json();
+    // Parse request body
+    const requestData = await req.json();
+    console.log("Request body received:", JSON.stringify(requestData));
 
-    if (!lectureId || !lectureContent || !lectureTitle) {
-      throw new Error('Missing required parameters');
+    // Validate required fields
+    const { lectureId, lectureContent, lectureTitle } = requestData;
+    
+    if (!lectureId) {
+      throw new Error('Missing required field: lectureId');
+    }
+    
+    if (!lectureContent) {
+      throw new Error('Missing required field: lectureContent');
     }
 
-    console.log('Received lecture content length:', lectureContent.length);
-    console.log('Lecture title:', lectureTitle);
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Fetch AI configuration - we don't currently have professor_lecture_ai_configs
-    // so use default values for now
-    const config = {
-      temperature: 0.7,
-      creativity_level: 0.5,
-      detail_level: 0.6,
-      content_language: 'English',
-      custom_instructions: ''
-    };
-
-    console.log('Using AI config:', config);
-
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not found');
+    if (!lectureTitle) {
+      throw new Error('Missing required field: lectureTitle');
     }
 
-    const systemPrompt = `You are an expert educational content creator. Analyze the lecture content and create a logical structure of segments 
-    in ${config.detail_level > 0.5 ? 'detailed' : 'concise'} format using 
-    ${config.content_language || 'English'} language. 
-    ${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`;
+    // Limit content to avoid token issues
+    const maxContentLength = 30000;
+    const trimmedContent = lectureContent.length > maxContentLength
+      ? `${lectureContent.substring(0, maxContentLength)} [Content was trimmed due to length]`
+      : lectureContent;
 
-    console.log('Sending request to OpenAI...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    console.log(`Processing professor lecture ID: ${lectureId}, title: ${lectureTitle}`);
+    console.log(`Content length: ${trimmedContent.length} characters`);
+
+    // Call OpenAI API to process the lecture content
+    console.log("Calling OpenAI API...");
+    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openAIApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: config.temperature,
+        model: "gpt-4o-mini",
         messages: [
-          { role: 'system', content: systemPrompt },
           {
-            role: 'user',
-            content: `Given this lecture titled "${lectureTitle}", create a logical segments structure.
-            Create a list of segments (3-7 segments). Each segment should contain:
-            1. A clear title focusing on one main concept
-            2. A brief description of what will be covered
-            3. An appropriate sequence number
-            
-            Return ONLY valid JSON without any markdown formatting, following this exact structure:
-            {
-              "segments": [
-                {
-                  "title": "segment title",
-                  "segment_description": "description of what this segment covers",
-                  "sequence_number": 1
-                },
-                ...
-              ]
-            }
-              Content to analyze:
-            ${lectureContent}`
+            role: "system",
+            content: "You are an AI designed to analyze lecture content and create a structured learning experience. Your task is to divide the lecture into logical segments, each with a title and concise description."
+          },
+          {
+            role: "user",
+            content: `Analyze this lecture titled "${lectureTitle}" and divide it into 5-10 logical segments for a learning platform. For each segment, provide a title and a brief description outlining what the segment covers.
+
+The lecture content is as follows:
+${trimmedContent}
+
+Return your response as a JSON array where each segment has:
+1. sequence_number: A number from 1 to N in order
+2. title: A concise, descriptive title for the segment
+3. segment_description: A brief description of what this segment covers (2-3 sentences)
+
+Format your response as a valid JSON array without any additional text before or after.`
           }
         ],
+        max_tokens: 2000,
+        temperature: 0.5,
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI API error:', error);
-      throw new Error(`OpenAI API error: ${response.status}`);
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error("OpenAI API error:", errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
-    const data = await response.json();
-    console.log('OpenAI response received');
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI');
+    const openAIData = await openAIResponse.json();
+    console.log("OpenAI response received");
+    
+    if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
+      console.error("Unexpected OpenAI response format:", JSON.stringify(openAIData));
+      throw new Error('Unexpected response format from OpenAI');
     }
 
+    // Extract and parse the generated segments
+    const rawContent = openAIData.choices[0].message.content.trim();
+    console.log("Raw OpenAI content:", rawContent);
+    
+    // Try to extract JSON from the response if it's not already pure JSON
+    let jsonStart = rawContent.indexOf('[');
+    let jsonEnd = rawContent.lastIndexOf(']');
+    
+    if (jsonStart === -1 || jsonEnd === -1) {
+      throw new Error('Could not find JSON array in OpenAI response');
+    }
+    
+    const jsonContent = rawContent.substring(jsonStart, jsonEnd + 1);
+    
+    // Parse the JSON segments
     let segments;
     try {
-      // Parse the generated content, handling potential markdown formatting
-      const jsonStr = data.choices[0].message.content.replace(/```json\n?|\n?```/g, '');
-      segments = JSON.parse(jsonStr);
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      console.log('Raw OpenAI response:', data.choices[0].message.content);
-      throw new Error('Failed to parse segment structure from OpenAI response');
+      segments = JSON.parse(jsonContent);
+      console.log("Parsed segments:", JSON.stringify(segments));
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      console.error("JSON content that failed to parse:", jsonContent);
+      throw new Error(`Failed to parse JSON from OpenAI response: ${parseError.message}`);
     }
 
-    console.log('Successfully parsed segments:', segments);
+    // Validate segments format
+    if (!Array.isArray(segments)) {
+      throw new Error('Segments must be an array');
+    }
 
-    // Insert segments into the database - using professor_lecture_segments table
-    if (segments?.segments?.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('professor_lecture_segments')
-        .delete()
-        .eq('lecture_id', lectureId);
+    // Insert segments into the database
+    console.log(`Inserting ${segments.length} segments into professor_lecture_segments table`);
+    const { error: deleteError } = await supabase
+      .from('professor_lecture_segments')
+      .delete()
+      .eq('professor_lecture_id', lectureId);
 
-      if (deleteError) {
-        throw deleteError;
+    if (deleteError) {
+      console.error("Error deleting existing segments:", deleteError);
+      throw new Error(`Failed to delete existing segments: ${deleteError.message}`);
+    }
+
+    for (const segment of segments) {
+      // Validate segment properties
+      if (!segment.sequence_number || !segment.title || !segment.segment_description) {
+        console.error("Invalid segment format:", segment);
+        continue; // Skip invalid segments
       }
 
       const { error: insertError } = await supabase
         .from('professor_lecture_segments')
-        .insert(
-          segments.segments.map((segment: any) => ({
-            lecture_id: lectureId,
-            title: segment.title,
-            segment_description: segment.segment_description,
-            sequence_number: segment.sequence_number,
-          }))
-        );
+        .insert({
+          professor_lecture_id: lectureId,
+          sequence_number: segment.sequence_number,
+          title: segment.title,
+          segment_description: segment.segment_description
+        });
 
       if (insertError) {
-        throw insertError;
+        console.error(`Error inserting segment ${segment.sequence_number}:`, insertError);
+        throw new Error(`Failed to insert segment ${segment.sequence_number}: ${insertError.message}`);
       }
     }
 
-    return new Response(JSON.stringify(segments), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.log("All professor segments inserted successfully");
+
+    // Return success response
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Professor segments generated and stored successfully",
+      segments: segments
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error in generate-professor-segments-structure:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Error in generate-professor-segments-structure:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message || 'An unexpected error occurred'
+    }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
