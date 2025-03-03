@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDF.js correctly and get both the main library and GlobalWorkerOptions
-import pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.min.mjs'
+// Use pdf-parse which is more compatible with server environments
+import { default as pdfParse } from 'https://esm.sh/pdf-parse@1.1.1'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -96,42 +96,17 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Step 2: Convert PDF to ArrayBuffer for PDF.js
+    // Step 2: Convert PDF to ArrayBuffer for processing
     const arrayBuffer = await fileData.arrayBuffer()
     
     try {
-      console.log('Loading PDF document')
+      console.log('Extracting text from PDF')
       
-      // This is the critical part - we create a completely worker-free processing environment
-      // No need to set GlobalWorkerOptions.workerSrc when we disable the worker completely
-      const loadingTask = pdfjs.getDocument({
-        data: arrayBuffer,
-        disableWorker: true,           // Critical: Disable worker usage completely
-        disableAutoFetch: true,        // Disable fetching resources
-        disableStream: true,           // Disable streaming
-        disableRange: true,            // Disable range requests
-        disableFontFace: true,         // Disable font face loading
-        isEvalSupported: false,        // Disable eval support
-        nativeImageDecoderSupport: 'none',
-        verbosity: 2                   // Increase logging for debugging
-      })
+      // Use pdf-parse to extract text from the PDF
+      const data = new Uint8Array(arrayBuffer)
+      const result = await pdfParse(data)
       
-      const pdfDocument = await loadingTask.promise
-      
-      console.log(`PDF loaded successfully. Number of pages: ${pdfDocument.numPages}`)
-      
-      // Extract text from all pages
-      let fullText = ''
-      for (let i = 1; i <= pdfDocument.numPages; i++) {
-        console.log(`Processing page ${i} of ${pdfDocument.numPages}`)
-        const page = await pdfDocument.getPage(i)
-        const textContent = await page.getTextContent()
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ')
-        
-        fullText += pageText + '\n\n'
-      }
+      const fullText = result.text
       
       console.log(`Text extraction complete. Extracted ${fullText.length} characters`)
       
