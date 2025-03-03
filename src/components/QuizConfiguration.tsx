@@ -43,6 +43,12 @@ const QuizConfiguration = () => {
     queryFn: async () => {
       if (!lectureId) throw new Error("Lecture ID is required");
       
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Authentication required");
+      }
+      
       const { data, error } = await supabase
         .from("lectures")
         .select("*, courses(*)")
@@ -68,6 +74,17 @@ const QuizConfiguration = () => {
 
   const onSubmit = async (data: QuizConfigFormValues) => {
     try {
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to generate quizzes.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setIsSubmitting(true);
       toast({
         title: "Generating Quiz",

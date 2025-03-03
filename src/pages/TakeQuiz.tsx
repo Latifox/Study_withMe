@@ -29,6 +29,7 @@ const TakeQuiz = () => {
   const { toast } = useToast();
   const { courseId, lectureId } = useParams();
   const [quizConfig, setQuizConfig] = useState<any>(null);
+  const [quizId, setQuizId] = useState<number | null>(null);
 
   useEffect(() => {
     const storedConfig = localStorage.getItem(`quiz_config_${lectureId}`);
@@ -66,6 +67,33 @@ const TakeQuiz = () => {
           setIsLoading(true);
           console.log('Generating quiz with config:', quizConfig);
           
+          // Check if we already have a generated quiz for this lecture
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            throw new Error('User authentication required');
+          }
+          
+          const { data: existingQuizzes, error: fetchError } = await supabase
+            .from('generated_quizzes')
+            .select('id, quiz_data')
+            .eq('lecture_id', quizConfig.lectureId)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!fetchError && existingQuizzes && existingQuizzes.length > 0) {
+            // Use the most recent quiz
+            console.log('Using existing quiz:', existingQuizzes[0]);
+            setQuizId(existingQuizzes[0].id);
+            setQuizState(prev => ({ 
+              ...prev, 
+              questions: existingQuizzes[0].quiz_data.quiz 
+            }));
+            setIsLoading(false);
+            return;
+          }
+          
+          // Generate a new quiz
           const { data, error } = await supabase.functions.invoke('generate-quiz', {
             body: { 
               lectureId: quizConfig.lectureId, 
@@ -84,6 +112,7 @@ const TakeQuiz = () => {
             throw new Error('Invalid quiz data returned');
           }
           
+          setQuizId(data.quizId);
           setQuizState(prev => ({ ...prev, questions: data.quiz }));
         } catch (error) {
           console.error('Error generating quiz:', error);
@@ -142,12 +171,25 @@ const TakeQuiz = () => {
 
   const submitQuiz = () => {
     setQuizState(prev => ({ ...prev, showResults: true }));
+    
+    // Save quiz results to database
+    if (quizId) {
+      const score = calculateCorrectAnswers();
+      const totalQuestions = quizState.questions.length;
+      
+      // Store quiz results logic would go here
+      console.log(`Quiz completed with score: ${score}/${totalQuestions}`);
+    }
+  };
+
+  const calculateCorrectAnswers = () => {
+    return quizState.questions.reduce((count, question, index) => {
+      return count + (quizState.userAnswers[index] === question.correctAnswer ? 1 : 0);
+    }, 0);
   };
 
   const calculateScore = () => {
-    const correctAnswers = quizState.questions.reduce((count, question, index) => {
-      return count + (quizState.userAnswers[index] === question.correctAnswer ? 1 : 0);
-    }, 0);
+    const correctAnswers = calculateCorrectAnswers();
     return `${correctAnswers}/${quizState.questions.length}`;
   };
 
@@ -169,6 +211,11 @@ const TakeQuiz = () => {
         });
 
         if (error) throw error;
+        
+        if (data.quizId) {
+          setQuizId(data.quizId);
+        }
+        
         setQuizState(prev => ({ ...prev, questions: data.quiz }));
       } catch (error) {
         console.error('Error generating quiz:', error);

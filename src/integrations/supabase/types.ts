@@ -71,6 +71,44 @@ export type Database = {
           },
         ]
       }
+      generated_quizzes: {
+        Row: {
+          config: Json
+          created_at: string
+          id: number
+          lecture_id: number | null
+          quiz_data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          quiz_data: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: number
+          lecture_id?: number | null
+          quiz_data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_quizzes_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lecture_additional_resources: {
         Row: {
           content: string
