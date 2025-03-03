@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,25 @@ interface Question {
   hint?: string;
 }
 
+// Quiz structure for OpenAI to follow
+const quizStructurePrompt = `
+You are an AI that generates educational quizzes based on lecture content.
+Create a quiz with detailed questions, plausible answer options, and informative hints.
+The output must follow this exact JSON format with no additional text:
+{
+  "quiz": [
+    {
+      "question": "Question text here?",
+      "type": "multiple_choice", // or "true_false"
+      "options": ["Option A", "Option B", "Option C", "Option D"], // For true_false, use ["True", "False"]
+      "correctAnswer": "Option that is correct",
+      "hint": "Helpful hint for the student"
+    },
+    // more questions...
+  ]
+}
+`;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -35,6 +55,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const openAIKey = Deno.env.get("OPENAI_API_KEY") as string;
+
+    if (!openAIKey) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get auth user
     const authHeader = req.headers.get('Authorization');
@@ -88,9 +116,81 @@ serve(async (req) => {
       .eq('lecture_id', lectureId)
       .maybeSingle();
 
-    // Generate quiz (without real AI for now, just mock data)
-    const quiz = generateMockQuiz(config, lecture.title);
-    console.log("Generated quiz with questions:", quiz.length);
+    // Generate quiz using OpenAI
+    console.log("Generating quiz using OpenAI");
+    const temperature = aiConfig?.temperature || 0.7;
+
+    // Create a prompt for OpenAI that includes the lecture content and quiz config
+    const prompt = `
+${quizStructurePrompt}
+
+LECTURE TITLE: ${lecture.title}
+LECTURE CONTENT: ${lecture.content}
+
+Generate a ${config.difficulty} difficulty quiz with ${config.numberOfQuestions} questions.
+Question types: ${config.questionTypes === 'mixed' ? 'a mix of multiple-choice and true/false questions' : config.questionTypes + ' questions'}
+${config.hintsEnabled ? 'Include helpful hints for each question.' : 'Do not include hints.'}
+`;
+
+    // Call OpenAI API
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are an educational quiz generator that creates quizzes based on lecture content.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: temperature,
+      }),
+    });
+
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.json();
+      console.error("OpenAI API error:", errorData);
+      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
+    }
+    
+    const openAIData = await openAIResponse.json();
+    const generatedText = openAIData.choices[0].message.content;
+    
+    // Parse the JSON response from OpenAI
+    let quizData;
+    try {
+      // Sometimes OpenAI might include markdown code blocks, so we need to extract just the JSON
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : generatedText;
+      quizData = JSON.parse(jsonString);
+      
+      // Validate the structure
+      if (!quizData.quiz || !Array.isArray(quizData.quiz)) {
+        throw new Error('Invalid quiz data structure');
+      }
+      
+      // Ensure each question has the required fields
+      quizData.quiz = quizData.quiz.map((q: any) => ({
+        question: q.question,
+        type: q.type,
+        options: q.options || [],
+        correctAnswer: q.correctAnswer,
+        hint: config.hintsEnabled ? q.hint : undefined
+      }));
+      
+      // Limit to requested number of questions
+      if (quizData.quiz.length > config.numberOfQuestions) {
+        quizData.quiz = quizData.quiz.slice(0, config.numberOfQuestions);
+      }
+      
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response:", parseError, "Response:", generatedText);
+      throw new Error('Failed to parse quiz data from OpenAI');
+    }
+
+    console.log(`Successfully generated quiz with ${quizData.quiz.length} questions`);
 
     // Store the generated quiz in the database
     const { data: storedQuiz, error: storeError } = await supabase
@@ -99,7 +199,7 @@ serve(async (req) => {
         lecture_id: lectureId,
         user_id: user.id,
         config: config,
-        quiz_data: { quiz }
+        quiz_data: quizData
       })
       .select('id')
       .single();
@@ -114,7 +214,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        quiz,
+        quiz: quizData.quiz,
         quizId: storedQuiz.id
       }),
       { 
@@ -122,55 +222,10 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in generate-quiz:", error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-// Mock function to generate quizzes until we implement real AI generation
-function generateMockQuiz(config: QuizConfig, lectureTitle: string): Question[] {
-  const questions: Question[] = [];
-  const { difficulty, questionTypes, numberOfQuestions, hintsEnabled } = config;
-
-  console.log(`Generating ${numberOfQuestions} ${difficulty} questions about ${lectureTitle}`);
-
-  // Generate questions based on configuration
-  for (let i = 0; i < numberOfQuestions; i++) {
-    // Determine question type
-    let type: "multiple_choice" | "true_false";
-    if (questionTypes === "mixed") {
-      type = i % 2 === 0 ? "multiple_choice" : "true_false";
-    } else {
-      type = questionTypes as "multiple_choice" | "true_false";
-    }
-
-    // Generate question based on type
-    if (type === "multiple_choice") {
-      questions.push({
-        question: `Multiple choice question ${i + 1} about ${lectureTitle}?`,
-        type: "multiple_choice",
-        options: [
-          `Answer option A for question ${i + 1}`,
-          `Answer option B for question ${i + 1}`,
-          `Answer option C for question ${i + 1}`,
-          `Answer option D for question ${i + 1}`
-        ],
-        correctAnswer: `Answer option ${String.fromCharCode(65 + (i % 4))} for question ${i + 1}`,
-        hint: hintsEnabled ? `Hint for question ${i + 1}` : undefined
-      });
-    } else {
-      questions.push({
-        question: `True/False: Statement ${i + 1} about ${lectureTitle} is correct.`,
-        type: "true_false",
-        options: ["True", "False"],
-        correctAnswer: i % 2 === 0 ? "True" : "False",
-        hint: hintsEnabled ? `Hint for question ${i + 1}` : undefined
-      });
-    }
-  }
-
-  return questions;
-}
