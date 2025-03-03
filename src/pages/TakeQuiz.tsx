@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,7 @@ const TakeQuiz = () => {
           
           const { data: existingQuizzes, error: fetchError } = await supabase
             .from('generated_quizzes')
-            .select('id, quiz_data')
+            .select('id, quiz_data, config')
             .eq('lecture_id', quizConfig.lectureId)
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
