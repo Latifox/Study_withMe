@@ -98,8 +98,8 @@ Deno.serve(async (req) => {
     // Convert the blob to ArrayBuffer for PDF.js processing
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Initialize PDF.js
-    await pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+    // Initialize PDF.js - FIXING THE ERROR HERE
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
     
     try {
       console.log('Parsing PDF using PDF.js')
