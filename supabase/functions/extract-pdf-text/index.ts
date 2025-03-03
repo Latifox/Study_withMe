@@ -21,9 +21,6 @@ interface ExtractPdfParams {
   isProfessorLecture: boolean
 }
 
-// This is crucial for PDF.js - it won't try to use workers in this environment
-pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-
 Deno.serve(async (req) => {
   console.log('PDF extraction function started')
   
@@ -104,6 +101,9 @@ Deno.serve(async (req) => {
     
     try {
       console.log('Loading PDF with PDF.js')
+      
+      // This is crucial for PDF.js in serverless - disable workers completely
+      // Setting GlobalWorkerOptions.workerSrc directly can cause issues in Deno
       
       // Set up PDF.js for serverless environment
       const loadingTask = pdfjsLib.getDocument({
