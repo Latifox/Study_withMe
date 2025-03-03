@@ -1,5 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
+import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -94,125 +95,165 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
 
-    // Convert the blob to ArrayBuffer and then to Base64
+    // Convert the blob to ArrayBuffer for PDF.js processing
     const arrayBuffer = await fileData.arrayBuffer()
-    const base64String = arrayBufferToBase64(arrayBuffer)
     
-    // Try extraction methods in sequence until one succeeds
-
-    // Method 1: Try dedicated text extraction service
-    console.log('Attempting text extraction with primary service')
+    // Initialize PDF.js
+    await pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+    
     try {
-      const response = await fetch('https://pdfservice.vercel.app/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfData: base64String })
-      })
+      console.log('Parsing PDF using PDF.js')
       
-      if (!response.ok) {
-        throw new Error(`Service error: ${response.status}`)
+      // Load the PDF document
+      const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
+      const pdfDocument = await loadingTask.promise
+      
+      console.log(`PDF loaded successfully. Number of pages: ${pdfDocument.numPages}`)
+      
+      // Extract text from all pages
+      let fullText = ''
+      for (let i = 1; i <= pdfDocument.numPages; i++) {
+        console.log(`Processing page ${i}/${pdfDocument.numPages}`)
+        const page = await pdfDocument.getPage(i)
+        const textContent = await page.getTextContent()
+        
+        // Concatenate the text items with proper spacing
+        const textItems = textContent.items.map((item) => {
+          // @ts-ignore - TextItem type might not be recognized in Deno
+          return item.str || ''
+        })
+        
+        const pageText = textItems.join(' ')
+        fullText += pageText + '\n\n' // Add double newline between pages
       }
       
-      const result = await response.json()
-      const extractedText = result.text || ''
+      console.log(`Extracted text length: ${fullText.length} characters`)
+      console.log('Text preview:', fullText.substring(0, 200))
       
-      console.log('Primary extraction result, text length:', extractedText.length)
-      
-      if (extractedText && extractedText.length > 100) {
-        await storeExtractedText(numericLectureId, extractedText, isProfessorLecture)
+      if (fullText.length > 100) {
+        await storeExtractedText(numericLectureId, fullText, isProfessorLecture)
+        
         return new Response(
           JSON.stringify({
             success: true, 
             message: 'PDF content extracted and saved successfully',
-            contentLength: extractedText.length,
-            textPreview: extractedText.substring(0, 200) + '...'
+            contentLength: fullText.length,
+            textPreview: fullText.substring(0, 200) + '...'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
+      } else {
+        console.warn('Extracted text is too short, possibly failed extraction')
+        throw new Error('Extracted text is too short')
       }
-    } catch (error) {
-      console.error('Error with primary extraction service:', error)
-      // Continue to next method
-    }
-    
-    // Method 2: Try RapidAPI extraction service
-    console.log('Attempting text extraction with RapidAPI service')
-    try {
-      const rapidApiResponse = await fetch('https://pdf-to-text-converter.p.rapidapi.com/api/pdf-to-text', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-RapidAPI-Key': '36f3240392msh5cbe57ad5235408p199e36jsn9a9624583c47', 
-          'X-RapidAPI-Host': 'pdf-to-text-converter.p.rapidapi.com'
-        },
-        body: JSON.stringify({
-          pdfBase64: base64String,
-          extractAllText: true
+    } catch (parsingError) {
+      console.error('PDF.js parsing error:', parsingError)
+      
+      // Fallback to alternative parsing when PDF.js fails
+      try {
+        console.log('Attempting fallback PDF text extraction')
+        
+        // Try extracting text using a RapidAPI service as fallback
+        const base64String = arrayBufferToBase64(arrayBuffer)
+        
+        const rapidApiResponse = await fetch('https://pdf-to-text-converter.p.rapidapi.com/api/pdf-to-text', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RapidAPI-Key': '36f3240392msh5cbe57ad5235408p199e36jsn9a9624583c47', 
+            'X-RapidAPI-Host': 'pdf-to-text-converter.p.rapidapi.com'
+          },
+          body: JSON.stringify({
+            pdfBase64: base64String,
+            extractAllText: true
+          })
         })
-      })
-      
-      if (!rapidApiResponse.ok) {
-        throw new Error(`RapidAPI service error: ${rapidApiResponse.status}`)
+        
+        if (!rapidApiResponse.ok) {
+          throw new Error(`RapidAPI service error: ${rapidApiResponse.status}`)
+        }
+        
+        const rapidApiResult = await rapidApiResponse.json()
+        const rapidApiText = rapidApiResult.text || ''
+        
+        console.log('RapidAPI extraction result, text length:', rapidApiText.length)
+        console.log('Text preview:', rapidApiText.substring(0, 200))
+        
+        if (rapidApiText && rapidApiText.length > 100) {
+          await storeExtractedText(numericLectureId, rapidApiText, isProfessorLecture)
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'PDF content extracted and saved (RapidAPI method)',
+              contentLength: rapidApiText.length,
+              textPreview: rapidApiText.substring(0, 200) + '...'
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          )
+        }
+      } catch (fallbackError) {
+        console.error('Fallback extraction error:', fallbackError)
+        // Proceed to try one last method
       }
       
-      const rapidApiResult = await rapidApiResponse.json()
-      const rapidApiText = rapidApiResult.text || ''
-      
-      console.log('RapidAPI extraction result, text length:', rapidApiText.length)
-      console.log('Text preview:', rapidApiText.substring(0, 200))
-      
-      if (rapidApiText && rapidApiText.length > 100) {
-        await storeExtractedText(numericLectureId, rapidApiText, isProfessorLecture)
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'PDF content extracted and saved (RapidAPI method)',
-            contentLength: rapidApiText.length,
-            textPreview: rapidApiText.substring(0, 200) + '...'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      // Last resort: try a simple text extraction
+      try {
+        console.log('Attempting last resort direct text extraction')
+        const pdfBytes = new Uint8Array(arrayBuffer)
+        
+        // Simple text extraction by looking for text patterns in the binary data
+        let text = ''
+        let inText = false
+        let textBuffer = ''
+        
+        for (let i = 0; i < pdfBytes.length; i++) {
+          const byte = pdfBytes[i]
+          
+          // Check for text markers - this is a simplified approach
+          if (byte >= 32 && byte <= 126) { // ASCII printable characters
+            textBuffer += String.fromCharCode(byte)
+            inText = true
+          } else if (inText) {
+            if (textBuffer.length > 3) { // Only keep "words" that are at least 4 chars
+              text += textBuffer + ' '
+            }
+            textBuffer = ''
+            inText = false
+            
+            // Add newlines for certain characters
+            if (byte === 10 || byte === 13) { // LF or CR
+              text += '\n'
+            }
           }
-        )
+        }
+        
+        // Clean up the extracted text - remove PDF syntax markers and non-text content
+        const cleanedText = text
+          .replace(/\(\(.*?\)\)/g, '') // Remove PDF internal references
+          .replace(/\/[A-Za-z]+\s+/g, ' ') // Remove PDF operators
+          .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
+          .trim()
+        
+        console.log('Direct extraction result, text length:', cleanedText.length)
+        console.log('Text preview:', cleanedText.substring(0, 200))
+        
+        if (cleanedText && cleanedText.length > 100) {
+          await storeExtractedText(numericLectureId, cleanedText, isProfessorLecture)
+          return new Response(
+            JSON.stringify({
+              success: true, 
+              message: 'PDF content extracted and saved using direct extraction',
+              contentLength: cleanedText.length,
+              textPreview: cleanedText.substring(0, 200) + '...'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      } catch (directError) {
+        console.error('Direct extraction error:', directError)
       }
-    } catch (error) {
-      console.error('Error with RapidAPI extraction:', error)
-      // Continue to final method
-    }
-    
-    // Method 3: Try another fallback service
-    console.log('Attempting text extraction with fallback service')
-    try {
-      const fallbackResponse = await fetch('https://text-extraction.vercel.app/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfData: base64String })
-      })
-      
-      if (!fallbackResponse.ok) {
-        throw new Error(`Fallback service error: ${fallbackResponse.status}`)
-      }
-      
-      const fallbackResult = await fallbackResponse.json()
-      const fallbackText = fallbackResult.text || ''
-      
-      console.log('Fallback extraction result, text length:', fallbackText.length)
-      
-      if (fallbackText && fallbackText.length > 100) {
-        await storeExtractedText(numericLectureId, fallbackText, isProfessorLecture)
-        return new Response(
-          JSON.stringify({
-            success: true, 
-            message: 'PDF content extracted and saved using fallback service',
-            contentLength: fallbackText.length,
-            textPreview: fallbackText.substring(0, 200) + '...'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-    } catch (error) {
-      console.error('Error with fallback extraction service:', error)
-      // All methods failed
     }
     
     // If all extraction methods fail, notify the user
