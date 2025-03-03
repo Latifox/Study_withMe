@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Use pdf-parse which is more compatible with server environments
-import { default as pdfParse } from 'https://esm.sh/pdf-parse@1.1.1'
+// Import PDFjs from a CDN with the minified browser version
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -20,6 +20,9 @@ interface ExtractPdfParams {
   lectureId: string
   isProfessorLecture: boolean
 }
+
+// This is crucial for PDF.js - it won't try to use workers in this environment
+pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 
 Deno.serve(async (req) => {
   console.log('PDF extraction function started')
@@ -96,17 +99,39 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Step 2: Convert PDF to ArrayBuffer for processing
+    // Step 2: Convert PDF to ArrayBuffer for PDF.js processing
     const arrayBuffer = await fileData.arrayBuffer()
     
     try {
-      console.log('Extracting text from PDF')
+      console.log('Loading PDF with PDF.js')
       
-      // Use pdf-parse to extract text from the PDF
-      const data = new Uint8Array(arrayBuffer)
-      const result = await pdfParse(data)
+      // Set up PDF.js for serverless environment
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(arrayBuffer),
+        disableWorker: true,  // Critical: disable workers
+        disableAutoFetch: true,
+        disableStream: true,
+        isEvalSupported: false
+      })
       
-      const fullText = result.text
+      const pdf = await loadingTask.promise
+      console.log(`PDF loaded successfully. Pages: ${pdf.numPages}`)
+      
+      // Extract text from all pages
+      let fullText = ''
+      
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        console.log(`Processing page ${pageNum}/${pdf.numPages}`)
+        const page = await pdf.getPage(pageNum)
+        const content = await page.getTextContent()
+        
+        // Join all items into a string
+        const pageText = content.items
+          .map((item: any) => item.str)
+          .join(' ')
+        
+        fullText += pageText + '\n\n'
+      }
       
       console.log(`Text extraction complete. Extracted ${fullText.length} characters`)
       
