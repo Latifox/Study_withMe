@@ -31,12 +31,13 @@ const UploadedCourses = () => {
   }, [user, loading, navigate]);
   
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['uploaded-courses'],
+    queryKey: ['uploaded-courses', user?.id],
     queryFn: async () => {
       console.log('Fetching courses from Supabase...');
       const { data, error } = await supabase
         .from('courses')
         .select('*')
+        .eq('owner_id', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) {

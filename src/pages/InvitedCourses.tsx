@@ -33,7 +33,7 @@ const InvitedCourses = () => {
   
   // Fetch enrolled courses
   const { data: enrolledCourses, isLoading } = useQuery({
-    queryKey: ['enrolled-courses'],
+    queryKey: ['enrolled-courses', user?.id],
     queryFn: async () => {
       console.log('Fetching enrolled courses from Supabase...');
       
@@ -48,6 +48,7 @@ const InvitedCourses = () => {
             course_code
           )
         `)
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) {

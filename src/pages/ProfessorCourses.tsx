@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,12 +45,13 @@ const ProfessorCourses = () => {
   }, [user, loading, navigate]);
   
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['professor-courses'],
+    queryKey: ['professor-courses', user?.id],
     queryFn: async () => {
       console.log('Fetching professor courses from Supabase...');
       const { data, error } = await supabase
         .from('professor_courses')
         .select('*')
+        .eq('owner_id', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -59,7 +61,8 @@ const ProfessorCourses = () => {
       
       console.log('Fetched professor courses:', data);
       return data || [] as ProfessorCourse[];
-    }
+    },
+    enabled: !!user
   });
 
   const handleCopyCode = (courseCode: string | undefined) => {

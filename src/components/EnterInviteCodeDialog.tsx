@@ -28,6 +28,12 @@ export function EnterInviteCodeDialog() {
 
     try {
       setIsLoading(true);
+      
+      // Get current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error("You must be logged in to enroll in a course");
+      }
 
       // First, find the course with the given invite code
       const { data: courseData, error: courseError } = await supabase
@@ -50,7 +56,7 @@ export function EnterInviteCodeDialog() {
         .from("student_enrolled_courses")
         .insert({
           course_id: courseData.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userData.user.id,
         });
 
       if (enrollError) {
