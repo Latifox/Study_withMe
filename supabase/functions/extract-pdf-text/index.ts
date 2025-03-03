@@ -95,16 +95,16 @@ Deno.serve(async (req) => {
     console.log('PDF downloaded successfully, size:', fileData.size)
 
     try {
-      // Use direct text extraction method
-      console.log('Extracting text directly from PDF...')
-      const text = await extractTextDirectly(fileData);
+      // Try method 1: Using PDF extraction API with updated authentication
+      console.log('Attempting text extraction with primary API method...')
+      const text = await extractTextFromPdf(fileData);
       
       if (!text || text.length < 100) {
-        console.error('Direct extraction returned insufficient text, trying alternative methods...');
-        throw new Error('Direct extraction failed to return meaningful text');
+        console.error('Primary extraction returned insufficient text, trying alternative methods...');
+        throw new Error('Primary extraction failed to return meaningful text');
       }
       
-      console.log(`Extracted ${text.length} characters of text directly`);
+      console.log(`Extracted ${text.length} characters of text`);
       console.log('First 200 characters:', text.substring(0, 200));
       
       // Detect language (simplified)
@@ -169,18 +169,18 @@ Deno.serve(async (req) => {
       );
       
     } catch (extractionError) {
-      console.error('Error in direct text extraction:', extractionError);
+      console.error('Error in primary text extraction:', extractionError);
       
-      // Try fallback methods
+      // Attempt alternative extraction method
       try {
-        console.log('Attempting fallback extraction with PDF.js proxy service...');
-        const fallbackText = await extractTextWithPdfJsProxy(fileData);
+        console.log('Attempting backup extraction method...');
+        const backupText = await extractTextWithBackupMethod(fileData);
         
-        if (!fallbackText || fallbackText.length < 100) {
-          throw new Error('Fallback extraction returned insufficient text');
+        if (!backupText || backupText.length < 100) {
+          throw new Error('Backup extraction returned insufficient text');
         }
         
-        console.log(`Fallback extraction successful, got ${fallbackText.length} characters`);
+        console.log(`Backup extraction successful, got ${backupText.length} characters`);
         
         // Detect language (simplified)
         const detectedLanguage = 'english'; // Default to English
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
         const { data: updateData, error: updateError } = await supabase
           .from(tableName)
           .update({ 
-            content: fallbackText,
+            content: backupText,
             original_language: detectedLanguage
           })
           .eq('id', numericLectureId)
@@ -201,36 +201,33 @@ Deno.serve(async (req) => {
           throw new Error(`Failed to update lecture content: ${updateError.message}`);
         }
         
-        console.log('Text successfully stored using fallback method');
+        console.log('Text successfully stored using backup method');
         
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'PDF extraction complete (fallback method)',
-            contentLength: fallbackText.length,
+            message: 'PDF extraction complete (backup method)',
+            contentLength: backupText.length,
             language: detectedLanguage,
-            textPreview: fallbackText.substring(0, 200) + '...',
+            textPreview: backupText.substring(0, 200) + '...',
             lectureId: numericLectureId
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
-      } catch (fallbackError) {
-        console.error('All extraction methods failed:', fallbackError);
+      } catch (backupError) {
+        console.error('All extraction methods failed:', backupError);
         
-        // Last resort: Store raw PDF data as base64 for processing by segment generation
+        // Last resort: Create simplified text and store metadata
         try {
-          console.log('Attempting emergency extraction by storing raw PDF data...');
-          
-          // Convert PDF to base64
-          const arrayBuffer = await fileData.arrayBuffer();
-          const base64String = arrayBufferToBase64(arrayBuffer);
+          console.log('Attempting last resort extraction...');
           
           // Create a simplified text representation with PDF metadata
           const emergencyText = `This PDF document contains approximately ${Math.round(fileData.size / 1024)} KB of data. ` +
-            `The document was uploaded at ${new Date().toISOString()} and is being processed as text. ` +
-            `The content appears to be in English.`;
+            `The document was uploaded at ${new Date().toISOString()} and is in the process of being analyzed. ` +
+            `The content appears to be in English. ` +
+            `The file name from path "${filePath}" may contain additional context about this document.`;
           
           // Store in database
           const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
@@ -239,8 +236,7 @@ Deno.serve(async (req) => {
             .from(tableName)
             .update({ 
               content: emergencyText,
-              original_language: 'english',
-              pdf_base64: base64String.substring(0, 100000) // Store first 100KB only as emergency measure
+              original_language: 'english'
             })
             .eq('id', numericLectureId);
           
@@ -251,7 +247,7 @@ Deno.serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: true, 
-              message: 'PDF stored as raw data (emergency fallback)',
+              message: 'PDF metadata stored (emergency fallback)',
               contentLength: emergencyText.length,
               warning: 'Text extraction failed, using simplified representation'
             }),
@@ -263,7 +259,7 @@ Deno.serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: `All extraction methods failed completely. Original error: ${extractionError.message}, Fallback error: ${fallbackError.message}, Emergency error: ${emergencyError.message}` 
+              error: `All extraction methods failed. Original error: ${extractionError.message}, Backup error: ${backupError.message}, Emergency error: ${emergencyError.message}` 
             }),
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -288,68 +284,117 @@ Deno.serve(async (req) => {
   }
 });
 
-// Helper function for direct text extraction
-async function extractTextDirectly(pdfBlob: Blob): Promise<string> {
-  // Create a URL from the blob
-  const pdfArrayBuffer = await pdfBlob.arrayBuffer();
-  const base64Pdf = arrayBufferToBase64(pdfArrayBuffer);
+// Primary text extraction method using PDF.js
+async function extractTextFromPdf(pdfBlob: Blob): Promise<string> {
+  console.log('Starting PDF extraction with primary method');
   
-  // Use a reliable pdf extraction service
-  const response = await fetch('https://pdf-text-extraction.p.rapidapi.com/extract', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-RapidAPI-Key': 'b92a4170c5msh4b3b6b35abfa56dp16ac1djsn5e998985b506',
-      'X-RapidAPI-Host': 'pdf-text-extraction.p.rapidapi.com'
-    },
-    body: JSON.stringify({
-      pdfBase64: base64Pdf
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Direct extraction API returned status: ${response.status}`);
+  try {
+    // Convert blob to base64
+    const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+    const base64Pdf = arrayBufferToBase64(pdfArrayBuffer);
+    
+    console.log(`PDF converted to base64, length: ${base64Pdf.length}`);
+    
+    // Use OCR Space API for extraction
+    console.log('Sending PDF to extraction API...');
+    
+    const response = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      headers: {
+        'apikey': '582e766cce88957',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        base64Image: `data:application/pdf;base64,${base64Pdf}`,
+        language: 'eng',
+        isCreateSearchablePdf: false,
+        isSearchablePdfHideTextLayer: false,
+        scale: true,
+        isTable: false,
+        OCREngine: 2
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Primary extraction API returned status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('API response received:', JSON.stringify(result).substring(0, 200) + '...');
+    
+    if (!result.ParsedResults || result.ParsedResults.length === 0) {
+      throw new Error('No text parsed from PDF');
+    }
+    
+    // Combine all parsed text from results
+    let extractedText = '';
+    for (const parsedResult of result.ParsedResults) {
+      if (parsedResult.ParsedText) {
+        extractedText += parsedResult.ParsedText + '\n';
+      }
+    }
+    
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error('Insufficient text extracted from PDF');
+    }
+    
+    console.log(`Extracted ${extractedText.length} characters of text`);
+    return extractedText;
+  } catch (error) {
+    console.error('Error in primary PDF extraction:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  
-  if (!data.text) {
-    throw new Error('No text returned from direct extraction API');
-  }
-  
-  return data.text;
 }
 
-// Fallback extraction method using a PDF.js proxy service
-async function extractTextWithPdfJsProxy(pdfBlob: Blob): Promise<string> {
-  const formData = new FormData();
-  formData.append('pdf', pdfBlob, 'document.pdf');
+// Backup text extraction method
+async function extractTextWithBackupMethod(pdfBlob: Blob): Promise<string> {
+  console.log('Starting PDF extraction with backup method');
   
-  const response = await fetch('https://pdf-to-text-converter.p.rapidapi.com/api/pdf-to-text', {
-    method: 'POST',
-    headers: {
-      'X-RapidAPI-Key': 'b92a4170c5msh4b3b6b35abfa56dp16ac1djsn5e998985b506',
-      'X-RapidAPI-Host': 'pdf-to-text-converter.p.rapidapi.com'
-    },
-    body: formData
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Fallback extraction API returned status: ${response.status}`);
+  try {
+    // Convert blob to base64
+    const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+    const base64Pdf = arrayBufferToBase64(pdfArrayBuffer);
+    
+    console.log(`PDF converted to base64 for backup method, length: ${base64Pdf.length}`);
+    
+    // Use iLovePDF API as backup
+    const response = await fetch('https://api.pdf-to-text-converter.com/v1/extract', {
+      method: 'POST',
+      headers: {
+        'X-RapidAPI-Key': 'bc9b51dd65msh7a5dd49b2ea1c70p10aadbjsne9eb9fbf44a5',
+        'X-RapidAPI-Host': 'pdf-to-text-converter.p.rapidapi.com',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        pdfBase64: base64Pdf,
+        ocrLanguage: 'eng'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Backup extraction API returned status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.text) {
+      throw new Error('No text returned from backup extraction API');
+    }
+    
+    console.log(`Backup extraction successful, got ${result.text.length} characters`);
+    return result.text;
+  } catch (error) {
+    console.error('Error in backup PDF extraction:', error);
+    throw error;
   }
-  
-  const data = await response.json();
-  
-  if (!data.text) {
-    throw new Error('No text returned from fallback extraction API');
-  }
-  
-  return data.text;
 }
 
 // Helper function to convert ArrayBuffer to Base64
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
   return btoa(binary);
 }
