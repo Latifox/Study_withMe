@@ -119,7 +119,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       setCurrentLectureId(lectureData.id);
       setShowAIProfessor(true);
 
-      // Step 1: Extract PDF content
+      // Step 1: Extract PDF content with improved error handling
       console.log('Extracting PDF content...');
       try {
         const extractParams = {
@@ -147,13 +147,13 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         
         console.log('PDF content extracted successfully, waiting for database update...');
         
-        // Wait for content to be stored in the database
+        // Wait for content to be stored in the database with increased initial delay
         console.log('Waiting for content to be stored in the database...');
-        await delay(10000); // 10 seconds initial delay
+        await delay(15000); // 15 seconds initial delay - increased from 10 to give more time
         
-        // Verify content is saved and retry if needed
+        // Verify content is saved and retry if needed with more retries
         console.log('Verifying lecture content...');
-        const lectureContent = await verifyLectureContent(lectureData.id, isProfessorCourse);
+        const lectureContent = await verifyLectureContent(lectureData.id, isProfessorCourse, 15); // Increased retries from 10 to 15
         
         if (!lectureContent) {
           console.error('Unable to verify lecture content in the database after multiple attempts');
