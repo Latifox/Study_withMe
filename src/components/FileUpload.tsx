@@ -7,9 +7,10 @@ import { useLectureUpload } from "./file-upload/useLectureUpload";
 interface FileUploadProps {
   courseId?: string;
   onClose: () => void;
+  isProfessorCourse?: boolean;
 }
 
-const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
+const FileUpload = ({ courseId, onClose, isProfessorCourse = false }: FileUploadProps) => {
   const {
     file,
     setFile,
@@ -19,12 +20,13 @@ const FileUpload = ({ courseId, onClose }: FileUploadProps) => {
     showAIProfessor,
     currentLectureId,
     handleUpload
-  } = useLectureUpload(onClose, courseId);
+  } = useLectureUpload(onClose, courseId, isProfessorCourse);
 
   if (showAIProfessor && currentLectureId && courseId) {
     return <AIProfessorLoading 
       lectureId={currentLectureId} 
-      courseId={parseInt(courseId)} 
+      courseId={parseInt(courseId)}
+      isProfessorLecture={isProfessorCourse}
     />;
   }
 

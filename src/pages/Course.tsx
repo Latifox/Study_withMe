@@ -22,6 +22,13 @@ interface CourseData {
   isProfessor?: boolean;
 }
 
+interface LectureData {
+  id: number;
+  title: string;
+  created_at: string;
+  // Common fields between lectures and professor_lectures
+}
+
 const Course = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -72,18 +79,47 @@ const Course = () => {
     }
   });
 
+  // Fetch lectures based on the course type (regular or professor)
   const { data: lectures, isLoading } = useQuery({
-    queryKey: ['lectures', parsedCourseId],
+    queryKey: ['lectures', parsedCourseId, course?.isProfessor],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lectures')
-        .select('*')
-        .eq('course_id', parsedCourseId)
-        .order('created_at', { ascending: false });
+      if (!course) return [];
       
-      if (error) throw error;
-      return data;
+      console.log(`Fetching lectures for ${course.isProfessor ? 'professor' : 'regular'} course ${parsedCourseId}`);
+      
+      if (course.isProfessor) {
+        // Fetch from professor_lectures table
+        const { data, error } = await supabase
+          .from('professor_lectures')
+          .select('*')
+          .eq('professor_course_id', parsedCourseId)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching professor lectures:', error);
+          throw error;
+        }
+        
+        console.log('Fetched professor lectures:', data);
+        return data || [];
+      } else {
+        // Fetch from regular lectures table
+        const { data, error } = await supabase
+          .from('lectures')
+          .select('*')
+          .eq('course_id', parsedCourseId)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching regular lectures:', error);
+          throw error;
+        }
+        
+        console.log('Fetched regular lectures:', data);
+        return data || [];
+      }
     },
+    enabled: !!course,
     refetchInterval: 1000,
   });
 
@@ -173,6 +209,7 @@ const Course = () => {
                         lectureId={lecture.id} 
                         lectureTitle={lecture.title} 
                         courseId={parsedCourseId}
+                        isProfessorLecture={!!course?.isProfessor}
                       />
                       <Button 
                         variant="outline"
@@ -206,6 +243,7 @@ const Course = () => {
             <FileUpload 
               courseId={parsedCourseId.toString()} 
               onClose={() => setShowUpload(false)}
+              isProfessorCourse={course?.isProfessor}
             />
           )}
 
@@ -213,12 +251,14 @@ const Course = () => {
             isOpen={!!selectedLectureId}
             onClose={() => setSelectedLectureId(null)}
             lectureId={selectedLectureId!}
+            isProfessorLecture={!!course?.isProfessor}
           />
 
           <LectureAIConfigDialog
             isOpen={!!showAIConfig}
             onClose={() => setShowAIConfig(null)}
             lectureId={showAIConfig!}
+            isProfessorLecture={!!course?.isProfessor}
           />
         </div>
       </div>

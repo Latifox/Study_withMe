@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
-export const useLectureUpload = (onClose: () => void, courseId?: string) => {
+export const useLectureUpload = (onClose: () => void, courseId?: string, isProfessorCourse = false) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -38,19 +38,41 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       if (uploadError) throw uploadError;
       console.log('PDF uploaded successfully');
 
-      // Save lecture metadata and get the lecture ID
-      console.log('Saving lecture to database...');
-      const { data: lectureData, error: dbError } = await supabase
-        .from('lectures')
-        .insert({
-          course_id: parseInt(courseId),
-          title,
-          pdf_path: filePath,
-        })
-        .select()
-        .single();
+      // Save lecture metadata to the appropriate table based on course type
+      console.log(`Saving lecture to ${isProfessorCourse ? 'professor_lectures' : 'lectures'} table...`);
+      
+      let lectureData;
+      
+      if (isProfessorCourse) {
+        // Insert into professor_lectures table
+        const { data, error } = await supabase
+          .from('professor_lectures')
+          .insert({
+            professor_course_id: parseInt(courseId),
+            title,
+            pdf_path: filePath,
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        lectureData = data;
+      } else {
+        // Insert into regular lectures table
+        const { data, error } = await supabase
+          .from('lectures')
+          .insert({
+            course_id: parseInt(courseId),
+            title,
+            pdf_path: filePath,
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        lectureData = data;
+      }
 
-      if (dbError) throw dbError;
       console.log('Lecture saved successfully:', lectureData);
 
       if (!lectureData?.id) {
@@ -64,7 +86,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
         body: {
           filePath,
-          lectureId: lectureData.id.toString()
+          lectureId: lectureData.id.toString(),
+          isProfessorLecture: isProfessorCourse
         }
       });
 
@@ -82,7 +105,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
         body: {
           lectureId: lectureData.id,
           lectureContent: extractionData.content,
-          lectureTitle: title
+          lectureTitle: title,
+          isProfessorLecture: isProfessorCourse
         }
       });
 
@@ -110,7 +134,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
               segmentNumber: segment.sequence_number,
               segmentTitle: segment.title,
               segmentDescription: segment.segment_description,
-              lectureContent: extractionData.content
+              lectureContent: extractionData.content,
+              isProfessorLecture: isProfessorCourse
             }
           });
 

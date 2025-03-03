@@ -295,6 +295,47 @@ export type Database = {
         }
         Relationships: []
       }
+      professor_lectures: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: number
+          original_language: string | null
+          pdf_path: string | null
+          professor_course_id: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: never
+          original_language?: string | null
+          pdf_path?: string | null
+          professor_course_id?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: never
+          original_language?: string | null
+          pdf_path?: string | null
+          professor_course_id?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_lectures_professor_course_id_fkey"
+            columns: ["professor_course_id"]
+            isOneToOne: false
+            referencedRelation: "professor_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_progress: {
         Row: {
           completed_at: string | null

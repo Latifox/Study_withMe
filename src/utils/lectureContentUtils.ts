@@ -59,19 +59,25 @@ export const recreateLecture = async (
     detail_level: number;
     content_language?: string | null;
     custom_instructions?: string | null;
+    isProfessorLecture?: boolean;
   }
 ) => {
   console.log('Starting lecture recreation process...');
+  const isProfessorLecture = aiConfig.isProfessorLecture || false;
+  
+  // Get the table name based on the lecture type
+  const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
+  const courseIdField = isProfessorLecture ? 'professor_course_id' : 'course_id';
   
   // First, get the old lecture data
   const { data: oldLecture, error: fetchError } = await supabase
-    .from('lectures')
-    .select('course_id, title, content, pdf_path, original_language')
+    .from(tableName)
+    .select(`${courseIdField}, title, content, pdf_path, original_language`)
     .eq('id', oldLectureId)
     .single();
 
   if (fetchError) {
-    console.error('Error fetching old lecture:', fetchError);
+    console.error(`Error fetching old ${isProfessorLecture ? 'professor' : ''} lecture:`, fetchError);
     throw fetchError;
   }
 
@@ -79,20 +85,22 @@ export const recreateLecture = async (
 
   try {
     // Create new lecture
+    const insertData = {
+      [courseIdField]: oldLecture[courseIdField],
+      title: oldLecture.title,
+      content: oldLecture.content,
+      pdf_path: oldLecture.pdf_path,
+      original_language: oldLecture.original_language
+    };
+
     const { data: newLecture, error: insertError } = await supabase
-      .from('lectures')
-      .insert({
-        course_id: oldLecture.course_id,
-        title: oldLecture.title,
-        content: oldLecture.content,
-        pdf_path: oldLecture.pdf_path,
-        original_language: oldLecture.original_language
-      })
+      .from(tableName)
+      .insert(insertData)
       .select()
       .single();
 
     if (insertError) {
-      console.error('Error creating new lecture:', insertError);
+      console.error(`Error creating new ${isProfessorLecture ? 'professor' : ''} lecture:`, insertError);
       throw insertError;
     }
 
@@ -113,7 +121,7 @@ export const recreateLecture = async (
     if (configError) {
       console.error('Error creating AI config:', configError);
       // If AI config creation fails, delete the new lecture to maintain consistency
-      await supabase.from('lectures').delete().eq('id', newLecture.id);
+      await supabase.from(tableName).delete().eq('id', newLecture.id);
       throw configError;
     }
 
@@ -125,13 +133,14 @@ export const recreateLecture = async (
       body: {
         lectureId: newLecture.id,
         lectureContent: oldLecture.content,
-        lectureTitle: oldLecture.title
+        lectureTitle: oldLecture.title,
+        isProfessorLecture: isProfessorLecture
       }
     });
 
     if (structureError) {
       // If structure generation fails, clean up by deleting the new lecture
-      await supabase.from('lectures').delete().eq('id', newLecture.id);
+      await supabase.from(tableName).delete().eq('id', newLecture.id);
       throw structureError;
     }
 
@@ -159,7 +168,8 @@ export const recreateLecture = async (
           segmentNumber: segment.sequence_number,
           segmentTitle: segment.title,
           segmentDescription: segment.segment_description,
-          lectureContent: oldLecture.content
+          lectureContent: oldLecture.content,
+          isProfessorLecture: isProfessorLecture
         }
       });
 
@@ -175,12 +185,12 @@ export const recreateLecture = async (
     // Only delete the old lecture after everything else succeeds
     console.log('Deleting old lecture...');
     const { error: deleteError } = await supabase
-      .from('lectures')
+      .from(tableName)
       .delete()
       .eq('id', oldLectureId);
 
     if (deleteError) {
-      console.error('Error deleting old lecture:', deleteError);
+      console.error(`Error deleting old ${isProfessorLecture ? 'professor' : ''} lecture:`, deleteError);
       throw deleteError;
     }
 
@@ -192,4 +202,3 @@ export const recreateLecture = async (
     throw error;
   }
 };
-
