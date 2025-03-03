@@ -42,16 +42,20 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
     console.log('StoryQuiz - Submitting answer:', selectedAnswer);
     console.log('StoryQuiz - Correct answer:', question.correctAnswer);
 
-    // Convert the answers to lowercase strings for comparison
-    const normalizedSelectedAnswer = selectedAnswer.toLowerCase();
-    const normalizedCorrectAnswer = typeof question.correctAnswer === 'boolean' 
+    // Improved comparison - handle both string comparison and case-insensitive comparison
+    // Fix the exact string comparison issue by removing whitespace and normalizing text
+    const normalizeText = (text: string) => text.trim().toLowerCase().replace(/\s+/g, ' ');
+    
+    const selectedAnswerNormalized = normalizeText(selectedAnswer);
+    const correctAnswerNormalized = typeof question.correctAnswer === 'boolean' 
       ? question.correctAnswer.toString().toLowerCase()
-      : question.correctAnswer.toString().toLowerCase();
+      : normalizeText(question.correctAnswer.toString());
 
-    console.log('StoryQuiz - Normalized selected answer:', normalizedSelectedAnswer);
-    console.log('StoryQuiz - Normalized correct answer:', normalizedCorrectAnswer);
+    console.log('StoryQuiz - Normalized selected answer:', selectedAnswerNormalized);
+    console.log('StoryQuiz - Normalized correct answer:', correctAnswerNormalized);
 
-    const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer;
+    // Check if the answers match exactly after normalization
+    const isCorrect = selectedAnswerNormalized === correctAnswerNormalized;
     console.log('StoryQuiz - Answer is correct:', isCorrect);
 
     setIsCorrect(isCorrect);
@@ -59,7 +63,7 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
 
     if (isCorrect) {
       toast({
-        title: "🎯 Correct!",
+        title: "🎉 Correct!",
         description: "Great job! Let's continue with the story.",
       });
       setTimeout(() => {

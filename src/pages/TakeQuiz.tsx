@@ -205,9 +205,19 @@ const TakeQuiz = () => {
     }
   };
 
+  const normalizeText = (text: string) => text.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+
   const calculateCorrectAnswers = () => {
     return quizState.questions.reduce((count, question, index) => {
-      return count + (quizState.userAnswers[index] === question.correctAnswer ? 1 : 0);
+      const userAnswer = quizState.userAnswers[index];
+      const correctAnswer = question.correctAnswer;
+      
+      if (!userAnswer) return count;
+      
+      const userAnswerNormalized = normalizeText(userAnswer);
+      const correctAnswerNormalized = normalizeText(correctAnswer);
+      
+      return count + (userAnswerNormalized === correctAnswerNormalized ? 1 : 0);
     }, 0);
   };
 
