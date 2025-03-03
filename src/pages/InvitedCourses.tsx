@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Key } from "lucide-react";
+import { Key, ArrowLeft } from "lucide-react";
 
 const InvitedCourses = () => {
   const navigate = useNavigate();
@@ -16,10 +16,11 @@ const InvitedCourses = () => {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => navigate('/')}
-            className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
+            onClick={() => navigate('/dashboard')}
+            className="gap-2 hover:bg-white/20 border-white/20"
           >
-            Back to Home
+            <ArrowLeft className="w-5 h-5" />
+            Back to Dashboard
           </Button>
         </div>
 
