@@ -94,25 +94,32 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Extract text using improved methods
-    let extractedText = await extractTextFromPDF(fileData);
+    // Extract text from PDF
+    // Convert Blob to ArrayBuffer and then to Uint8Array for text extraction
+    const arrayBuffer = await fileData.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
     
-    if (!extractedText || extractedText.length < 100) {
+    // Using a pure text-based approach without PDF.js
+    let extractedText = await extractReadableText(bytes);
+    console.log(`Extracted ${extractedText.length} characters of text`);
+    
+    if (extractedText.length < 200) {
       console.log("First extraction method yielded limited results, trying alternative method");
-      extractedText = await extractTextUsingRawBytes(fileData);
+      extractedText = await extractTextFromPdfBytes(bytes);
+      console.log(`Alternative method extracted ${extractedText.length} characters`);
     }
     
-    // Clean the extracted text
+    // Clean the extracted text to make it readable
     extractedText = cleanExtractedText(extractedText);
     
-    console.log(`Extracted ${extractedText.length} characters of text`);
-    console.log('First 500 characters:', extractedText.substring(0, 500));
+    console.log(`Final cleaned text: ${extractedText.length} characters`);
+    console.log('First 200 characters:', extractedText.substring(0, 200));
     
     // Detect language (basic implementation)
-    const detectedLanguage = detectTextLanguage(extractedText);
+    const detectedLanguage = detectLanguage(extractedText);
     
-    // Store the extracted text
-    console.log('Storing extracted text in database')
+    // Store the extracted text in the database
+    console.log('Storing extracted text in database');
     const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
     
     const { data: updateData, error: updateError } = await supabase
@@ -125,7 +132,7 @@ Deno.serve(async (req) => {
       .select();
     
     if (updateError) {
-      console.error(`Error updating ${tableName}:`, updateError)
+      console.error(`Error updating ${tableName}:`, updateError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -135,11 +142,11 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
-      )
+      );
     }
     
     if (!updateData || updateData.length === 0) {
-      console.error('No rows updated')
+      console.error('No rows updated');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -149,26 +156,27 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
         }
-      )
+      );
     }
     
-    console.log('Text successfully stored in database')
+    console.log('Text successfully stored in database');
     
     // Return success response
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'PDF extraction complete and content stored in database',
+        message: 'PDF extraction complete',
         contentLength: extractedText.length,
         language: detectedLanguage,
+        textPreview: extractedText.substring(0, 200) + '...',
         lectureId: numericLectureId
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    )
+    );
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -178,165 +186,160 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
-    )
+    );
   }
-})
+});
 
-// Main PDF text extraction function
-async function extractTextFromPDF(pdfFile: Blob): Promise<string> {
+// Extract readable text using UTF-8 decoding
+async function extractReadableText(bytes: Uint8Array): Promise<string> {
   try {
-    // Convert Blob to ArrayBuffer
-    const arrayBuffer = await pdfFile.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
+    // First try a simple UTF-8 decode of the entire file
+    const decoder = new TextDecoder('utf-8');
+    let fullText = decoder.decode(bytes);
     
-    // Look for text markers in PDF
-    // In PDF structure, text is often between "BT" (Begin Text) and "ET" (End Text)
-    let textContent = '';
+    // Extract text that looks human-readable (3+ consecutive letters)
+    const textMatches = fullText.match(/[a-zA-Z]{3,}[a-zA-Z\s.,;:!?'"()]{5,}/g) || [];
+    const extractedText = textMatches.join(' ');
     
-    // First try standard UTF-8 decoding
-    try {
-      const decoder = new TextDecoder('utf-8');
-      const rawText = decoder.decode(bytes);
-      
-      // Extract parts that look like text
-      const textPatterns = rawText.match(/[a-zA-Z0-9\s.,;:!?'"()\-–—]{5,}/g) || [];
-      textContent = textPatterns.join(' ');
-    } catch (e) {
-      console.error("UTF-8 decoding failed:", e);
-    }
-    
-    // If we didn't get much text, try more advanced extraction
-    if (textContent.length < 200) {
-      textContent = extractTextFromPDFBytes(bytes);
-    }
-    
-    return textContent;
-  } catch (error) {
-    console.error("Error extracting text from PDF:", error);
-    return "ERROR: Could not extract text from this PDF.";
-  }
-}
-
-// Alternative text extraction method using raw byte patterns
-async function extractTextUsingRawBytes(pdfFile: Blob): Promise<string> {
-  try {
-    const arrayBuffer = await pdfFile.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    
-    // Extract all strings between parentheses (PDF often stores text like this)
-    const pdfStr = new TextDecoder().decode(bytes);
-    const stringMatches = pdfStr.match(/\((.*?)\)/g) || [];
-    
-    let extractedStrings = stringMatches
-      .map(s => s.slice(1, -1)) // Remove the parentheses
-      .filter(s => s.length > 3) // Only keep strings of reasonable length
-      .join(' ');
-    
-    // Also try to find text by looking for word boundaries
-    const wordMatches = pdfStr.match(/[a-zA-Z]{2,}[a-zA-Z\s.,;:!?'"()]{3,}/g) || [];
-    const wordText = wordMatches.join(' ');
-    
-    // Combine both methods
-    return extractedStrings.length > wordText.length ? extractedStrings : wordText;
+    return extractedText;
   } catch (e) {
-    console.error("Raw bytes extraction failed:", e);
+    console.error("Error in extractReadableText:", e);
     return "";
   }
 }
 
 // Extract text by analyzing PDF byte patterns
-function extractTextFromPDFBytes(bytes: Uint8Array): string {
-  let textParts: string[] = [];
-  let currentText = '';
-  const textStart = [66, 84]; // 'BT' in ASCII
-  const textEnd = [69, 84]; // 'ET' in ASCII
-  
-  // Scan for text blocks between BT and ET markers
-  let inTextBlock = false;
-  let textBlockContent = '';
-  
-  for (let i = 0; i < bytes.length - 1; i++) {
-    // Check for text block start
-    if (!inTextBlock && bytes[i] === textStart[0] && bytes[i + 1] === textStart[1]) {
-      inTextBlock = true;
-      textBlockContent = '';
-      i += 1; // Skip the 'T' in 'BT'
-      continue;
-    }
-    
-    // Check for text block end
-    if (inTextBlock && bytes[i] === textEnd[0] && bytes[i + 1] === textEnd[1]) {
-      inTextBlock = false;
+function extractTextFromPdfBytes(bytes: Uint8Array): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const extractedParts: string[] = [];
       
-      // Try to clean and decode the text block
-      const cleanedBlock = textBlockContent
-        .replace(/[^\x20-\x7E\xA0-\xFF]/g, ' ') // Keep only printable ASCII and extended Latin
-        .replace(/\s+/g, ' ');
+      // Approach 1: Look for text between parentheses (PDF string objects)
+      // Convert bytes to string first
+      const pdfString = new TextDecoder('utf-8').decode(bytes);
+      const parenthesisRegex = /\(([^()\\]*(?:\\.[^()\\]*)*)\)/g;
+      let match;
       
-      if (cleanedBlock.trim().length > 0) {
-        textParts.push(cleanedBlock);
+      while ((match = parenthesisRegex.exec(pdfString)) !== null) {
+        if (match[1].length > 3) { // Only consider strings of reasonable length
+          let extractedText = match[1]
+            .replace(/\\n/g, ' ')
+            .replace(/\\r/g, ' ')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\\(/g, '(')
+            .replace(/\\\)/g, ')')
+            .trim();
+          
+          if (extractedText.length > 0 && !/^\d+$/.test(extractedText)) {
+            extractedParts.push(extractedText);
+          }
+        }
       }
       
-      i += 1; // Skip the 'T' in 'ET'
-      continue;
-    }
-    
-    // Collect content within text block
-    if (inTextBlock) {
-      // Only collect printable ASCII characters
-      if (bytes[i] >= 32 && bytes[i] <= 126) {
-        textBlockContent += String.fromCharCode(bytes[i]);
+      // Approach 2: Look for text blocks between BT and ET operators
+      const btIndex = [];
+      const etIndex = [];
+      
+      // Find all BT and ET positions
+      for (let i = 0; i < bytes.length - 1; i++) {
+        if (bytes[i] === 66 && bytes[i + 1] === 84) { // 'BT'
+          btIndex.push(i);
+        } else if (bytes[i] === 69 && bytes[i + 1] === 84) { // 'ET'
+          etIndex.push(i);
+        }
       }
-    }
-    
-    // Collect regular text outside of text blocks
-    // Look for sequences of readable characters
-    if (bytes[i] >= 32 && bytes[i] <= 126) {
-      currentText += String.fromCharCode(bytes[i]);
-    } else {
-      if (currentText.length > 5) { // Only keep sequences of reasonable length
-        textParts.push(currentText);
+      
+      // Process text blocks
+      for (let i = 0; i < Math.min(btIndex.length, etIndex.length); i++) {
+        if (etIndex[i] > btIndex[i]) {
+          const blockBytes = bytes.slice(btIndex[i] + 2, etIndex[i]);
+          const blockText = new TextDecoder('utf-8').decode(blockBytes);
+          
+          // Extract text objects (Tj, TJ operators)
+          const textMatches = blockText.match(/\([^)]+\)[\s]*T[jJ]/g);
+          if (textMatches) {
+            for (const match of textMatches) {
+              let text = match.substring(1, match.lastIndexOf(')'))
+                .replace(/\\n/g, ' ')
+                .replace(/\\r/g, ' ')
+                .replace(/\\\\/g, '\\')
+                .replace(/\\\(/g, '(')
+                .replace(/\\\)/g, ')')
+                .trim();
+              
+              if (text.length > 0) {
+                extractedParts.push(text);
+              }
+            }
+          }
+        }
       }
-      currentText = '';
+      
+      // Approach 3: Scan for ASCII text sequences
+      let currentText = '';
+      for (let i = 0; i < bytes.length; i++) {
+        // Only collect printable ASCII characters
+        if (bytes[i] >= 32 && bytes[i] <= 126) {
+          currentText += String.fromCharCode(bytes[i]);
+        } else {
+          if (currentText.length >= 4 && /[a-zA-Z]{2,}/.test(currentText)) {
+            extractedParts.push(currentText);
+          }
+          currentText = '';
+        }
+      }
+      
+      // Join all extracted parts and return
+      const result = extractedParts.join(' ');
+      resolve(result);
+    } catch (error) {
+      console.error("Error in extractTextFromPdfBytes:", error);
+      resolve("");
     }
-  }
-  
-  // Add any remaining text
-  if (currentText.length > 5) {
-    textParts.push(currentText);
-  }
-  
-  return textParts.join(' ');
+  });
 }
 
 // Clean and normalize extracted text
 function cleanExtractedText(text: string): string {
+  if (!text) return "";
+  
   return text
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '') // Remove control chars
-    .replace(/(\(cid:\d+\)|\[\d+\])/g, '') // Remove CID references
-    .replace(/\\n/g, '\n') // Replace literal "\n" with actual line breaks
-    .replace(/\\t/g, '\t') // Replace literal "\t" with actual tabs
-    .replace(/\\r/g, '') // Remove carriage returns
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF]/g, ' ') // Keep only common ASCII and Latin characters
+    // Remove control characters
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    // Remove repeated whitespace
+    .replace(/\s+/g, ' ')
+    // Remove weird markers
+    .replace(/(\(cid:\d+\)|\[\d+\])/g, '')
+    // Remove single non-word characters surrounded by spaces
+    .replace(/\s[^\w\s]\s/g, ' ')
+    // Remove very short "words" that are likely not real words
+    .replace(/\s[a-zA-Z]{1,2}\s/g, ' ')
+    // Remove strings that are just numbers
+    .replace(/\s\d+\s/g, ' ')
+    // Replace multiple spaces with a single space
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
 // Basic language detection
-function detectTextLanguage(text: string): string {
-  // Basic detection based on common words
-  const normalizedText = text.toLowerCase();
+function detectLanguage(text: string): string {
+  if (!text || text.length < 50) return "english"; // Default
+  
+  const sample = text.toLowerCase().substring(0, 1000);
+  
+  // Common words in different languages
   const languages = [
-    { name: 'english', words: ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this'], count: 0 },
-    { name: 'spanish', words: ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una'], count: 0 },
-    { name: 'french', words: ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une'], count: 0 }
+    { name: 'english', words: ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this', 'with'], count: 0 },
+    { name: 'spanish', words: ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una', 'para'], count: 0 },
+    { name: 'french', words: ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une', 'pour'], count: 0 },
+    { name: 'german', words: ['der', 'die', 'das', 'und', 'ist', 'in', 'zu', 'den', 'mit', 'für'], count: 0 }
   ];
   
-  // Count occurrences of common words for each language
+  // Count occurrences of common words
   for (const lang of languages) {
     for (const word of lang.words) {
       const regex = new RegExp(`\\b${word}\\b`, 'g');
-      const matches = normalizedText.match(regex);
+      const matches = sample.match(regex);
       if (matches) {
         lang.count += matches.length;
       }
@@ -347,5 +350,5 @@ function detectTextLanguage(text: string): string {
   languages.sort((a, b) => b.count - a.count);
   console.log(`Language detection results: ${languages.map(l => `${l.name}=${l.count}`).join(', ')}`);
   
-  return languages[0].count > 0 ? languages[0].name : 'english'; // Default to English if no matches
+  return languages[0].count > 0 ? languages[0].name : 'english';
 }
