@@ -98,40 +98,46 @@ Deno.serve(async (req) => {
     // Convert the blob to ArrayBuffer for PDF.js processing
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Initialize PDF.js - Fixed to properly initialize without setting workerSrc
-    // PDF.js in ESM mode doesn't require explicit worker settings
+    // Initialize PDF.js without worker configuration
     console.log('Initializing PDF.js')
     
     try {
       console.log('Parsing PDF using PDF.js')
       
-      // Load the PDF document
+      // Load the PDF document directly without setting worker
       const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
       const pdfDocument = await loadingTask.promise
       
       console.log(`PDF loaded successfully. Number of pages: ${pdfDocument.numPages}`)
       
-      // Extract text from all pages
+      // Extract text from all pages - FOCUSED ON GETTING FULL TEXT CONTENT
       let fullText = ''
+      
+      // Process all pages to extract text
       for (let i = 1; i <= pdfDocument.numPages; i++) {
         console.log(`Processing page ${i}/${pdfDocument.numPages}`)
         const page = await pdfDocument.getPage(i)
         const textContent = await page.getTextContent()
         
         // Concatenate the text items with proper spacing
-        const textItems = textContent.items.map((item) => {
-          // @ts-ignore - TextItem type might not be recognized in Deno
-          return item.str || ''
-        })
+        const pageText = textContent.items
+          .map((item) => {
+            // @ts-ignore - TextItem type might not be recognized in Deno
+            return (item.str || '').trim()
+          })
+          .filter(text => text.length > 0)
+          .join(' ')
         
-        const pageText = textItems.join(' ')
         fullText += pageText + '\n\n' // Add double newline between pages
+        console.log(`Page ${i} text length: ${pageText.length} characters`)
       }
       
-      console.log(`Extracted text length: ${fullText.length} characters`)
-      console.log('Text preview:', fullText.substring(0, 200))
+      // Log text extraction results
+      console.log(`Extracted total text length: ${fullText.length} characters`)
+      console.log('Text preview (first 200 chars):', fullText.substring(0, 200))
       
       if (fullText.length > 100) {
+        // Store the extracted full text content
         await storeExtractedText(numericLectureId, fullText, isProfessorLecture)
         
         return new Response(
