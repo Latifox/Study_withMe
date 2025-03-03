@@ -404,6 +404,38 @@ export type Database = {
           },
         ]
       }
+      student_enrolled_courses: {
+        Row: {
+          course_id: number
+          created_at: string
+          id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          course_id: number
+          created_at?: string
+          id?: never
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          course_id?: number
+          created_at?: string
+          id?: never
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_enrolled_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "professor_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_plans: {
         Row: {
           created_at: string
