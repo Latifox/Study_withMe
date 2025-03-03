@@ -1,183 +1,250 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1'
-// Fix the PDF.js import - use the default export instead of named export
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm'
-import { corsHeaders } from '../_shared/cors.ts'
-// Fix import to use the correct export name from gptAnalyzer
-import { analyzeTextWithGPT } from './gptAnalyzer.ts'
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js'
+// Configure CORS headers for browser requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-// Maximum text length that can be handled directly (1MB)
-const MAX_DIRECT_TEXT_LENGTH = 1000000;
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-export const handler = async (req: Request) => {
+// Define types for function parameters
+interface ExtractPdfParams {
+  filePath: string
+  lectureId: string
+  isProfessorLecture: boolean
+}
+
+Deno.serve(async (req) => {
+  console.log('PDF extraction function started')
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request for CORS preflight')
-    return new Response(null, {
-      headers: corsHeaders,
-    })
+    console.log('Handling OPTIONS request')
+    return new Response(null, { headers: corsHeaders })
   }
-
+  
   try {
-    console.log('Starting PDF text extraction process')
-    const { filePath, lectureId, isProfessorLecture = false } = await req.json()
+    // Parse request body
+    const params = await req.json() as ExtractPdfParams
+    console.log('Request parameters:', params)
     
-    if (!filePath || !lectureId) {
-      const errorMsg = `Missing required fields: ${!filePath ? 'filePath' : ''} ${!lectureId ? 'lectureId' : ''}`
-      console.error(errorMsg)
+    if (!params.filePath || !params.lectureId) {
+      console.error('Missing required parameters')
       return new Response(
-        JSON.stringify({ success: false, error: errorMsg }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Missing required parameters: filePath or lectureId' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
       )
     }
     
-    console.log(`Processing PDF extraction for: filePath=${filePath}, lectureId=${lectureId}, isProfessorLecture=${isProfessorLecture}`)
+    const { filePath, lectureId, isProfessorLecture } = params
+    const numericLectureId = parseInt(lectureId)
     
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    if (isNaN(numericLectureId)) {
+      console.error('Invalid lecture ID:', lectureId)
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid lecture ID format' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      )
+    }
     
-    // Get PDF file from storage
-    console.log(`Fetching PDF from storage: ${filePath}`)
-    const { data: fileData, error: fileError } = await supabase.storage
+    console.log(`Processing PDF from path: ${filePath} for lecture ID: ${numericLectureId} (isProfessor: ${isProfessorLecture})`)
+    
+    // Step 1: Download the PDF from storage
+    console.log('Downloading PDF from storage')
+    const { data: fileData, error: fileError } = await supabase
+      .storage
       .from('lecture_pdfs')
       .download(filePath)
     
-    if (fileError || !fileData) {
-      const errorMsg = `Failed to download PDF file: ${fileError?.message || 'File not found'}`
-      console.error(errorMsg)
+    if (fileError) {
+      console.error('Error downloading PDF:', fileError)
       return new Response(
-        JSON.stringify({ success: false, error: errorMsg }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        JSON.stringify({ success: false, error: `Failed to download PDF: ${fileError.message}` }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
       )
     }
     
-    console.log('Successfully downloaded PDF, beginning text extraction')
+    if (!fileData) {
+      console.error('No file data received')
+      return new Response(
+        JSON.stringify({ success: false, error: 'No file data received' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      )
+    }
     
-    // Extract text from PDF
-    const pdfBytes = new Uint8Array(await fileData.arrayBuffer())
-    const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise
+    console.log('PDF downloaded successfully, size:', fileData.size)
     
-    console.log(`PDF loaded successfully. Total pages: ${pdf.numPages}`)
+    // Step 2: Convert PDF to ArrayBuffer for PDF.js
+    const arrayBuffer = await fileData.arrayBuffer()
     
-    let extractedText = ''
+    // Initialize PDF.js worker
+    console.log('Initializing PDF.js')
+    const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js`
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
     
-    // Extract text from each page
-    for (let i = 1; i <= pdf.numPages; i++) {
-      console.log(`Processing page ${i} of ${pdf.numPages}`)
-      const page = await pdf.getPage(i)
-      const content = await page.getTextContent()
-      const pageText = content.items
-        .map((item: any) => (item.str || '').trim())
+    // Step 3: Use PDF.js to extract text content
+    console.log('Loading PDF document')
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+    const pdfDocument = await loadingTask.promise
+    
+    console.log(`PDF loaded successfully. Number of pages: ${pdfDocument.numPages}`)
+    
+    // Extract text from all pages
+    let fullText = ''
+    for (let i = 1; i <= pdfDocument.numPages; i++) {
+      console.log(`Processing page ${i} of ${pdfDocument.numPages}`)
+      const page = await pdfDocument.getPage(i)
+      const textContent = await page.getTextContent()
+      const pageText = textContent.items
+        .map((item: any) => item.str)
         .join(' ')
       
-      extractedText += pageText + '\n\n'
+      fullText += pageText + '\n\n'
     }
     
-    if (!extractedText || extractedText.trim().length === 0) {
-      const errorMsg = 'No text could be extracted from the PDF'
-      console.error(errorMsg)
+    console.log(`Text extraction complete. Extracted ${fullText.length} characters`)
+    
+    if (fullText.length === 0) {
+      console.error('No text content extracted from PDF')
       return new Response(
-        JSON.stringify({ success: false, error: errorMsg }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        JSON.stringify({ success: false, error: 'No text extracted from PDF' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 422 
+        }
       )
     }
     
-    console.log(`Successfully extracted ${extractedText.length} characters from PDF`)
+    // Step 4: Determine language of the content (simple detection)
+    const detectLanguage = (text: string): string => {
+      // Very basic detection - this could be improved with actual language detection libraries
+      const commonEnglishWords = ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this'];
+      const commonSpanishWords = ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una'];
+      const commonFrenchWords = ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une'];
+      
+      const normalizedText = text.toLowerCase();
+      let englishCount = 0;
+      let spanishCount = 0;
+      let frenchCount = 0;
+      
+      commonEnglishWords.forEach(word => {
+        const regex = new RegExp(`\\b${word}\\b`, 'g');
+        const matches = normalizedText.match(regex);
+        if (matches) englishCount += matches.length;
+      });
+      
+      commonSpanishWords.forEach(word => {
+        const regex = new RegExp(`\\b${word}\\b`, 'g');
+        const matches = normalizedText.match(regex);
+        if (matches) spanishCount += matches.length;
+      });
+      
+      commonFrenchWords.forEach(word => {
+        const regex = new RegExp(`\\b${word}\\b`, 'g');
+        const matches = normalizedText.match(regex);
+        if (matches) frenchCount += matches.length;
+      });
+      
+      if (englishCount > spanishCount && englishCount > frenchCount) return 'english';
+      if (spanishCount > englishCount && spanishCount > frenchCount) return 'spanish';
+      if (frenchCount > englishCount && frenchCount > spanishCount) return 'french';
+      
+      return 'english'; // Default to English if unsure
+    };
     
-    // Determine which table to update based on isProfessorLecture
+    const detectedLanguage = detectLanguage(fullText);
+    console.log(`Detected language: ${detectedLanguage}`);
+    
+    // Step 5: Store the extracted text in the database
+    console.log('Storing extracted text in database')
+    
     const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
     
-    // Handle large texts by storing directly
-    if (extractedText.length <= MAX_DIRECT_TEXT_LENGTH) {
-      console.log(`Storing extracted text directly in ${tableName} table for lecture ID ${lectureId}`)
-      
-      // Update the lecture record with the extracted text
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({ content: extractedText })
-        .eq('id', parseInt(lectureId))
-      
-      if (updateError) {
-        const errorMsg = `Failed to update lecture with extracted text: ${updateError.message}`
-        console.error(errorMsg)
-        return new Response(
-          JSON.stringify({ success: false, error: errorMsg }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
-      }
-      
-      // Verify that the content was actually saved
-      const { data: verificationData, error: verificationError } = await supabase
-        .from(tableName)
-        .select('content')
-        .eq('id', parseInt(lectureId))
-        .single()
-      
-      if (verificationError || !verificationData?.content) {
-        const errorMsg = `Failed to verify content was saved: ${verificationError?.message || 'No content found after update'}`
-        console.error(errorMsg)
-        return new Response(
-          JSON.stringify({ success: false, error: errorMsg }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
-      }
-      
-      console.log(`Content successfully saved and verified in the database with ${verificationData.content.length} characters`)
-    } else {
-      // For very large texts, potentially summarize or chunk the text
-      console.log(`Extracted text exceeds direct storage limit (${extractedText.length} > ${MAX_DIRECT_TEXT_LENGTH}), truncating...`)
-      
-      // Just store a truncated version for now
-      const truncatedText = extractedText.substring(0, MAX_DIRECT_TEXT_LENGTH)
-      
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({ content: truncatedText })
-        .eq('id', parseInt(lectureId))
-      
-      if (updateError) {
-        const errorMsg = `Failed to update lecture with truncated text: ${updateError.message}`
-        console.error(errorMsg)
-        return new Response(
-          JSON.stringify({ success: false, error: errorMsg }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
-      }
-      
-      console.log(`Truncated content saved to database (${truncatedText.length} characters)`)
+    const { data: updateData, error: updateError } = await supabase
+      .from(tableName)
+      .update({ 
+        content: fullText,
+        original_language: detectedLanguage
+      })
+      .eq('id', numericLectureId)
+      .select()
+    
+    if (updateError) {
+      console.error(`Error updating ${tableName}:`, updateError)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to update lecture content: ${updateError.message}` 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      )
     }
     
-    // Delay to ensure database write completes
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    if (!updateData || updateData.length === 0) {
+      console.error('No rows updated')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `No rows updated. Lecture ID ${numericLectureId} not found in ${tableName} table.` 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      )
+    }
     
-    // Return success response with the extracted text
-    console.log('PDF extraction process completed successfully')
+    console.log('Text successfully stored in database')
+    
+    // Return success response
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully extracted ${extractedText.length} characters from PDF`,
-        textLength: extractedText.length
+        message: 'PDF extraction complete and content stored in database',
+        contentLength: fullText.length,
+        language: detectedLanguage,
+        lectureId: numericLectureId
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     )
     
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error(`Error in PDF extraction: ${errorMessage}`)
-    console.error(error)
-    
+    console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: `Error extracting PDF text: ${errorMessage}`,
-        stack: error instanceof Error ? error.stack : undefined
+        error: `Unexpected error: ${error.message || 'Unknown error'}` 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
     )
   }
-}
+})
