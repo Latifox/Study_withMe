@@ -36,6 +36,7 @@ const QuizConfiguration = () => {
   const navigate = useNavigate();
   const { courseId, lectureId } = useParams();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { data: lecture, isError, error } = useQuery({
     queryKey: ["lecture", lectureId],
@@ -67,9 +68,15 @@ const QuizConfiguration = () => {
 
   const onSubmit = async (data: QuizConfigFormValues) => {
     try {
+      setIsSubmitting(true);
       toast({
         title: "Generating Quiz",
         description: "Please wait while we generate your quiz...",
+      });
+      
+      console.log('Submitting quiz config:', { 
+        config: data, 
+        lectureId: lectureId 
       });
       
       // Store config in localStorage
@@ -80,11 +87,14 @@ const QuizConfiguration = () => {
       
       navigate(`/course/${courseId}/lecture/${lectureId}/take-quiz`);
     } catch (error) {
+      console.error('Error preparing quiz:', error);
       toast({
         title: "Error",
-        description: "Failed to generate quiz. Please try again.",
+        description: "Failed to prepare quiz. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -273,8 +283,9 @@ const QuizConfiguration = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-lg mt-4"
+                  disabled={isSubmitting}
                 >
-                  Generate Quiz
+                  {isSubmitting ? "Preparing Quiz..." : "Generate Quiz"}
                 </Button>
               </form>
             </Form>

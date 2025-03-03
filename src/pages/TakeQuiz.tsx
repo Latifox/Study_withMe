@@ -40,9 +40,9 @@ const TakeQuiz = () => {
         description: "Quiz configuration not found. Please try again.",
         variant: "destructive",
       });
-      navigate(`/lecture/${lectureId}`);
+      navigate(`/course/${courseId}`);
     }
-  }, [lectureId]);
+  }, [lectureId, courseId, navigate, toast]);
 
   const [quizState, setQuizState] = useState<QuizState>({
     questions: [],
@@ -64,6 +64,8 @@ const TakeQuiz = () => {
       const generateQuiz = async () => {
         try {
           setIsLoading(true);
+          console.log('Generating quiz with config:', quizConfig);
+          
           const { data, error } = await supabase.functions.invoke('generate-quiz', {
             body: { 
               lectureId: quizConfig.lectureId, 
@@ -71,7 +73,17 @@ const TakeQuiz = () => {
             },
           });
 
-          if (error) throw error;
+          if (error) {
+            console.error('Error invoking function:', error);
+            throw error;
+          }
+          
+          console.log('Quiz generation response:', data);
+          
+          if (!data || !data.quiz) {
+            throw new Error('Invalid quiz data returned');
+          }
+          
           setQuizState(prev => ({ ...prev, questions: data.quiz }));
         } catch (error) {
           console.error('Error generating quiz:', error);
@@ -80,7 +92,7 @@ const TakeQuiz = () => {
             description: "Failed to generate quiz. Please try again.",
             variant: "destructive",
           });
-          navigate(`/lecture/${lectureId}`);
+          navigate(`/course/${courseId}`);
         } finally {
           setIsLoading(false);
         }
@@ -88,7 +100,7 @@ const TakeQuiz = () => {
 
       generateQuiz();
     }
-  }, [quizConfig]);
+  }, [quizConfig, courseId, navigate, toast]);
 
   useEffect(() => {
     if (!quizState.showResults && quizState.timeRemaining > 0) {
