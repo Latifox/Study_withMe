@@ -94,148 +94,49 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
 
-    // Convert the blob to an ArrayBuffer for processing
+    // Convert the blob to ArrayBuffer and then to Base64
     const arrayBuffer = await fileData.arrayBuffer()
     const base64String = arrayBufferToBase64(arrayBuffer)
     
-    // Use PDF.js extraction service specifically optimized for selectable text
-    console.log('Extracting text using PDF.js extraction service')
+    // Try extraction methods in sequence until one succeeds
+
+    // Method 1: Try dedicated text extraction service
+    console.log('Attempting text extraction with primary service')
     try {
-      const response = await fetch('https://pdf-extract.vercel.app/api/extract', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          pdfData: base64String,
-          extractMode: 'text' // Explicitly request text extraction mode
-        })
-      })
-      
-      if (!response.ok) {
-        console.error(`PDF.js extraction service error: ${response.status} ${response.statusText}`)
-        throw new Error(`PDF.js extraction service error: ${response.status}`)
-      }
-      
-      const extractionResult = await response.json()
-      const extractedText = extractionResult.text || ''
-      
-      console.log('Text extraction result, text length:', extractedText.length)
-      console.log('Text preview:', extractedText.substring(0, 200))
-      
-      if (extractedText && extractedText.length > 100) {
-        console.log('Successful text extraction, updating database...')
-        
-        // Store the extracted text in the appropriate table
-        const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
-        
-        const { error: updateError } = await supabase
-          .from(tableName)
-          .update({ 
-            content: extractedText,
-            original_language: 'english' // Default language
-          })
-          .eq('id', numericLectureId)
-        
-        if (updateError) {
-          console.error(`Error updating ${tableName}:`, updateError)
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: `Failed to save PDF content: ${updateError.message}` 
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 500 
-            }
-          )
-        }
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'PDF content extracted and saved successfully',
-            contentLength: extractedText.length,
-            textPreview: extractedText.substring(0, 200) + '...'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      } else {
-        console.log('PDF.js extraction returned limited or no text, trying alternative methods')
-      }
-    } catch (error) {
-      console.error('Error with PDF.js extraction:', error)
-      // Continue to fallback methods
-    }
-    
-    // Fallback method 1: Use text extraction service as backup
-    console.log('Trying fallback text extraction service')
-    try {
-      const fallbackResponse = await fetch('https://pdfservice.vercel.app/api/extract', {
+      const response = await fetch('https://pdfservice.vercel.app/api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pdfData: base64String })
       })
       
-      if (!fallbackResponse.ok) {
-        throw new Error(`Fallback service error: ${fallbackResponse.status}`)
+      if (!response.ok) {
+        throw new Error(`Service error: ${response.status}`)
       }
       
-      const fallbackResult = await fallbackResponse.json()
-      const fallbackText = fallbackResult.text || ''
+      const result = await response.json()
+      const extractedText = result.text || ''
       
-      console.log('Fallback extraction result, text length:', fallbackText.length)
-      console.log('Text preview:', fallbackText.substring(0, 200))
+      console.log('Primary extraction result, text length:', extractedText.length)
       
-      if (fallbackText && fallbackText.length > 100) {
-        console.log('Successful fallback text extraction, updating database...')
-        
-        // Store the extracted text
-        const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
-        
-        const { error: updateError } = await supabase
-          .from(tableName)
-          .update({ 
-            content: fallbackText,
-            original_language: 'english'
-          })
-          .eq('id', numericLectureId)
-        
-        if (updateError) {
-          console.error(`Error updating ${tableName}:`, updateError)
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: `Failed to save PDF content: ${updateError.message}` 
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 500 
-            }
-          )
-        }
-        
+      if (extractedText && extractedText.length > 100) {
+        await storeExtractedText(numericLectureId, extractedText, isProfessorLecture)
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             success: true, 
-            message: 'PDF content extracted and saved (fallback method)',
-            contentLength: fallbackText.length,
-            textPreview: fallbackText.substring(0, 200) + '...'
+            message: 'PDF content extracted and saved successfully',
+            contentLength: extractedText.length,
+            textPreview: extractedText.substring(0, 200) + '...'
           }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     } catch (error) {
-      console.error('Error with fallback extraction:', error)
-      // Continue to last resort method
+      console.error('Error with primary extraction service:', error)
+      // Continue to next method
     }
     
-    // Last resort: Use RapidAPI service (different approach)
-    console.log('Trying last resort extraction via RapidAPI')
+    // Method 2: Try RapidAPI extraction service
+    console.log('Attempting text extraction with RapidAPI service')
     try {
       const rapidApiResponse = await fetch('https://pdf-to-text-converter.p.rapidapi.com/api/pdf-to-text', {
         method: 'POST',
@@ -261,33 +162,7 @@ Deno.serve(async (req) => {
       console.log('Text preview:', rapidApiText.substring(0, 200))
       
       if (rapidApiText && rapidApiText.length > 100) {
-        console.log('Successful RapidAPI text extraction, updating database...')
-        
-        // Store the extracted text
-        const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
-        
-        const { error: updateError } = await supabase
-          .from(tableName)
-          .update({ 
-            content: rapidApiText,
-            original_language: 'english'
-          })
-          .eq('id', numericLectureId)
-        
-        if (updateError) {
-          console.error(`Error updating ${tableName}:`, updateError)
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: `Failed to save PDF content: ${updateError.message}` 
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 500 
-            }
-          )
-        }
-        
+        await storeExtractedText(numericLectureId, rapidApiText, isProfessorLecture)
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -302,7 +177,42 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.error('Error with RapidAPI extraction:', error)
-      // Continue to absolute last resort
+      // Continue to final method
+    }
+    
+    // Method 3: Try another fallback service
+    console.log('Attempting text extraction with fallback service')
+    try {
+      const fallbackResponse = await fetch('https://text-extraction.vercel.app/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfData: base64String })
+      })
+      
+      if (!fallbackResponse.ok) {
+        throw new Error(`Fallback service error: ${fallbackResponse.status}`)
+      }
+      
+      const fallbackResult = await fallbackResponse.json()
+      const fallbackText = fallbackResult.text || ''
+      
+      console.log('Fallback extraction result, text length:', fallbackText.length)
+      
+      if (fallbackText && fallbackText.length > 100) {
+        await storeExtractedText(numericLectureId, fallbackText, isProfessorLecture)
+        return new Response(
+          JSON.stringify({
+            success: true, 
+            message: 'PDF content extracted and saved using fallback service',
+            contentLength: fallbackText.length,
+            textPreview: fallbackText.substring(0, 200) + '...'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } catch (error) {
+      console.error('Error with fallback extraction service:', error)
+      // All methods failed
     }
     
     // If all extraction methods fail, notify the user
@@ -331,6 +241,30 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+/**
+ * Helper function to store extracted text in the database
+ */
+async function storeExtractedText(lectureId: number, extractedText: string, isProfessorLecture: boolean): Promise<void> {
+  console.log(`Storing extracted text for lecture ID ${lectureId}, text length: ${extractedText.length}`)
+  
+  const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
+  
+  const { error } = await supabase
+    .from(tableName)
+    .update({ 
+      content: extractedText,
+      original_language: 'english' // Default language
+    })
+    .eq('id', lectureId)
+  
+  if (error) {
+    console.error(`Error updating ${tableName}:`, error)
+    throw error
+  }
+  
+  console.log(`Successfully stored text in ${tableName} for lecture ID ${lectureId}`)
+}
 
 /**
  * Convert ArrayBuffer to Base64 string for transmission
