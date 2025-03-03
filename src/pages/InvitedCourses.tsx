@@ -109,6 +109,9 @@ const InvitedCourses = () => {
                       <CardTitle className="text-xl mb-1">{enrollment.course.title}</CardTitle>
                       <CardDescription className="flex flex-col gap-1">
                         <span>Joined on {new Date(enrollment.course.created_at).toLocaleDateString()}</span>
+                        {enrollment.course.course_code && (
+                          <span className="text-purple-600 font-medium">Course Code: {enrollment.course.course_code}</span>
+                        )}
                       </CardDescription>
                     </div>
                   </CardHeader>
