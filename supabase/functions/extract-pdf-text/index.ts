@@ -94,70 +94,54 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Use OpenAI to extract and process the PDF content
     try {
-      // The PDF data is available now, call OpenAI to extract the text
-      console.log('Sending PDF to OpenAI for text extraction...');
+      // Convert PDF to text using PDF.js library from CDN
+      console.log('Extracting text from PDF...')
       
-      // Convert the blob to base64 for sending to OpenAI
-      const buffer = await fileData.arrayBuffer();
-      const base64Data = arrayBufferToBase64(buffer);
+      // Import PDF.js as a remote module
+      const pdfJS = await import('https://cdn.skypack.dev/pdfjs-dist@2.14.305/build/pdf.js')
       
-      // Get the OpenAI API key from environment variables
-      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-      if (!openaiApiKey) {
-        throw new Error('OPENAI_API_KEY environment variable not set');
+      // Set up the worker source - needed for PDF.js to work
+      const pdfWorker = await import('https://cdn.skypack.dev/pdfjs-dist@2.14.305/build/pdf.worker.js')
+      pdfJS.GlobalWorkerOptions.workerSrc = pdfWorker
+      
+      // Convert Blob to ArrayBuffer
+      const arrayBuffer = await fileData.arrayBuffer()
+      
+      // Load the PDF document
+      const loadingTask = pdfJS.getDocument({ data: arrayBuffer })
+      const pdfDocument = await loadingTask.promise
+      
+      console.log(`PDF loaded. Total pages: ${pdfDocument.numPages}`)
+      
+      let extractedText = ''
+      
+      // Extract text from each page
+      for (let i = 1; i <= pdfDocument.numPages; i++) {
+        const page = await pdfDocument.getPage(i)
+        const textContent = await page.getTextContent()
+        
+        // Concatenate the text items
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ')
+        
+        extractedText += pageText + '\n\n'
+        
+        if (i % 10 === 0 || i === pdfDocument.numPages) {
+          console.log(`Processed page ${i} of ${pdfDocument.numPages}`)
+        }
       }
       
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiApiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4-vision-preview",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extract all the readable text content from this PDF document. Return ONLY the actual text content that a human would read, organized in paragraphs. Do not describe the document or include any metadata. Do not include any notes about the extraction process."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:application/pdf;base64,${base64Data}`
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 4096
-        })
-      });
-      
-      if (!openaiResponse.ok) {
-        const errorData = await openaiResponse.text();
-        console.error('OpenAI API error:', errorData);
-        throw new Error(`OpenAI API error: ${openaiResponse.status} ${errorData}`);
-      }
-      
-      const openaiData = await openaiResponse.json();
-      console.log('OpenAI response received');
-      
-      // Extract the text content from the OpenAI response
-      const extractedText = openaiData.choices[0].message.content.trim();
-      console.log(`Extracted ${extractedText.length} characters of text`);
-      console.log('First 200 characters:', extractedText.substring(0, 200));
+      console.log(`Extracted ${extractedText.length} characters of text`)
+      console.log('First 200 characters:', extractedText.substring(0, 200))
       
       // Detect language
-      const detectedLanguage = detectLanguage(extractedText);
+      const detectedLanguage = detectLanguage(extractedText)
       
       // Store the extracted text in the database
-      console.log('Storing extracted text in database');
-      const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
+      console.log('Storing extracted text in database')
+      const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
       
       const { data: updateData, error: updateError } = await supabase
         .from(tableName)
@@ -166,10 +150,10 @@ Deno.serve(async (req) => {
           original_language: detectedLanguage
         })
         .eq('id', numericLectureId)
-        .select();
+        .select()
       
       if (updateError) {
-        console.error(`Error updating ${tableName}:`, updateError);
+        console.error(`Error updating ${tableName}:`, updateError)
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -179,11 +163,11 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500 
           }
-        );
+        )
       }
       
       if (!updateData || updateData.length === 0) {
-        console.error('No rows updated');
+        console.error('No rows updated')
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -193,10 +177,10 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 404 
           }
-        );
+        )
       }
       
-      console.log('Text successfully stored in database');
+      console.log('Text successfully stored in database')
       
       // Return success response
       return new Response(
@@ -211,22 +195,22 @@ Deno.serve(async (req) => {
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-      );
-    } catch (openaiError) {
-      console.error('Error in OpenAI processing:', openaiError);
+      )
+    } catch (extractionError) {
+      console.error('Error extracting text from PDF:', extractionError)
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Error extracting text with OpenAI: ${openaiError.message}` 
+          error: `Error extracting text from PDF: ${extractionError.message}` 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
-      );
+      )
     }
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -236,25 +220,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
-    );
+    )
   }
-});
-
-// Convert ArrayBuffer to base64 string
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const uint8Array = new Uint8Array(buffer);
-  let binaryString = '';
-  for (let i = 0; i < uint8Array.length; i++) {
-    binaryString += String.fromCharCode(uint8Array[i]);
-  }
-  return btoa(binaryString);
-}
+})
 
 // Basic language detection function
 function detectLanguage(text: string): string {
-  if (!text || text.length < 50) return "english"; // Default
+  if (!text || text.length < 50) return "english" // Default
   
-  const sample = text.toLowerCase().substring(0, 1000);
+  const sample = text.toLowerCase().substring(0, 1000)
   
   // Common words in different languages
   const languages = [
@@ -262,22 +236,22 @@ function detectLanguage(text: string): string {
     { name: 'spanish', words: ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una', 'para'], count: 0 },
     { name: 'french', words: ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une', 'pour'], count: 0 },
     { name: 'german', words: ['der', 'die', 'das', 'und', 'ist', 'in', 'zu', 'den', 'mit', 'für'], count: 0 }
-  ];
+  ]
   
   // Count occurrences of common words
   for (const lang of languages) {
     for (const word of lang.words) {
-      const regex = new RegExp(`\\b${word}\\b`, 'g');
-      const matches = sample.match(regex);
+      const regex = new RegExp(`\\b${word}\\b`, 'g')
+      const matches = sample.match(regex)
       if (matches) {
-        lang.count += matches.length;
+        lang.count += matches.length
       }
     }
   }
   
   // Return the language with the highest count
-  languages.sort((a, b) => b.count - a.count);
-  console.log(`Language detection results: ${languages.map(l => `${l.name}=${l.count}`).join(', ')}`);
+  languages.sort((a, b) => b.count - a.count)
+  console.log(`Language detection results: ${languages.map(l => `${l.name}=${l.count}`).join(', ')}`)
   
-  return languages[0].count > 0 ? languages[0].name : 'english';
+  return languages[0].count > 0 ? languages[0].name : 'english'
 }
