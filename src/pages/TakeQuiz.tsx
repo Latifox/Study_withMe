@@ -24,6 +24,11 @@ interface QuizState {
   timeRemaining: number;
 }
 
+interface QuizResponse {
+  quiz: Question[];
+  quizId?: number;
+}
+
 const TakeQuiz = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -85,16 +90,25 @@ const TakeQuiz = () => {
             // Use the most recent quiz
             console.log('Using existing quiz:', existingQuizzes[0]);
             setQuizId(existingQuizzes[0].id);
-            setQuizState(prev => ({ 
-              ...prev, 
-              questions: existingQuizzes[0].quiz_data.quiz 
-            }));
+            
+            // Properly type and access the quiz data
+            const quizData = existingQuizzes[0].quiz_data as QuizResponse;
+            if (quizData && Array.isArray(quizData.quiz)) {
+              setQuizState(prev => ({ 
+                ...prev, 
+                questions: quizData.quiz 
+              }));
+            } else {
+              console.error('Invalid quiz data format:', quizData);
+              throw new Error('Invalid quiz data format');
+            }
+            
             setIsLoading(false);
             return;
           }
           
           // Generate a new quiz
-          const { data, error } = await supabase.functions.invoke('generate-quiz', {
+          const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
             body: { 
               lectureId: quizConfig.lectureId, 
               config: quizConfig.config 
@@ -108,11 +122,14 @@ const TakeQuiz = () => {
           
           console.log('Quiz generation response:', data);
           
-          if (!data || !data.quiz) {
+          if (!data || !Array.isArray(data.quiz)) {
             throw new Error('Invalid quiz data returned');
           }
           
-          setQuizId(data.quizId);
+          if (data.quizId) {
+            setQuizId(data.quizId);
+          }
+          
           setQuizState(prev => ({ ...prev, questions: data.quiz }));
         } catch (error) {
           console.error('Error generating quiz:', error);
@@ -203,7 +220,7 @@ const TakeQuiz = () => {
     setIsLoading(true);
     const generateQuiz = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('generate-quiz', {
+        const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
           body: { 
             lectureId: quizConfig.lectureId, 
             config: quizConfig.config 
@@ -212,11 +229,15 @@ const TakeQuiz = () => {
 
         if (error) throw error;
         
-        if (data.quizId) {
+        if (data && data.quizId) {
           setQuizId(data.quizId);
         }
         
-        setQuizState(prev => ({ ...prev, questions: data.quiz }));
+        if (data && Array.isArray(data.quiz)) {
+          setQuizState(prev => ({ ...prev, questions: data.quiz }));
+        } else {
+          throw new Error('Invalid quiz data format');
+        }
       } catch (error) {
         console.error('Error generating quiz:', error);
         toast({
