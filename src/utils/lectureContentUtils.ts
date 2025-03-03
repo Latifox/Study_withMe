@@ -85,8 +85,15 @@ export const recreateLecture = async (
     throw new Error(`No lecture found with ID: ${oldLectureId}`);
   }
 
-  // Now we know 'data' is not null and has the expected properties
-  const oldLecture = data;
+  // Type assertion to help TypeScript understand that data has the expected shape
+  const oldLecture = data as {
+    [key: string]: any;
+    title: string;
+    content: string;
+    pdf_path: string | null;
+    original_language: string | null;
+  };
+  
   console.log('Retrieved old lecture data:', oldLecture);
 
   try {
@@ -114,8 +121,12 @@ export const recreateLecture = async (
       throw new Error('Failed to create new lecture');
     }
 
-    // Now we know 'newLectureData' is not null and has the expected properties
-    const newLecture = newLectureData;
+    // Type assertion for newLecture
+    const newLecture = newLectureData as {
+      id: number;
+      [key: string]: any;
+    };
+    
     console.log('Created new lecture:', newLecture);
 
     // Create AI config for the new lecture
