@@ -97,73 +97,16 @@ Deno.serve(async (req) => {
     // Convert Blob to ArrayBuffer
     const arrayBuffer = await fileData.arrayBuffer();
     
-    console.log('Loading PDF document');
+    console.log('Extracting text from PDF...');
     
-    // Try a different approach to handle PDF extraction without PDF.js library dependencies
-    // Use a custom implementation to extract text directly
-    let fullText = '';
-    try {
-      // Simple text extraction technique for PDFs
-      // Convert the buffer to a string and look for text markers
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const textDecoder = new TextDecoder('utf-8');
-      const rawText = textDecoder.decode(uint8Array);
-      
-      // Basic PDF text extraction pattern - this is a simplified approach
-      // Extract text between BT (Begin Text) and ET (End Text) markers
-      const textMarkers = rawText.match(/BT([\s\S]*?)ET/g) || [];
-      console.log(`Found ${textMarkers.length} text sections in PDF`);
-      
-      // Extract text content from markers
-      for (const marker of textMarkers) {
-        // Look for text patterns like (text) TJ or Tj
-        const textMatches = marker.match(/\((.*?)\)([ ]?)(TJ|Tj)/g) || [];
-        for (const match of textMatches) {
-          // Extract the text between parentheses
-          const text = match.match(/\((.*?)\)/);
-          if (text && text[1]) {
-            fullText += text[1] + ' ';
-          }
-        }
-      }
-      
-      // If the simple extraction didn't yield much text, try another approach
-      if (fullText.length < 100) {
-        // Scan for text patterns commonly found in PDFs
-        const textBlocks = rawText.match(/\/(T[idmfj]|TJ|Tm)\s*(\[.*?\]|\(.*?\))/g) || [];
-        let extractedText = '';
-        for (const block of textBlocks) {
-          const text = block.match(/\((.*?)\)/);
-          if (text && text[1]) {
-            extractedText += text[1] + ' ';
-          }
-        }
-        if (extractedText.length > fullText.length) {
-          fullText = extractedText;
-        }
-      }
-    } catch (error) {
-      console.error('Error during PDF text extraction:', error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `PDF text extraction failed: ${error.message || 'Unknown error'}` 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
+    // Custom PDF text extraction approach
+    let fullText = await extractTextFromPdf(arrayBuffer);
+    console.log(`Extracted ${fullText.length} characters of text`);
+    
+    if (fullText.length < 100) {
+      console.warn('Extracted text is very short, this might indicate extraction issues');
     }
     
-    // Thoroughly clean the extracted text
-    fullText = fullText
-      .replace(/\s+/g, ' ')          // Replace multiple spaces with a single space
-      .replace(/(\r\n|\n|\r)/gm, '\n') // Normalize line breaks
-      .replace(/[^\x20-\x7E\n]/g, '') // Remove non-ASCII characters except newlines
-      .trim();
-    
-    console.log(`Extracted ${fullText.length} characters of text`);
     console.log('First 200 characters:', fullText.substring(0, 200));
     
     // Simple language detection
@@ -240,6 +183,129 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+/**
+ * Custom PDF text extraction function that uses multiple strategies
+ */
+async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const textDecoder = new TextDecoder('utf-8');
+    
+    // We'll first try to convert the PDF to a string - this isn't perfect
+    // but can help us extract text with regex patterns
+    const rawText = textDecoder.decode(uint8Array);
+    
+    // Combined approach using multiple extraction strategies
+    let extractedText = '';
+    
+    // Strategy 1: Extract text between BT (Begin Text) and ET (End Text) markers
+    try {
+      console.log('Trying BT/ET extraction method...');
+      const textMarkers = rawText.match(/BT([\s\S]*?)ET/g) || [];
+      console.log(`Found ${textMarkers.length} BT/ET text sections`);
+      
+      let btExtractedText = '';
+      for (const marker of textMarkers) {
+        // Look for text patterns like (text) TJ or Tj
+        const textMatches = marker.match(/\((.*?)\)([ ]?)(TJ|Tj)/g) || [];
+        for (const match of textMatches) {
+          // Extract the text between parentheses
+          const text = match.match(/\((.*?)\)/);
+          if (text && text[1]) {
+            btExtractedText += text[1] + ' ';
+          }
+        }
+      }
+      
+      if (btExtractedText.length > 0) {
+        console.log(`BT/ET method extracted ${btExtractedText.length} chars`);
+        extractedText += btExtractedText;
+      }
+    } catch (error) {
+      console.error('Error in BT/ET extraction:', error);
+    }
+    
+    // Strategy 2: Look for text objects with Tj, TJ operators directly
+    try {
+      console.log('Trying direct text operator extraction...');
+      const textOperators = rawText.match(/\/(T[idmfj]|TJ|Tm)\s*(\[.*?\]|\(.*?\))/g) || [];
+      let opExtractedText = '';
+      
+      for (const block of textOperators) {
+        const text = block.match(/\((.*?)\)/);
+        if (text && text[1]) {
+          opExtractedText += text[1] + ' ';
+        }
+      }
+      
+      if (opExtractedText.length > 0) {
+        console.log(`Operator method extracted ${opExtractedText.length} chars`);
+        // Only add this text if it provides significant additional content
+        if (extractedText.length === 0 || 
+            (opExtractedText.length > extractedText.length * 0.2)) {
+          extractedText += ' ' + opExtractedText;
+        }
+      }
+    } catch (error) {
+      console.error('Error in text operator extraction:', error);
+    }
+    
+    // Strategy 3: Unicode text extraction for PDFs that use Unicode
+    try {
+      console.log('Trying Unicode extraction...');
+      // Look for Unicode sequences often used in PDFs
+      const unicodeMatches = rawText.match(/\\u([0-9a-fA-F]{4})/g) || [];
+      if (unicodeMatches.length > 0) {
+        console.log(`Found ${unicodeMatches.length} Unicode sequences`);
+        let unicodeText = '';
+        for (const match of unicodeMatches) {
+          try {
+            const hexValue = match.substring(2); // Remove \u
+            const charCode = parseInt(hexValue, 16);
+            unicodeText += String.fromCharCode(charCode) + ' ';
+          } catch (e) {
+            // Skip invalid Unicode
+          }
+        }
+        
+        if (unicodeText.length > 0) {
+          console.log(`Unicode method extracted ${unicodeText.length} chars`);
+          extractedText += ' ' + unicodeText;
+        }
+      }
+    } catch (error) {
+      console.error('Error in Unicode extraction:', error);
+    }
+    
+    // Strategy 4: Plain text extraction as a fallback
+    if (extractedText.length < 100) {
+      console.log('Using plain text extraction as fallback...');
+      // Simple regex to find likely text (letters + punctuation + spaces)
+      const textBlocks = rawText.match(/[a-zA-Z0-9\s.,;:!?()\-'"\[\]]{10,}/g) || [];
+      let plainText = textBlocks.join(' ');
+      
+      if (plainText.length > 0) {
+        console.log(`Plain text fallback extracted ${plainText.length} chars`);
+        extractedText += ' ' + plainText;
+      }
+    }
+    
+    // Clean up the extracted text
+    const cleanedText = extractedText
+      .replace(/\s+/g, ' ')          // Replace multiple spaces with a single space
+      .replace(/(\r\n|\n|\r)/gm, '\n') // Normalize line breaks
+      .replace(/[^\x20-\x7E\n]/g, '') // Remove non-ASCII characters except newlines
+      .trim();
+    
+    console.log(`Final extracted text length: ${cleanedText.length} characters`);
+    return cleanedText;
+  } catch (error) {
+    console.error('Error in PDF text extraction:', error);
+    // Return any partial text extracted or empty string if complete failure
+    return '';
+  }
+}
 
 // Basic language detection function
 function detectLanguage(text: string): string {
