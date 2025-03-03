@@ -94,43 +94,130 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Convert Blob to ArrayBuffer
-    const arrayBuffer = await fileData.arrayBuffer();
-    
-    console.log('Extracting text from PDF...');
-    
-    // Custom PDF text extraction approach
-    let fullText = await extractTextFromPdf(arrayBuffer);
-    console.log(`Extracted ${fullText.length} characters of text`);
-    
-    if (fullText.length < 100) {
-      console.warn('Extracted text is very short, this might indicate extraction issues');
-    }
-    
-    console.log('First 200 characters:', fullText.substring(0, 200));
-    
-    // Simple language detection
-    const detectedLanguage = detectLanguage(fullText);
-    
-    // Store the extracted text in the database
-    console.log('Storing extracted text in database');
-    const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
-    
-    const { data: updateData, error: updateError } = await supabase
-      .from(tableName)
-      .update({ 
-        content: fullText,
-        original_language: detectedLanguage
-      })
-      .eq('id', numericLectureId)
-      .select();
-    
-    if (updateError) {
-      console.error(`Error updating ${tableName}:`, updateError);
+    // Use OpenAI to extract and process the PDF content
+    try {
+      // The PDF data is available now, call OpenAI to extract the text
+      console.log('Sending PDF to OpenAI for text extraction...');
+      
+      // Convert the blob to base64 for sending to OpenAI
+      const buffer = await fileData.arrayBuffer();
+      const base64Data = arrayBufferToBase64(buffer);
+      
+      // Get the OpenAI API key from environment variables
+      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+      if (!openaiApiKey) {
+        throw new Error('OPENAI_API_KEY environment variable not set');
+      }
+      
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4-vision-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract all the readable text content from this PDF document. Return ONLY the actual text content that a human would read, organized in paragraphs. Do not describe the document or include any metadata. Do not include any notes about the extraction process."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:application/pdf;base64,${base64Data}`
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4096
+        })
+      });
+      
+      if (!openaiResponse.ok) {
+        const errorData = await openaiResponse.text();
+        console.error('OpenAI API error:', errorData);
+        throw new Error(`OpenAI API error: ${openaiResponse.status} ${errorData}`);
+      }
+      
+      const openaiData = await openaiResponse.json();
+      console.log('OpenAI response received');
+      
+      // Extract the text content from the OpenAI response
+      const extractedText = openaiData.choices[0].message.content.trim();
+      console.log(`Extracted ${extractedText.length} characters of text`);
+      console.log('First 200 characters:', extractedText.substring(0, 200));
+      
+      // Detect language
+      const detectedLanguage = detectLanguage(extractedText);
+      
+      // Store the extracted text in the database
+      console.log('Storing extracted text in database');
+      const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
+      
+      const { data: updateData, error: updateError } = await supabase
+        .from(tableName)
+        .update({ 
+          content: extractedText,
+          original_language: detectedLanguage
+        })
+        .eq('id', numericLectureId)
+        .select();
+      
+      if (updateError) {
+        console.error(`Error updating ${tableName}:`, updateError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Failed to update lecture content: ${updateError.message}` 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
+      
+      if (!updateData || updateData.length === 0) {
+        console.error('No rows updated');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `No rows updated. Lecture ID ${numericLectureId} not found in ${tableName} table.` 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 404 
+          }
+        );
+      }
+      
+      console.log('Text successfully stored in database');
+      
+      // Return success response
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'PDF extraction complete',
+          contentLength: extractedText.length,
+          language: detectedLanguage,
+          textPreview: extractedText.substring(0, 200) + '...',
+          lectureId: numericLectureId
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    } catch (openaiError) {
+      console.error('Error in OpenAI processing:', openaiError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Failed to update lecture content: ${updateError.message}` 
+          error: `Error extracting text with OpenAI: ${openaiError.message}` 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -138,37 +225,6 @@ Deno.serve(async (req) => {
         }
       );
     }
-    
-    if (!updateData || updateData.length === 0) {
-      console.error('No rows updated');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `No rows updated. Lecture ID ${numericLectureId} not found in ${tableName} table.` 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-    
-    console.log('Text successfully stored in database');
-    
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'PDF extraction complete',
-        contentLength: fullText.length,
-        language: detectedLanguage,
-        textPreview: fullText.substring(0, 200) + '...',
-        lectureId: numericLectureId
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
   } catch (error) {
     console.error('Unexpected error:', error);
     return new Response(
@@ -184,127 +240,14 @@ Deno.serve(async (req) => {
   }
 });
 
-/**
- * Custom PDF text extraction function that uses multiple strategies
- */
-async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<string> {
-  try {
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const textDecoder = new TextDecoder('utf-8');
-    
-    // We'll first try to convert the PDF to a string - this isn't perfect
-    // but can help us extract text with regex patterns
-    const rawText = textDecoder.decode(uint8Array);
-    
-    // Combined approach using multiple extraction strategies
-    let extractedText = '';
-    
-    // Strategy 1: Extract text between BT (Begin Text) and ET (End Text) markers
-    try {
-      console.log('Trying BT/ET extraction method...');
-      const textMarkers = rawText.match(/BT([\s\S]*?)ET/g) || [];
-      console.log(`Found ${textMarkers.length} BT/ET text sections`);
-      
-      let btExtractedText = '';
-      for (const marker of textMarkers) {
-        // Look for text patterns like (text) TJ or Tj
-        const textMatches = marker.match(/\((.*?)\)([ ]?)(TJ|Tj)/g) || [];
-        for (const match of textMatches) {
-          // Extract the text between parentheses
-          const text = match.match(/\((.*?)\)/);
-          if (text && text[1]) {
-            btExtractedText += text[1] + ' ';
-          }
-        }
-      }
-      
-      if (btExtractedText.length > 0) {
-        console.log(`BT/ET method extracted ${btExtractedText.length} chars`);
-        extractedText += btExtractedText;
-      }
-    } catch (error) {
-      console.error('Error in BT/ET extraction:', error);
-    }
-    
-    // Strategy 2: Look for text objects with Tj, TJ operators directly
-    try {
-      console.log('Trying direct text operator extraction...');
-      const textOperators = rawText.match(/\/(T[idmfj]|TJ|Tm)\s*(\[.*?\]|\(.*?\))/g) || [];
-      let opExtractedText = '';
-      
-      for (const block of textOperators) {
-        const text = block.match(/\((.*?)\)/);
-        if (text && text[1]) {
-          opExtractedText += text[1] + ' ';
-        }
-      }
-      
-      if (opExtractedText.length > 0) {
-        console.log(`Operator method extracted ${opExtractedText.length} chars`);
-        // Only add this text if it provides significant additional content
-        if (extractedText.length === 0 || 
-            (opExtractedText.length > extractedText.length * 0.2)) {
-          extractedText += ' ' + opExtractedText;
-        }
-      }
-    } catch (error) {
-      console.error('Error in text operator extraction:', error);
-    }
-    
-    // Strategy 3: Unicode text extraction for PDFs that use Unicode
-    try {
-      console.log('Trying Unicode extraction...');
-      // Look for Unicode sequences often used in PDFs
-      const unicodeMatches = rawText.match(/\\u([0-9a-fA-F]{4})/g) || [];
-      if (unicodeMatches.length > 0) {
-        console.log(`Found ${unicodeMatches.length} Unicode sequences`);
-        let unicodeText = '';
-        for (const match of unicodeMatches) {
-          try {
-            const hexValue = match.substring(2); // Remove \u
-            const charCode = parseInt(hexValue, 16);
-            unicodeText += String.fromCharCode(charCode) + ' ';
-          } catch (e) {
-            // Skip invalid Unicode
-          }
-        }
-        
-        if (unicodeText.length > 0) {
-          console.log(`Unicode method extracted ${unicodeText.length} chars`);
-          extractedText += ' ' + unicodeText;
-        }
-      }
-    } catch (error) {
-      console.error('Error in Unicode extraction:', error);
-    }
-    
-    // Strategy 4: Plain text extraction as a fallback
-    if (extractedText.length < 100) {
-      console.log('Using plain text extraction as fallback...');
-      // Simple regex to find likely text (letters + punctuation + spaces)
-      const textBlocks = rawText.match(/[a-zA-Z0-9\s.,;:!?()\-'"\[\]]{10,}/g) || [];
-      let plainText = textBlocks.join(' ');
-      
-      if (plainText.length > 0) {
-        console.log(`Plain text fallback extracted ${plainText.length} chars`);
-        extractedText += ' ' + plainText;
-      }
-    }
-    
-    // Clean up the extracted text
-    const cleanedText = extractedText
-      .replace(/\s+/g, ' ')          // Replace multiple spaces with a single space
-      .replace(/(\r\n|\n|\r)/gm, '\n') // Normalize line breaks
-      .replace(/[^\x20-\x7E\n]/g, '') // Remove non-ASCII characters except newlines
-      .trim();
-    
-    console.log(`Final extracted text length: ${cleanedText.length} characters`);
-    return cleanedText;
-  } catch (error) {
-    console.error('Error in PDF text extraction:', error);
-    // Return any partial text extracted or empty string if complete failure
-    return '';
+// Convert ArrayBuffer to base64 string
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const uint8Array = new Uint8Array(buffer);
+  let binaryString = '';
+  for (let i = 0; i < uint8Array.length; i++) {
+    binaryString += String.fromCharCode(uint8Array[i]);
   }
+  return btoa(binaryString);
 }
 
 // Basic language detection function
