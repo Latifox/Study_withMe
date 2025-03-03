@@ -1,162 +1,180 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { processText } from './textProcessor.ts'
-import { validateSegment } from './segmentValidator.ts'
-import { analyzeContent } from './gptAnalyzer.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1'
+import { pdfjs } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm'
+import { corsHeaders } from '../_shared/cors.ts'
 
-// Define CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js'
 
-serve(async (req) => {
+// Maximum text length that can be handled directly (1MB)
+const MAX_DIRECT_TEXT_LENGTH = 1000000;
+
+export const handler = async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    console.log('Handling OPTIONS request for CORS preflight')
+    return new Response(null, {
+      headers: corsHeaders,
+    })
   }
 
   try {
-    console.log('Extract PDF text function called')
+    console.log('Starting PDF text extraction process')
     const { filePath, lectureId, isProfessorLecture = false } = await req.json()
-
-    // Validate inputs
-    if (!filePath) {
-      console.error('Missing required filePath parameter')
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing required filePath parameter' }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 400 }
-      )
-    }
-
-    if (!lectureId) {
-      console.error('Missing required lectureId parameter')
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing required lectureId parameter' }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 400 }
-      )
-    }
-
-    console.log(`Processing PDF at path: ${filePath} for lecture ID: ${lectureId}, isProfessorLecture: ${isProfessorLecture}`)
-
-    // Initialize Supabase client with admin privileges
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
-    // Get the public URL for the PDF
-    const { data: publicUrlData } = supabaseAdmin.storage.from('lecture_pdfs').getPublicUrl(filePath)
-    if (!publicUrlData?.publicUrl) {
-      console.error('Failed to get public URL for PDF')
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to get public URL for PDF' }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
-      )
-    }
-
-    const pdfUrl = publicUrlData.publicUrl
-    console.log(`PDF public URL: ${pdfUrl}`)
-
-    // Fetch the PDF
-    console.log('Fetching PDF content...')
-    const pdfResponse = await fetch(pdfUrl)
-    if (!pdfResponse.ok) {
-      console.error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`)
-      return new Response(
-        JSON.stringify({ success: false, error: `Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}` }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
-      )
-    }
-
-    const pdfBuffer = await pdfResponse.arrayBuffer()
-    console.log(`PDF fetched, size: ${pdfBuffer.byteLength} bytes`)
-
-    // Process the PDF text
-    console.log('Processing PDF text...')
-    const text = await processText(pdfBuffer)
     
-    if (!text || text.trim().length === 0) {
-      console.error('Extracted text is empty')
+    if (!filePath || !lectureId) {
+      const errorMsg = `Missing required fields: ${!filePath ? 'filePath' : ''} ${!lectureId ? 'lectureId' : ''}`
+      console.error(errorMsg)
       return new Response(
-        JSON.stringify({ success: false, error: 'Extracted text is empty' }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 422 }
+        JSON.stringify({ success: false, error: errorMsg }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
     
-    // Validate the extracted content
-    if (!validateSegment(text)) {
-      console.error('Extracted text does not contain valid content')
+    console.log(`Processing PDF extraction for: filePath=${filePath}, lectureId=${lectureId}, isProfessorLecture=${isProfessorLecture}`)
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // Get PDF file from storage
+    console.log(`Fetching PDF from storage: ${filePath}`)
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('lecture_pdfs')
+      .download(filePath)
+    
+    if (fileError || !fileData) {
+      const errorMsg = `Failed to download PDF file: ${fileError?.message || 'File not found'}`
+      console.error(errorMsg)
       return new Response(
-        JSON.stringify({ success: false, error: 'Extracted text does not contain valid content' }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 422 }
+        JSON.stringify({ success: false, error: errorMsg }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
-
-    console.log(`Successfully extracted text from PDF, length: ${text.length} characters`)
-    console.log('Sample of extracted text:', text.substring(0, 200) + '...')
-
-    // Store the content in the appropriate table
+    
+    console.log('Successfully downloaded PDF, beginning text extraction')
+    
+    // Extract text from PDF
+    const pdfBytes = new Uint8Array(await fileData.arrayBuffer())
+    const pdf = await pdfjs.getDocument({ data: pdfBytes }).promise
+    
+    console.log(`PDF loaded successfully. Total pages: ${pdf.numPages}`)
+    
+    let extractedText = ''
+    
+    // Extract text from each page
+    for (let i = 1; i <= pdf.numPages; i++) {
+      console.log(`Processing page ${i} of ${pdf.numPages}`)
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      const pageText = content.items
+        .map((item: any) => (item.str || '').trim())
+        .join(' ')
+      
+      extractedText += pageText + '\n\n'
+    }
+    
+    if (!extractedText || extractedText.trim().length === 0) {
+      const errorMsg = 'No text could be extracted from the PDF'
+      console.error(errorMsg)
+      return new Response(
+        JSON.stringify({ success: false, error: errorMsg }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+    
+    console.log(`Successfully extracted ${extractedText.length} characters from PDF`)
+    
+    // Determine which table to update based on isProfessorLecture
     const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
-    console.log(`Updating ${tableName} table with content for lecture ID: ${lectureId}`)
     
-    // Check if we need to analyze the content with GPT first
-    let finalText = text;
-    if (text.length > 40000) {
-      console.log('Content is very long, using GPT to summarize...')
-      try {
-        const analyzedText = await analyzeContent(text)
-        if (analyzedText && analyzedText.trim().length > 0) {
-          finalText = analyzedText
-          console.log(`Content summarized with GPT, new length: ${finalText.length} characters`)
-        } else {
-          console.log('GPT summarization returned empty text, using original text')
-        }
-      } catch (analyzeError) {
-        console.error('Error during GPT analysis:', analyzeError)
-        console.log('Continuing with original text')
-      }
-    }
-
-    // Try to update the database with the extracted content
-    try {
-      const { error: updateError } = await supabaseAdmin
+    // Handle large texts by storing directly
+    if (extractedText.length <= MAX_DIRECT_TEXT_LENGTH) {
+      console.log(`Storing extracted text directly in ${tableName} table for lecture ID ${lectureId}`)
+      
+      // Update the lecture record with the extracted text
+      const { error: updateError } = await supabase
         .from(tableName)
-        .update({ content: finalText })
-        .eq('id', lectureId)
-
+        .update({ content: extractedText })
+        .eq('id', parseInt(lectureId))
+      
       if (updateError) {
-        console.error(`Error updating ${tableName}:`, updateError)
+        const errorMsg = `Failed to update lecture with extracted text: ${updateError.message}`
+        console.error(errorMsg)
         return new Response(
-          JSON.stringify({ success: false, error: `Failed to update lecture content: ${updateError.message}` }),
-          { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
+          JSON.stringify({ success: false, error: errorMsg }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         )
       }
-
-      console.log(`Successfully updated ${tableName} with content`)
-    } catch (dbError) {
-      console.error(`Database error when updating ${tableName}:`, dbError)
-      return new Response(
-        JSON.stringify({ success: false, error: `Database error: ${dbError.message}` }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
-      )
+      
+      // Verify that the content was actually saved
+      const { data: verificationData, error: verificationError } = await supabase
+        .from(tableName)
+        .select('content')
+        .eq('id', parseInt(lectureId))
+        .single()
+      
+      if (verificationError || !verificationData?.content) {
+        const errorMsg = `Failed to verify content was saved: ${verificationError?.message || 'No content found after update'}`
+        console.error(errorMsg)
+        return new Response(
+          JSON.stringify({ success: false, error: errorMsg }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        )
+      }
+      
+      console.log(`Content successfully saved and verified in the database with ${verificationData.content.length} characters`)
+    } else {
+      // For very large texts, potentially summarize or chunk the text
+      console.log(`Extracted text exceeds direct storage limit (${extractedText.length} > ${MAX_DIRECT_TEXT_LENGTH}), truncating...`)
+      
+      // Just store a truncated version for now
+      const truncatedText = extractedText.substring(0, MAX_DIRECT_TEXT_LENGTH)
+      
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({ content: truncatedText })
+        .eq('id', parseInt(lectureId))
+      
+      if (updateError) {
+        const errorMsg = `Failed to update lecture with truncated text: ${updateError.message}`
+        console.error(errorMsg)
+        return new Response(
+          JSON.stringify({ success: false, error: errorMsg }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        )
+      }
+      
+      console.log(`Truncated content saved to database (${truncatedText.length} characters)`)
     }
-
-    // Return success
+    
+    // Delay to ensure database write completes
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Return success response with the extracted text
+    console.log('PDF extraction process completed successfully')
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'PDF text extracted and saved successfully',
-        contentLength: finalText.length
+        message: `Successfully extracted ${extractedText.length} characters from PDF`,
+        textLength: extractedText.length
       }),
-      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
+    
   } catch (error) {
-    console.error('Unhandled error in extract-pdf-text function:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error(`Error in PDF extraction: ${errorMessage}`)
+    console.error(error)
+    
     return new Response(
-      JSON.stringify({ success: false, error: `Server error: ${error.message}` }),
-      { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
+      JSON.stringify({ 
+        success: false, 
+        error: `Error extracting PDF text: ${errorMessage}`,
+        stack: error instanceof Error ? error.stack : undefined
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
-})
+}

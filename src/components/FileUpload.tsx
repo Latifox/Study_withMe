@@ -4,6 +4,8 @@ import AIProfessorLoading from "./AIProfessorLoading";
 import { FileUploadForm } from "./file-upload/FileUploadForm";
 import { useLectureUpload } from "./file-upload/useLectureUpload";
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface FileUploadProps {
   courseId?: string;
@@ -30,6 +32,7 @@ const FileUpload = ({ courseId, onClose, isProfessorCourse = false }: FileUpload
     try {
       await handleUpload();
     } catch (error: any) {
+      console.error("Upload error caught in FileUpload component:", error);
       setErrorMessage(error.message || "An unexpected error occurred during upload");
     }
   };
@@ -50,9 +53,13 @@ const FileUpload = ({ courseId, onClose, isProfessorCourse = false }: FileUpload
         </DialogHeader>
         
         {errorMessage && (
-          <div className="p-3 mb-3 bg-red-900/50 border border-red-700 rounded-md">
-            <p className="text-red-200 text-sm">{errorMessage}</p>
-          </div>
+          <Alert variant="destructive" className="border-red-800 bg-red-950/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription className="text-red-200 text-sm">
+              {errorMessage}
+            </AlertDescription>
+          </Alert>
         )}
         
         <FileUploadForm
