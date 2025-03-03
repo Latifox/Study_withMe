@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDF.js correctly - use the specific module path that includes the getDocument function
-import * as PDFJS from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs'
+// Import PDF.js from a more reliable source with the correct module path
+import * as PDFJS from 'https://cdn.skypack.dev/pdfjs-dist@3.11.174/build/pdf.mjs'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
