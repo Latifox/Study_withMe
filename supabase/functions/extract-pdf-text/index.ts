@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
+import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -19,10 +19,6 @@ interface ExtractPdfParams {
   lectureId: string
   isProfessorLecture: boolean
 }
-
-// Set the worker source before using PDF.js
-// Using v3.11.174 which is more stable in serverless environments
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 Deno.serve(async (req) => {
   console.log('PDF extraction function started')
@@ -103,18 +99,20 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer()
     
     try {
-      // Step 3: Use a simplified configuration approach that works in serverless environments
-      console.log('Loading PDF document...')
-      const loadingTask = pdfjsLib.getDocument({
+      // Step 3: Create a custom document loading task without GlobalWorkerOptions
+      console.log('Loading PDF document with custom configuration')
+      
+      // IMPORTANT: We're not using GlobalWorkerOptions at all
+      // Instead, we configure the document loading with disableWorker: true
+      const loadingTask = pdfjs.getDocument({
         data: arrayBuffer,
-        // These options help ensure it works in a serverless environment
-        disableAutoFetch: true,
-        disableStream: true,
-        disableRange: true,
-        disableFontFace: true,
+        disableWorker: true,           // Critical: Disable worker usage completely
+        disableAutoFetch: true,        // Disable fetching resources
+        disableStream: true,           // Disable streaming
+        disableRange: true,            // Disable range requests
+        disableFontFace: true,         // Disable font face loading
         nativeImageDecoderSupport: 'none',
-        cMapUrl: undefined,
-        standardFontDataUrl: undefined
+        verbosity: 2                   // Increase logging for debugging
       })
       
       const pdfDocument = await loadingTask.promise
