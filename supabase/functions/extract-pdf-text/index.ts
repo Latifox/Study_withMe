@@ -98,20 +98,22 @@ Deno.serve(async (req) => {
     // Step 2: Convert PDF to ArrayBuffer for PDF.js
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Initialize PDF.js - Critical fix: Set the worker source properly
-    console.log('Initializing PDF.js')
+    // Initialize PDF.js - Critical fix: completely disable worker and use built-in processing
+    console.log('Initializing PDF.js with built-in processing')
     
-    // Set worker source explicitly to CDN URL with same version
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js';
+    // Important: In Deno edge function environment, we need to disable the worker completely
+    // and not try to set the workerSrc at all, as external worker scripts can't be loaded
     
     try {
-      // Step 3: Use PDF.js to extract text content
-      console.log('Loading PDF document')
+      // Step 3: Use PDF.js to extract text content with worker completely disabled
+      console.log('Loading PDF document with built-in processing')
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        disableWorker: true, // Still keep disableWorker true to use fake worker approach
+        disableWorker: true, // Completely disable worker
         isEvalSupported: false,
-        useSystemFonts: true
+        useSystemFonts: true,
+        cMapUrl: undefined, // Don't try to load external cMap files either
+        standardFontDataUrl: undefined // Don't try to load external font data
       })
       
       const pdfDocument = await loadingTask.promise
