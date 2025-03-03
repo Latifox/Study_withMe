@@ -129,7 +129,13 @@ const Dashboard = () => {
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-white">Student Dashboard</h1>
+            <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
+              <CardHeader className="py-3 px-6">
+                <CardTitle className="text-4xl font-bold text-white">
+                  Student Dashboard
+                </CardTitle>
+              </CardHeader>
+            </Card>
             
             {/* Profile dropdown menu */}
             <TooltipProvider>
