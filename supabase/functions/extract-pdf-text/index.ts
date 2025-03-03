@@ -2,6 +2,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1'
 import { pdfjs } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm'
 import { corsHeaders } from '../_shared/cors.ts'
+// Fix import to use the correct export name from gptAnalyzer
+import { analyzeTextWithGPT } from './gptAnalyzer.ts'
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js'
