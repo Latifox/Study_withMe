@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDF.js from a more reliable source with the correct module path
-import * as PDFJS from 'https://cdn.skypack.dev/pdfjs-dist@3.11.174/build/pdf.mjs'
+// Import a standalone version of PDF.js that works in Deno
+import { getDocument } from 'https://cdn.skypack.dev/pdfjs-dist@2.12.313/es5/build/pdf.js'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -102,13 +102,12 @@ Deno.serve(async (req) => {
     try {
       console.log('Loading PDF with PDF.js')
       
-      // Create a new PDF.js document with the correct way to call getDocument
-      const loadingTask = PDFJS.getDocument({
+      // Create a new PDF.js document
+      const loadingTask = getDocument({
         data: new Uint8Array(arrayBuffer),
-        disableWorker: true,  // Critical: disable workers
+        disableWorker: true,  // Critical: disable workers in Deno environment
         disableAutoFetch: true,
         disableStream: true,
-        isEvalSupported: false
       })
       
       const pdf = await loadingTask.promise
@@ -143,7 +142,7 @@ Deno.serve(async (req) => {
         )
       }
       
-      // Step 4: Determine language of the content (simple detection)
+      // Step 3: Determine language of the content (simple detection)
       const detectLanguage = (text: string): string => {
         // Very basic detection - this could be improved with actual language detection libraries
         const commonEnglishWords = ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this'];
@@ -183,7 +182,7 @@ Deno.serve(async (req) => {
       const detectedLanguage = detectLanguage(fullText);
       console.log(`Detected language: ${detectedLanguage}`);
       
-      // Step 5: Store the extracted text in the database
+      // Step 4: Store the extracted text in the database
       console.log('Storing extracted text in database')
       
       const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
