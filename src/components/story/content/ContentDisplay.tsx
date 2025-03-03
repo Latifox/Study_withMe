@@ -4,6 +4,7 @@ import TheorySlide from "../TheorySlide";
 import QuizHandler from "../quiz/QuizHandler";
 import SegmentProgress from "../SegmentProgress";
 import { AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface ContentDisplayProps {
   currentSegmentData: {
@@ -48,8 +49,15 @@ const ContentDisplay = ({
   onCorrectAnswer,
   onWrongAnswer
 }: ContentDisplayProps) => {
+  const [key, setKey] = useState(0);
+  
+  // Reset key when step changes to force component remount
+  useEffect(() => {
+    setKey(prev => prev + 1);
+  }, [currentStep]);
+  
   console.log('ContentDisplay - Current segment data:', currentSegmentData);
-  console.log('ContentDisplay - Is slide:', isSlide, 'slideIndex:', slideIndex);
+  console.log('ContentDisplay - Is slide:', isSlide, 'slideIndex:', slideIndex, 'questionIndex:', questionIndex, 'currentStep:', currentStep);
 
   // Get the appropriate content based on the slide index
   const currentSlideContent = isSlide 
@@ -73,6 +81,8 @@ const ContentDisplay = ({
       : currentSegmentData.quiz_2_explanation
   } : null;
 
+  console.log('ContentDisplay - Current question:', currentQuestion);
+
   // Check if we have valid content for the current state
   const hasValidSlide = isSlide && Boolean(currentSlideContent?.trim());
   const hasValidQuestion = !isSlide && currentQuestion !== null;
@@ -91,6 +101,7 @@ const ContentDisplay = ({
       {isSlide ? (
         hasValidSlide ? (
           <TheorySlide
+            key={`slide-${key}-${slideIndex}`}
             content={currentSlideContent}
             onContinue={onContinue}
           />
@@ -110,6 +121,7 @@ const ContentDisplay = ({
       ) : (
         hasValidQuestion ? (
           <QuizHandler
+            key={`quiz-${key}-${questionIndex}`}
             currentSegmentData={{
               id: String(currentSegment),
               questions: [currentQuestion]
@@ -141,4 +153,3 @@ const ContentDisplay = ({
 };
 
 export default ContentDisplay;
-

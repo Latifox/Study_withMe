@@ -35,7 +35,11 @@ const QuizHandler = ({
   const [failedQuestions, setFailedQuestions] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
+  console.log('QuizHandler - Current segment data:', currentSegmentData);
+  console.log('QuizHandler - Question index:', questionIndex, 'Current score:', currentScore);
+
   const handleCorrectAnswer = async () => {
+    console.log('QuizHandler - Correct answer selected');
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
@@ -49,32 +53,36 @@ const QuizHandler = ({
         return;
       }
 
-      if (!lectureId) return;
-      const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
+      if (!lectureId) {
+        console.error('Missing lecture ID');
+        return;
+      }
+      
+      // Parse segment number from the ID
+      const segmentId = currentSegmentData.id;
+      console.log('Segment ID for parsing:', segmentId);
+      
+      // Try different parsing methods depending on the format
+      let segmentNumber: number;
+      if (segmentId.includes('_')) {
+        segmentNumber = parseInt(segmentId.split('_')[1]);
+      } else if (!isNaN(parseInt(segmentId))) {
+        segmentNumber = parseInt(segmentId);
+      } else {
+        console.error('Invalid segment ID format:', segmentId);
+        toast({
+          title: "Error",
+          description: "Invalid segment format. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log('Parsed segment number:', segmentNumber);
       const quizNumber = questionIndex + 1;
 
-      const { error } = await supabase
-        .from('quiz_progress')
-        .upsert({
-          user_id: user.id,
-          lecture_id: parseInt(lectureId),
-          segment_number: segmentNumber,
-          quiz_number: quizNumber,
-          quiz_score: 5,
-          completed_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
-        });
-
-      if (error) {
-        console.error('Error saving quiz progress:', error);
-        throw error;
-      }
-
-      toast({
-        title: "🎯 Correct!",
-        description: `+5 points earned!`,
-      });
+      // Mark question as answered
+      setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
 
       // Remove from failed questions if it was there
       if (failedQuestions.has(questionIndex)) {
@@ -88,14 +96,14 @@ const QuizHandler = ({
         if (failedQuestions.size > 0) {
           setShowFailDialog(true);
         } else {
-          onCorrectAnswer();
           toast({
             title: "🌟 Node Complete!",
             description: "Great job! You've mastered this node.",
           });
+          onCorrectAnswer();
         }
       } else {
-        handleContinue();
+        onCorrectAnswer();
       }
 
     } catch (error) {
@@ -109,53 +117,22 @@ const QuizHandler = ({
   };
 
   const handleWrongAnswer = async () => {
+    console.log('QuizHandler - Wrong answer selected');
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.error('Authentication error:', authError);
-        return;
-      }
-
-      if (!lectureId) return;
-      const segmentNumber = parseInt(currentSegmentData.id.split('_')[1]);
-      const quizNumber = questionIndex + 1;
-
-      const { error } = await supabase
-        .from('quiz_progress')
-        .upsert({
-          user_id: user.id,
-          lecture_id: parseInt(lectureId),
-          segment_number: segmentNumber,
-          quiz_number: quizNumber,
-          quiz_score: 0,
-          completed_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,lecture_id,segment_number,quiz_number'
-        });
-
-      if (error) {
-        console.error('Error saving quiz progress:', error);
-        throw error;
-      }
-
       // Add to failed questions set
       setFailedQuestions(prev => new Set([...prev, questionIndex]));
-      
       setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
+      
+      // Call parent handler for wrong answer (will reset to first slide)
       onWrongAnswer();
-      toast({
-        title: "Keep trying!",
-        description: "Don't worry, mistakes help us learn.",
-        variant: "destructive"
-      });
-      handleContinue();
+      
     } catch (error) {
       console.error('Error in handleWrongAnswer:', error);
     }
   };
 
   const handleContinue = () => {
+    console.log('QuizHandler - Continue button clicked');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     onContinue();
   };
@@ -169,7 +146,7 @@ const QuizHandler = ({
   return (
     <>
       <StoryQuiz
-        question={currentSegmentData.questions[questionIndex]}
+        question={currentSegmentData.questions[0]}
         onCorrectAnswer={handleCorrectAnswer}
         onWrongAnswer={handleWrongAnswer}
         isAnswered={answeredQuestions.has(questionIndex)}

@@ -26,6 +26,9 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const { toast } = useToast();
 
+  console.log('StoryQuiz - Question:', question);
+  console.log('StoryQuiz - isAnswered:', isAnswered);
+
   // Reset state when question changes
   useEffect(() => {
     setSelectedAnswer(null);
@@ -36,10 +39,20 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
   const handleSubmit = () => {
     if (!selectedAnswer || hasSubmitted) return;
 
+    console.log('StoryQuiz - Submitting answer:', selectedAnswer);
+    console.log('StoryQuiz - Correct answer:', question.correctAnswer);
+
+    // Convert the answers to lowercase strings for comparison
     const normalizedSelectedAnswer = selectedAnswer.toLowerCase();
-    const normalizedCorrectAnswer = question.correctAnswer.toString().toLowerCase();
+    const normalizedCorrectAnswer = typeof question.correctAnswer === 'boolean' 
+      ? question.correctAnswer.toString().toLowerCase()
+      : question.correctAnswer.toString().toLowerCase();
+
+    console.log('StoryQuiz - Normalized selected answer:', normalizedSelectedAnswer);
+    console.log('StoryQuiz - Normalized correct answer:', normalizedCorrectAnswer);
 
     const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer;
+    console.log('StoryQuiz - Answer is correct:', isCorrect);
 
     setIsCorrect(isCorrect);
     setHasSubmitted(true);
@@ -49,14 +62,18 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
         title: "🎯 Correct!",
         description: "Great job! Let's continue with the story.",
       });
-      onCorrectAnswer();
+      setTimeout(() => {
+        onCorrectAnswer();
+      }, 800);
     } else {
       toast({
         title: "Not quite right",
         description: question.explanation,
         variant: "destructive",
       });
-      onWrongAnswer();
+      setTimeout(() => {
+        onWrongAnswer();
+      }, 1500);
     }
   };
 
@@ -83,7 +100,9 @@ const StoryQuiz = ({ question, onCorrectAnswer, onWrongAnswer, isAnswered }: Sto
         >
           {options.map((option) => {
             const isSelected = selectedAnswer === option;
-            const isCorrectAnswer = option.toLowerCase() === question.correctAnswer.toString().toLowerCase();
+            // Use string comparison for correctAnswer
+            const correctAnswerStr = question.correctAnswer.toString();
+            const isCorrectAnswer = option.toLowerCase() === correctAnswerStr.toLowerCase();
             const isWrongSelection = hasSubmitted && isSelected && !isCorrectAnswer;
 
             return (

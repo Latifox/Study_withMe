@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { POINTS_PER_CORRECT_ANSWER } from "@/utils/scoreUtils";
 
 interface StoryContentHandlerProps {
   nodeId: string | undefined;
@@ -26,11 +27,13 @@ export const useStoryContentHandler = ({
   const { toast } = useToast();
 
   const handleContinue = () => {
+    console.log('Continuing to next step, current step:', currentStep);
     setCurrentStep(prev => {
       const newStep = prev + 1;
+      console.log('New step will be:', newStep);
       if (newStep === 4) {
         const totalScore = segmentScores[nodeId || ''] || 0;
-        console.log('Current score:', totalScore, 'Failed questions:', failedQuestions);
+        console.log('Current score on completion:', totalScore, 'Failed questions:', failedQuestions);
         // If we reach this point, the user has answered all questions correctly
         // since wrong answers restart the segment
         toast({
@@ -43,20 +46,30 @@ export const useStoryContentHandler = ({
   };
 
   const handleCorrectAnswer = async () => {
-    if (!nodeId || !numericLectureId || !sequenceNumber) return;
+    console.log('Handling correct answer. NodeId:', nodeId, 'LectureId:', numericLectureId, 'SequenceNumber:', sequenceNumber);
+    
+    if (!nodeId || !numericLectureId || sequenceNumber === null) {
+      console.error('Missing required data for saving progress:', { nodeId, numericLectureId, sequenceNumber });
+      return;
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      console.error('No authenticated user found');
+      return;
+    }
 
     const currentQuestionIndex = currentStep - 2;
     const quizNumber = currentQuestionIndex + 1;
+    
+    console.log('Current question index:', currentQuestionIndex, 'Quiz number:', quizNumber);
     
     // Remove from failed questions if it was there
     const updatedFailedQuestions = new Set(failedQuestions);
     updatedFailedQuestions.delete(currentQuestionIndex);
     setFailedQuestions(updatedFailedQuestions);
 
-    const newScore = (segmentScores[nodeId] || 0) + 5;
+    const newScore = (segmentScores[nodeId] || 0) + POINTS_PER_CORRECT_ANSWER;
     setSegmentScores(prev => ({
       ...prev,
       [nodeId]: newScore
@@ -71,19 +84,27 @@ export const useStoryContentHandler = ({
           lecture_id: numericLectureId,
           segment_number: sequenceNumber,
           quiz_number: quizNumber,
-          quiz_score: 5,
+          quiz_score: POINTS_PER_CORRECT_ANSWER,
           completed_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,lecture_id,segment_number,quiz_number'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving quiz progress:', error);
+        throw error;
+      }
 
+      console.log('Quiz progress saved successfully. New score:', newScore);
       toast({
         title: "🌟 Correct Answer!",
-        description: `+5 XP points earned! Total: ${newScore}/10 XP`,
+        description: `+${POINTS_PER_CORRECT_ANSWER} XP points earned! Total: ${newScore}/10 XP`,
       });
-      handleContinue();
+      
+      // Wait a moment before continuing to next step to allow toast to be seen
+      setTimeout(() => {
+        handleContinue();
+      }, 500);
     } catch (error) {
       console.error('Error saving quiz progress:', error);
       toast({
@@ -95,9 +116,16 @@ export const useStoryContentHandler = ({
   };
 
   const handleWrongAnswer = async () => {
-    if (!nodeId || !numericLectureId || !sequenceNumber) return;
+    console.log('Handling wrong answer. NodeId:', nodeId, 'LectureId:', numericLectureId, 'SequenceNumber:', sequenceNumber);
+    
+    if (!nodeId || !numericLectureId || sequenceNumber === null) {
+      console.error('Missing required data for handling wrong answer');
+      return;
+    }
     
     const currentQuestionIndex = currentStep - 2;
+    console.log('Current question index that was answered incorrectly:', currentQuestionIndex);
+    
     setFailedQuestions(prev => new Set([...prev, currentQuestionIndex]));
 
     // Reset the score in state
@@ -106,6 +134,7 @@ export const useStoryContentHandler = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        console.log('Deleting segment progress for user:', user.id, 'lecture:', numericLectureId, 'segment:', sequenceNumber);
         // Call the database function to delete all progress for this segment
         const { error } = await supabase
           .rpc('delete_segment_progress', {
@@ -114,7 +143,11 @@ export const useStoryContentHandler = ({
             p_segment_number: sequenceNumber
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error deleting segment progress:', error);
+          throw error;
+        }
+        console.log('Segment progress deleted successfully');
       }
     } catch (error) {
       console.error('Error deleting segment progress:', error);
@@ -126,10 +159,9 @@ export const useStoryContentHandler = ({
       variant: "destructive"
     });
     
-    // Ensure immediate reset to step 0 (first theory slide)
-    setTimeout(() => {
-      setCurrentStep(0);
-    }, 0);
+    // Reset to step 0 (first theory slide)
+    console.log('Resetting to first theory slide (step 0)');
+    setCurrentStep(0);
   };
 
   return {
