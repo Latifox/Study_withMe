@@ -1,2 +1,4 @@
 
 project_id = "bjpawnertrqwtgyvrhml"
+[functions.generate-segments-structure]
+verify_jwt = false

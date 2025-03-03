@@ -9,14 +9,17 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Generate segments structure function called');
     const { lectureId, lectureContent, lectureTitle } = await req.json();
 
     if (!lectureId || !lectureContent || !lectureTitle) {
+      console.error('Missing required parameters:', { lectureId, contentLength: lectureContent?.length, lectureTitle });
       throw new Error('Missing required parameters');
     }
 
@@ -48,6 +51,7 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
       throw new Error('OpenAI API key not found');
     }
 
@@ -104,6 +108,7 @@ serve(async (req) => {
     console.log('OpenAI response received');
 
     if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid response from OpenAI');
       throw new Error('Invalid response from OpenAI');
     }
 
@@ -112,13 +117,12 @@ serve(async (req) => {
       // Parse the generated content, handling potential markdown formatting
       const jsonStr = data.choices[0].message.content.replace(/```json\n?|\n?```/g, '');
       segments = JSON.parse(jsonStr);
+      console.log('Successfully parsed segments');
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.log('Raw OpenAI response:', data.choices[0].message.content);
       throw new Error('Failed to parse segment structure from OpenAI response');
     }
-
-    console.log('Successfully parsed segments:', segments);
 
     // Insert segments into the database
     if (segments?.segments?.length > 0) {
@@ -128,6 +132,7 @@ serve(async (req) => {
         .eq('lecture_id', lectureId);
 
       if (deleteError) {
+        console.error('Error deleting existing segments:', deleteError);
         throw deleteError;
       }
 
@@ -143,8 +148,11 @@ serve(async (req) => {
         );
 
       if (insertError) {
+        console.error('Error inserting segments:', insertError);
         throw insertError;
       }
+      
+      console.log('Segments saved to database successfully');
     }
 
     return new Response(JSON.stringify(segments), {

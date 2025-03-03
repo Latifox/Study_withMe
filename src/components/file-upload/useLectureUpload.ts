@@ -81,6 +81,19 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
         throw new Error('Extracted content is too short, possibly failed to extract meaningful text');
       }
 
+      // Fetch the lecture to confirm content was saved correctly
+      const { data: updatedLecture, error: fetchError } = await supabase
+        .from('lectures')
+        .select('content')
+        .eq('id', lectureData.id)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching updated lecture:', fetchError);
+      } else {
+        console.log('Lecture content in database, length:', updatedLecture?.content?.length || 0);
+      }
+
       // Generate segment structure (titles and descriptions) with retry mechanism
       console.log('Generating segment structure...');
       const maxRetries = 3;
@@ -88,18 +101,45 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       
       const generateStructureWithRetry = async (attemptCount = 0) => {
         try {
+          console.log(`Attempt ${attemptCount + 1} to generate segment structure`);
+          
+          // Make sure we always send the most up-to-date content
+          const { data: lecture, error: lectureError } = await supabase
+            .from('lectures')
+            .select('content')
+            .eq('id', lectureData.id)
+            .single();
+            
+          if (lectureError) {
+            throw new Error(`Failed to fetch lecture content: ${lectureError.message}`);
+          }
+          
+          const contentToUse = lecture.content || extractionData.content;
+          
+          if (!contentToUse || contentToUse.length < 100) {
+            throw new Error('Missing or insufficient lecture content for generation');
+          }
+          
+          console.log(`Sending segment structure request with content length: ${contentToUse.length}`);
+          
           const response = await supabase.functions.invoke('generate-segments-structure', {
             body: {
               lectureId: lectureData.id,
-              lectureContent: extractionData.content,
+              lectureContent: contentToUse,
               lectureTitle: title
             }
           });
 
           if (response.error) {
+            console.error('Segment structure generation error:', response.error);
             throw response.error;
           }
 
+          if (!response.data) {
+            throw new Error('No data returned from segment structure generation');
+          }
+
+          console.log('Segment structure generation response:', response);
           return response;
         } catch (error) {
           console.error(`Attempt ${attemptCount + 1} failed:`, error);
