@@ -33,6 +33,7 @@ interface QuizConfig {
 interface RequestBody {
   lectureId: number;
   config: QuizConfig;
+  forceNew?: boolean; // Add this flag to force a new quiz generation
 }
 
 interface OpenAIQuestionResponse {
@@ -84,9 +85,10 @@ Deno.serve(async (req) => {
     });
 
     const body: RequestBody = await req.json();
-    const { lectureId, config } = body;
+    const { lectureId, config, forceNew = true } = body; // Default forceNew to true to always generate a new quiz
 
     console.log("Request body:", JSON.stringify(body, null, 2));
+    console.log("Force new quiz:", forceNew);
 
     // Validate required fields
     if (!lectureId || !config) {
@@ -128,7 +130,7 @@ Deno.serve(async (req) => {
     console.log(`Generating quiz for lecture ${lectureId}, title: ${lecture.title}`);
     console.log(`Config: ${JSON.stringify(config, null, 2)}`);
 
-    // Generate quiz using OpenAI
+    // Always generate quiz using OpenAI
     const quizData = await generateQuizWithOpenAI(openai, lecture.content, config);
 
     // Insert quiz into the database

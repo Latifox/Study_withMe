@@ -64,31 +64,8 @@ const TakeQuiz = () => {
             throw new Error('User authentication required');
           }
           
-          const { data: existingQuizzes, error: fetchError } = await supabase
-            .from('generated_quizzes')
-            .select('id, quiz_data, config')
-            .eq('lecture_id', quizConfig.lectureId)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          if (!fetchError && existingQuizzes && existingQuizzes.length > 0) {
-            console.log('Using existing quiz:', existingQuizzes[0]);
-            setQuizId(existingQuizzes[0].id);
-            
-            const rawQuizData = existingQuizzes[0].quiz_data;
-            if (isQuizData(rawQuizData)) {
-              setQuizState(prev => ({ 
-                ...prev, 
-                questions: rawQuizData.quiz 
-              }));
-              setIsLoading(false);
-              return;
-            }
-            
-            console.error('Invalid quiz data format:', rawQuizData);
-            throw new Error('Invalid quiz data format');
-          }
+          // Remove the check for existing quizzes and always generate a new quiz
+          console.log('Always generating a new quiz');
           
           const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
             body: { 
@@ -236,10 +213,12 @@ const TakeQuiz = () => {
     setIsLoading(true);
     const generateQuiz = async () => {
       try {
+        // Always generate a new quiz, never fetch existing ones
         const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
           body: { 
             lectureId: quizConfig.lectureId, 
-            config: quizConfig.config 
+            config: quizConfig.config,
+            forceNew: true // Add a flag to ensure we're forcing a new quiz
           },
         });
 
