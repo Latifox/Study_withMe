@@ -13,6 +13,8 @@ const corsHeaders = {
 
 // Start the server using the serve function
 serve(async (req) => {
+  console.log("Generate segment content function called");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -21,10 +23,12 @@ serve(async (req) => {
   try {
     // Parse the request body as JSON
     const requestData = await req.json();
+    console.log("Request data received:", JSON.stringify(requestData).substring(0, 200) + "...");
     
     // Validate the request data
     const validationResult = validateRequest(requestData);
     if (!validationResult.valid) {
+      console.error("Validation error:", validationResult.error);
       return new Response(
         JSON.stringify({ error: validationResult.error }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -38,21 +42,27 @@ serve(async (req) => {
       segmentTitle, 
       segmentDescription, 
       lectureContent,
-      isProfessorLecture = false
+      isProfessorLecture = false,
+      contentLanguage = "english"
     } = requestData;
 
     console.log(`Processing segment ${segmentNumber} for lecture ${lectureId} (Professor: ${isProfessorLecture})`);
     console.log(`Title: ${segmentTitle}`);
-    console.log(`Description: ${segmentDescription}`);
+    console.log(`Description: ${segmentDescription?.substring(0, 50)}...`);
+    console.log(`Content language: ${contentLanguage}`);
     
     // Generate content for the segment
+    console.log("Generating segment content...");
     const segmentContent = await generateSegmentContent(
       segmentTitle,
       segmentDescription,
-      lectureContent
+      lectureContent,
+      contentLanguage
     );
+    console.log("Content generated successfully");
 
     // Save the generated content to the database
+    console.log("Saving content to database...");
     if (isProfessorLecture) {
       await insertProfessorSegmentContent(
         lectureId,
@@ -66,23 +76,25 @@ serve(async (req) => {
         segmentContent
       );
     }
+    console.log("Content saved successfully");
 
     // Return a success response
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Content for segment ${segmentNumber} generated and saved successfully` 
+        message: `Content for segment ${segmentNumber} generated and saved successfully`,
+        content: segmentContent
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     // Log and return any errors
-    console.error('Error:', error);
+    console.error('Error in generate-segment-content:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Failed to generate segment content', 
-        details: error.message 
+        details: error.message || 'Unknown error'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );

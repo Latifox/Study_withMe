@@ -83,123 +83,146 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       setShowAIProfessor(true);
 
       console.log('Extracting PDF content...');
-      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
-        body: {
-          filePath,
-          lectureId: lectureData.id.toString(),
-          isProfessorLecture: isProfessorCourse
+      
+      try {
+        const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
+          body: {
+            filePath,
+            lectureId: lectureData.id.toString(),
+            isProfessorLecture: isProfessorCourse
+          }
+        });
+
+        if (extractionError) throw extractionError;
+        if (!extractionData || !extractionData.content) {
+          throw new Error('No content returned from PDF extraction');
         }
-      });
+        
+        console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
+        console.log('Content length:', extractionData.content.length);
 
-      if (extractionError) throw extractionError;
-      if (!extractionData || !extractionData.content) {
-        throw new Error('No content returned from PDF extraction');
-      }
-      
-      console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
-      console.log('Content length:', extractionData.content.length);
+        // Update the content column in the appropriate table
+        const updateContentError = isProfessorCourse
+          ? (await supabase
+              .from('professor_lectures')
+              .update({ content: extractionData.content })
+              .eq('id', lectureData.id)).error
+          : (await supabase
+              .from('lectures')
+              .update({ content: extractionData.content })
+              .eq('id', lectureData.id)).error;
 
-      // Update the content column in the appropriate table
-      const updateContentError = isProfessorCourse
-        ? (await supabase
-            .from('professor_lectures')
-            .update({ content: extractionData.content })
-            .eq('id', lectureData.id)).error
-        : (await supabase
-            .from('lectures')
-            .update({ content: extractionData.content })
-            .eq('id', lectureData.id)).error;
-
-      if (updateContentError) {
-        console.error('Error updating lecture content:', updateContentError);
-        throw updateContentError;
-      }
-
-      console.log('Lecture content updated successfully');
-
-      // Generate segment structure (titles and descriptions)
-      console.log('Generating segment structure...');
-      const segmentsFunctionName = isProfessorCourse ? 'generate-professor-segments-structure' : 'generate-segments-structure';
-      
-      const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
-        body: {
-          lectureId: lectureData.id,
-          lectureContent: extractionData.content,
-          lectureTitle: title,
-          isProfessorLecture: isProfessorCourse
+        if (updateContentError) {
+          console.error('Error updating lecture content:', updateContentError);
+          throw updateContentError;
         }
-      });
 
-      if (segmentError) {
-        console.error('Segment generation error:', segmentError);
-        throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
-      }
-      
-      if (!segmentData || !segmentData.segments) {
-        throw new Error('No segments returned from generation');
-      }
-      
-      console.log('Segment structure generated:', segmentData);
+        console.log('Lecture content updated successfully');
 
-      // Generate content for each segment with proper error handling and retries
-      console.log('Generating content for all segments...');
-      const maxRetries = 3;
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-      const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
+        // Generate segment structure (titles and descriptions)
+        console.log('Generating segment structure...');
+        const segmentsFunctionName = isProfessorCourse ? 'generate-professor-segments-structure' : 'generate-segments-structure';
+        
         try {
-          const response = await supabase.functions.invoke('generate-segment-content', {
+          const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
             body: {
               lectureId: lectureData.id,
-              segmentNumber: segment.sequence_number,
-              segmentTitle: segment.title,
-              segmentDescription: segment.segment_description,
               lectureContent: extractionData.content,
+              lectureTitle: title,
               isProfessorLecture: isProfessorCourse
             }
           });
 
-          if (response.error) {
-            throw response.error;
+          if (segmentError) {
+            console.error('Segment generation error:', segmentError);
+            throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
+          }
+          
+          if (!segmentData || !segmentData.segments) {
+            throw new Error('No segments returned from generation');
+          }
+          
+          console.log('Segment structure generated:', segmentData);
+
+          // Generate content for each segment with proper error handling and retries
+          console.log('Generating content for all segments...');
+          const maxRetries = 3;
+          const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+          const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
+            try {
+              console.log(`Generating content for segment ${segment.sequence_number}, attempt ${attemptCount + 1}`);
+              
+              const requestBody = {
+                lectureId: lectureData.id,
+                segmentNumber: segment.sequence_number,
+                segmentTitle: segment.title,
+                segmentDescription: segment.segment_description,
+                lectureContent: extractionData.content,
+                isProfessorLecture: isProfessorCourse
+              };
+              
+              console.log('Request body:', JSON.stringify(requestBody).substring(0, 200) + '...');
+              
+              const response = await supabase.functions.invoke('generate-segment-content', {
+                body: requestBody
+              });
+
+              if (response.error) {
+                console.error(`Error in segment ${segment.sequence_number}:`, response.error);
+                throw response.error;
+              }
+
+              console.log(`Response for segment ${segment.sequence_number}:`, response.data);
+
+              if (!response.data?.success) {
+                console.error(`Failure in segment ${segment.sequence_number}:`, response.data?.error);
+                throw new Error(response.data?.error || 'Failed to generate segment content');
+              }
+
+              return response;
+            } catch (error) {
+              console.error(`Error generating segment ${segment.sequence_number}:`, error);
+              
+              if (attemptCount < maxRetries) {
+                console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
+                await delay(2000 * (attemptCount + 1));
+                return generateSegmentWithRetry(segment, attemptCount + 1);
+              }
+              throw error;
+            }
+          };
+
+          for (const segment of segmentData.segments) {
+            try {
+              console.log(`Processing segment ${segment.sequence_number}...`);
+              await generateSegmentWithRetry(segment);
+              console.log(`Segment ${segment.sequence_number} completed`);
+            } catch (error) {
+              console.error(`Failed to generate content for segment ${segment.sequence_number}:`, error);
+              throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${error.message}`);
+            }
           }
 
-          if (!response.data?.success) {
-            throw new Error(response.data?.error || 'Failed to generate segment content');
-          }
+          console.log('All segment content generated successfully');
 
-          return response;
-        } catch (error) {
-          if (attemptCount < maxRetries) {
-            console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
-            await delay(2000 * (attemptCount + 1));
-            return generateSegmentWithRetry(segment, attemptCount + 1);
-          }
-          throw error;
+          await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          toast({
+            title: "Success",
+            description: "Lecture uploaded and processed successfully!",
+          });
+          onClose();
+        } catch (segmentError) {
+          console.error('Error during segment generation:', segmentError);
+          throw segmentError;
         }
-      };
-
-      for (const segment of segmentData.segments) {
-        try {
-          console.log(`Processing segment ${segment.sequence_number}...`);
-          await generateSegmentWithRetry(segment);
-          console.log(`Segment ${segment.sequence_number} completed`);
-        } catch (error) {
-          console.error(`Failed to generate content for segment ${segment.sequence_number}:`, error);
-          throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${error.message}`);
-        }
+      } catch (textExtractionError) {
+        console.error('Error during text extraction:', textExtractionError);
+        throw textExtractionError;
       }
-
-      console.log('All segment content generated successfully');
-
-      await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      toast({
-        title: "Success",
-        description: "Lecture uploaded and processed successfully!",
-      });
-      onClose();
     } catch (error: any) {
       console.error('Upload error:', error);
       setIsUploading(false);
