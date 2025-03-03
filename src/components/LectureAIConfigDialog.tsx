@@ -19,10 +19,9 @@ interface LectureAIConfigDialogProps {
   isOpen: boolean;
   onClose: () => void;
   lectureId: number;
-  isProfessorLecture?: boolean;
 }
 
-const LectureAIConfigDialog = ({ isOpen, onClose, lectureId, isProfessorLecture = false }: LectureAIConfigDialogProps) => {
+const LectureAIConfigDialog = ({ isOpen, onClose, lectureId }: LectureAIConfigDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [temperature, setTemperature] = useState([0.7]);
@@ -37,7 +36,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId, isProfessorLecture 
 
   // Fetch existing configuration
   const { data: config } = useQuery({
-    queryKey: ["lecture-ai-config", lectureId, isProfessorLecture],
+    queryKey: ["lecture-ai-config", lectureId],
     queryFn: async () => {
       if (!lectureId) return null;
       
@@ -85,7 +84,6 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId, isProfessorLecture 
         detail_level: detailLevel[0],
         content_language: contentLanguage,
         custom_instructions: customInstructions,
-        isProfessorLecture: isProfessorLecture
       });
 
       console.log('Lecture recreation completed successfully');
@@ -117,11 +115,7 @@ const LectureAIConfigDialog = ({ isOpen, onClose, lectureId, isProfessorLecture 
   };
 
   if (showAIProfessor && newLectureId) {
-    return <AIProfessorLoading 
-      lectureId={newLectureId} 
-      courseId={parseInt(window.location.pathname.split('/')[2])} 
-      isProfessorLecture={isProfessorLecture}
-    />;
+    return <AIProfessorLoading lectureId={newLectureId} courseId={parseInt(window.location.pathname.split('/')[2])} />;
   }
 
   return (

@@ -3,35 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Mail, UserRound } from "lucide-react";
+import { Upload, Mail, LogOut } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import Analytics from "@/components/Analytics";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
     user,
-    loading,
-    accountSwitching,
-    signOut,
-    switchAccountType
+    loading
   } = useAuth();
   const {
     toast
@@ -74,31 +56,10 @@ const Dashboard = () => {
     }
   };
 
-  const handleSwitchToTeacher = async () => {
-    try {
-      await switchAccountType('teacher');
-    } catch (error: any) {
-      toast({
-        title: "Error switching account type",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  if (loading || accountSwitching) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-        <div className="text-center text-white mb-6">
-          {accountSwitching ? 'Switching to Teacher Mode...' : 'Loading...'}
-        </div>
-        <div className="space-y-3 w-64">
-          <Skeleton className="h-4 w-full bg-white/20" />
-          <Skeleton className="h-4 w-5/6 bg-white/20" />
-          <Skeleton className="h-4 w-4/6 bg-white/20" />
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
+      Loading...
+    </div>;
   }
 
   return <div className="relative min-h-screen overflow-hidden">
@@ -129,49 +90,11 @@ const Dashboard = () => {
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
-              <CardHeader className="py-3 px-6">
-                <CardTitle className="text-4xl font-bold text-white">
-                  Student Dashboard
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            
-            {/* Profile dropdown menu */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
-                        <UserRound className="w-4 h-4" />
-                        Profile
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-white/10 backdrop-blur-md border-white/20 text-white">
-                      <DropdownMenuLabel>Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-white/20" />
-                      <DropdownMenuItem 
-                        onClick={handleSwitchToTeacher}
-                        className="hover:bg-white/20 cursor-pointer"
-                      >
-                        Switch to Teacher Mode
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-white/20" />
-                      <DropdownMenuItem 
-                        onClick={handleSignOut}
-                        className="hover:bg-white/20 cursor-pointer"
-                      >
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>Manage your account</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <h1 className="text-4xl font-bold text-white">Student Dashboard</h1>
+            <Button variant="outline" onClick={handleSignOut} className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-12">

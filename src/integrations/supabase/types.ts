@@ -11,7 +11,6 @@ export type Database = {
     Tables: {
       courses: {
         Row: {
-          course_code: string | null
           created_at: string
           id: number
           owner_id: string | null
@@ -19,7 +18,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          course_code?: string | null
           created_at?: string
           id?: number
           owner_id?: string | null
@@ -27,7 +25,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          course_code?: string | null
           created_at?: string
           id?: number
           owner_id?: string | null
@@ -268,174 +265,6 @@ export type Database = {
           },
         ]
       }
-      professor_courses: {
-        Row: {
-          course_code: string | null
-          created_at: string
-          id: number
-          owner_id: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          course_code?: string | null
-          created_at?: string
-          id?: number
-          owner_id?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          course_code?: string | null
-          created_at?: string
-          id?: number
-          owner_id?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      professor_lecture_segments: {
-        Row: {
-          created_at: string
-          id: number
-          lecture_id: number | null
-          segment_description: string
-          sequence_number: number
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          lecture_id?: number | null
-          segment_description?: string
-          sequence_number: number
-          title: string
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          lecture_id?: number | null
-          segment_description?: string
-          sequence_number?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "professor_lecture_segments_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "professor_lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      professor_lectures: {
-        Row: {
-          content: string | null
-          created_at: string
-          id: number
-          original_language: string | null
-          pdf_path: string | null
-          professor_course_id: number | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          id?: never
-          original_language?: string | null
-          pdf_path?: string | null
-          professor_course_id?: number | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          id?: never
-          original_language?: string | null
-          pdf_path?: string | null
-          professor_course_id?: number | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "professor_lectures_professor_course_id_fkey"
-            columns: ["professor_course_id"]
-            isOneToOne: false
-            referencedRelation: "professor_courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      professor_segments_content: {
-        Row: {
-          created_at: string
-          id: number
-          lecture_id: number | null
-          quiz_1_correct_answer: string
-          quiz_1_explanation: string
-          quiz_1_options: string[] | null
-          quiz_1_question: string
-          quiz_1_type: string
-          quiz_2_correct_answer: boolean
-          quiz_2_explanation: string
-          quiz_2_question: string
-          quiz_2_type: string
-          sequence_number: number
-          theory_slide_1: string
-          theory_slide_2: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          lecture_id?: number | null
-          quiz_1_correct_answer?: string
-          quiz_1_explanation?: string
-          quiz_1_options?: string[] | null
-          quiz_1_question?: string
-          quiz_1_type?: string
-          quiz_2_correct_answer?: boolean
-          quiz_2_explanation?: string
-          quiz_2_question?: string
-          quiz_2_type?: string
-          sequence_number: number
-          theory_slide_1?: string
-          theory_slide_2?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          lecture_id?: number | null
-          quiz_1_correct_answer?: string
-          quiz_1_explanation?: string
-          quiz_1_options?: string[] | null
-          quiz_1_question?: string
-          quiz_1_type?: string
-          quiz_2_correct_answer?: boolean
-          quiz_2_explanation?: string
-          quiz_2_question?: string
-          quiz_2_type?: string
-          sequence_number?: number
-          theory_slide_1?: string
-          theory_slide_2?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "professor_segments_content_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "professor_lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       quiz_progress: {
         Row: {
           completed_at: string | null
@@ -541,38 +370,6 @@ export type Database = {
             columns: ["lecture_id"]
             isOneToOne: false
             referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      student_enrolled_courses: {
-        Row: {
-          course_id: number
-          created_at: string
-          id: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          course_id: number
-          created_at?: string
-          id?: never
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          course_id?: number
-          created_at?: string
-          id?: never
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_enrolled_courses_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "professor_courses"
             referencedColumns: ["id"]
           },
         ]

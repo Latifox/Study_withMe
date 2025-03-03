@@ -3,29 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Brain, UserRound } from "lucide-react";
+import { BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading, accountSwitching, switchAccountType } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,31 +47,10 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleSwitchToStudent = async () => {
-    try {
-      await switchAccountType('student');
-    } catch (error: any) {
-      toast({
-        title: "Error switching account type",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  if (loading || accountSwitching) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
-        <div className="text-center text-white mb-6">
-          {accountSwitching ? 'Switching to Student Mode...' : 'Loading...'}
-        </div>
-        <div className="space-y-3 w-64">
-          <Skeleton className="h-4 w-full bg-white/20" />
-          <Skeleton className="h-4 w-5/6 bg-white/20" />
-          <Skeleton className="h-4 w-4/6 bg-white/20" />
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
+      Loading...
+    </div>;
   }
 
   return (
@@ -119,46 +83,14 @@ const TeacherDashboard = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-white">Teacher Dashboard</h1>
-            
-            {/* Profile dropdown menu */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
-                        <UserRound className="w-4 h-4" />
-                        Profile
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-white/10 backdrop-blur-md border-white/20 text-white">
-                      <DropdownMenuLabel>Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-white/20" />
-                      <DropdownMenuItem 
-                        onClick={handleSwitchToStudent}
-                        className="hover:bg-white/20 cursor-pointer"
-                      >
-                        Switch to Student Mode
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-white/20" />
-                      <DropdownMenuItem 
-                        onClick={handleSignOut}
-                        className="hover:bg-white/20 cursor-pointer"
-                      >
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>Manage your account</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button variant="outline" onClick={handleSignOut} className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 max-w-4xl mx-auto">
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/professor-courses')}>
+          <div className="flex justify-center mb-12">
+            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20 max-w-md w-full" onClick={() => navigate('/uploaded-courses')}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
                   <BookOpen className="w-6 h-6" />
@@ -168,20 +100,6 @@ const TeacherDashboard = () => {
               <CardContent>
                 <p className="text-white/80 font-extrabold">
                   View and manage all your created courses
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/ai-professor-config')}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
-                  <Brain className="w-6 h-6" />
-                  AI Professor Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-white/80 font-extrabold">
-                  Customize AI settings for your courses
                 </p>
               </CardContent>
             </Card>

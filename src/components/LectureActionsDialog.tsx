@@ -13,45 +13,44 @@ interface LectureActionsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   lectureId: number;
-  isProfessorLecture?: boolean;
 }
 
-const LectureActionsDialog = ({ isOpen, onClose, lectureId, isProfessorLecture = false }: LectureActionsDialogProps) => {
+const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDialogProps) => {
   const navigate = useNavigate();
   const { courseId } = useParams();
 
   const handleChatAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/chat${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
     onClose();
   };
 
   const handleHighlightsAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/highlights${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/highlights`);
     onClose();
   };
 
   const handleQuizAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/quiz${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/quiz`);
     onClose();
   };
 
   const handleFlashcardsAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/flashcards${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/flashcards`);
     onClose();
   };
 
   const handleStudyPlanAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/study-plan${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/study-plan`);
     onClose();
   };
 
   const handleResourcesAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/resources${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/resources`);
     onClose();
   };
 
   const handleStoryModeAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/story${isProfessorLecture ? '?professor=true' : ''}`);
+    navigate(`/course/${courseId}/lecture/${lectureId}/story`);
     onClose();
   };
 

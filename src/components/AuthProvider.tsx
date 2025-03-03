@@ -6,10 +6,8 @@ interface AuthContextType {
   user: any | null;
   session: Session | null;
   loading: boolean;
-  accountSwitching: boolean;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  switchAccountType: (accountType: 'student' | 'teacher') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,7 +20,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<any | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [accountSwitching, setAccountSwitching] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -65,38 +62,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const switchAccountType = async (accountType: 'student' | 'teacher') => {
-    try {
-      setLoading(true);
-      setAccountSwitching(true);
-      const { data, error } = await supabase.auth.updateUser({
-        data: { account_type: accountType }
-      });
-      
-      if (error) throw error;
-      
-      setUser(data.user);
-      
-      window.location.href = accountType === 'teacher' ? '/teacher-dashboard' : '/dashboard';
-      
-    } catch (error: any) {
-      alert(error.error_description || error.message);
-      setAccountSwitching(false);
-    } finally {
-      // Note: We don't set loading to false here because we're redirecting
-      // The page will reload and the loading state will be reset
-    }
-  };
-
-  const value: AuthContextType = { 
-    user, 
-    session, 
-    loading, 
-    accountSwitching,
-    signIn, 
-    signOut,
-    switchAccountType 
-  };
+  const value: AuthContextType = { user, session, loading, signIn, signOut };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

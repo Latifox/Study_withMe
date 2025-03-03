@@ -59,74 +59,43 @@ export const recreateLecture = async (
     detail_level: number;
     content_language?: string | null;
     custom_instructions?: string | null;
-    isProfessorLecture?: boolean;
   }
 ) => {
   console.log('Starting lecture recreation process...');
-  const isProfessorLecture = aiConfig.isProfessorLecture || false;
-  
-  // Get the table name based on the lecture type
-  const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
-  const courseIdField = isProfessorLecture ? 'professor_course_id' : 'course_id';
   
   // First, get the old lecture data
-  const { data, error: fetchError } = await supabase
-    .from(tableName)
-    .select(`${courseIdField}, title, content, pdf_path, original_language`)
+  const { data: oldLecture, error: fetchError } = await supabase
+    .from('lectures')
+    .select('course_id, title, content, pdf_path, original_language')
     .eq('id', oldLectureId)
     .single();
 
   if (fetchError) {
-    console.error(`Error fetching old ${isProfessorLecture ? 'professor' : ''} lecture:`, fetchError);
+    console.error('Error fetching old lecture:', fetchError);
     throw fetchError;
   }
 
-  if (!data) {
-    throw new Error(`No lecture found with ID: ${oldLectureId}`);
-  }
-
-  // Type assertion with proper conversion to unknown first
-  const oldLecture = (data as unknown) as {
-    [key: string]: any;
-    title: string;
-    content: string;
-    pdf_path: string | null;
-    original_language: string | null;
-  };
-  
   console.log('Retrieved old lecture data:', oldLecture);
 
   try {
     // Create new lecture
-    const insertData = {
-      [courseIdField]: oldLecture[courseIdField],
-      title: oldLecture.title,
-      content: oldLecture.content,
-      pdf_path: oldLecture.pdf_path,
-      original_language: oldLecture.original_language
-    };
-
-    const { data: newLectureData, error: insertError } = await supabase
-      .from(tableName)
-      .insert(insertData)
+    const { data: newLecture, error: insertError } = await supabase
+      .from('lectures')
+      .insert({
+        course_id: oldLecture.course_id,
+        title: oldLecture.title,
+        content: oldLecture.content,
+        pdf_path: oldLecture.pdf_path,
+        original_language: oldLecture.original_language
+      })
       .select()
       .single();
 
     if (insertError) {
-      console.error(`Error creating new ${isProfessorLecture ? 'professor' : ''} lecture:`, insertError);
+      console.error('Error creating new lecture:', insertError);
       throw insertError;
     }
 
-    if (!newLectureData) {
-      throw new Error('Failed to create new lecture');
-    }
-
-    // Type assertion for newLecture with proper conversion to unknown first
-    const newLecture = (newLectureData as unknown) as {
-      id: number;
-      [key: string]: any;
-    };
-    
     console.log('Created new lecture:', newLecture);
 
     // Create AI config for the new lecture
@@ -144,7 +113,7 @@ export const recreateLecture = async (
     if (configError) {
       console.error('Error creating AI config:', configError);
       // If AI config creation fails, delete the new lecture to maintain consistency
-      await supabase.from(tableName).delete().eq('id', newLecture.id);
+      await supabase.from('lectures').delete().eq('id', newLecture.id);
       throw configError;
     }
 
@@ -156,21 +125,20 @@ export const recreateLecture = async (
       body: {
         lectureId: newLecture.id,
         lectureContent: oldLecture.content,
-        lectureTitle: oldLecture.title,
-        isProfessorLecture: isProfessorLecture
+        lectureTitle: oldLecture.title
       }
     });
 
     if (structureError) {
       // If structure generation fails, clean up by deleting the new lecture
-      await supabase.from(tableName).delete().eq('id', newLecture.id);
+      await supabase.from('lectures').delete().eq('id', newLecture.id);
       throw structureError;
     }
 
     console.log('Generated segments structure successfully');
 
     // Get all segments for the new lecture
-    const { data: segmentsData, error: segmentsError } = await supabase
+    const { data: segments, error: segmentsError } = await supabase
       .from('lecture_segments')
       .select('sequence_number, title, segment_description')
       .eq('lecture_id', newLecture.id)
@@ -180,8 +148,6 @@ export const recreateLecture = async (
       console.error('Error fetching segments:', segmentsError);
       throw segmentsError;
     }
-
-    const segments = segmentsData || [];
 
     // Generate content for each segment
     console.log('Generating content for segments...');
@@ -193,8 +159,7 @@ export const recreateLecture = async (
           segmentNumber: segment.sequence_number,
           segmentTitle: segment.title,
           segmentDescription: segment.segment_description,
-          lectureContent: oldLecture.content,
-          isProfessorLecture: isProfessorLecture
+          lectureContent: oldLecture.content
         }
       });
 
@@ -210,12 +175,12 @@ export const recreateLecture = async (
     // Only delete the old lecture after everything else succeeds
     console.log('Deleting old lecture...');
     const { error: deleteError } = await supabase
-      .from(tableName)
+      .from('lectures')
       .delete()
       .eq('id', oldLectureId);
 
     if (deleteError) {
-      console.error(`Error deleting old ${isProfessorLecture ? 'professor' : ''} lecture:`, deleteError);
+      console.error('Error deleting old lecture:', deleteError);
       throw deleteError;
     }
 
@@ -227,3 +192,4 @@ export const recreateLecture = async (
     throw error;
   }
 };
+

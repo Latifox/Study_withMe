@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,24 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import LectureActionsDialog from "@/components/LectureActionsDialog";
 import { DeleteLectureDialog } from "@/components/DeleteLectureDialog";
 import LectureAIConfigDialog from "@/components/LectureAIConfigDialog";
-
-// Define interface for course data including course_code
-interface CourseData {
-  id: number;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  owner_id: string;
-  course_code?: string;
-  isProfessor?: boolean;
-}
-
-interface LectureData {
-  id: number;
-  title: string;
-  created_at: string;
-  // Common fields between lectures and professor_lectures
-}
 
 const Course = () => {
   const { courseId } = useParams();
@@ -43,83 +24,32 @@ const Course = () => {
     return null;
   }
   
-  // Attempt to fetch course from both tables
-  const { data: course, isLoading: courseLoading } = useQuery({
-    queryKey: ['course-combined', parsedCourseId],
+  const { data: course } = useQuery({
+    queryKey: ['course', parsedCourseId],
     queryFn: async () => {
-      // Try regular courses first
-      const { data: regularCourse, error: regularError } = await supabase
+      const { data, error } = await supabase
         .from('courses')
         .select('*')
         .eq('id', parsedCourseId)
         .single();
       
-      if (!regularError && regularCourse) {
-        console.log('Found in regular courses:', regularCourse);
-        return { ...regularCourse, isProfessor: false } as CourseData;
-      }
-      
-      // Try professor courses next
-      const { data: professorCourse, error: professorError } = await supabase
-        .from('professor_courses')
-        .select('*')
-        .eq('id', parsedCourseId)
-        .single();
-      
-      if (!professorError && professorCourse) {
-        console.log('Found in professor courses:', professorCourse);
-        return { ...professorCourse, isProfessor: true } as CourseData;
-      }
-      
-      if (regularError && professorError) {
-        throw new Error('Course not found in either table');
-      }
-      
-      return null;
+      if (error) throw error;
+      return data;
     }
   });
 
-  // Fetch lectures based on the course type (regular or professor)
   const { data: lectures, isLoading } = useQuery({
-    queryKey: ['lectures', parsedCourseId, course?.isProfessor],
+    queryKey: ['lectures', parsedCourseId],
     queryFn: async () => {
-      if (!course) return [];
+      const { data, error } = await supabase
+        .from('lectures')
+        .select('*')
+        .eq('course_id', parsedCourseId)
+        .order('created_at', { ascending: false });
       
-      console.log(`Fetching lectures for ${course.isProfessor ? 'professor' : 'regular'} course ${parsedCourseId}`);
-      
-      if (course.isProfessor) {
-        // Fetch from professor_lectures table
-        const { data, error } = await supabase
-          .from('professor_lectures')
-          .select('*')
-          .eq('professor_course_id', parsedCourseId)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching professor lectures:', error);
-          throw error;
-        }
-        
-        console.log('Fetched professor lectures:', data);
-        return data || [];
-      } else {
-        // Fetch from regular lectures table
-        const { data, error } = await supabase
-          .from('lectures')
-          .select('*')
-          .eq('course_id', parsedCourseId)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching regular lectures:', error);
-          throw error;
-        }
-        
-        console.log('Fetched regular lectures:', data);
-        return data || [];
-      }
+      if (error) throw error;
+      return data;
     },
-    enabled: !!course,
     refetchInterval: 1000,
   });
 
@@ -149,22 +79,15 @@ const Course = () => {
           <div className="flex items-center gap-4 mb-8">
             <Button 
               variant="outline" 
-              onClick={() => navigate(course?.isProfessor ? '/professor-courses' : '/uploaded-courses')}
+              onClick={() => navigate('/uploaded-courses')}
               className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Courses
             </Button>
-            <div>
-              <h1 className="text-4xl font-bold text-white">
-                {courseLoading ? 'Loading...' : course?.title || 'Course not found'}
-              </h1>
-              {course?.course_code && (
-                <div className="bg-white/20 text-white text-sm font-medium py-1 px-2 rounded mt-2 inline-block">
-                  Course Code: {course.course_code}
-                </div>
-              )}
-            </div>
+            <h1 className="text-4xl font-bold text-white">
+              {course?.title || 'Loading...'}
+            </h1>
           </div>
 
           <div className="flex justify-end mb-6">
@@ -209,7 +132,6 @@ const Course = () => {
                         lectureId={lecture.id} 
                         lectureTitle={lecture.title} 
                         courseId={parsedCourseId}
-                        isProfessorLecture={!!course?.isProfessor}
                       />
                       <Button 
                         variant="outline"
@@ -243,7 +165,6 @@ const Course = () => {
             <FileUpload 
               courseId={parsedCourseId.toString()} 
               onClose={() => setShowUpload(false)}
-              isProfessorCourse={course?.isProfessor}
             />
           )}
 
@@ -251,14 +172,12 @@ const Course = () => {
             isOpen={!!selectedLectureId}
             onClose={() => setSelectedLectureId(null)}
             lectureId={selectedLectureId!}
-            isProfessorLecture={!!course?.isProfessor}
           />
 
           <LectureAIConfigDialog
             isOpen={!!showAIConfig}
             onClose={() => setShowAIConfig(null)}
             lectureId={showAIConfig!}
-            isProfessorLecture={!!course?.isProfessor}
           />
         </div>
       </div>

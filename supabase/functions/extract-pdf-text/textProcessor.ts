@@ -1,41 +1,44 @@
 
-/**
- * Processes and cleans text extracted from a PDF
- * 
- * @param text The raw text extracted from a PDF
- * @returns Cleaned and processed text
- */
-export function processText(text: string): string {
-  // Remove excessive whitespace
-  let processed = text.replace(/\s+/g, ' ');
-  
-  // Remove common PDF artifacts
-  processed = processed.replace(/(\n\s*){3,}/g, '\n\n');
-  
-  // Trim leading/trailing whitespace
-  processed = processed.trim();
-  
-  return processed;
+export function normalizeText(text: string): string {
+  return text
+    .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+    .replace(/[\r\n]+/g, ' ')  // Replace newlines with space
+    .trim();  // Remove leading/trailing spaces
 }
 
-/**
- * Extracts basic metadata from PDF text
- * 
- * @param text The text extracted from a PDF
- * @returns An object containing basic metadata
- */
-export function extractBasicMetadata(text: string): { 
-  wordCount: number;
-  paragraphCount: number;
-  estimatedReadingTime: number;
-} {
-  const words = text.trim().split(/\s+/).length;
-  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0).length;
-  const estimatedReadingTime = Math.ceil(words / 200); // Assuming 200 words per minute reading speed
+export function splitIntoSegments(text: string, targetLength: number = 1000): { segments: Array<{ content: string, wordStart: number, wordEnd: number }> } {
+  const words = text.split(/\s+/);
+  const segments: Array<{ content: string, wordStart: number, wordEnd: number }> = [];
   
-  return {
-    wordCount: words,
-    paragraphCount: paragraphs,
-    estimatedReadingTime: estimatedReadingTime
-  };
+  let currentSegment: string[] = [];
+  let startIndex = 1;
+  
+  for (let i = 0; i < words.length; i++) {
+    currentSegment.push(words[i]);
+    
+    // Check if current segment reaches target length or ends with a period
+    if (currentSegment.join(' ').length >= targetLength || 
+        (words[i].endsWith('.') && currentSegment.length > 50)) {
+      
+      segments.push({
+        content: currentSegment.join(' '),
+        wordStart: startIndex,
+        wordEnd: startIndex + currentSegment.length - 1
+      });
+      
+      startIndex = startIndex + currentSegment.length;
+      currentSegment = [];
+    }
+  }
+  
+  // Add remaining words as last segment if any
+  if (currentSegment.length > 0) {
+    segments.push({
+      content: currentSegment.join(' '),
+      wordStart: startIndex,
+      wordEnd: startIndex + currentSegment.length - 1
+    });
+  }
+  
+  return { segments };
 }

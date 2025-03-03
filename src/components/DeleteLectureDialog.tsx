@@ -11,15 +11,9 @@ interface DeleteLectureDialogProps {
   lectureId: number;
   lectureTitle: string;
   courseId: number;
-  isProfessorLecture?: boolean;
 }
 
-export function DeleteLectureDialog({ 
-  lectureId, 
-  lectureTitle, 
-  courseId, 
-  isProfessorLecture = false 
-}: DeleteLectureDialogProps) {
+export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: DeleteLectureDialogProps) {
   const [open, setOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
@@ -28,96 +22,83 @@ export function DeleteLectureDialog({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      console.log('Deleting lecture:', lectureId, 'isProfessorLecture:', isProfessorLecture);
+      console.log('Deleting lecture:', lectureId);
       
-      if (!isProfessorLecture) {
-        // Delete quiz progress
-        const { error: quizError } = await supabase
-          .from('quiz_progress')
-          .delete()
-          .eq('lecture_id', lectureId);
+      // Delete quiz progress
+      const { error: quizError } = await supabase
+        .from('quiz_progress')
+        .delete()
+        .eq('lecture_id', lectureId);
 
-        if (quizError) {
-          console.error('Error deleting quiz progress:', quizError);
-          throw quizError;
-        }
+      if (quizError) {
+        console.error('Error deleting quiz progress:', quizError);
+        throw quizError;
+      }
 
-        // Delete user progress
-        const { error: userProgressError } = await supabase
-          .from('user_progress')
-          .delete()
-          .eq('lecture_id', lectureId);
+      // Delete user progress
+      const { error: userProgressError } = await supabase
+        .from('user_progress')
+        .delete()
+        .eq('lecture_id', lectureId);
 
-        if (userProgressError) {
-          console.error('Error deleting user progress:', userProgressError);
-          throw userProgressError;
-        }
+      if (userProgressError) {
+        console.error('Error deleting user progress:', userProgressError);
+        throw userProgressError;
+      }
 
-        // Delete any segments content
-        const { error: segmentsError } = await supabase
-          .from('segments_content')
-          .delete()
-          .eq('lecture_id', lectureId);
+      // Delete any segments content
+      const { error: segmentsError } = await supabase
+        .from('segments_content')
+        .delete()
+        .eq('lecture_id', lectureId);
 
-        if (segmentsError) {
-          console.error('Error deleting segments:', segmentsError);
-          throw segmentsError;
-        }
+      if (segmentsError) {
+        console.error('Error deleting segments:', segmentsError);
+        throw segmentsError;
+      }
 
-        // Delete any AI configs
-        const { error: configError } = await supabase
-          .from('lecture_ai_configs')
-          .delete()
-          .eq('lecture_id', lectureId);
+      // Delete any AI configs
+      const { error: configError } = await supabase
+        .from('lecture_ai_configs')
+        .delete()
+        .eq('lecture_id', lectureId);
 
-        if (configError) {
-          console.error('Error deleting AI configs:', configError);
-          throw configError;
-        }
+      if (configError) {
+        console.error('Error deleting AI configs:', configError);
+        throw configError;
+      }
 
-        // Delete segments info
-        const { error: segmentInfoError } = await supabase
-          .from('lecture_segments')
-          .delete()
-          .eq('lecture_id', lectureId);
+      // Delete segments info
+      const { error: segmentInfoError } = await supabase
+        .from('lecture_segments')
+        .delete()
+        .eq('lecture_id', lectureId);
 
-        if (segmentInfoError) {
-          console.error('Error deleting segment info:', segmentInfoError);
-          throw segmentInfoError;
-        }
+      if (segmentInfoError) {
+        console.error('Error deleting segment info:', segmentInfoError);
+        throw segmentInfoError;
+      }
 
-        // Delete study plans
-        const { error: studyPlansError } = await supabase
-          .from('study_plans')
-          .delete()
-          .eq('lecture_id', lectureId);
+      // Delete study plans
+      const { error: studyPlansError } = await supabase
+        .from('study_plans')
+        .delete()
+        .eq('lecture_id', lectureId);
 
-        if (studyPlansError) {
-          console.error('Error deleting study plans:', studyPlansError);
-          throw studyPlansError;
-        }
+      if (studyPlansError) {
+        console.error('Error deleting study plans:', studyPlansError);
+        throw studyPlansError;
+      }
 
-        // Finally delete the lecture
-        const { error: lectureError } = await supabase
-          .from('lectures')
-          .delete()
-          .eq('id', lectureId);
+      // Finally delete the lecture
+      const { error: lectureError } = await supabase
+        .from('lectures')
+        .delete()
+        .eq('id', lectureId);
 
-        if (lectureError) {
-          console.error('Error deleting lecture:', lectureError);
-          throw lectureError;
-        }
-      } else {
-        // Delete professor lecture - the cascade will handle related records
-        const { error: lectureError } = await supabase
-          .from('professor_lectures')
-          .delete()
-          .eq('id', lectureId);
-
-        if (lectureError) {
-          console.error('Error deleting professor lecture:', lectureError);
-          throw lectureError;
-        }
+      if (lectureError) {
+        console.error('Error deleting lecture:', lectureError);
+        throw lectureError;
       }
 
       toast({

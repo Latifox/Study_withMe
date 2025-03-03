@@ -3,41 +3,21 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
 import { DeleteCourseDialog } from "@/components/DeleteCourseDialog";
+import { Share } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/components/AuthProvider";
-
-// Define course interface to include course_code
-interface Course {
-  id: number;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  owner_id: string;
-  course_code?: string;
-}
 
 const UploadedCourses = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
   
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['uploaded-courses', user?.id],
+    queryKey: ['uploaded-courses'],
     queryFn: async () => {
       console.log('Fetching courses from Supabase...');
       const { data, error } = await supabase
         .from('courses')
         .select('*')
-        .eq('owner_id', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -46,16 +26,9 @@ const UploadedCourses = () => {
       }
       
       console.log('Fetched courses:', data);
-      return data || [] as Course[];
-    },
-    enabled: !!user // Only run the query if user is authenticated
+      return data || [];
+    }
   });
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-      Loading...
-    </div>;
-  }
 
   return (
     <div className="relative min-h-screen">
@@ -64,13 +37,7 @@ const UploadedCourses = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-lg">
-                <CardHeader className="py-3 px-6">
-                  <CardTitle className="text-4xl font-bold text-purple-700">
-                    My Uploaded Courses
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+              <h1 className="text-4xl font-bold text-purple-700">My Uploaded Courses</h1>
               <p className="text-gray-600 mt-2">Manage your uploaded courses</p>
             </div>
             <div className="flex gap-4">
@@ -102,11 +69,8 @@ const UploadedCourses = () => {
                     </div>
                     <div className="text-center w-full pr-8">
                       <CardTitle className="text-xl mb-1">{course.title}</CardTitle>
-                      <CardDescription className="flex flex-col gap-1">
-                        <span>Created on {new Date(course.created_at).toLocaleDateString()}</span>
-                        {course.course_code && (
-                          <span className="text-purple-600 font-medium">Course Code: {course.course_code}</span>
-                        )}
+                      <CardDescription>
+                        Created on {new Date(course.created_at).toLocaleDateString()}
                       </CardDescription>
                     </div>
                   </CardHeader>
@@ -116,6 +80,16 @@ const UploadedCourses = () => {
                       onClick={() => navigate(`/course/${course.id}`)}
                     >
                       View Lectures
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        console.log('Share course:', course.id);
+                      }}
+                    >
+                      <Share className="mr-2 h-4 w-4" />
+                      Share Course
                     </Button>
                   </CardContent>
                 </Card>

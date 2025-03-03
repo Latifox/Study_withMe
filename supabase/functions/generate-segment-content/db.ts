@@ -1,47 +1,95 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.34.0'
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-export async function updateSegmentContent(
-  lectureId: number | string,
-  segmentNumber: number | string,
-  content: any,
-  isProfessorLecture: boolean = false
-): Promise<void> {
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  const table = isProfessorLecture ? 'professor_segments_content' : 'segments_content';
+export const db = {
+  client: null as any,
   
-  console.log(`Updating ${table} for lecture ${lectureId}, segment ${segmentNumber}`);
-
-  try {
-    const { error } = await supabase
-      .from(table)
-      .upsert({
-        lecture_id: Number(lectureId),
-        sequence_number: Number(segmentNumber),
-        theory_slide_1: content.theory_slide_1,
-        theory_slide_2: content.theory_slide_2,
-        quiz_1_type: content.quiz_1_type,
-        quiz_1_question: content.quiz_1_question,
-        quiz_1_options: content.quiz_1_options,
-        quiz_1_correct_answer: content.quiz_1_correct_answer,
-        quiz_1_explanation: content.quiz_1_explanation,
-        quiz_2_type: content.quiz_2_type,
-        quiz_2_question: content.quiz_2_question,
-        quiz_2_correct_answer: content.quiz_2_correct_answer,
-        quiz_2_explanation: content.quiz_2_explanation
-      });
-
-    if (error) {
-      console.error("DB update error:", error);
-      throw new Error(`Failed to update ${table}: ${error.message}`);
+  connect: async function() {
+    console.log("DB: Initializing Supabase client");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("DB: Missing environment variables for Supabase connection");
+      throw new Error("Missing Supabase connection parameters");
     }
     
-    console.log(`Successfully updated ${table}`);
-  } catch (error) {
-    console.error("Error in updateSegmentContent:", error);
-    throw error;
+    // Test connection by making a simple query
+    try {
+      const { data, error } = await supabaseClient.from('segments_content').select('id').limit(1);
+      if (error) throw error;
+      console.log("DB: Supabase connection test successful");
+    } catch (err) {
+      console.error("DB: Supabase connection test failed:", err);
+      throw new Error(`Failed to connect to Supabase: ${err.message}`);
+    }
+    
+    this.client = supabaseClient;
+    return this.client;
+  },
+  
+  getExistingContent: async function(lectureId: number, segmentNumber: number) {
+    console.log(`DB: Checking for existing content for lecture ${lectureId}, segment ${segmentNumber}`);
+    
+    try {
+      const { data, error } = await this.client
+        .from('segments_content')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .eq('sequence_number', segmentNumber)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is not an error for us
+        console.error("DB: Error fetching existing content:", error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log(`DB: Found existing content with ID ${data.id}`);
+      } else {
+        console.log("DB: No existing content found");
+      }
+      
+      return { data, error: null };
+    } catch (err) {
+      console.error("DB: Unexpected error in getExistingContent:", err);
+      return { data: null, error: err };
+    }
+  },
+  
+  storeContent: async function(content: any) {
+    console.log(`DB: Storing content for lecture ${content.lecture_id}, segment ${content.sequence_number}`);
+    
+    try {
+      // Log content structure without the actual content
+      const contentKeys = Object.keys(content);
+      console.log(`DB: Content object has ${contentKeys.length} keys: ${contentKeys.join(', ')}`);
+      
+      const { data, error } = await this.client
+        .from('segments_content')
+        .upsert(content)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("DB: Error storing content:", error);
+        throw error;
+      }
+      
+      console.log(`DB: Content stored successfully with ID ${data?.id}`);
+      return { data, error: null };
+    } catch (err) {
+      console.error("DB: Unexpected error in storeContent:", err);
+      return { data: null, error: err };
+    }
+  },
+  
+  end: async function() {
+    console.log("DB: Closing connection");
+    // No explicit close needed for Supabase client
+    this.client = null;
+    return true;
   }
-}
+};
