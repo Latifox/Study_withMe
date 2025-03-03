@@ -98,20 +98,18 @@ Deno.serve(async (req) => {
     // Step 2: Convert PDF to ArrayBuffer for PDF.js
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Initialize PDF.js - Important change: Using a CDN path that works with Deno
-    console.log('Initializing PDF.js without worker')
+    // Initialize PDF.js - Critical fix: Set the worker source properly
+    console.log('Initializing PDF.js')
     
-    // Set worker URL to null to use fake worker
-    // This approach uses the built-in "fake worker" in PDF.js when no worker is provided
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    // Set worker source explicitly to CDN URL with same version
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js';
     
     try {
-      // Step 3: Use PDF.js to extract text content without requiring a worker
+      // Step 3: Use PDF.js to extract text content
       console.log('Loading PDF document')
-      // Disable worker to use main thread processing
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        disableWorker: true,
+        disableWorker: true, // Still keep disableWorker true to use fake worker approach
         isEvalSupported: false,
         useSystemFonts: true
       })

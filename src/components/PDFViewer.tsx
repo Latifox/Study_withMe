@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -10,9 +11,11 @@ import * as pdfjs from 'pdfjs-dist';
 // Make sure we're using the same version for both API and worker
 // Using version 3.11.174 for both to match the API version mentioned in the error
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
 interface PDFViewerProps {
   lectureId?: string;
 }
+
 const PDFViewer = ({
   lectureId
 }: PDFViewerProps) => {
@@ -20,6 +23,7 @@ const PDFViewer = ({
   const [pageNumber, setPageNumber] = useState(1);
   const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+  
   const {
     data: pdfUrl,
     isLoading
@@ -37,6 +41,7 @@ const PDFViewer = ({
     },
     enabled: !!lectureId
   });
+  
   useEffect(() => {
     if (viewerContainerRef.current && pageNumber > 1) {
       // Try to find the page elements after they've been rendered
@@ -55,9 +60,11 @@ const PDFViewer = ({
       setNumPages(e.doc.numPages || 0);
     }
   };
+  
   if (isLoading) {
     return <div className="flex justify-center items-center h-full">Loading PDF...</div>;
   }
+  
   return <div className="h-full flex flex-col" ref={setContainerRef}>
       <div className="flex-1 overflow-auto flex justify-center">
         {pdfUrl && <div ref={viewerContainerRef} style={{
@@ -71,4 +78,5 @@ const PDFViewer = ({
       
     </div>;
 };
+
 export default PDFViewer;
