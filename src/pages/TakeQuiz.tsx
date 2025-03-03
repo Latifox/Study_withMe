@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,6 @@ const TakeQuiz = () => {
           setIsLoading(true);
           console.log('Generating quiz with config:', quizConfig);
           
-          // Check if we already have a generated quiz for this lecture
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
             throw new Error('User authentication required');
@@ -75,11 +73,9 @@ const TakeQuiz = () => {
             .limit(1);
 
           if (!fetchError && existingQuizzes && existingQuizzes.length > 0) {
-            // Use the most recent quiz
             console.log('Using existing quiz:', existingQuizzes[0]);
             setQuizId(existingQuizzes[0].id);
             
-            // Properly parse and validate the quiz data using our type guard
             const rawQuizData = existingQuizzes[0].quiz_data;
             if (isQuizData(rawQuizData)) {
               setQuizState(prev => ({ 
@@ -94,7 +90,6 @@ const TakeQuiz = () => {
             throw new Error('Invalid quiz data format');
           }
           
-          // Generate a new quiz
           const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
             body: { 
               lectureId: quizConfig.lectureId, 
@@ -176,18 +171,17 @@ const TakeQuiz = () => {
   const submitQuiz = async () => {
     setQuizState(prev => ({ ...prev, showResults: true }));
     
-    // Save quiz results to database
     if (quizId) {
       try {
         const score = calculateCorrectAnswers();
         const totalQuestions = quizState.questions.length;
-        // Calculate score as percentage (0-100)
         const scorePercentage = (score / totalQuestions) * 100;
         
-        // Update the quiz record with the score
         const { error } = await supabase
           .from('generated_quizzes')
-          .update({ quiz_result: scorePercentage })
+          .update({ 
+            quiz_result: scorePercentage 
+          })
           .eq('id', quizId);
         
         if (error) {

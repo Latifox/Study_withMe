@@ -78,6 +78,7 @@ export type Database = {
           id: number
           lecture_id: number | null
           quiz_data: Json
+          quiz_result: number | null
           updated_at: string
           user_id: string
         }
@@ -87,6 +88,7 @@ export type Database = {
           id?: number
           lecture_id?: number | null
           quiz_data: Json
+          quiz_result?: number | null
           updated_at?: string
           user_id: string
         }
@@ -96,6 +98,7 @@ export type Database = {
           id?: number
           lecture_id?: number | null
           quiz_data?: Json
+          quiz_result?: number | null
           updated_at?: string
           user_id?: string
         }
