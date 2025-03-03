@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs'
+import { getDocument } from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -99,10 +99,9 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer();
     
     console.log('Loading PDF document with PDF.js');
-    // IMPORTANT: For PDF.js in ESM format, we don't need to set workerSrc
-    // because the worker is included in the ESM build
     
-    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+    // Use the directly imported getDocument function
+    const loadingTask = getDocument({ data: new Uint8Array(arrayBuffer) });
     const pdfDocument = await loadingTask.promise;
     
     console.log('PDF document loaded successfully, number of pages:', pdfDocument.numPages);
