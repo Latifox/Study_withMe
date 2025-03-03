@@ -1,54 +1,41 @@
 
 import { SegmentContentRequest } from "./types.ts";
 
-export function validateRequest(data: any): { valid: boolean; error?: string } {
-  // Check if required fields are present
+export interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+export function validateRequest(data: SegmentContentRequest): ValidationResult {
+  // Check for required fields
   if (!data.lectureId) {
-    return { valid: false, error: "Missing required parameter: lectureId" };
+    return { isValid: false, error: 'Missing required field: lectureId' };
   }
-
-  if (!data.segmentNumber && data.segmentNumber !== 0) {
-    return { valid: false, error: "Missing required parameter: segmentNumber" };
+  
+  if (data.segmentNumber === undefined || data.segmentNumber === null) {
+    return { isValid: false, error: 'Missing required field: segmentNumber' };
   }
-
+  
   if (!data.segmentTitle) {
-    return { valid: false, error: "Missing required parameter: segmentTitle" };
+    return { isValid: false, error: 'Missing required field: segmentTitle' };
   }
-
+  
+  if (!data.segmentDescription) {
+    return { isValid: false, error: 'Missing required field: segmentDescription' };
+  }
+  
   if (!data.lectureContent) {
-    return { valid: false, error: "Missing required parameter: lectureContent" };
+    return { isValid: false, error: 'Missing required field: lectureContent' };
   }
-
-  // Validate types
-  if (typeof data.lectureId !== 'string' && typeof data.lectureId !== 'number') {
-    return { valid: false, error: "Invalid type for lectureId: Must be a string or number" };
-  }
-
-  if (typeof data.segmentNumber !== 'number') {
-    return { valid: false, error: "Invalid type for segmentNumber: Must be a number" };
-  }
-
-  if (typeof data.segmentTitle !== 'string') {
-    return { valid: false, error: "Invalid type for segmentTitle: Must be a string" };
-  }
-
-  if (typeof data.lectureContent !== 'string') {
-    return { valid: false, error: "Invalid type for lectureContent: Must be a string" };
-  }
-
+  
   // Additional validations
-  if (data.segmentNumber < 0) {
-    return { valid: false, error: "Invalid segmentNumber: Must be a non-negative number" };
+  if (typeof data.segmentNumber !== 'number' || data.segmentNumber < 1) {
+    return { isValid: false, error: 'segmentNumber must be a positive number' };
   }
-
-  if (data.segmentTitle.trim() === '') {
-    return { valid: false, error: "Invalid segmentTitle: Must not be empty" };
+  
+  if (typeof data.lectureContent !== 'string' || data.lectureContent.length < 10) {
+    return { isValid: false, error: 'lectureContent is too short or invalid' };
   }
-
-  if (data.lectureContent.trim() === '') {
-    return { valid: false, error: "Invalid lectureContent: Must not be empty" };
-  }
-
-  // If we reach here, the request is valid
-  return { valid: true };
+  
+  return { isValid: true };
 }

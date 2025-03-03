@@ -1,160 +1,128 @@
 
-import { SegmentContent } from "./types.ts";
+import { SegmentContentRequest, AIConfig } from "./types.ts";
+import { getAIConfig } from "./db.ts";
 
-// OpenAI API setup
-const apiKey = Deno.env.get("OPENAI_API_KEY") || "";
-const apiUrl = "https://api.openai.com/v1/chat/completions";
-
-// Safely format the lecture content to avoid issues with huge content
-function prepareLectureContent(content: string): string {
-  const maxContentLength = 20000; // Limit the content length to avoid exceeding token limits
-  if (content.length > maxContentLength) {
-    console.log(`Content is too long (${content.length} chars), truncating to ${maxContentLength} chars`);
-    return content.substring(0, maxContentLength) + "...";
-  }
-  return content;
-}
-
-export async function generateSegmentContent(
-  segmentTitle: string,
-  segmentDescription: string | undefined,
-  lectureContent: string,
-  contentLanguage: string = "english"
-): Promise<SegmentContent> {
-  console.log(`Generating content for segment: ${segmentTitle}`);
-  console.log(`Content language: ${contentLanguage}`);
-  
-  // Prepare lecture content
-  const preparedContent = prepareLectureContent(lectureContent);
-  
+export async function generateSegmentContent(request: SegmentContentRequest) {
   try {
-    // Create system message that properly escapes special characters
-    const systemMessage = `You are an AI teaching assistant that creates educational content. 
-Create engaging material based on the lecture segment title and description.
-Your output must be in ${contentLanguage}.
-Generate content in JSON format with the following structure:
-{
-  "theory_slide_1": "First slide explaining the concept clearly",
-  "theory_slide_2": "Second slide going deeper into the concept with examples",
-  "quiz_1_type": "multiple_choice",
-  "quiz_1_question": "A question testing understanding of the concept",
-  "quiz_1_options": ["Option A", "Option B", "Option C", "Option D"],
-  "quiz_1_correct_answer": "The correct option (exactly as written in the options)",
-  "quiz_1_explanation": "Explanation of why the answer is correct",
-  "quiz_2_type": "free_text",
-  "quiz_2_question": "A more challenging question requiring written response",
-  "quiz_2_correct_answer": "The expected answer or key points to include",
-  "quiz_2_explanation": "Detailed explanation of the correct answer"
-}
-
-Format guidelines:
-- Escape special markdown characters (e.g., '\\#', '\\*', '\\-', etc.) with backslashes
-- Keep theory slides concise but informative
-- Make multiple-choice options clear and distinct
-- Ensure the correct_answer EXACTLY matches one of the options
-- For free_text questions, provide key points for the expected answer`;
-
-    // Prepare the messages for the OpenAI API
-    const messages = [
-      { role: "system", content: systemMessage },
-      { 
-        role: "user", 
-        content: `Create educational content for the following lecture segment:
-Title: ${segmentTitle}
-${segmentDescription ? `Description: ${segmentDescription}` : ''}
-
-Here's the relevant lecture content to base your material on:
-${preparedContent}
-
-Please generate the content according to the specified JSON format.`
-      }
-    ];
-
-    // Make the API request with proper error handling
-    console.log("Sending request to OpenAI...");
-    const response = await fetch(apiUrl, {
-      method: "POST",
+    const { 
+      lectureId, 
+      segmentTitle, 
+      segmentDescription, 
+      lectureContent,
+      contentLanguage
+    } = request;
+    
+    console.log('Fetching AI configuration for lecture', lectureId);
+    
+    // Get AI config or use defaults
+    const aiConfig = await getAIConfig(lectureId) || {
+      temperature: 0.7,
+      creativity_level: 0.5,
+      detail_level: 0.6,
+      content_language: contentLanguage || 'English',
+      custom_instructions: ''
+    };
+    
+    console.log('Using AI config:', aiConfig);
+    
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      return { 
+        content: null, 
+        error: 'OpenAI API key not found' 
+      };
+    }
+    
+    // Create the prompt for OpenAI
+    const systemPrompt = createSystemPrompt(aiConfig);
+    const userPrompt = createUserPrompt(request, aiConfig);
+    
+    console.log('Sending request to OpenAI...');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4",
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2000
-      })
+        model: 'gpt-4o-mini',
+        temperature: aiConfig.temperature,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+      }),
     });
 
-    // Check for HTTP errors
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`OpenAI API error (${response.status}):`, errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      console.error('OpenAI API error:', errorText);
+      return { 
+        content: null, 
+        error: `OpenAI API error: ${response.status}` 
+      };
     }
 
-    // Parse the response
     const data = await response.json();
-    if (!data.choices || data.choices.length === 0) {
-      console.error("Invalid response from OpenAI:", data);
-      throw new Error("Invalid response from OpenAI API");
+    
+    if (!data.choices?.[0]?.message?.content) {
+      return { 
+        content: null, 
+        error: 'Invalid response from OpenAI' 
+      };
     }
-
-    const content = data.choices[0].message.content;
-    console.log("Received content from OpenAI, parsing JSON...");
-
-    try {
-      // Extract and parse the JSON from the response
-      let parsedContent;
-      
-      // Handle case where the AI might wrap the JSON in backticks
-      const jsonRegex = /```json\n([\s\S]*?)\n```|```([\s\S]*?)```|(\{[\s\S]*\})/;
-      const match = content.match(jsonRegex);
-      
-      if (match) {
-        const jsonContent = match[1] || match[2] || match[3];
-        parsedContent = JSON.parse(jsonContent);
-      } else {
-        // Try to parse directly if not wrapped
-        parsedContent = JSON.parse(content);
-      }
-
-      // Validate that the response has the required fields
-      const requiredFields = [
-        "theory_slide_1",
-        "theory_slide_2",
-        "quiz_1_type",
-        "quiz_1_question",
-        "quiz_1_correct_answer",
-        "quiz_1_explanation",
-        "quiz_2_type",
-        "quiz_2_question",
-        "quiz_2_correct_answer",
-        "quiz_2_explanation"
-      ];
-
-      for (const field of requiredFields) {
-        if (!parsedContent[field]) {
-          console.error(`Missing required field in OpenAI response: ${field}`);
-          throw new Error(`Missing required field in content: ${field}`);
-        }
-      }
-
-      // Ensure quiz_1_options exists if quiz_1_type is multiple_choice
-      if (parsedContent.quiz_1_type === "multiple_choice" && !parsedContent.quiz_1_options) {
-        console.error("Missing quiz_1_options for multiple_choice quiz");
-        throw new Error("Missing quiz_1_options for multiple_choice quiz");
-      }
-
-      console.log("Successfully parsed and validated content");
-      return parsedContent;
-    } catch (parseError) {
-      console.error("Failed to parse content from OpenAI:", parseError);
-      console.error("Raw content:", content);
-      throw new Error(`Failed to parse content: ${parseError.message}`);
-    }
+    
+    // Process the content
+    const content = data.choices[0].message.content.trim();
+    console.log('Generated content length:', content.length);
+    
+    return { content, error: null };
+    
   } catch (error) {
-    console.error("Error generating segment content:", error);
-    throw error;
+    console.error('Error generating content:', error);
+    return { 
+      content: null, 
+      error: `Content generation failed: ${error.message}` 
+    };
   }
+}
+
+function createSystemPrompt(aiConfig: AIConfig) {
+  return `You are an expert educational content creator, tasked with creating detailed, accurate, and engaging 
+educational content. Your goal is to explain concepts clearly with examples that aid understanding.
+
+Content Preferences:
+- Detail level: ${aiConfig.detail_level > 0.7 ? 'very detailed' : aiConfig.detail_level > 0.3 ? 'moderately detailed' : 'concise'}
+- Creativity: ${aiConfig.creativity_level > 0.7 ? 'highly creative' : aiConfig.creativity_level > 0.3 ? 'moderately creative' : 'straightforward'}
+- Language: ${aiConfig.content_language || 'English'}
+${aiConfig.custom_instructions ? `\nAdditional instructions: ${aiConfig.custom_instructions}` : ''}`;
+}
+
+function createUserPrompt(request: SegmentContentRequest, aiConfig: AIConfig) {
+  const { 
+    segmentTitle, 
+    segmentDescription, 
+    lectureContent 
+  } = request;
+  
+  // Calculate appropriate length based on detail level
+  const targetLength = aiConfig.detail_level > 0.7 ? 'about 1000-1500 words' : 
+                        aiConfig.detail_level > 0.3 ? 'about 600-900 words' : 
+                        'about 400-600 words';
+  
+  return `Create educational content for a segment titled "${segmentTitle}". 
+This segment covers: ${segmentDescription}
+
+The content should be ${targetLength} and should explain the concepts thoroughly with examples. 
+Focus on clarity and accuracy. Use the following lecture content as reference:
+
+${lectureContent}
+
+Format your response as follows:
+1. Start with a brief introduction to the topic
+2. Explain the key concepts in detail
+3. Include examples where appropriate
+4. Add a brief conclusion or summary
+
+Use Markdown formatting for headings, bullet points, etc. to make the content more readable.`;
 }
