@@ -99,6 +99,24 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
       console.log('Content length:', extractionData.content.length);
 
+      // Update the content column in the appropriate table
+      const updateContentError = isProfessorCourse
+        ? (await supabase
+            .from('professor_lectures')
+            .update({ content: extractionData.content })
+            .eq('id', lectureData.id)).error
+        : (await supabase
+            .from('lectures')
+            .update({ content: extractionData.content })
+            .eq('id', lectureData.id)).error;
+
+      if (updateContentError) {
+        console.error('Error updating lecture content:', updateContentError);
+        throw updateContentError;
+      }
+
+      console.log('Lecture content updated successfully');
+
       // Generate segment structure (titles and descriptions)
       console.log('Generating segment structure...');
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
