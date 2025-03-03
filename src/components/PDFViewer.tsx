@@ -1,15 +1,13 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Viewer, { SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
 import '@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css';
 import * as pdfjs from 'pdfjs-dist';
 
-// Make sure we're using the same version for both API and worker
-// Using version 3.11.174 for both to match the API version mentioned in the error
+// Make sure we're using a consistent version for both API and worker
+// Using version 3.11.174 to match the Edge Function
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 interface PDFViewerProps {

@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm'
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -19,6 +19,10 @@ interface ExtractPdfParams {
   lectureId: string
   isProfessorLecture: boolean
 }
+
+// Set the worker source before using PDF.js
+// Using v3.11.174 which is more stable in serverless environments
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 Deno.serve(async (req) => {
   console.log('PDF extraction function started')
@@ -98,25 +102,19 @@ Deno.serve(async (req) => {
     // Step 2: Convert PDF to ArrayBuffer for PDF.js
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Critical fix: Configure PDF.js to work in a Deno environment
-    console.log('Initializing PDF.js for serverless environment')
-    
-    // IMPORTANT: This is the crucial fix - set the workerSrc to null before any PDF.js operations
-    // This explicitly tells PDF.js to use the fake worker implementation
-    pdfjsLib.GlobalWorkerOptions.workerSrc = null;
-    
     try {
-      // Step 3: Use PDF.js to extract text content with all network operations disabled
-      console.log('Loading PDF document with fake worker processing')
+      // Step 3: Use a simplified configuration approach that works in serverless environments
+      console.log('Loading PDF document...')
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        disableWorker: true,              // Force disable any worker usage
-        isEvalSupported: false,           // Disable eval for security
-        useSystemFonts: false,            // Don't try to use system fonts
-        cMapUrl: null,                    // Don't load character maps
-        standardFontDataUrl: null,        // Don't load font data
-        useWorkerFetch: false,            // Don't use fetch in worker (redundant with disableWorker, but being explicit)
-        verbosity: 1                      // Increase logging for debugging
+        // These options help ensure it works in a serverless environment
+        disableAutoFetch: true,
+        disableStream: true,
+        disableRange: true,
+        disableFontFace: true,
+        nativeImageDecoderSupport: 'none',
+        cMapUrl: undefined,
+        standardFontDataUrl: undefined
       })
       
       const pdfDocument = await loadingTask.promise
