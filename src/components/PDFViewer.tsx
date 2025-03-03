@@ -1,13 +1,9 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Viewer, { SpecialZoomLevel } from '@phuocng/react-pdf-viewer';
 import '@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css';
-import * as pdfjs from 'pdfjs-dist';
-
-// Make sure we're using a consistent version for both API and worker
-// Using version 3.11.174 to match the Edge Function
-pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 interface PDFViewerProps {
   lectureId?: string;

@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import the PDF.js library correctly
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.mjs'
+// Import PDF.js from npm via esm.sh which is more reliable with Deno
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.11.174'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
