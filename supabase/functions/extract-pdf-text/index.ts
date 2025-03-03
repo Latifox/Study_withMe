@@ -1,6 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
+// Fix the import to access the PDF.js API correctly
+import { getDocument } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -99,12 +100,11 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer()
     
     try {
-      // Step 3: Create a custom document loading task without GlobalWorkerOptions
+      // Step 3: Create a custom document loading task with fixed configuration
       console.log('Loading PDF document with custom configuration')
       
-      // IMPORTANT: We're not using GlobalWorkerOptions at all
-      // Instead, we configure the document loading with disableWorker: true
-      const loadingTask = pdfjs.getDocument({
+      // Fixed: Use the correct getDocument function we imported
+      const loadingTask = getDocument({
         data: arrayBuffer,
         disableWorker: true,           // Critical: Disable worker usage completely
         disableAutoFetch: true,        // Disable fetching resources
