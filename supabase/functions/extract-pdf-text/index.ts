@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDFjs from a CDN with the minified browser version
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm'
+// Import PDF.js correctly - use the specific module path that includes the getDocument function
+import * as PDFJS from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -102,11 +102,8 @@ Deno.serve(async (req) => {
     try {
       console.log('Loading PDF with PDF.js')
       
-      // This is crucial for PDF.js in serverless - disable workers completely
-      // Setting GlobalWorkerOptions.workerSrc directly can cause issues in Deno
-      
-      // Set up PDF.js for serverless environment
-      const loadingTask = pdfjsLib.getDocument({
+      // Create a new PDF.js document with the correct way to call getDocument
+      const loadingTask = PDFJS.getDocument({
         data: new Uint8Array(arrayBuffer),
         disableWorker: true,  // Critical: disable workers
         disableAutoFetch: true,
