@@ -85,8 +85,8 @@ export const recreateLecture = async (
     throw new Error(`No lecture found with ID: ${oldLectureId}`);
   }
 
-  // Type assertion to help TypeScript understand that data has the expected shape
-  const oldLecture = data as {
+  // Type assertion with proper conversion to unknown first
+  const oldLecture = (data as unknown) as {
     [key: string]: any;
     title: string;
     content: string;
@@ -121,8 +121,8 @@ export const recreateLecture = async (
       throw new Error('Failed to create new lecture');
     }
 
-    // Type assertion for newLecture
-    const newLecture = newLectureData as {
+    // Type assertion for newLecture with proper conversion to unknown first
+    const newLecture = (newLectureData as unknown) as {
       id: number;
       [key: string]: any;
     };
