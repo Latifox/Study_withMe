@@ -46,28 +46,47 @@ serve(async (req) => {
     console.log("Request body received:", JSON.stringify(requestData));
 
     // Validate required fields
-    const { lectureId, lectureContent, lectureTitle } = requestData;
+    const { lectureId, lectureTitle, isProfessorLecture = false } = requestData;
     
     if (!lectureId) {
       throw new Error('Missing required field: lectureId');
-    }
-    
-    if (!lectureContent) {
-      throw new Error('Missing required field: lectureContent');
     }
 
     if (!lectureTitle) {
       throw new Error('Missing required field: lectureTitle');
     }
 
+    // Determine the table name based on whether it's a professor lecture
+    const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
+    
+    // Fetch the lecture content from the database if not provided in the request
+    console.log(`Fetching lecture content from ${tableName} table...`);
+    const { data: lectureData, error: lectureError } = await supabase
+      .from(tableName)
+      .select('content')
+      .eq('id', lectureId)
+      .single();
+
+    if (lectureError) {
+      console.error(`Error fetching lecture from ${tableName}:`, lectureError);
+      throw new Error(`Failed to fetch lecture content: ${lectureError.message}`);
+    }
+
+    if (!lectureData || !lectureData.content) {
+      throw new Error('No content found for the given lecture ID');
+    }
+
+    const lectureContent = lectureData.content;
+    console.log(`Retrieved lecture content, length: ${lectureContent.length} characters`);
+
     // Limit content to avoid token issues
-    const maxContentLength = 30000;
+    const maxContentLength = 25000;
     const trimmedContent = lectureContent.length > maxContentLength
       ? `${lectureContent.substring(0, maxContentLength)} [Content was trimmed due to length]`
       : lectureContent;
 
     console.log(`Processing lecture ID: ${lectureId}, title: ${lectureTitle}`);
-    console.log(`Content length: ${trimmedContent.length} characters`);
+    console.log(`Content length for processing: ${trimmedContent.length} characters`);
 
     // Call OpenAI API to process the lecture content
     console.log("Calling OpenAI API...");
@@ -148,12 +167,16 @@ Format your response as a valid JSON array without any additional text before or
       throw new Error('Segments must be an array');
     }
 
+    // Determine the appropriate segments table
+    const segmentsTable = isProfessorLecture ? 'professor_lecture_segments' : 'lecture_segments';
+    const lectureIdField = isProfessorLecture ? 'professor_lecture_id' : 'lecture_id';
+
     // Insert segments into the database
-    console.log(`Inserting ${segments.length} segments into lecture_segments table`);
+    console.log(`Inserting ${segments.length} segments into ${segmentsTable} table`);
     const { error: deleteError } = await supabase
-      .from('lecture_segments')
+      .from(segmentsTable)
       .delete()
-      .eq('lecture_id', lectureId);
+      .eq(lectureIdField, lectureId);
 
     if (deleteError) {
       console.error("Error deleting existing segments:", deleteError);
@@ -168,9 +191,9 @@ Format your response as a valid JSON array without any additional text before or
       }
 
       const { error: insertError } = await supabase
-        .from('lecture_segments')
+        .from(segmentsTable)
         .insert({
-          lecture_id: lectureId,
+          [lectureIdField]: lectureId,
           sequence_number: segment.sequence_number,
           title: segment.title,
           segment_description: segment.segment_description

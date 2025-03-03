@@ -1,115 +1,127 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { extractTextFromPDF } from "./textProcessor.ts";
+import { getPdfText } from "./textProcessor.ts";
+import { validateContent } from "./segmentValidator.ts";
 
-// Define CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Set up Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 serve(async (req) => {
+  console.log("Request received for extract-pdf-text");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log("Handling OPTIONS request (CORS preflight)");
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    });
+  }
+
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    console.log(`Method not allowed: ${req.method}`);
+    return new Response(JSON.stringify({
+      error: 'Method not allowed',
+      status: 405
+    }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   try {
-    console.log("PDF extraction function called");
-    
-    // Parse the request body
-    let requestData;
-    try {
-      requestData = await req.json();
-      console.log("Request data:", JSON.stringify(requestData));
-    } catch (parseError) {
-      console.error("Failed to parse request body:", parseError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-    
+    // Parse request body
+    const requestData = await req.json();
+    console.log("Request body received:", JSON.stringify(requestData));
+
+    // Validate required fields
     const { filePath, lectureId, isProfessorLecture = false } = requestData;
     
-    if (!filePath || !lectureId) {
-      console.error("Missing required parameters:", { filePath, lectureId });
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters: filePath or lectureId' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.error("Missing Supabase configuration");
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (!filePath) {
+      throw new Error('Missing required field: filePath');
     }
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (!lectureId) {
+      throw new Error('Missing required field: lectureId');
+    }
 
-    // Download the PDF from storage
-    console.log(`Downloading PDF from path: ${filePath}`);
+    console.log(`Processing PDF file: ${filePath}`);
+    console.log(`Lecture ID: ${lectureId}, isProfessorLecture: ${isProfessorLecture}`);
+
+    // Determine the table name based on whether it's a professor lecture
+    const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures';
+    
+    // Download the PDF file from storage
+    console.log("Downloading PDF from storage...");
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('lecture_pdfs')
       .download(filePath);
 
-    if (downloadError || !fileData) {
-      console.error('Error downloading PDF:', downloadError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to download PDF file', details: downloadError }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (downloadError) {
+      console.error("Error downloading PDF:", downloadError);
+      throw new Error(`Failed to download PDF: ${downloadError.message}`);
     }
 
-    console.log("PDF download successful, file size:", fileData.size);
-
-    // Extract text from the PDF
-    console.log('Extracting text from PDF...');
-    let extractedText;
-    try {
-      extractedText = await extractTextFromPDF(fileData);
-    } catch (extractError) {
-      console.error('Error during PDF text extraction:', extractError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to extract text from PDF', details: extractError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (!fileData) {
+      throw new Error('No file data received from storage');
     }
+
+    console.log("PDF downloaded successfully, extracting text...");
     
-    if (!extractedText || extractedText.length === 0) {
-      console.error('No text could be extracted from the PDF');
-      return new Response(
-        JSON.stringify({ error: 'No text could be extracted from the PDF' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+    // Extract text from the PDF
+    const pdfText = await getPdfText(fileData);
+    console.log(`Extracted text length: ${pdfText.length} characters`);
+    
+    // Validate the extracted content
+    const validatedContent = validateContent(pdfText);
+    console.log(`Validated content length: ${validatedContent.length} characters`);
+
+    if (validatedContent.length < 100) {
+      throw new Error('Extracted content is too short or invalid');
     }
 
-    console.log(`Extracted ${extractedText.length} characters from PDF`);
+    // Update the lecture with the extracted content
+    console.log(`Updating ${tableName} with extracted content...`);
+    const { error: updateError } = await supabase
+      .from(tableName)
+      .update({ content: validatedContent })
+      .eq('id', lectureId);
 
-    // Return the extracted content
-    return new Response(
-      JSON.stringify({ 
-        content: extractedText,
-        original_length: extractedText.length,
-        lecture_id: lectureId,
-        is_professor_lecture: isProfessorLecture
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    if (updateError) {
+      console.error("Error updating lecture content:", updateError);
+      throw new Error(`Failed to update lecture content: ${updateError.message}`);
+    }
+
+    console.log("Lecture content updated successfully");
+
+    // Return success response
+    return new Response(JSON.stringify({
+      success: true,
+      message: "PDF text extracted and stored successfully",
+      content: validatedContent
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
 
   } catch (error) {
-    console.error('Unhandled error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Server error', details: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
+    console.error("Error in extract-pdf-text:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message || 'An unexpected error occurred'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });

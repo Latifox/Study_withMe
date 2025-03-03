@@ -46,28 +46,44 @@ serve(async (req) => {
     console.log("Request body received:", JSON.stringify(requestData));
 
     // Validate required fields
-    const { lectureId, lectureContent, lectureTitle } = requestData;
+    const { lectureId, lectureTitle } = requestData;
     
     if (!lectureId) {
       throw new Error('Missing required field: lectureId');
-    }
-    
-    if (!lectureContent) {
-      throw new Error('Missing required field: lectureContent');
     }
 
     if (!lectureTitle) {
       throw new Error('Missing required field: lectureTitle');
     }
 
+    // Fetch the lecture content from the database
+    console.log("Fetching professor lecture content from database...");
+    const { data: lectureData, error: lectureError } = await supabase
+      .from('professor_lectures')
+      .select('content')
+      .eq('id', lectureId)
+      .single();
+
+    if (lectureError) {
+      console.error("Error fetching professor lecture:", lectureError);
+      throw new Error(`Failed to fetch lecture content: ${lectureError.message}`);
+    }
+
+    if (!lectureData || !lectureData.content) {
+      throw new Error('No content found for the given professor lecture ID');
+    }
+
+    const lectureContent = lectureData.content;
+    console.log(`Retrieved professor lecture content, length: ${lectureContent.length} characters`);
+
     // Limit content to avoid token issues
-    const maxContentLength = 30000;
+    const maxContentLength = 25000;
     const trimmedContent = lectureContent.length > maxContentLength
       ? `${lectureContent.substring(0, maxContentLength)} [Content was trimmed due to length]`
       : lectureContent;
 
     console.log(`Processing professor lecture ID: ${lectureId}, title: ${lectureTitle}`);
-    console.log(`Content length: ${trimmedContent.length} characters`);
+    console.log(`Content length for processing: ${trimmedContent.length} characters`);
 
     // Call OpenAI API to process the lecture content
     console.log("Calling OpenAI API...");
