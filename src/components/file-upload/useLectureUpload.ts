@@ -82,6 +82,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       }
 
       // Fetch the lecture to confirm content was saved correctly
+      console.log('Fetching updated lecture to verify content was saved...');
       const { data: updatedLecture, error: fetchError } = await supabase
         .from('lectures')
         .select('content')
@@ -90,9 +91,15 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
         
       if (fetchError) {
         console.error('Error fetching updated lecture:', fetchError);
-      } else {
-        console.log('Lecture content in database, length:', updatedLecture?.content?.length || 0);
+        throw new Error(`Failed to fetch updated lecture: ${fetchError.message}`);
+      } 
+      
+      if (!updatedLecture?.content || updatedLecture.content.length < 100) {
+        console.error('Lecture content in database is missing or too short');
+        throw new Error('Lecture content was not properly saved to the database');
       }
+      
+      console.log('Lecture content verified in database, length:', updatedLecture.content.length);
 
       // Generate segment structure (titles and descriptions) with retry mechanism
       console.log('Generating segment structure...');
@@ -103,10 +110,11 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
         try {
           console.log(`Attempt ${attemptCount + 1} to generate segment structure`);
           
-          // Make sure we always send the most up-to-date content
+          // Always get the most up-to-date content
+          console.log('Fetching the most recent lecture content for segment generation...');
           const { data: lecture, error: lectureError } = await supabase
             .from('lectures')
-            .select('content')
+            .select('content, title')
             .eq('id', lectureData.id)
             .single();
             
@@ -114,44 +122,47 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
             throw new Error(`Failed to fetch lecture content: ${lectureError.message}`);
           }
           
-          const contentToUse = lecture.content || extractionData.content;
-          
-          if (!contentToUse || contentToUse.length < 100) {
+          if (!lecture.content || lecture.content.length < 100) {
             throw new Error('Missing or insufficient lecture content for generation');
           }
           
-          console.log(`Sending segment structure request with content length: ${contentToUse.length}`);
+          console.log(`Starting segment structure generation with content length: ${lecture.content.length}`);
+          console.log('Sending request to generate-segments-structure edge function...');
           
           const response = await supabase.functions.invoke('generate-segments-structure', {
             body: {
               lectureId: lectureData.id,
-              lectureContent: contentToUse,
+              lectureContent: lecture.content,
               lectureTitle: title
             }
           });
 
+          console.log('Response received from generate-segments-structure:', response);
+
           if (response.error) {
             console.error('Segment structure generation error:', response.error);
-            throw response.error;
+            throw new Error(`Segment structure generation failed: ${response.error}`);
           }
 
           if (!response.data) {
             throw new Error('No data returned from segment structure generation');
           }
 
-          console.log('Segment structure generation response:', response);
+          console.log('Segment structure generation successful:', response.data);
           return response;
         } catch (error) {
           console.error(`Attempt ${attemptCount + 1} failed:`, error);
           if (attemptCount < maxRetries) {
-            console.log(`Retrying segment structure generation, attempt ${attemptCount + 1}...`);
-            await delay(2000 * (attemptCount + 1));
+            const retryDelay = 2000 * (attemptCount + 1);
+            console.log(`Retrying segment structure generation in ${retryDelay}ms, attempt ${attemptCount + 1}...`);
+            await delay(retryDelay);
             return generateStructureWithRetry(attemptCount + 1);
           }
           throw error;
         }
       };
 
+      console.log('Starting segment structure generation with retries...');
       const segmentResponse = await generateStructureWithRetry();
       const segmentData = segmentResponse.data;
       
@@ -159,36 +170,39 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
         throw new Error('No segments returned from generation');
       }
       
-      console.log('Segment structure generated:', segmentData);
+      console.log('Segment structure generated successfully:', segmentData);
 
       // Generate content for each segment with proper error handling and retries
       console.log('Generating content for all segments...');
 
       const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
         try {
+          console.log(`Generating content for segment ${segment.sequence_number}...`);
           const response = await supabase.functions.invoke('generate-segment-content', {
             body: {
               lectureId: lectureData.id,
               segmentNumber: segment.sequence_number,
               segmentTitle: segment.title,
               segmentDescription: segment.segment_description,
-              lectureContent: extractionData.content
+              lectureContent: updatedLecture.content
             }
           });
 
           if (response.error) {
-            throw response.error;
+            throw new Error(`Segment content generation failed: ${response.error}`);
           }
 
           if (!response.data?.success) {
             throw new Error(response.data?.error || 'Failed to generate segment content');
           }
 
+          console.log(`Segment ${segment.sequence_number} content generated successfully`);
           return response;
         } catch (error) {
           if (attemptCount < maxRetries) {
-            console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
-            await delay(2000 * (attemptCount + 1));
+            const retryDelay = 2000 * (attemptCount + 1);
+            console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1} in ${retryDelay}ms...`);
+            await delay(retryDelay);
             return generateSegmentWithRetry(segment, attemptCount + 1);
           }
           throw error;

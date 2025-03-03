@@ -11,32 +11,48 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Generate segments structure function called');
-    const { lectureId, lectureContent, lectureTitle } = await req.json();
+    console.log('Processing generate-segments-structure request');
+    
+    // Log request details
+    const reqBody = await req.json();
+    const { lectureId, lectureContent, lectureTitle } = reqBody;
+    
+    console.log(`Request received with lectureId: ${lectureId}`);
+    console.log(`Lecture title: ${lectureTitle}`);
+    console.log(`Content length: ${lectureContent?.length || 0} characters`);
 
     if (!lectureId || !lectureContent || !lectureTitle) {
-      console.error('Missing required parameters:', { lectureId, contentLength: lectureContent?.length, lectureTitle });
-      throw new Error('Missing required parameters');
+      console.error('Missing required parameters:', { 
+        lectureId, 
+        contentLength: lectureContent?.length, 
+        lectureTitle 
+      });
+      throw new Error('Missing required parameters: lectureId, lectureContent, or lectureTitle');
     }
-
-    console.log('Received lecture content length:', lectureContent.length);
-    console.log('Lecture title:', lectureTitle);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    console.log('Supabase client initialized');
 
     // Fetch AI configuration
-    const { data: aiConfig } = await supabase
+    console.log(`Fetching AI config for lecture ${lectureId}`);
+    const { data: aiConfig, error: configError } = await supabase
       .from('lecture_ai_configs')
       .select('*')
       .eq('lecture_id', lectureId)
       .maybeSingle();
+
+    if (configError) {
+      console.error('Error fetching AI config:', configError);
+    }
 
     // Use default values if no config is found
     const config = aiConfig || {
@@ -60,7 +76,9 @@ serve(async (req) => {
     ${config.content_language || 'English'} language. 
     ${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}`;
 
+    console.log('System prompt prepared:', systemPrompt.substring(0, 100) + '...');
     console.log('Sending request to OpenAI...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -91,16 +109,18 @@ serve(async (req) => {
                 ...
               ]
             }
-              Content to analyze:
+            Content to analyze:
             ${lectureContent}`
           }
         ],
       }),
     });
 
+    console.log('OpenAI response status:', response.status);
+
     if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI API error:', error);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
@@ -108,16 +128,19 @@ serve(async (req) => {
     console.log('OpenAI response received');
 
     if (!data.choices?.[0]?.message?.content) {
-      console.error('Invalid response from OpenAI');
+      console.error('Invalid response from OpenAI:', data);
       throw new Error('Invalid response from OpenAI');
     }
+
+    console.log('Raw OpenAI response content:', data.choices[0].message.content.substring(0, 200) + '...');
 
     let segments;
     try {
       // Parse the generated content, handling potential markdown formatting
       const jsonStr = data.choices[0].message.content.replace(/```json\n?|\n?```/g, '');
+      console.log('Cleaned JSON string:', jsonStr.substring(0, 200) + '...');
       segments = JSON.parse(jsonStr);
-      console.log('Successfully parsed segments');
+      console.log('Successfully parsed segments:', JSON.stringify(segments).substring(0, 200) + '...');
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.log('Raw OpenAI response:', data.choices[0].message.content);
@@ -126,6 +149,9 @@ serve(async (req) => {
 
     // Insert segments into the database
     if (segments?.segments?.length > 0) {
+      console.log(`Inserting ${segments.segments.length} segments into database`);
+      
+      // Delete existing segments first
       const { error: deleteError } = await supabase
         .from('lecture_segments')
         .delete()
@@ -135,17 +161,22 @@ serve(async (req) => {
         console.error('Error deleting existing segments:', deleteError);
         throw deleteError;
       }
+      
+      console.log('Existing segments deleted successfully');
 
+      // Insert new segments
+      const segmentsToInsert = segments.segments.map((segment: any) => ({
+        lecture_id: lectureId,
+        title: segment.title,
+        segment_description: segment.segment_description,
+        sequence_number: segment.sequence_number,
+      }));
+      
+      console.log('Segments to insert:', segmentsToInsert);
+      
       const { error: insertError } = await supabase
         .from('lecture_segments')
-        .insert(
-          segments.segments.map((segment: any) => ({
-            lecture_id: lectureId,
-            title: segment.title,
-            segment_description: segment.segment_description,
-            sequence_number: segment.sequence_number,
-          }))
-        );
+        .insert(segmentsToInsert);
 
       if (insertError) {
         console.error('Error inserting segments:', insertError);
@@ -153,8 +184,12 @@ serve(async (req) => {
       }
       
       console.log('Segments saved to database successfully');
+    } else {
+      console.error('No valid segments found in the parsed response');
+      throw new Error('No valid segments found in the parsed response');
     }
 
+    console.log('Function completed successfully');
     return new Response(JSON.stringify(segments), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
