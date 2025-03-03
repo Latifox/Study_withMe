@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import { getDocument } from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs'
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.11.174/es5/build/pdf.js'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -100,8 +100,8 @@ Deno.serve(async (req) => {
     
     console.log('Loading PDF document with PDF.js');
     
-    // Use the directly imported getDocument function
-    const loadingTask = getDocument({ data: new Uint8Array(arrayBuffer) });
+    // Use the PDF.js library properly
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
     const pdfDocument = await loadingTask.promise;
     
     console.log('PDF document loaded successfully, number of pages:', pdfDocument.numPages);
