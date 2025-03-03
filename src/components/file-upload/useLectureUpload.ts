@@ -75,21 +75,45 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       
       console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
       console.log('Content length:', extractionData.content.length);
-
-      // Generate segment structure (titles and descriptions)
-      console.log('Generating segment structure...');
-      const { data: segmentData, error: segmentError } = await supabase.functions.invoke('generate-segments-structure', {
-        body: {
-          lectureId: lectureData.id,
-          lectureContent: extractionData.content,
-          lectureTitle: title
-        }
-      });
-
-      if (segmentError) {
-        console.error('Segment generation error:', segmentError);
-        throw new Error(`Failed to generate segments: ${segmentError.message || 'Unknown error'}`);
+      
+      // Make sure to verify we have content before proceeding to segment generation
+      if (extractionData.content.length < 100) {
+        throw new Error('Extracted content is too short, possibly failed to extract meaningful text');
       }
+
+      // Generate segment structure (titles and descriptions) with retry mechanism
+      console.log('Generating segment structure...');
+      const maxRetries = 3;
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      const generateStructureWithRetry = async (attemptCount = 0) => {
+        try {
+          const response = await supabase.functions.invoke('generate-segments-structure', {
+            body: {
+              lectureId: lectureData.id,
+              lectureContent: extractionData.content,
+              lectureTitle: title
+            }
+          });
+
+          if (response.error) {
+            throw response.error;
+          }
+
+          return response;
+        } catch (error) {
+          console.error(`Attempt ${attemptCount + 1} failed:`, error);
+          if (attemptCount < maxRetries) {
+            console.log(`Retrying segment structure generation, attempt ${attemptCount + 1}...`);
+            await delay(2000 * (attemptCount + 1));
+            return generateStructureWithRetry(attemptCount + 1);
+          }
+          throw error;
+        }
+      };
+
+      const segmentResponse = await generateStructureWithRetry();
+      const segmentData = segmentResponse.data;
       
       if (!segmentData || !segmentData.segments) {
         throw new Error('No segments returned from generation');
@@ -99,8 +123,6 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
 
       // Generate content for each segment with proper error handling and retries
       console.log('Generating content for all segments...');
-      const maxRetries = 3;
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
       const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
         try {
