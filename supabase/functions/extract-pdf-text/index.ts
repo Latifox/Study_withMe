@@ -99,49 +99,61 @@ Deno.serve(async (req) => {
     
     console.log('Loading PDF document');
     
-    // Since we can't rely on importing PDF.js directly in Deno, let's use a different approach
-    // Dynamically import PDF.js via a CDN
-    const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.mjs');
-    
-    if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
-      console.error('PDF.js library not loaded correctly:', pdfjsLib);
+    // Try a different approach to handle PDF extraction without PDF.js library dependencies
+    // Use a custom implementation to extract text directly
+    let fullText = '';
+    try {
+      // Simple text extraction technique for PDFs
+      // Convert the buffer to a string and look for text markers
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const textDecoder = new TextDecoder('utf-8');
+      const rawText = textDecoder.decode(uint8Array);
+      
+      // Basic PDF text extraction pattern - this is a simplified approach
+      // Extract text between BT (Begin Text) and ET (End Text) markers
+      const textMarkers = rawText.match(/BT([\s\S]*?)ET/g) || [];
+      console.log(`Found ${textMarkers.length} text sections in PDF`);
+      
+      // Extract text content from markers
+      for (const marker of textMarkers) {
+        // Look for text patterns like (text) TJ or Tj
+        const textMatches = marker.match(/\((.*?)\)([ ]?)(TJ|Tj)/g) || [];
+        for (const match of textMatches) {
+          // Extract the text between parentheses
+          const text = match.match(/\((.*?)\)/);
+          if (text && text[1]) {
+            fullText += text[1] + ' ';
+          }
+        }
+      }
+      
+      // If the simple extraction didn't yield much text, try another approach
+      if (fullText.length < 100) {
+        // Scan for text patterns commonly found in PDFs
+        const textBlocks = rawText.match(/\/(T[idmfj]|TJ|Tm)\s*(\[.*?\]|\(.*?\))/g) || [];
+        let extractedText = '';
+        for (const block of textBlocks) {
+          const text = block.match(/\((.*?)\)/);
+          if (text && text[1]) {
+            extractedText += text[1] + ' ';
+          }
+        }
+        if (extractedText.length > fullText.length) {
+          fullText = extractedText;
+        }
+      }
+    } catch (error) {
+      console.error('Error during PDF text extraction:', error);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'PDF.js library could not be loaded properly' 
+          error: `PDF text extraction failed: ${error.message || 'Unknown error'}` 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
       );
-    }
-    
-    // Use the PDF.js library
-    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
-    const pdfDocument = await loadingTask.promise;
-    
-    console.log('PDF document loaded successfully, number of pages:', pdfDocument.numPages);
-    
-    // Extract text from all pages
-    let fullText = '';
-    for (let i = 1; i <= pdfDocument.numPages; i++) {
-      console.log(`Extracting text from page ${i}/${pdfDocument.numPages}`);
-      const page = await pdfDocument.getPage(i);
-      const textContent = await page.getTextContent();
-      
-      // Concatenate text items with proper spacing
-      const pageText = textContent.items
-        .map(item => {
-          // Check if the item has a 'str' property (text item)
-          if ('str' in item && typeof item.str === 'string') {
-            return item.str;
-          }
-          return '';
-        })
-        .join(' ');
-      
-      fullText += pageText + '\n\n';
     }
     
     // Thoroughly clean the extracted text
