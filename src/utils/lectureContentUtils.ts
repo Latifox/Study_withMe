@@ -70,7 +70,7 @@ export const recreateLecture = async (
   const courseIdField = isProfessorLecture ? 'professor_course_id' : 'course_id';
   
   // First, get the old lecture data
-  const { data: oldLecture, error: fetchError } = await supabase
+  const { data, error: fetchError } = await supabase
     .from(tableName)
     .select(`${courseIdField}, title, content, pdf_path, original_language`)
     .eq('id', oldLectureId)
@@ -81,10 +81,12 @@ export const recreateLecture = async (
     throw fetchError;
   }
 
-  if (!oldLecture) {
+  if (!data) {
     throw new Error(`No lecture found with ID: ${oldLectureId}`);
   }
 
+  // Now we know 'data' is not null and has the expected properties
+  const oldLecture = data;
   console.log('Retrieved old lecture data:', oldLecture);
 
   try {
@@ -97,7 +99,7 @@ export const recreateLecture = async (
       original_language: oldLecture.original_language
     };
 
-    const { data: newLecture, error: insertError } = await supabase
+    const { data: newLectureData, error: insertError } = await supabase
       .from(tableName)
       .insert(insertData)
       .select()
@@ -108,10 +110,12 @@ export const recreateLecture = async (
       throw insertError;
     }
 
-    if (!newLecture) {
+    if (!newLectureData) {
       throw new Error('Failed to create new lecture');
     }
 
+    // Now we know 'newLectureData' is not null and has the expected properties
+    const newLecture = newLectureData;
     console.log('Created new lecture:', newLecture);
 
     // Create AI config for the new lecture
@@ -155,7 +159,7 @@ export const recreateLecture = async (
     console.log('Generated segments structure successfully');
 
     // Get all segments for the new lecture
-    const { data: segments, error: segmentsError } = await supabase
+    const { data: segmentsData, error: segmentsError } = await supabase
       .from('lecture_segments')
       .select('sequence_number, title, segment_description')
       .eq('lecture_id', newLecture.id)
@@ -166,9 +170,11 @@ export const recreateLecture = async (
       throw segmentsError;
     }
 
+    const segments = segmentsData || [];
+
     // Generate content for each segment
     console.log('Generating content for segments...');
-    for (const segment of segments || []) {
+    for (const segment of segments) {
       console.log(`Generating content for segment ${segment.sequence_number}...`);
       const { error: contentError } = await supabase.functions.invoke('generate-segment-content', {
         body: {
