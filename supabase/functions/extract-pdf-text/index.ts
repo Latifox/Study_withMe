@@ -94,35 +94,37 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
     
-    // Step 2: Use Supabase Storage to extract text
-    // Instead of using PDF.js, which is causing compatibility issues,
-    // we'll store the raw PDF and use a simple text extraction approach
-    
+    // Step 2: Extract text from the PDF
     try {
       console.log('Extracting text from PDF')
       
-      // Convert file to ArrayBuffer to extract basic text content
+      // Convert file to ArrayBuffer
       const buffer = await fileData.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
       
-      // This is a simplified text extraction approach
-      // It's not as robust as PDF.js but will work for basic text extraction
+      // This is a more robust approach to text extraction
+      // We'll extract readable text and clean it up
       let textContent = '';
       
+      // Try UTF-8 encoding first
       try {
-        // Convert buffer to text - will work for some PDFs with basic text encoding
-        const decoder = new TextDecoder('utf-8');
-        const rawText = decoder.decode(buffer);
+        const utf8Decoder = new TextDecoder('utf-8');
+        // Convert binary data to a string
+        const rawText = utf8Decoder.decode(bytes);
         
-        // Basic cleaning to extract readable text - this is a simplified approach
-        textContent = rawText
-          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '') // Remove control chars
-          .replace(/(\(cid:\d+\)|\[\d+\])/g, '') // Remove CID references
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim();
+        // Clean and normalize the text
+        textContent = cleanExtractedText(rawText);
       } catch (decodeError) {
-        console.error('Error decoding PDF content:', decodeError);
-        // Continue with empty content if we can't decode
-        textContent = 'PDF content could not be decoded automatically. Manual processing required.';
+        console.error('Error with UTF-8 decoding, trying alternative approach:', decodeError);
+        
+        // If UTF-8 fails, try to extract text with a more basic approach
+        // Look for sequences that appear to be text
+        textContent = extractTextFromBinary(bytes);
+      }
+      
+      if (textContent.length < 100) {
+        console.warn('Extracted text is suspiciously short, trying alternative extraction method');
+        textContent = extractTextFromBinary(bytes);
       }
       
       if (textContent.length === 0) {
@@ -130,11 +132,25 @@ Deno.serve(async (req) => {
         textContent = 'PDF content could not be extracted automatically. Manual processing required.';
       }
       
-      console.log(`Text extraction complete. Extracted ${textContent.length} characters`);
+      // Verify text quality - check if it has a reasonable proportion of readable characters
+      const readableCharRatio = countReadableChars(textContent) / textContent.length;
+      console.log(`Text readability ratio: ${readableCharRatio}`);
       
-      // Step 3: Determine language of the content (simple detection)
+      if (readableCharRatio < 0.5) {
+        console.warn('Extracted text has low readability, trying another approach');
+        const alternativeText = extractTextWithRegex(bytes);
+        
+        if (alternativeText.length > textContent.length * 0.7) {
+          textContent = alternativeText;
+        }
+      }
+      
+      console.log(`Text extraction complete. Extracted ${textContent.length} characters`);
+      console.log('Sample of extracted text:', textContent.substring(0, 500) + '...');
+      
+      // Step 3: Determine language of the content
       const detectLanguage = (text: string): string => {
-        // Very basic detection - this could be improved with actual language detection libraries
+        // Basic detection based on common words
         const commonEnglishWords = ['the', 'and', 'is', 'in', 'it', 'to', 'of', 'that', 'this'];
         const commonSpanishWords = ['el', 'la', 'es', 'en', 'y', 'de', 'que', 'un', 'una'];
         const commonFrenchWords = ['le', 'la', 'est', 'et', 'en', 'de', 'que', 'un', 'une'];
@@ -161,6 +177,8 @@ Deno.serve(async (req) => {
           const matches = normalizedText.match(regex);
           if (matches) frenchCount += matches.length;
         });
+        
+        console.log(`Language detection: English=${englishCount}, Spanish=${spanishCount}, French=${frenchCount}`);
         
         if (englishCount > spanishCount && englishCount > frenchCount) return 'english';
         if (spanishCount > englishCount && spanishCount > frenchCount) return 'spanish';
@@ -258,3 +276,65 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+// Helper functions for text extraction
+
+function cleanExtractedText(text: string): string {
+  return text
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '') // Remove control chars
+    .replace(/(\(cid:\d+\)|\[\d+\])/g, '') // Remove CID references
+    .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Remove more control chars
+    .replace(/\\n/g, '\n') // Replace literal "\n" with actual line breaks
+    .replace(/\\t/g, '\t') // Replace literal "\t" with actual tabs
+    .replace(/\\r/g, '') // Remove carriage returns
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF]/g, ' ') // Keep only common ASCII and Latin characters
+    .trim();
+}
+
+function countReadableChars(text: string): number {
+  // Count alphanumeric characters and common punctuation
+  const readableChars = text.match(/[a-zA-Z0-9.,;:!?\- ]/g);
+  return readableChars ? readableChars.length : 0;
+}
+
+function extractTextFromBinary(bytes: Uint8Array): string {
+  // Look for strings of readable ASCII characters in the binary data
+  let result = '';
+  let currentString = '';
+  
+  for (let i = 0; i < bytes.length; i++) {
+    const byte = bytes[i];
+    // Check if the byte represents a readable ASCII character
+    if ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13) {
+      currentString += String.fromCharCode(byte);
+    } else {
+      // If we hit a non-readable character, check if we've built up a decent string
+      if (currentString.length > 3) { // Require at least 4 consecutive readable chars
+        result += currentString + ' ';
+      }
+      currentString = '';
+    }
+  }
+  
+  // Don't forget the last string if we had one
+  if (currentString.length > 3) {
+    result += currentString;
+  }
+  
+  return cleanExtractedText(result);
+}
+
+function extractTextWithRegex(bytes: Uint8Array): string {
+  // Another approach: convert to string and use regex to extract
+  // sequences that look like text
+  
+  // First try UTF-8
+  const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  
+  // Extract words (3+ consecutive letter/number sequences)
+  const wordRegex = /[a-zA-Z0-9][a-zA-Z0-9.,:;\-_' ]{2,}/g;
+  const matches = text.match(wordRegex) || [];
+  
+  return matches.join(' ');
+}
