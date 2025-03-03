@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
 import { DeleteProfessorCourseDialog } from "@/components/DeleteProfessorCourseDialog";
-import { Share, ArrowLeft } from "lucide-react";
+import { Share, ArrowLeft, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
@@ -65,6 +65,23 @@ const ProfessorCourses = () => {
       return data || [] as ProfessorCourse[];
     }
   });
+
+  const handleCopyCode = (courseCode: string | undefined) => {
+    if (!courseCode) {
+      toast({
+        title: "No course code available",
+        description: "This course doesn't have a sharing code yet.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    navigator.clipboard.writeText(courseCode);
+    toast({
+      title: "Course code copied!",
+      description: "Share this code with your students so they can join the course.",
+    });
+  };
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
@@ -133,16 +150,10 @@ const ProfessorCourses = () => {
                     <Button 
                       variant="outline"
                       className="w-full"
-                      onClick={() => {
-                        console.log('Share course:', course.id);
-                        toast({
-                          title: "Coming Soon",
-                          description: "Course sharing will be available in a future update",
-                        });
-                      }}
+                      onClick={() => handleCopyCode(course.course_code)}
                     >
-                      <Share className="mr-2 h-4 w-4" />
-                      Share Course
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Course Code
                     </Button>
                   </CardContent>
                 </Card>
