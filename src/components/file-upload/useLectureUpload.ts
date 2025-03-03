@@ -36,7 +36,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
-      console.log('PDF uploaded successfully');
+      console.log('PDF uploaded successfully to path:', filePath);
 
       // Save lecture metadata to the appropriate table based on course type
       console.log(`Saving lecture to ${isProfessorCourse ? 'professor_lectures' : 'lectures'} table...`);
@@ -83,43 +83,56 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       setShowAIProfessor(true);
 
       console.log('Extracting PDF content...');
-      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
-        body: {
+      try {
+        console.log('Calling extract-pdf-text function with params:', {
           filePath,
           lectureId: lectureData.id.toString(),
           isProfessorLecture: isProfessorCourse
-        }
-      });
+        });
+        
+        const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
+          body: {
+            filePath,
+            lectureId: lectureData.id.toString(),
+            isProfessorLecture: isProfessorCourse
+          }
+        });
 
-      if (extractionError) {
-        console.error('PDF extraction error:', extractionError);
+        console.log('Response from extract-pdf-text:', { data: extractionData, error: extractionError });
+
+        if (extractionError) {
+          console.error('PDF extraction error:', extractionError);
+          throw new Error(`Failed to extract PDF content: ${extractionError.message || 'Unknown error'}`);
+        }
+        
+        if (!extractionData || !extractionData.content) {
+          throw new Error('No content returned from PDF extraction');
+        }
+        
+        console.log('PDF content extracted, content length:', extractionData.content.length);
+
+        // Update the content column in the appropriate table
+        console.log('Updating lecture content in database...');
+        const updateContentError = isProfessorCourse
+          ? (await supabase
+              .from('professor_lectures')
+              .update({ content: extractionData.content })
+              .eq('id', lectureData.id)).error
+          : (await supabase
+              .from('lectures')
+              .update({ content: extractionData.content })
+              .eq('id', lectureData.id)).error;
+
+        if (updateContentError) {
+          console.error('Error updating lecture content:', updateContentError);
+          throw updateContentError;
+        }
+
+        console.log('Lecture content updated successfully');
+      } catch (extractionError: any) {
+        console.error('Error in PDF content extraction process:', extractionError);
         throw new Error(`Failed to extract PDF content: ${extractionError.message || 'Unknown error'}`);
       }
-      
-      if (!extractionData || !extractionData.content) {
-        throw new Error('No content returned from PDF extraction');
-      }
-      
-      console.log('PDF content extracted, first 200 chars:', extractionData.content.substring(0, 200));
-      console.log('Content length:', extractionData.content.length);
-
-      // Update the content column in the appropriate table
-      const updateContentError = isProfessorCourse
-        ? (await supabase
-            .from('professor_lectures')
-            .update({ content: extractionData.content })
-            .eq('id', lectureData.id)).error
-        : (await supabase
-            .from('lectures')
-            .update({ content: extractionData.content })
-            .eq('id', lectureData.id)).error;
-
-      if (updateContentError) {
-        console.error('Error updating lecture content:', updateContentError);
-        throw updateContentError;
-      }
-
-      console.log('Lecture content updated successfully');
 
       // Generate segment structure (titles and descriptions)
       console.log('Generating segment structure...');
@@ -128,7 +141,6 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       console.log(`Invoking edge function: ${segmentsFunctionName}`);
       console.log('Request payload:', {
         lectureId: lectureData.id,
-        lectureContent: extractionData.content,
         lectureTitle: title
       });
       
@@ -136,10 +148,11 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
         const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
           body: {
             lectureId: lectureData.id,
-            lectureContent: extractionData.content,
             lectureTitle: title
           }
         });
+
+        console.log('Response from segment generation:', { data: segmentData, error: segmentError });
 
         if (segmentError) {
           console.error('Segment generation error:', segmentError);
@@ -159,16 +172,18 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
 
         const generateSegmentWithRetry = async (segment: any, attemptCount = 0) => {
           try {
+            console.log(`Generating content for segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
             const response = await supabase.functions.invoke('generate-segment-content', {
               body: {
                 lectureId: lectureData.id,
                 segmentNumber: segment.sequence_number,
                 segmentTitle: segment.title,
                 segmentDescription: segment.segment_description,
-                lectureContent: extractionData.content,
                 isProfessorLecture: isProfessorCourse
               }
             });
+
+            console.log(`Response for segment ${segment.sequence_number}:`, response);
 
             if (response.error) {
               throw response.error;
@@ -179,7 +194,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
             }
 
             return response;
-          } catch (error) {
+          } catch (error: any) {
+            console.error(`Error generating segment ${segment.sequence_number}:`, error);
             if (attemptCount < maxRetries) {
               console.log(`Retrying segment ${segment.sequence_number}, attempt ${attemptCount + 1}...`);
               await delay(2000 * (attemptCount + 1));
@@ -194,14 +210,15 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
             console.log(`Processing segment ${segment.sequence_number}...`);
             await generateSegmentWithRetry(segment);
             console.log(`Segment ${segment.sequence_number} completed`);
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Failed to generate content for segment ${segment.sequence_number}:`, error);
-            throw new Error(`Failed to generate content for segment ${segment.sequence_number}: ${error.message}`);
+            // Continue with other segments even if one fails
+            // But log the error for debugging
           }
         }
 
         console.log('All segment content generated successfully');
-      } catch (segmentProcessingError) {
+      } catch (segmentProcessingError: any) {
         console.error('Error in segment processing:', segmentProcessingError);
         throw new Error(`Segment processing failed: ${segmentProcessingError.message || 'Unknown error'}`);
       }

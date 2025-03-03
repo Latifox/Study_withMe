@@ -2,8 +2,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { extractTextFromPDF } from "./textProcessor.ts";
-import { analyzePDFStructure } from "./gptAnalyzer.ts";
-import { validateSegments } from "./segmentValidator.ts";
 
 // Define CORS headers for cross-origin requests
 const corsHeaders = {
@@ -18,10 +16,25 @@ serve(async (req) => {
   }
 
   try {
+    console.log("PDF extraction function called");
+    
     // Parse the request body
-    const { filePath, lectureId, isProfessorLecture = false } = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log("Request data:", JSON.stringify(requestData));
+    } catch (parseError) {
+      console.error("Failed to parse request body:", parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    const { filePath, lectureId, isProfessorLecture = false } = requestData;
     
     if (!filePath || !lectureId) {
+      console.error("Missing required parameters:", { filePath, lectureId });
       return new Response(
         JSON.stringify({ error: 'Missing required parameters: filePath or lectureId' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -33,6 +46,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
     if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase configuration");
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -55,11 +69,23 @@ serve(async (req) => {
       );
     }
 
+    console.log("PDF download successful, file size:", fileData.size);
+
     // Extract text from the PDF
     console.log('Extracting text from PDF...');
-    const extractedText = await extractTextFromPDF(fileData);
+    let extractedText;
+    try {
+      extractedText = await extractTextFromPDF(fileData);
+    } catch (extractError) {
+      console.error('Error during PDF text extraction:', extractError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to extract text from PDF', details: extractError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
     
     if (!extractedText || extractedText.length === 0) {
+      console.error('No text could be extracted from the PDF');
       return new Response(
         JSON.stringify({ error: 'No text could be extracted from the PDF' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -68,34 +94,11 @@ serve(async (req) => {
 
     console.log(`Extracted ${extractedText.length} characters from PDF`);
 
-    // Optional: Analyze PDF structure with GPT to improve parsing
-    let enhancedContent = extractedText;
-    try {
-      console.log('Analyzing PDF structure with GPT...');
-      enhancedContent = await analyzePDFStructure(extractedText);
-      console.log('PDF structure analysis complete');
-    } catch (error) {
-      console.error('Error analyzing PDF structure:', error);
-      // Continue with the raw extracted text if analysis fails
-      console.log('Proceeding with raw extracted text...');
-    }
-
-    // Optional: Validate the segments to ensure they meet requirements
-    try {
-      console.log('Validating content segments...');
-      validateSegments(enhancedContent);
-      console.log('Content segments validated successfully');
-    } catch (error) {
-      console.error('Content validation warning:', error);
-      // Continue anyway as this is just a quality check
-    }
-
-    // Return the extracted and processed content
+    // Return the extracted content
     return new Response(
       JSON.stringify({ 
-        content: enhancedContent,
+        content: extractedText,
         original_length: extractedText.length,
-        processed_length: enhancedContent.length,
         lecture_id: lectureId,
         is_professor_lecture: isProfessorLecture
       }),
@@ -103,7 +106,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Unhandled error:', error);
     return new Response(
       JSON.stringify({ error: 'Server error', details: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

@@ -1,0 +1,10 @@
+
+project_id = "bjpawnertrqwtgyvrhml"
+
+[global]
+version = "v1.67.2"
+
+[functions.extract-pdf-text]
+verify_jwt = true
+memory = 1024
+max_timeout = 120
