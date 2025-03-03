@@ -1,4 +1,3 @@
-
 // Follow this setup guide to integrate the Deno runtime and the Supabase JS library with your project:
 // https://deno.land/manual/examples/supabase
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
@@ -92,6 +91,11 @@ Deno.serve(async (req) => {
     // Validate required fields
     if (!lectureId || !config) {
       return corsResponse({ error: "Missing required fields" }, 400);
+    }
+
+    // Validate number of questions (adding this validation)
+    if (config.numberOfQuestions < 1 || config.numberOfQuestions > 20) {
+      return corsResponse({ error: "Number of questions must be between 1 and 20" }, 400);
     }
 
     // Get auth user

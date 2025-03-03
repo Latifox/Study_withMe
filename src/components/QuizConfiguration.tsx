@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, BookOpen } from "lucide-react";
@@ -26,7 +25,7 @@ const formSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
   questionTypes: z.enum(["multiple_choice", "true_false", "mixed"]),
   timeLimit: z.number().min(1).max(30),
-  numberOfQuestions: z.number().min(1).max(15),
+  numberOfQuestions: z.number().min(1).max(20),
   hintsEnabled: z.boolean(),
 });
 
@@ -270,7 +269,7 @@ const QuizConfiguration = () => {
                           {...field}
                           onChange={(e) => field.onChange(Number(e.target.value))}
                           min={1}
-                          max={15}
+                          max={20}
                           className="bg-white/50 border-white/40 border border-black/20"
                         />
                       </FormControl>
