@@ -11,11 +11,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("generate-segments-structure function called");
+  console.log("[generate-segments-structure] Function called");
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS request for CORS");
+    console.log("[generate-segments-structure] Handling OPTIONS request for CORS");
     return new Response(null, {
       status: 204,
       headers: corsHeaders
@@ -27,12 +27,13 @@ serve(async (req) => {
     const requestData = await req.json();
     const { lectureId, lectureContent, lectureTitle } = requestData;
 
-    console.log(`Processing lecture ID: ${lectureId}, title: ${lectureTitle}`);
+    console.log(`[generate-segments-structure] Processing lecture ID: ${lectureId}, title: ${lectureTitle}`);
+    console.log(`[generate-segments-structure] Content length: ${lectureContent?.length || 0} characters`);
     
     if (!lectureId || !lectureContent) {
-      console.error("Missing required parameters: lectureId or lectureContent");
+      console.error("[generate-segments-structure] Missing required parameters: lectureId or lectureContent");
       return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
+        JSON.stringify({ error: "Missing required parameters", details: { lectureId, contentLength: lectureContent?.length || 0 } }),
         { status: 400, headers: corsHeaders }
       );
     }
@@ -40,15 +41,31 @@ serve(async (req) => {
     // Create a Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("[generate-segments-structure] Missing Supabase credentials");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error: Missing Supabase credentials" }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Call OpenAI to analyze the content and suggest segments
-    console.log("Preparing to call OpenAI for segment generation");
+    console.log("[generate-segments-structure] Preparing to call OpenAI for segment generation");
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     
     if (!openaiApiKey) {
-      throw new Error("OpenAI API key not found");
+      console.error("[generate-segments-structure] OpenAI API key not found");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error: OpenAI API key not found" }),
+        { status: 500, headers: corsHeaders }
+      );
     }
+    
+    // Limit content length to avoid token limits
+    const truncatedContent = lectureContent.substring(0, 12000);
     
     // Create a prompt for the GPT model
     const prompt = `
@@ -74,101 +91,133 @@ serve(async (req) => {
     DO NOT include any explanations or text outside the JSON array. Return ONLY the JSON array.
     
     Here is the lecture content:
-    ${lectureContent.substring(0, 15000)} // Limit to 15K chars to avoid token limits
+    ${truncatedContent}
     `;
     
-    console.log("Calling OpenAI API");
-    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openaiApiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",  // Using a reliable model for this task
-        messages: [
-          {
-            role: "system",
-            content: "You are an AI that helps divide educational content into logical segments."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.3  // Lower temperature for more consistent results
-      })
-    });
+    console.log("[generate-segments-structure] Calling OpenAI API");
+    console.log("[generate-segments-structure] Using model: gpt-4o-mini");
     
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.text();
-      console.error("OpenAI API error:", errorData);
-      throw new Error(`OpenAI API error: ${errorData}`);
-    }
-    
-    const openAIData = await openAIResponse.json();
-    console.log("Received response from OpenAI");
-    
-    // Extract the response content
-    const segmentsText = openAIData.choices[0].message.content.trim();
-    
-    let segments;
     try {
-      // Try to parse the JSON response
-      // Sometimes OpenAI adds markdown code blocks, so we need to extract just the JSON
-      const jsonMatch = segmentsText.match(/\[[\s\S]*\]/);
-      
-      if (jsonMatch) {
-        segments = JSON.parse(jsonMatch[0]);
-      } else {
-        segments = JSON.parse(segmentsText);
-      }
-      
-      console.log(`Successfully parsed ${segments.length} segments`);
-    } catch (parseError) {
-      console.error("Error parsing OpenAI response:", parseError);
-      console.error("Raw response:", segmentsText);
-      throw new Error("Failed to parse segments from OpenAI response");
-    }
-    
-    // Start a transaction to store all segments
-    const storedSegments = [];
-    
-    console.log("Storing segments in database");
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      const sequenceNumber = i + 1;
-      
-      // Insert the segment into the database
-      const { data, error } = await supabase
-        .from('lecture_segments')
-        .insert({
-          lecture_id: parseInt(lectureId),
-          title: segment.title,
-          segment_description: segment.description,
-          sequence_number: sequenceNumber
+      const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openaiApiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",  // Using a reliable model for this task
+          messages: [
+            {
+              role: "system",
+              content: "You are an AI that helps divide educational content into logical segments."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.3  // Lower temperature for more consistent results
         })
-        .select()
-        .single();
-        
-      if (error) {
-        console.error(`Error inserting segment ${sequenceNumber}:`, error);
-        throw error;
+      });
+      
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.text();
+        console.error("[generate-segments-structure] OpenAI API error:", errorData);
+        return new Response(
+          JSON.stringify({ error: "OpenAI API error", details: errorData }),
+          { status: 500, headers: corsHeaders }
+        );
       }
       
-      storedSegments.push(data);
+      const openAIData = await openAIResponse.json();
+      console.log("[generate-segments-structure] Received response from OpenAI");
+      
+      // Extract the response content
+      const segmentsText = openAIData.choices[0].message.content.trim();
+      console.log("[generate-segments-structure] Raw OpenAI response:", segmentsText.substring(0, 200) + "...");
+      
+      let segments;
+      try {
+        // Try to parse the JSON response
+        // Sometimes OpenAI adds markdown code blocks, so we need to extract just the JSON
+        const jsonMatch = segmentsText.match(/\[[\s\S]*\]/);
+        
+        if (jsonMatch) {
+          segments = JSON.parse(jsonMatch[0]);
+        } else {
+          segments = JSON.parse(segmentsText);
+        }
+        
+        console.log(`[generate-segments-structure] Successfully parsed ${segments.length} segments`);
+      } catch (parseError) {
+        console.error("[generate-segments-structure] Error parsing OpenAI response:", parseError);
+        console.error("[generate-segments-structure] Raw response:", segmentsText);
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to parse segments from OpenAI response", 
+            details: parseError.message,
+            rawResponse: segmentsText
+          }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
+      
+      // Start a transaction to store all segments
+      const storedSegments = [];
+      
+      console.log("[generate-segments-structure] Storing segments in database");
+      for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const sequenceNumber = i + 1;
+        
+        // Insert the segment into the database
+        const { data, error } = await supabase
+          .from('lecture_segments')
+          .insert({
+            lecture_id: parseInt(lectureId),
+            title: segment.title,
+            segment_description: segment.description,
+            sequence_number: sequenceNumber
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error(`[generate-segments-structure] Error inserting segment ${sequenceNumber}:`, error);
+          return new Response(
+            JSON.stringify({ 
+              error: "Database error when storing segments", 
+              details: error,
+              segmentData: { 
+                lecture_id: parseInt(lectureId),
+                title: segment.title,
+                description: segment.description,
+                sequence_number: sequenceNumber
+              }
+            }),
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        
+        storedSegments.push(data);
+      }
+      
+      console.log(`[generate-segments-structure] Successfully stored ${storedSegments.length} segments`);
+      
+      // Return the created segments
+      return new Response(
+        JSON.stringify({ success: true, segments: storedSegments }),
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (openAIError) {
+      console.error("[generate-segments-structure] Error calling OpenAI:", openAIError);
+      return new Response(
+        JSON.stringify({ error: "Error communicating with OpenAI", details: openAIError.message }),
+        { status: 500, headers: corsHeaders }
+      );
     }
-    
-    console.log(`Successfully stored ${storedSegments.length} segments`);
-    
-    // Return the created segments
-    return new Response(
-      JSON.stringify({ success: true, segments: storedSegments }),
-      { status: 200, headers: corsHeaders }
-    );
-    
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error("[generate-segments-structure] Error processing request:", error);
     
     return new Response(
       JSON.stringify({

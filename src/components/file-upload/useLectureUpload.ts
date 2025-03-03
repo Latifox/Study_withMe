@@ -121,12 +121,18 @@ export const useLectureUpload = (onClose: () => void, courseId?: string, isProfe
       console.log('Generating segment structure...');
       const segmentsFunctionName = isProfessorCourse ? 'generate-professor-segments-structure' : 'generate-segments-structure';
       
+      console.log(`Invoking edge function: ${segmentsFunctionName}`);
+      console.log('Request payload:', {
+        lectureId: lectureData.id,
+        lectureContent: extractionData.content,
+        lectureTitle: title
+      });
+      
       const { data: segmentData, error: segmentError } = await supabase.functions.invoke(segmentsFunctionName, {
         body: {
           lectureId: lectureData.id,
           lectureContent: extractionData.content,
-          lectureTitle: title,
-          isProfessorLecture: isProfessorCourse
+          lectureTitle: title
         }
       });
 
