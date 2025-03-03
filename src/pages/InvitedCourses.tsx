@@ -78,11 +78,11 @@ const InvitedCourses = () => {
           <div className="flex gap-4 items-center">
             <Button 
               variant="outline" 
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Home
+              Back to Dashboard
             </Button>
             <EnterInviteCodeDialog />
           </div>
