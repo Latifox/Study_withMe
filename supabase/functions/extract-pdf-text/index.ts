@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-import { Buffer } from "https://deno.land/std@0.177.0/node/buffer.ts";
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -96,31 +95,20 @@ Deno.serve(async (req) => {
     console.log('PDF downloaded successfully, size:', fileData.size)
     
     try {
-      // Using the PDF.js online parser for PDF extraction
       console.log('Extracting text from PDF...')
       
       // Convert blob to array buffer
       const arrayBuffer = await fileData.arrayBuffer();
       const base64Data = arrayBufferToBase64(arrayBuffer);
       
-      // Use the Mozilla PDF.js API (online version)
-      const pdfServiceUrl = 'https://mozilla.github.io/pdf.js/web/cmaps/';
-      const response = await fetch('https://pdf-extractor-api.vercel.app/api/extract', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pdfBase64: base64Data,
-        }),
-      });
+      // Use a reliable PDF extraction API
+      const extractionResult = await extractTextFromPdf(base64Data);
       
-      if (!response.ok) {
-        throw new Error(`PDF extraction service error: ${response.status} ${response.statusText}`);
+      if (!extractionResult.success) {
+        throw new Error(extractionResult.error || 'Failed to extract text from PDF');
       }
       
-      const extractionResult = await response.json();
-      const extractedText = extractionResult.text || '';
+      const extractedText = extractionResult.text;
       
       if (!extractedText || extractedText.length < 100) {
         console.error('Extraction returned insufficient text:', extractedText);
@@ -193,23 +181,16 @@ Deno.serve(async (req) => {
     } catch (extractionError) {
       console.error('Error extracting text from PDF:', extractionError);
       
-      // Fallback to using the PDF text extraction API
+      // Fallback to alternative extraction API
       try {
         console.log('Attempting fallback extraction method...');
-        const formData = new FormData();
-        formData.append('file', fileData, 'document.pdf');
+        const fallbackResult = await extractTextFromPdfFallback(fileData);
         
-        const fallbackResponse = await fetch('https://api.pdftotext.dev/v1/extract', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!fallbackResponse.ok) {
-          throw new Error(`Fallback extraction failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
+        if (!fallbackResult.success) {
+          throw new Error(fallbackResult.error || 'Fallback extraction failed');
         }
         
-        const fallbackResult = await fallbackResponse.json();
-        const fallbackText = fallbackResult.text || '';
+        const fallbackText = fallbackResult.text;
         
         if (!fallbackText || fallbackText.length < 100) {
           throw new Error('Fallback extraction returned insufficient text');
@@ -285,6 +266,69 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
   return btoa(binary);
+}
+
+// Primary PDF text extraction function using PdfToText.dev API
+async function extractTextFromPdf(base64Data: string): Promise<{success: boolean, text?: string, error?: string}> {
+  try {
+    console.log('Using PDF Text Extraction API...');
+    
+    const response = await fetch('https://api.pdftotext.dev/v1/extract-base64', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        pdf_base64: base64Data,
+        return_text: true
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API returned status: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.text) {
+      return { success: false, error: 'No text returned from API' };
+    }
+    
+    return { success: true, text: data.text };
+  } catch (error) {
+    console.error('Error in PDF extraction API:', error);
+    return { success: false, error: error.message || 'Unknown error in PDF extraction' };
+  }
+}
+
+// Fallback PDF text extraction using an alternative API
+async function extractTextFromPdfFallback(pdfBlob: Blob): Promise<{success: boolean, text?: string, error?: string}> {
+  try {
+    console.log('Using Fallback PDF Text Extraction API...');
+    
+    const formData = new FormData();
+    formData.append('file', pdfBlob, 'document.pdf');
+    
+    const response = await fetch('https://pdf-extractor-api.vercel.app/api/extract', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Fallback API returned status: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.text) {
+      return { success: false, error: 'No text returned from fallback API' };
+    }
+    
+    return { success: true, text: data.text };
+  } catch (error) {
+    console.error('Error in fallback PDF extraction API:', error);
+    return { success: false, error: error.message || 'Unknown error in fallback PDF extraction' };
+  }
 }
 
 // Basic language detection function
