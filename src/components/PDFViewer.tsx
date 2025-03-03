@@ -74,8 +74,6 @@ const PDFViewer = ({
             <Viewer fileUrl={pdfUrl} onDocumentLoad={handleDocumentLoad} defaultScale={SpecialZoomLevel.PageFit} />
           </div>}
       </div>
-      
-      
     </div>;
 };
 
