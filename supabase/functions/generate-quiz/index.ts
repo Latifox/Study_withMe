@@ -1,15 +1,16 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.1'
-import { Configuration, OpenAIApi } from 'https://esm.sh/openai@4.24.1'
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+// Follow this setup guide to integrate the Deno runtime and the Supabase JS library with your project:
+// https://deno.land/manual/examples/supabase
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
 
-// Define the corsHeaders for cross-origin requests
+// Import OpenAI SDK
+import OpenAI from 'https://esm.sh/openai@4.39.0';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-// Define type for the Question 
 interface Question {
   question: string;
   type: "multiple_choice" | "true_false";
@@ -18,197 +19,239 @@ interface Question {
   hint?: string;
 }
 
-// Define the quiz response type
 interface QuizData {
   quiz: Question[];
 }
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+interface QuizConfig {
+  difficulty: "easy" | "medium" | "hard";
+  questionTypes: "multiple_choice" | "true_false" | "mixed";
+  timeLimit: number;
+  numberOfQuestions: number;
+  hintsEnabled: boolean;
+}
 
-// Initialize OpenAI
-const configuration = new Configuration({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
-});
-const openai = new OpenAIApi(configuration);
+interface RequestBody {
+  lectureId: number;
+  config: QuizConfig;
+}
 
-// Serve HTTP requests
-serve(async (req) => {
-  // Handle CORS preflight requests
+interface OpenAIQuestionResponse {
+  question: string;
+  type: "multiple_choice" | "true_false";
+  options: string[];
+  correctAnswer: string;
+  hint: string;
+}
+
+export const corsResponse = (body: unknown, status = 200) => {
+  return new Response(
+    JSON.stringify(body),
+    {
+      status,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+};
+
+// Handle CORS preflight requests
+Deno.serve(async (req) => {
+  // This is needed if you're planning to invoke your function from a browser.
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
   try {
-    // Parse request body
-    const requestData = await req.json();
-    const { lectureId, config } = requestData;
-    
-    console.log('Request data:', { lectureId, config: JSON.stringify(config) });
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
 
-    if (!lectureId) {
-      return new Response(
-        JSON.stringify({ error: 'lectureId is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+    // Create a supabase client with the Admin key to bypass RLS policies for accessing lecture data
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY') ?? '',
+    });
+
+    const body: RequestBody = await req.json();
+    const { lectureId, config } = body;
+
+    console.log("Request body:", JSON.stringify(body, null, 2));
+
+    // Validate required fields
+    if (!lectureId || !config) {
+      return corsResponse({ error: "Missing required fields" }, 400);
     }
 
-    // Fetch lecture content from database
-    const { data: lecture, error: lectureError } = await supabase
-      .from('lectures')
-      .select('content, title')
-      .eq('id', lectureId)
+    // Get auth user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      console.error("Authentication error:", userError);
+      return corsResponse({ error: "Authentication required" }, 401);
+    }
+
+    // Fetch lecture content
+    const { data: lecture, error: lectureError } = await supabaseAdmin
+      .from("lectures")
+      .select("content, title")
+      .eq("id", lectureId)
       .single();
 
     if (lectureError || !lecture) {
-      console.error('Error fetching lecture:', lectureError);
-      return new Response(
-        JSON.stringify({ error: `Failed to fetch lecture: ${lectureError?.message || 'Not found'}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      );
+      console.error("Error fetching lecture:", lectureError);
+      return corsResponse({ error: "Lecture not found" }, 404);
     }
 
-    // Format the prompt based on the config
-    const questionTypes = config.questionTypes || ['multiple_choice', 'true_false'];
-    const difficultyLevel = config.difficultyLevel || 'medium';
-    const numQuestions = config.numQuestions || 5;
-    const hintsEnabled = config.hintsEnabled || false;
-    const timeLimit = config.timeLimit || 15;
-
-    const content = lecture.content || '';
-    if (!content) {
-      return new Response(
-        JSON.stringify({ error: 'Lecture content is empty' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+    if (!lecture.content) {
+      return corsResponse({ error: "Lecture has no content" }, 400);
     }
 
-    // Create the system prompt with detailed instructions
-    const systemPrompt = `You are a quiz generator. Create a quiz based on the provided lecture content.
-    The quiz should have ${numQuestions} questions of ${difficultyLevel} difficulty.
-    Use only the following question types: ${questionTypes.join(', ')}.
-    ${hintsEnabled ? 'Include helpful hints for each question.' : 'Do not include hints.'}
-    For multiple-choice questions, provide 4 options with only one correct answer.
-    For true/false questions, ensure the answer is clearly true or false.`;
+    console.log(`Generating quiz for lecture ${lectureId}, title: ${lecture.title}`);
+    console.log(`Config: ${JSON.stringify(config, null, 2)}`);
 
-    // Create the user prompt with the lecture content
-    const userPrompt = `Create a quiz based on this lecture content: "${content}"`;
+    // Generate quiz using OpenAI
+    const quizData = await generateQuizWithOpenAI(openai, lecture.content, config);
 
-    // Generate the quiz using OpenAI
-    const response = await openai.createChatCompletion({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      functions: [
-        {
-          name: 'generate_quiz',
-          description: 'Generate a quiz based on lecture content',
-          parameters: {
-            type: 'object',
-            properties: {
-              quiz: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    question: { type: 'string' },
-                    type: { type: 'string', enum: ['multiple_choice', 'true_false'] },
-                    options: { type: 'array', items: { type: 'string' } },
-                    correctAnswer: { type: 'string' },
-                    hint: { type: 'string' }
-                  },
-                  required: ['question', 'type', 'options', 'correctAnswer']
-                }
-              }
-            },
-            required: ['quiz']
-          }
-        }
-      ],
-      function_call: { name: 'generate_quiz' }
-    });
-
-    // Parse the response
-    const functionCall = response.choices[0].message.function_call;
-    if (!functionCall || !functionCall.arguments) {
-      throw new Error('Failed to generate quiz: Invalid response format');
-    }
-
-    const quizData = JSON.parse(functionCall.arguments) as QuizData;
-    
-    // Validate the quiz data
-    if (!quizData.quiz || !Array.isArray(quizData.quiz) || quizData.quiz.length === 0) {
-      throw new Error('Invalid quiz data: Quiz array is empty or malformed');
-    }
-
-    // Ensure each question has the required properties
-    quizData.quiz.forEach((question, index) => {
-      if (!question.question || !question.type || !question.options || !question.correctAnswer) {
-        throw new Error(`Invalid question at index ${index}: Missing required properties`);
-      }
-      
-      // For true/false questions, ensure options are only "True" and "False"
-      if (question.type === 'true_false' && 
-          (!question.options.includes('True') || !question.options.includes('False') || question.options.length !== 2)) {
-        question.options = ['True', 'False'];
-      }
-      
-      // Make sure the correct answer is one of the options
-      if (!question.options.includes(question.correctAnswer)) {
-        throw new Error(`Invalid question at index ${index}: Correct answer not in options`);
-      }
-    });
-
-    // Get the authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-
-    // Save the generated quiz to the database with proper config
-    const { data: quizRecord, error: insertError } = await supabase
-      .from('generated_quizzes')
+    // Insert quiz into the database
+    const { data: quizRecord, error: insertError } = await supabaseAdmin
+      .from("generated_quizzes")
       .insert({
         user_id: user.id,
         lecture_id: lectureId,
         quiz_data: quizData,
-        config: {
-          questionTypes,
-          difficultyLevel,
-          numQuestions,
-          hintsEnabled,
-          timeLimit
-        }
+        config: config  // Store the config explicitly
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (insertError) {
-      console.error('Error inserting quiz:', insertError);
-      return new Response(
-        JSON.stringify({ error: `Error inserting quiz: ${insertError.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+      console.error("Error inserting quiz:", insertError);
+      return corsResponse({ error: `Error inserting quiz: ${JSON.stringify(insertError)}` }, 500);
     }
 
-    // Return the generated quiz along with its ID
-    return new Response(
-      JSON.stringify({ quiz: quizData.quiz, quizId: quizRecord.id }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return corsResponse({
+      quiz: quizData.quiz,
+      quizId: quizRecord.id
+    });
 
   } catch (error) {
-    console.error('Error generating quiz:', error);
-    return new Response(
-      JSON.stringify({ error: `Error generating quiz: ${error.message}` }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
+    console.error("Unexpected error:", error);
+    return corsResponse({ error: `Unexpected error: ${error.message}` }, 500);
   }
 });
+
+async function generateQuizWithOpenAI(
+  openai: OpenAI,
+  lectureContent: string,
+  config: QuizConfig
+): Promise<QuizData> {
+  const { difficulty, questionTypes, numberOfQuestions, hintsEnabled } = config;
+
+  // Determine the maximum content length to avoid exceeding token limits
+  const maxContentLength = 10000;
+  const truncatedContent = lectureContent.length > maxContentLength
+    ? lectureContent.substring(0, maxContentLength)
+    : lectureContent;
+
+  console.log(`Using OpenAI to generate ${numberOfQuestions} ${difficulty} questions`);
+  
+  // Create a system message that specifies the format and requirements
+  const systemMessage = `You are a quiz generator for educational content. 
+Generate ${numberOfQuestions} ${difficulty} level questions based on the provided lecture content.
+${questionTypes === "multiple_choice" ? "Create multiple-choice questions only."
+  : questionTypes === "true_false" ? "Create true/false questions only."
+  : "Create a mix of multiple-choice and true/false questions."}
+${hintsEnabled ? "Include a helpful hint for each question." : "Do not include hints."}`;
+
+  try {
+    // Use OpenAI's function calling feature to get a structured response
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemMessage },
+        { role: "user", content: `Here is the lecture content to generate questions from:\n\n${truncatedContent}` }
+      ],
+      functions: [
+        {
+          name: "generate_quiz_questions",
+          parameters: {
+            type: "object",
+            properties: {
+              questions: {
+                type: "array",
+                description: "Array of quiz questions",
+                items: {
+                  type: "object",
+                  properties: {
+                    question: { type: "string", description: "The question text" },
+                    type: { type: "string", enum: ["multiple_choice", "true_false"], description: "Type of question" },
+                    options: { 
+                      type: "array", 
+                      items: { type: "string" },
+                      description: "Array of possible answers (for multiple_choice, include at least 4 options; for true_false, include exactly ['True', 'False'])"
+                    },
+                    correctAnswer: { type: "string", description: "The correct answer (must be one of the options)" },
+                    hint: { type: "string", description: "A helpful hint for the question" }
+                  },
+                  required: ["question", "type", "options", "correctAnswer"]
+                }
+              }
+            },
+            required: ["questions"]
+          }
+        }
+      ],
+      function_call: { name: "generate_quiz_questions" }
+    });
+
+    // Parse the function call arguments
+    if (response.choices[0]?.message?.function_call?.arguments) {
+      const argsJson = response.choices[0].message.function_call.arguments;
+      console.log("OpenAI response arguments:", argsJson);
+      
+      const parsedResponse = JSON.parse(argsJson);
+      const questions = parsedResponse.questions as OpenAIQuestionResponse[];
+      
+      // Validate the questions
+      const validatedQuestions = questions.map(q => {
+        // Make sure true/false questions have exactly two options: True and False
+        if (q.type === "true_false" && (!q.options || q.options.length !== 2)) {
+          q.options = ["True", "False"];
+        }
+        
+        // Ensure the correct answer is in the options
+        if (!q.options.includes(q.correctAnswer)) {
+          q.correctAnswer = q.options[0];
+        }
+        
+        return q;
+      });
+      
+      // Limit to the requested number of questions
+      const limitedQuestions = validatedQuestions.slice(0, numberOfQuestions);
+      
+      return { quiz: limitedQuestions };
+    } else {
+      console.error("OpenAI response did not contain function call arguments", response);
+      throw new Error("Failed to generate quiz questions");
+    }
+  } catch (error) {
+    console.error("Error generating quiz with OpenAI:", error);
+    throw error;
+  }
+}
