@@ -95,27 +95,24 @@ Deno.serve(async (req) => {
     
     console.log('PDF downloaded successfully, size:', fileData.size)
 
-    // Convert the blob to an ArrayBuffer
+    // Convert the blob to an ArrayBuffer for processing
     const arrayBuffer = await fileData.arrayBuffer()
     
-    // Extract text from PDF using pdf.js-based extraction method
-    // Call external API that can process the PDF properly
-    console.log('Extracting text from PDF via PDF extraction service')
+    // Try direct extraction first using PDF.js proxy service
     try {
-      // First try with Mozilla's pdf.js via a proxy service
-      const extractedText = await extractPdfTextWithPdfJs(arrayBuffer)
+      console.log('Attempting primary text extraction via PDF.js')
+      const pdfText = await extractTextWithPdfJs(arrayBuffer)
       
-      if (extractedText && extractedText.length > 100) {
-        console.log(`Text extracted successfully, length: ${extractedText.length} characters`)
+      if (pdfText && pdfText.length > 200) { // Ensure we have meaningful content
+        console.log(`Text extracted successfully with PDF.js, length: ${pdfText.length} characters`)
         
-        // Store the extracted text in the database
+        // Store the extracted text in the appropriate table
         const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
         
-        console.log(`Storing extracted text in ${tableName}`)
         const { error: updateError } = await supabase
           .from(tableName)
           .update({ 
-            content: extractedText,
+            content: pdfText,
             original_language: 'english' // Default language
           })
           .eq('id', numericLectureId)
@@ -125,7 +122,7 @@ Deno.serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: `Failed to update lecture content: ${updateError.message}` 
+              error: `Failed to save PDF content: ${updateError.message}` 
             }),
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -137,35 +134,37 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'PDF extraction complete',
-            contentLength: extractedText.length,
-            textPreview: extractedText.substring(0, 200) + '...'
+            message: 'PDF content extracted and saved successfully',
+            contentLength: pdfText.length,
+            textPreview: pdfText.substring(0, 200) + '...'
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         )
+      } else {
+        console.log('PDF.js extraction returned insufficient text content, trying fallback')
       }
-    } catch (extractionError) {
-      console.error('Error in primary extraction method:', extractionError)
+    } catch (pdfJsError) {
+      console.error('Error with PDF.js extraction:', pdfJsError)
     }
     
-    // If primary method fails, try fallback method
+    // Try alternative extraction service if PDF.js fails
     try {
-      console.log('Trying fallback extraction method')
-      const fallbackText = await extractPdfTextFallback(arrayBuffer)
+      console.log('Attempting fallback text extraction via RapidAPI')
+      const fallbackText = await extractTextViaRapidApi(arrayBuffer)
       
-      if (fallbackText && fallbackText.length > 100) {
+      if (fallbackText && fallbackText.length > 200) {
         console.log(`Fallback extraction successful, length: ${fallbackText.length} characters`)
         
-        // Store the extracted text in the database
+        // Store the extracted text
         const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
         
         const { error: updateError } = await supabase
           .from(tableName)
           .update({ 
             content: fallbackText,
-            original_language: 'english' // Default language
+            original_language: 'english'
           })
           .eq('id', numericLectureId)
         
@@ -174,7 +173,7 @@ Deno.serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: `Failed to update lecture content: ${updateError.message}` 
+              error: `Failed to save PDF content: ${updateError.message}` 
             }),
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -186,7 +185,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'PDF extraction complete (fallback method)',
+            message: 'PDF content extracted and saved (fallback method)',
             contentLength: fallbackText.length,
             textPreview: fallbackText.substring(0, 200) + '...'
           }),
@@ -196,22 +195,22 @@ Deno.serve(async (req) => {
         )
       }
     } catch (fallbackError) {
-      console.error('Error in fallback extraction:', fallbackError)
+      console.error('Error with fallback extraction:', fallbackError)
     }
     
-    // If both methods fail, use a last resort method to extract what we can
-    console.log('Using last resort text extraction method')
+    // If all extraction methods fail, extract PDF content directly without OCR
     try {
-      const lastResortText = await extractTextFromPdfLastResort(fileData)
+      console.log('Attempting raw text extraction from PDF')
+      const rawText = await extractRawTextFromPdf(arrayBuffer)
       
-      // Store the extracted text in the database
+      // Store whatever text we could extract
       const tableName = isProfessorLecture ? 'professor_lectures' : 'lectures'
       
       const { error: updateError } = await supabase
         .from(tableName)
         .update({ 
-          content: lastResortText,
-          original_language: 'english' // Default language
+          content: rawText,
+          original_language: 'english'
         })
         .eq('id', numericLectureId)
       
@@ -220,7 +219,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: `Failed to update lecture content: ${updateError.message}` 
+            error: `Failed to save PDF content: ${updateError.message}` 
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -232,20 +231,22 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'PDF extraction complete (last resort method)',
-          contentLength: lastResortText.length,
-          textPreview: lastResortText.substring(0, 200) + '...'
+          message: 'PDF raw content extracted and saved',
+          contentLength: rawText.length,
+          textPreview: rawText.substring(0, 200) + '...'
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
-    } catch (lastResortError) {
-      console.error('Error in last resort extraction:', lastResortError)
+    } catch (rawExtractionError) {
+      console.error('Error with raw text extraction:', rawExtractionError)
+      
+      // If everything fails, return an error
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Failed to extract text from PDF: ${lastResortError.message || 'Unknown error'}` 
+          error: 'All PDF extraction methods failed' 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -269,15 +270,12 @@ Deno.serve(async (req) => {
 })
 
 /**
- * Extract text from PDF using pdf.js via a proxy service
+ * Extract text from PDF using PDF.js via a dedicated service
  */
-async function extractPdfTextWithPdfJs(pdfArrayBuffer: ArrayBuffer): Promise<string> {
-  console.log('Extracting text with pdf.js via proxy service')
-  
-  // Convert ArrayBuffer to base64
+async function extractTextWithPdfJs(pdfArrayBuffer: ArrayBuffer): Promise<string> {
   const base64String = arrayBufferToBase64(pdfArrayBuffer)
   
-  const response = await fetch('https://pdfjs-text-extraction.deno.dev/extract', {
+  const response = await fetch('https://pdf-text-extraction.vercel.app/api/extract', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -288,25 +286,17 @@ async function extractPdfTextWithPdfJs(pdfArrayBuffer: ArrayBuffer): Promise<str
   })
   
   if (!response.ok) {
-    throw new Error(`PDF.js extraction API responded with status: ${response.status}`)
+    throw new Error(`PDF.js extraction service responded with status: ${response.status}`)
   }
   
   const result = await response.json()
-  
-  if (!result.text) {
-    throw new Error('No text returned from PDF.js extraction service')
-  }
-  
-  return result.text
+  return result.text || ''
 }
 
 /**
- * Fallback method to extract text from PDF
+ * Extract text from PDF using RapidAPI service
  */
-async function extractPdfTextFallback(pdfArrayBuffer: ArrayBuffer): Promise<string> {
-  console.log('Using fallback PDF extraction method')
-  
-  // Convert to base64 for API transmission
+async function extractTextViaRapidApi(pdfArrayBuffer: ArrayBuffer): Promise<string> {
   const base64Pdf = arrayBufferToBase64(pdfArrayBuffer)
   
   const response = await fetch('https://pdf-to-text-converter.p.rapidapi.com/api/pdf-to-text', {
@@ -322,7 +312,7 @@ async function extractPdfTextFallback(pdfArrayBuffer: ArrayBuffer): Promise<stri
   })
   
   if (!response.ok) {
-    throw new Error(`Fallback API responded with status: ${response.status}`)
+    throw new Error(`RapidAPI service responded with status: ${response.status}`)
   }
   
   const result = await response.json()
@@ -330,44 +320,64 @@ async function extractPdfTextFallback(pdfArrayBuffer: ArrayBuffer): Promise<stri
 }
 
 /**
- * Last resort method to extract what we can from a PDF
+ * Extract raw text content from PDF using pdf-lib
+ * This is a last resort method that attempts to extract whatever text it can find
  */
-async function extractTextFromPdfLastResort(pdfBlob: Blob): Promise<string> {
-  console.log('Using last resort PDF text extraction')
-  
+async function extractRawTextFromPdf(pdfArrayBuffer: ArrayBuffer): Promise<string> {
   try {
-    // Get metadata about the PDF
-    const arrayBuffer = await pdfBlob.arrayBuffer()
-    const pdfDoc = await PDFDocument.load(arrayBuffer)
-    
+    const pdfDoc = await PDFDocument.load(pdfArrayBuffer)
     const pageCount = pdfDoc.getPageCount()
+    
+    // Extract basic PDF metadata
+    const title = pdfDoc.getTitle() || 'Untitled'
     const creator = pdfDoc.getCreator() || 'Unknown'
     const producer = pdfDoc.getProducer() || 'Unknown'
-    const title = pdfDoc.getTitle() || 'Untitled'
     
-    // Extract what we can from the first few pages structure
-    let pdfInfo = `Title: ${title}\n`
-    pdfInfo += `Creator: ${creator}\n`
-    pdfInfo += `Producer: ${producer}\n`
-    pdfInfo += `Page Count: ${pageCount}\n\n`
+    // Create a raw text representation by grabbing whatever text we can find
+    // This is a very basic extraction that might not get all text
+    const pages = pdfDoc.getPages()
+    let extractedText = ''
     
-    // Extract raw text from the structure if possible
-    pdfInfo += `The document appears to be a PDF file with ${pageCount} pages.\n`
-    pdfInfo += `All automatic text extraction methods have failed, which may indicate that the PDF contains:\n`
-    pdfInfo += `- Scanned pages without OCR\n`
-    pdfInfo += `- Text embedded in images\n`
-    pdfInfo += `- Security restrictions on content extraction\n`
-    pdfInfo += `- Non-standard text encoding\n\n`
+    // Dump whatever text content we can find directly
+    const pdfBytes = await pdfDoc.save()
+    const textBytes = new Uint8Array(pdfBytes)
+    const textDecoder = new TextDecoder('utf-8')
+    const rawContent = textDecoder.decode(textBytes)
     
-    return pdfInfo
+    // Extract text strings that look like actual content
+    const textMatches = rawContent.match(/(\([^)]{3,1000}\)(Tj|TJ))/g) || []
+    const extractedStrings = textMatches.map(match => {
+      // Extract the text between parentheses
+      const content = match.substring(1, match.length - 3)
+      // Basic cleanup: remove non-printable characters
+      return content.replace(/[^\x20-\x7E\s]/g, '')
+    }).filter(text => text.trim().length > 0)
+    
+    extractedText = extractedStrings.join(' ')
+    
+    // If we couldn't extract any meaningful text, provide information about the PDF
+    if (extractedText.length < 200) {
+      extractedText = `PDF CONTENT ANALYSIS:\n\n` +
+        `This PDF document contains approximately ${Math.round(pdfBytes.length / 1024)} KB of data and appears to be PDF version ${pdfDoc.getVersion()}.\n\n` +
+        `The document contains approximately ${pageCount} pages.\n\n` +
+        `PARTIAL TEXT CONTENT:\n\n${rawContent.substring(0, 1000)}\n\n` +
+        `DOCUMENT METADATA:\n` +
+        `- File path: ${pdfDoc.getAuthor() || 'Unknown'}\n` +
+        `- File size: ${Math.round(pdfBytes.length / 1024)} KB\n` +
+        `- PDF version: ${pdfDoc.getVersion()}\n` +
+        `- Upload timestamp: ${new Date().toISOString()}\n\n` +
+        `NOTE: This is a partial extraction of the PDF content. The automated text extraction was not fully successful. The document may contain complex formatting, scanned images, or other elements that prevented complete text extraction.`
+    }
+    
+    return extractedText
   } catch (error) {
-    console.error('Error in last resort extraction:', error)
-    return `Unable to extract text from this PDF. The document may be secured, damaged, or contain text in a format that cannot be extracted.`
+    console.error('Error in raw PDF extraction:', error)
+    throw error
   }
 }
 
 /**
- * Convert ArrayBuffer to Base64 string
+ * Convert ArrayBuffer to Base64 string for transmission
  */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
