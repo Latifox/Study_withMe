@@ -53,7 +53,7 @@ export async function generateTheoryContent(openAIApiKey: string, segmentTitle: 
   const messages = [
     {
       role: 'system',
-      content: 'You are an educational content generator. Please generate theory content in a valid JSON format. Use Markdown syntax for formatting, but do **NOT** include code blocks (no triple backticks or inline backticks). Escape Markdown characters (e.g., '#', '*', '-', etc.) with a backslash (e.g., '\\#', '\\*', '\\-') to ensure the JSON structure remains valid. The content should be readable and appropriately formatted in Markdown style, but ensure the final output is a valid, well-formed JSON object.'
+      content: 'You are an educational content generator. Please generate theory content in a valid JSON format. Use Markdown syntax for formatting, but do **NOT** include code blocks (no triple backticks or inline backticks). Escape Markdown characters (e.g., "\\#", "\\*", "\\-", etc.) with a backslash (e.g., "\\\\#", "\\\\*", "\\\\-") to ensure the JSON structure remains valid. The content should be readable and appropriately formatted in Markdown style, but ensure the final output is a valid, well-formed JSON object.'
     },
     {
       role: 'user',
@@ -67,7 +67,7 @@ export async function generateTheoryContent(openAIApiKey: string, segmentTitle: 
       }
       
       Keep each slide content concise and focused. Include markdown format for bold, lists, bullet points, quotes, italics etc.
-      Please generate the segment content using Markdown formatting (e.g., # for headings, ** for bold, * for italics, and - for lists), but escape all Markdown symbols (e.g., # should be \#, * should be \*, etc.) so they don’t interfere with JSON parsing. The output should be in a plain JSON format and include escaped Markdown syntax for readability. Use this lecture content as your only information source: "${lectureContent}"`
+      Please generate the segment content using Markdown formatting (e.g., # for headings, ** for bold, * for italics, and - for lists), but escape all Markdown symbols (e.g., # should be \\#, * should be \\*, etc.) so they don't interfere with JSON parsing. The output should be in a plain JSON format and include escaped Markdown syntax for readability. Use this lecture content as your only information source: "${lectureContent}"`
     }
   ];
 
