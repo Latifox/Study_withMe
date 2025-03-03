@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
-// Import PDF.js properly - using the ES module version from esm.sh
-import { getDocument } from 'https://esm.sh/pdfjs-dist@3.11.174/es5/build/pdf.js'
+// Import PDF.js library from npm via esm.sh with a more standard path
+import * as pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs'
 
 // Configure CORS headers for browser requests
 const corsHeaders = {
@@ -103,8 +103,9 @@ Deno.serve(async (req) => {
       // Step 3: Create a custom document loading task with fixed configuration
       console.log('Loading PDF document with custom configuration')
       
-      // Use the correct PDF.js method with properly imported getDocument
-      const loadingTask = getDocument({
+      // Using the PDF.js library
+      // Make sure to use getDocument from pdfjs correctly
+      const loadingTask = pdfjs.getDocument({
         data: arrayBuffer,
         disableWorker: true,           // Critical: Disable worker usage completely
         disableAutoFetch: true,        // Disable fetching resources
