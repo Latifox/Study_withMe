@@ -1,141 +1,160 @@
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { SegmentContent } from "./types.ts";
 
-async function makeOpenAIRequest(openAIApiKey: string, messages: any[], retryCount = 0, maxRetries = 3) {
+// OpenAI API setup
+const apiKey = Deno.env.get("OPENAI_API_KEY") || "";
+const apiUrl = "https://api.openai.com/v1/chat/completions";
+
+// Safely format the lecture content to avoid issues with huge content
+function prepareLectureContent(content: string): string {
+  const maxContentLength = 20000; // Limit the content length to avoid exceeding token limits
+  if (content.length > maxContentLength) {
+    console.log(`Content is too long (${content.length} chars), truncating to ${maxContentLength} chars`);
+    return content.substring(0, maxContentLength) + "...";
+  }
+  return content;
+}
+
+export async function generateSegmentContent(
+  segmentTitle: string,
+  segmentDescription: string | undefined,
+  lectureContent: string,
+  contentLanguage: string = "english"
+): Promise<SegmentContent> {
+  console.log(`Generating content for segment: ${segmentTitle}`);
+  console.log(`Content language: ${contentLanguage}`);
+  
+  // Prepare lecture content
+  const preparedContent = prepareLectureContent(lectureContent);
+  
   try {
-    console.log(`Attempting OpenAI request, attempt ${retryCount + 1} of ${maxRetries + 1}`);
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    // Create system message that properly escapes special characters
+    const systemMessage = `You are an AI teaching assistant that creates educational content. 
+Create engaging material based on the lecture segment title and description.
+Your output must be in ${contentLanguage}.
+Generate content in JSON format with the following structure:
+{
+  "theory_slide_1": "First slide explaining the concept clearly",
+  "theory_slide_2": "Second slide going deeper into the concept with examples",
+  "quiz_1_type": "multiple_choice",
+  "quiz_1_question": "A question testing understanding of the concept",
+  "quiz_1_options": ["Option A", "Option B", "Option C", "Option D"],
+  "quiz_1_correct_answer": "The correct option (exactly as written in the options)",
+  "quiz_1_explanation": "Explanation of why the answer is correct",
+  "quiz_2_type": "free_text",
+  "quiz_2_question": "A more challenging question requiring written response",
+  "quiz_2_correct_answer": "The expected answer or key points to include",
+  "quiz_2_explanation": "Detailed explanation of the correct answer"
+}
+
+Format guidelines:
+- Escape special markdown characters (e.g., '\\#', '\\*', '\\-', etc.) with backslashes
+- Keep theory slides concise but informative
+- Make multiple-choice options clear and distinct
+- Ensure the correct_answer EXACTLY matches one of the options
+- For free_text questions, provide key points for the expected answer`;
+
+    // Prepare the messages for the OpenAI API
+    const messages = [
+      { role: "system", content: systemMessage },
+      { 
+        role: "user", 
+        content: `Create educational content for the following lecture segment:
+Title: ${segmentTitle}
+${segmentDescription ? `Description: ${segmentDescription}` : ''}
+
+Here's the relevant lecture content to base your material on:
+${preparedContent}
+
+Please generate the content according to the specified JSON format.`
+      }
+    ];
+
+    // Make the API request with proper error handling
+    console.log("Sending request to OpenAI...");
+    const response = await fetch(apiUrl, {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages,
+        model: "gpt-4",
+        messages: messages,
         temperature: 0.7,
-      }),
+        max_tokens: 2000
+      })
     });
 
-    if (response.status === 429) {
-      if (retryCount < maxRetries) {
-        // Exponential backoff: wait longer between each retry
-        const waitTime = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
-        console.log(`Rate limited, waiting ${waitTime}ms before retry...`);
-        await sleep(waitTime);
-        return makeOpenAIRequest(openAIApiKey, messages, retryCount + 1, maxRetries);
-      } else {
-        throw new Error('Rate limit exceeded after maximum retries');
-      }
-    }
-
+    // Check for HTTP errors
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`OpenAI API error (${response.status}):`, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
+    // Parse the response
     const data = await response.json();
-    return data.choices[0].message.content;
-  } catch (error) {
-    if (error.message.includes('Rate limit') && retryCount < maxRetries) {
-      const waitTime = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
-      console.log(`Error occurred, waiting ${waitTime}ms before retry...`);
-      await sleep(waitTime);
-      return makeOpenAIRequest(openAIApiKey, messages, retryCount + 1, maxRetries);
+    if (!data.choices || data.choices.length === 0) {
+      console.error("Invalid response from OpenAI:", data);
+      throw new Error("Invalid response from OpenAI API");
     }
-    throw error;
-  }
-}
 
-export async function generateTheoryContent(openAIApiKey: string, segmentTitle: string, segmentDescription: string, lectureContent: string) {
-  console.log('Generating theory content for segment:', segmentTitle);
-  
-  const messages = [
-    {
-      role: 'system',
-      content: 'You are an educational content generator. Please generate theory content in a valid JSON format. Use Markdown syntax for formatting, but do **NOT** include code blocks (no triple backticks or inline backticks). Escape Markdown characters (e.g., "\\#", "\\*", "\\-", etc.) with a backslash (e.g., "\\\\#", "\\\\*", "\\\\-") to ensure the JSON structure remains valid. The content should be readable and appropriately formatted in Markdown style, but ensure the final output is a valid, well-formed JSON object.'
-    },
-    {
-      role: 'user',
-      content: `Generate theory content for a segment with title "${segmentTitle}" and description "${segmentDescription}". 
-      Use this lecture content as your only information source: "${lectureContent}"
+    const content = data.choices[0].message.content;
+    console.log("Received content from OpenAI, parsing JSON...");
+
+    try {
+      // Extract and parse the JSON from the response
+      let parsedContent;
       
-      Return ONLY a JSON object with the following format:
-      {
-        "theory_slide_1": "First slide content explaining core concepts",
-        "theory_slide_2": "Second slide content with examples and applications"
+      // Handle case where the AI might wrap the JSON in backticks
+      const jsonRegex = /```json\n([\s\S]*?)\n```|```([\s\S]*?)```|(\{[\s\S]*\})/;
+      const match = content.match(jsonRegex);
+      
+      if (match) {
+        const jsonContent = match[1] || match[2] || match[3];
+        parsedContent = JSON.parse(jsonContent);
+      } else {
+        // Try to parse directly if not wrapped
+        parsedContent = JSON.parse(content);
       }
-      
-      Keep each slide content concise and focused. Include markdown format for bold, lists, bullet points, quotes, italics etc.
-      Please generate the segment content using Markdown formatting (e.g., # for headings, ** for bold, * for italics, and - for lists), but escape all Markdown symbols (e.g., # should be \\#, * should be \\*, etc.) so they don't interfere with JSON parsing. The output should be in a plain JSON format and include escaped Markdown syntax for readability. Use this lecture content as your only information source: "${lectureContent}"`
+
+      // Validate that the response has the required fields
+      const requiredFields = [
+        "theory_slide_1",
+        "theory_slide_2",
+        "quiz_1_type",
+        "quiz_1_question",
+        "quiz_1_correct_answer",
+        "quiz_1_explanation",
+        "quiz_2_type",
+        "quiz_2_question",
+        "quiz_2_correct_answer",
+        "quiz_2_explanation"
+      ];
+
+      for (const field of requiredFields) {
+        if (!parsedContent[field]) {
+          console.error(`Missing required field in OpenAI response: ${field}`);
+          throw new Error(`Missing required field in content: ${field}`);
+        }
+      }
+
+      // Ensure quiz_1_options exists if quiz_1_type is multiple_choice
+      if (parsedContent.quiz_1_type === "multiple_choice" && !parsedContent.quiz_1_options) {
+        console.error("Missing quiz_1_options for multiple_choice quiz");
+        throw new Error("Missing quiz_1_options for multiple_choice quiz");
+      }
+
+      console.log("Successfully parsed and validated content");
+      return parsedContent;
+    } catch (parseError) {
+      console.error("Failed to parse content from OpenAI:", parseError);
+      console.error("Raw content:", content);
+      throw new Error(`Failed to parse content: ${parseError.message}`);
     }
-  ];
-
-  const content = await makeOpenAIRequest(openAIApiKey, messages);
-  return JSON.parse(content);
-}
-
-export async function generateQuizContent(openAIApiKey: string, segmentTitle: string, segmentDescription: string, lectureContent: string) {
-  console.log('Generating quiz content for segment:', segmentTitle);
-
-  const messages = [
-    {
-      role: 'system',
-      content: 'You are an educational quiz generator. Generate quiz questions in JSON format only. Focus on testing understanding of key concepts.'
-    },
-    {
-      role: 'user',
-      content: `Generate two quiz questions for a segment with title "${segmentTitle}" and description "${segmentDescription}". 
-      Use this lecture content as reference: "${lectureContent.substring(0, 2000)}..."
-      
-      Return ONLY a JSON object with the following format:
-      {
-        "quiz_1_type": "multiple-choice",
-        "quiz_1_question": "Question text",
-        "quiz_1_options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-        "quiz_1_correct_answer": "Correct option text",
-        "quiz_1_explanation": "Explanation for the correct answer",
-        "quiz_2_type": "true-false",
-        "quiz_2_question": "Question text",
-        "quiz_2_correct_answer": true or false,
-        "quiz_2_explanation": "Explanation for the correct answer"
-      }`
-    }
-  ];
-
-  const content = await makeOpenAIRequest(openAIApiKey, messages);
-  return JSON.parse(content);
-}
-
-// This is the main function that the index.ts file is trying to import
-export async function generateSegmentContent({ segmentTitle, segmentDescription, lectureContent, contentLanguage = 'english' }) {
-  console.log('Starting segment content generation for:', segmentTitle);
-  console.log('Content language:', contentLanguage);
-  
-  // Get OpenAI API key from environment variable
-  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-  
-  if (!openAIApiKey) {
-    throw new Error('OPENAI_API_KEY environment variable is not set');
-  }
-  
-  try {
-    // Generate theory content
-    console.log('Generating theory content...');
-    const theoryContent = await generateTheoryContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent);
-    
-    // Generate quiz content
-    console.log('Generating quiz content...');
-    const quizContent = await generateQuizContent(openAIApiKey, segmentTitle, segmentDescription, lectureContent);
-    
-    // Combine the results
-    console.log('Content generation completed successfully');
-    return {
-      ...theoryContent,
-      ...quizContent
-    };
   } catch (error) {
-    console.error('Error generating segment content:', error);
+    console.error("Error generating segment content:", error);
     throw error;
   }
 }
