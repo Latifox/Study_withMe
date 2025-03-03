@@ -81,6 +81,10 @@ export const recreateLecture = async (
     throw fetchError;
   }
 
+  if (!oldLecture) {
+    throw new Error(`No lecture found with ID: ${oldLectureId}`);
+  }
+
   console.log('Retrieved old lecture data:', oldLecture);
 
   try {
@@ -102,6 +106,10 @@ export const recreateLecture = async (
     if (insertError) {
       console.error(`Error creating new ${isProfessorLecture ? 'professor' : ''} lecture:`, insertError);
       throw insertError;
+    }
+
+    if (!newLecture) {
+      throw new Error('Failed to create new lecture');
     }
 
     console.log('Created new lecture:', newLecture);
@@ -160,7 +168,7 @@ export const recreateLecture = async (
 
     // Generate content for each segment
     console.log('Generating content for segments...');
-    for (const segment of segments) {
+    for (const segment of segments || []) {
       console.log(`Generating content for segment ${segment.sequence_number}...`);
       const { error: contentError } = await supabase.functions.invoke('generate-segment-content', {
         body: {

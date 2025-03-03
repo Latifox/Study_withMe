@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -20,6 +19,7 @@ interface Position {
 interface AIProfessorLoadingProps {
   lectureId: number;
   courseId: number;
+  isProfessorLecture?: boolean;
 }
 
 const titlePositions = [
@@ -85,7 +85,7 @@ const getConnectionPath = (start: Position, end: Position) => {
   return `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 };
 
-const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) => {
+const AIProfessorLoading = ({ lectureId, courseId, isProfessorLecture = false }: AIProfessorLoadingProps) => {
   const navigate = useNavigate();
   const baseDelay = 897;
 
@@ -123,12 +123,15 @@ const AIProfessorLoading = ({ lectureId, courseId }: AIProfessorLoadingProps) =>
     if (data && data.length > 0) {
       const totalDelay = getDescriptionDelay(data.length - 1) + baseDelay;
       const timer = setTimeout(() => {
-        navigate(`/course/${courseId}/lecture/${lectureId}/story/nodes`);
+        const route = isProfessorLecture
+          ? `/course/${courseId}/professor-lecture/${lectureId}/story/nodes`
+          : `/course/${courseId}/lecture/${lectureId}/story/nodes`;
+        navigate(route);
       }, totalDelay);
       
       return () => clearTimeout(timer);
     }
-  }, [data, navigate, courseId, lectureId]);
+  }, [data, navigate, courseId, lectureId, isProfessorLecture]);
 
   if (error) {
     return (
