@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader, RefreshCw, ArrowLeft } from "lucide-react";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
-import { Question, QuizResponse, QuizData } from "@/types/quiz";
+import { Question, QuizResponse, QuizData, isQuizData } from "@/types/quiz";
 
 interface QuizState {
   questions: Question[];
@@ -78,19 +78,17 @@ const TakeQuiz = () => {
             console.log('Using existing quiz:', existingQuizzes[0]);
             setQuizId(existingQuizzes[0].id);
             
-            // Properly parse and validate the quiz data
+            // Properly parse and validate the quiz data using our type guard
             const rawQuizData = existingQuizzes[0].quiz_data;
-            if (typeof rawQuizData === 'object' && rawQuizData !== null && 'quiz' in rawQuizData) {
-              const quizData = rawQuizData as QuizData;
-              if (Array.isArray(quizData.quiz)) {
-                setQuizState(prev => ({ 
-                  ...prev, 
-                  questions: quizData.quiz 
-                }));
-                setIsLoading(false);
-                return;
-              }
+            if (isQuizData(rawQuizData)) {
+              setQuizState(prev => ({ 
+                ...prev, 
+                questions: rawQuizData.quiz 
+              }));
+              setIsLoading(false);
+              return;
             }
+            
             console.error('Invalid quiz data format:', rawQuizData);
             throw new Error('Invalid quiz data format');
           }

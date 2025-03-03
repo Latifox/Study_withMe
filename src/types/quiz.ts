@@ -1,4 +1,5 @@
 
+
 export interface QuizProgressHandlerProps {
   userId: string;
   lectureId: number;
@@ -29,3 +30,14 @@ export interface QuizResponse {
 export interface QuizData {
   quiz: Question[];
 }
+
+// Helper function to check if a value matches the QuizData interface
+export function isQuizData(value: unknown): value is QuizData {
+  return (
+    typeof value === 'object' && 
+    value !== null && 
+    'quiz' in value && 
+    Array.isArray((value as any).quiz)
+  );
+}
+
