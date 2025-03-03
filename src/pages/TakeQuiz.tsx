@@ -173,16 +173,41 @@ const TakeQuiz = () => {
     }));
   };
 
-  const submitQuiz = () => {
+  const submitQuiz = async () => {
     setQuizState(prev => ({ ...prev, showResults: true }));
     
     // Save quiz results to database
     if (quizId) {
-      const score = calculateCorrectAnswers();
-      const totalQuestions = quizState.questions.length;
-      
-      // Store quiz results logic would go here
-      console.log(`Quiz completed with score: ${score}/${totalQuestions}`);
+      try {
+        const score = calculateCorrectAnswers();
+        const totalQuestions = quizState.questions.length;
+        // Calculate score as percentage (0-100)
+        const scorePercentage = (score / totalQuestions) * 100;
+        
+        // Update the quiz record with the score
+        const { error } = await supabase
+          .from('generated_quizzes')
+          .update({ quiz_result: scorePercentage })
+          .eq('id', quizId);
+        
+        if (error) {
+          console.error('Error saving quiz result:', error);
+          toast({
+            title: "Warning",
+            description: "Your quiz was completed but we couldn't save your score.",
+            variant: "destructive",
+          });
+        } else {
+          console.log(`Quiz completed with score: ${score}/${totalQuestions} (${scorePercentage}%)`);
+          toast({
+            title: "Success",
+            description: `Quiz completed! Your score: ${score}/${totalQuestions}`,
+            variant: "default",
+          });
+        }
+      } catch (error) {
+        console.error('Error in quiz submission:', error);
+      }
     }
   };
 
