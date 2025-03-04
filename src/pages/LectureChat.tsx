@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -131,7 +132,7 @@ const LectureChat = () => {
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
-              <div className="mt-auto flex gap-2 items-center bg-white/50 backdrop-blur-sm rounded-full border border-white/30 pl-4 pr-2 py-1">
+              <div className="mt-auto flex gap-2 items-center bg-gradient-to-r from-purple-400 to-indigo-500 backdrop-blur-sm rounded-full border border-white/30 pl-4 pr-2 py-1">
                 <Input value={inputMessage} onChange={e => setInputMessage(e.target.value)} placeholder="Type your message..." onKeyPress={e => e.key === 'Enter' && !isLoading && handleSendMessage()} disabled={isLoading} className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500" />
                 <Button onClick={handleSendMessage} disabled={isLoading} size="icon" className="rounded-full h-9 w-9 bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
                   {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
