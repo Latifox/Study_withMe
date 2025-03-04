@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, Loader, Send, BookOpen } from "lucide-react";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 const LectureChat = () => {
   const {
     courseId,
@@ -29,14 +30,17 @@ const LectureChat = () => {
   }]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth"
     });
   };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
   const {
     data: lecture
   } = useQuery({
@@ -50,6 +54,7 @@ const LectureChat = () => {
       return data;
     }
   });
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     try {
@@ -92,9 +97,11 @@ const LectureChat = () => {
       setIsLoading(false);
     }
   };
+
   if (!lecture) {
     return <div>Loading...</div>;
   }
+
   return <BackgroundGradient>
       <div className="flex flex-col h-screen max-h-screen">
         <div className="container mx-auto p-4">
@@ -118,12 +125,12 @@ const LectureChat = () => {
               <PDFViewer lectureId={lectureId} />
             </div>
             <div className="h-full max-h-full bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
-              <div className="flex-1 overflow-auto mb-4 px-2">
+              <ScrollArea className="flex-1 h-[calc(100%-60px)] pr-4">
                 <div className="space-y-3">
                   {messages.map((message, index) => <ChatMessage key={index} message={message} />)}
                   <div ref={messagesEndRef} />
                 </div>
-              </div>
+              </ScrollArea>
               <div className="mt-auto flex gap-2 items-center bg-white/50 backdrop-blur-sm rounded-full border border-white/30 pl-4 pr-2 py-1">
                 <Input value={inputMessage} onChange={e => setInputMessage(e.target.value)} placeholder="Type your message..." onKeyPress={e => e.key === 'Enter' && !isLoading && handleSendMessage()} disabled={isLoading} className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500" />
                 <Button onClick={handleSendMessage} disabled={isLoading} size="icon" className="rounded-full h-9 w-9 bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
@@ -136,4 +143,5 @@ const LectureChat = () => {
       </div>
     </BackgroundGradient>;
 };
+
 export default LectureChat;
