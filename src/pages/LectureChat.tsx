@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -125,8 +126,8 @@ const LectureChat = () => {
               <PDFViewer lectureId={lectureId} />
             </div>
             <div className="h-full max-h-full bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg p-4 flex flex-col">
-              <ScrollArea className="flex-1 h-[calc(100%-60px)] pr-4">
-                <div className="space-y-3">
+              <ScrollArea className="flex-1 mb-4">
+                <div className="space-y-3 pr-4">
                   {messages.map((message, index) => <ChatMessage key={index} message={message} />)}
                   <div ref={messagesEndRef} />
                 </div>
