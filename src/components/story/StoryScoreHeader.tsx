@@ -1,3 +1,4 @@
+
 import { Trophy, Star, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -14,7 +15,7 @@ const StoryScoreHeader = ({ currentScore, currentStep, onBack }: StoryScoreHeade
       <Button
         variant="ghost"
         onClick={onBack}
-        className="hover:scale-105 transition-transform"
+        className="hover:scale-105 transition-transform border border-black"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Learning Pathway
