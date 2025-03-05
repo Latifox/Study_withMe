@@ -20,7 +20,8 @@ const StoryNodes = () => {
   const { toast } = useToast();
 
   const {
-    data: userProgress
+    data: userProgress,
+    isLoading: isUserProgressLoading
   } = useQuery({
     queryKey: ['user-progress', lectureId],
     queryFn: async () => {
@@ -35,6 +36,27 @@ const StoryNodes = () => {
         .eq('lecture_id', parseInt(lectureId))
         .order('completed_at', { ascending: false });
       return data;
+    }
+  });
+
+  // Added query to get quiz progress data for total lectures count
+  const {
+    data: quizProgressData
+  } = useQuery({
+    queryKey: ['quiz-progress'],
+    queryFn: async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from('quiz_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: true });
+      
+      return data || [];
     }
   });
 
@@ -67,6 +89,10 @@ const StoryNodes = () => {
     return streak;
   };
 
+  // Calculate total lectures using the same logic as in Analytics component
+  const totalLectures = quizProgressData ? 
+    new Set(quizProgressData.map(p => p.lecture_id)).size : 0;
+    
   const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
   const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
   const currentStreak = calculateStreak();
@@ -209,7 +235,7 @@ const StoryNodes = () => {
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
               <BookOpen className="h-5 w-5 text-emerald-200" />
-              <span className="font-bold text-white">{completedNodesCount}</span>
+              <span className="font-bold text-white">{totalLectures}</span>
             </motion.div>
             <motion.div 
               whileHover={{ scale: 1.05 }}
