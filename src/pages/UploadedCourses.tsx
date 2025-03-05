@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CreateCourseDialog } from "@/components/CreateCourseDialog";
 import { DeleteCourseDialog } from "@/components/DeleteCourseDialog";
-import { Share } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const UploadedCourses = () => {
@@ -80,16 +79,6 @@ const UploadedCourses = () => {
                       onClick={() => navigate(`/course/${course.id}`)}
                     >
                       View Lectures
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        console.log('Share course:', course.id);
-                      }}
-                    >
-                      <Share className="mr-2 h-4 w-4" />
-                      Share Course
                     </Button>
                   </CardContent>
                 </Card>
