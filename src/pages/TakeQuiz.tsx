@@ -9,6 +9,7 @@ import { Loader, RefreshCw, ArrowLeft, Flame, BookOpen, Star } from "lucide-reac
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import { Question, QuizResponse, QuizData, isQuizData } from "@/types/quiz";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 interface QuizState {
   questions: Question[];
@@ -51,7 +52,6 @@ const TakeQuiz = () => {
   const [showHint, setShowHint] = useState<Record<number, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch streak, lecture count and XP data
   const { data: userProgress } = useQuery({
     queryKey: ['take-quiz-progress', lectureId],
     queryFn: async () => {
@@ -146,7 +146,6 @@ const TakeQuiz = () => {
             throw new Error('User authentication required');
           }
           
-          // Remove the check for existing quizzes and always generate a new quiz
           console.log('Always generating a new quiz');
           
           const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
@@ -295,12 +294,11 @@ const TakeQuiz = () => {
     setIsLoading(true);
     const generateQuiz = async () => {
       try {
-        // Always generate a new quiz, never fetch existing ones
         const { data, error } = await supabase.functions.invoke<QuizResponse>('generate-quiz', {
           body: { 
             lectureId: quizConfig.lectureId, 
             config: quizConfig.config,
-            forceNew: true // Add a flag to ensure we're forcing a new quiz
+            forceNew: true
           },
         });
 
