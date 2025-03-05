@@ -1,16 +1,25 @@
+
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, GraduationCap } from "lucide-react";
+import { LogOut, GraduationCap, ChevronDown, User } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { toast } = useToast();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -45,6 +54,10 @@ const TeacherDashboard = () => {
     }
   };
 
+  const switchToStudentMode = () => {
+    navigate('/dashboard');
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
       Loading...
@@ -76,10 +89,27 @@ const TeacherDashboard = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-white">Teacher Dashboard</h1>
-            <Button variant="outline" onClick={handleSignOut} className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
+            
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
+                  <User className="w-4 h-4" />
+                  Account
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-sm z-50">
+                <DropdownMenuItem onClick={switchToStudentMode} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Switch to Student Mode</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-12">
