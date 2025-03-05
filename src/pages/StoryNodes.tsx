@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, BookOpen, Sparkles, Flame } from "lucide-react";
@@ -23,23 +22,22 @@ const StoryNodes = () => {
     data: userProgress,
     isLoading: isUserProgressLoading
   } = useQuery({
-    queryKey: ['user-progress', lectureId],
+    queryKey: ['user-progress'],
     queryFn: async () => {
       const {
         data: { user }
       } = await supabase.auth.getUser();
-      if (!user || !lectureId) return null;
+      if (!user) return null;
       const { data } = await supabase
         .from('user_progress')
         .select('score, completed_at')
         .eq('user_id', user.id)
-        .eq('lecture_id', parseInt(lectureId))
+        .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
       return data;
     }
   });
 
-  // Added query to get quiz progress data for total lectures count
   const {
     data: quizProgressData
   } = useQuery({
@@ -89,7 +87,6 @@ const StoryNodes = () => {
     return streak;
   };
 
-  // Calculate total lectures using the same logic as in Analytics component
   const totalLectures = quizProgressData ? 
     new Set(quizProgressData.map(p => p.lecture_id)).size : 0;
     

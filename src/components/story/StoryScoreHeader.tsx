@@ -19,8 +19,9 @@ const StoryScoreHeader = ({ currentScore, currentStep, onBack, lectureId }: Stor
   const [totalLectures, setTotalLectures] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
 
+  // Fetch all user progress data without filtering by lecture ID
   const { data: userProgress } = useQuery({
-    queryKey: ['story-header-progress', lectureId],
+    queryKey: ['story-header-progress'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -29,12 +30,14 @@ const StoryScoreHeader = ({ currentScore, currentStep, onBack, lectureId }: Stor
         .from('user_progress')
         .select('score, completed_at')
         .eq('user_id', user.id)
+        .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
       
       return data || [];
     }
   });
 
+  // Fetch all quiz progress data without filtering by lecture ID
   const { data: quizProgressData } = useQuery({
     queryKey: ['story-header-quiz-progress'],
     queryFn: async () => {

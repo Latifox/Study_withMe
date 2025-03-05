@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,9 +32,9 @@ const Resources = () => {
   // Parse the lecture ID from URL params
   const numericLectureId = lectureId ? parseInt(lectureId) : null;
 
-  // Fetch streak, lecture count and XP data
+  // Fetch streak, lecture count and XP data without filtering by lecture ID
   const { data: userProgress } = useQuery({
-    queryKey: ['resources-progress', lectureId],
+    queryKey: ['resources-progress'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -44,6 +43,7 @@ const Resources = () => {
         .from('user_progress')
         .select('score, completed_at')
         .eq('user_id', user.id)
+        .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
       
       return data || [];
