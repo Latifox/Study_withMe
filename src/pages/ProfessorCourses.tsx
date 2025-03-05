@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,11 @@ const ProfessorCourses = () => {
                       <CardDescription>
                         Created on {new Date(course.created_at).toLocaleDateString()}
                       </CardDescription>
+                      {course.course_code && (
+                        <CardDescription className="mt-1">
+                          <span className="font-medium">Course Code:</span> {course.course_code}
+                        </CardDescription>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2 pt-4">
