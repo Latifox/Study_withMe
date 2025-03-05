@@ -32,7 +32,14 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && !loading) {
-      navigate('/dashboard');
+      const accountType = user.user_metadata?.account_type;
+      if (accountType === 'teacher') {
+        navigate('/teacher-dashboard');
+      } else if (accountType === 'student') {
+        navigate('/dashboard');
+      } else {
+        navigate('/account-type');
+      }
     }
   }, [user, loading, navigate]);
 

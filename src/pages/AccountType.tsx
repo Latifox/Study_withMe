@@ -44,8 +44,12 @@ const AccountType = () => {
         description: `You've selected ${accountType === "student" ? "Student" : "Teacher"} account type.`,
       });
 
-      // Redirect to dashboard after setting account type
-      navigate("/dashboard");
+      // Redirect to the correct dashboard based on account type
+      if (accountType === "teacher") {
+        navigate("/teacher-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       toast({
         title: "Error setting account type",
