@@ -8,18 +8,25 @@ import { DeleteCourseDialog } from "@/components/DeleteProfessorCourseDialog";
 import { Share } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/components/AuthProvider";
 
 const ProfessorCourses = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['professor-courses'],
+    queryKey: ['professor-courses', user?.id],
     queryFn: async () => {
-      console.log('Fetching professor courses from Supabase...');
+      if (!user) {
+        return [];
+      }
+      
+      console.log('Fetching professor courses for user:', user.id);
       const { data, error } = await supabase
         .from('professor_courses')
         .select('*')
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -34,12 +41,12 @@ const ProfessorCourses = () => {
       
       console.log('Fetched professor courses:', data);
       return data || [];
-    }
+    },
+    enabled: !!user
   });
 
   return (
     <div className="relative min-h-screen">
-      {/* Content */}
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
