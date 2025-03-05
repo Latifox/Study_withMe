@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -13,16 +12,18 @@ const ProfessorCourseLectures = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  const numericCourseId = courseId ? parseInt(courseId, 10) : undefined;
 
   const { data: course } = useQuery({
-    queryKey: ['professor-course', courseId],
+    queryKey: ['professor-course', numericCourseId],
     queryFn: async () => {
-      if (!courseId || !user) return null;
+      if (!numericCourseId || !user) return null;
       
       const { data, error } = await supabase
         .from('professor_courses')
         .select('*')
-        .eq('id', courseId)
+        .eq('id', numericCourseId)
         .eq('owner_id', user.id)
         .single();
       
@@ -38,18 +39,18 @@ const ProfessorCourseLectures = () => {
       
       return data;
     },
-    enabled: !!courseId && !!user
+    enabled: !!numericCourseId && !!user
   });
 
   const { data: lectures, isLoading } = useQuery({
-    queryKey: ['professor-lectures', courseId],
+    queryKey: ['professor-lectures', numericCourseId],
     queryFn: async () => {
-      if (!courseId) return [];
+      if (!numericCourseId) return [];
       
       const { data, error } = await supabase
         .from('professor_lectures')
         .select('*')
-        .eq('professor_course_id', courseId)
+        .eq('professor_course_id', numericCourseId)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -64,7 +65,7 @@ const ProfessorCourseLectures = () => {
       
       return data || [];
     },
-    enabled: !!courseId
+    enabled: !!numericCourseId
   });
 
   return (
