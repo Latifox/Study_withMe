@@ -102,6 +102,7 @@ const StoryContent = () => {
             currentScore={currentScore}
             currentStep={currentStep}
             onBack={handleBack}
+            lectureId={lectureId}
           />
         </motion.div>
 
