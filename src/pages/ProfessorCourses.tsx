@@ -1,11 +1,10 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CreateCourseDialog } from "@/components/CreateProfessorCourseDialog";
 import { DeleteCourseDialog } from "@/components/DeleteProfessorCourseDialog";
-import { Share } from "lucide-react";
+import { Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/components/AuthProvider";
@@ -44,6 +43,24 @@ const ProfessorCourses = () => {
     },
     enabled: !!user
   });
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Course code copied to clipboard",
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to copy text: ', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy course code",
+          variant: "destructive"
+        });
+      });
+  };
 
   return (
     <div className="relative min-h-screen">
@@ -104,15 +121,19 @@ const ProfessorCourses = () => {
                       variant="outline"
                       className="w-full"
                       onClick={() => {
-                        console.log('Share course:', course.id);
-                        toast({
-                          title: "Share feature",
-                          description: "Share functionality coming soon!",
-                        });
+                        if (course.course_code) {
+                          copyToClipboard(course.course_code);
+                        } else {
+                          toast({
+                            title: "Error",
+                            description: "No course code available",
+                            variant: "destructive"
+                          });
+                        }
                       }}
                     >
-                      <Share className="mr-2 h-4 w-4" />
-                      Share Course
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Course Code
                     </Button>
                   </CardContent>
                 </Card>
