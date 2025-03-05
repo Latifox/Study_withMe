@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, BookOpen, Loader2, Flame, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 import { useGenerateResources } from "@/hooks/useGenerateResources";
 import { toast } from "@/components/ui/use-toast";
 import ReactMarkdown from 'react-markdown';
@@ -158,7 +158,7 @@ const Resources = () => {
   }
   
   return <div className="relative min-h-screen">
-      <BackgroundGradient>
+      <StoryBackground>
         <div className="relative p-8">
           <div className="max-w-[1400px] mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -267,7 +267,7 @@ const Resources = () => {
               </div>}
           </div>
         </div>
-      </BackgroundGradient>
+      </StoryBackground>
     </div>;
 };
 
