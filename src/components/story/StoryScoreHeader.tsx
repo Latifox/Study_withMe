@@ -1,3 +1,4 @@
+
 import { Flame, BookOpen, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -105,27 +106,27 @@ const StoryScoreHeader = ({ currentScore, currentStep, onBack, lectureId }: Stor
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Learning Pathway
       </Button>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-5">
         <div className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-full",
-          "bg-white/30 backdrop-blur-sm border border-white/50"
+          "flex items-center gap-3 px-4 py-2 rounded-full",
+          "bg-white/40 backdrop-blur-sm border border-white/50"
         )}>
-          <Flame className="h-5 w-5 text-red-500 fill-red-500" />
-          <span className="font-bold">{currentStreak}</span>
+          <Flame className="h-6 w-6 text-red-500 fill-red-500" />
+          <span className="font-bold text-lg">{currentStreak}</span>
         </div>
         <div className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-full",
-          "bg-white/30 backdrop-blur-sm border border-white/50"
+          "flex items-center gap-3 px-4 py-2 rounded-full",
+          "bg-white/40 backdrop-blur-sm border border-white/50"
         )}>
-          <BookOpen className="h-5 w-5 text-emerald-200" />
-          <span className="font-bold">{totalLectures}</span>
+          <BookOpen className="h-6 w-6 text-emerald-200" />
+          <span className="font-bold text-lg">{totalLectures}</span>
         </div>
         <div className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-full",
-          "bg-white/30 backdrop-blur-sm border border-white/50"
+          "flex items-center gap-3 px-4 py-2 rounded-full",
+          "bg-white/40 backdrop-blur-sm border border-white/50"
         )}>
-          <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-          <span className="font-bold">{totalXP}</span>
+          <Star className="h-6 w-6 text-yellow-500 fill-yellow-500" />
+          <span className="font-bold text-lg">{totalXP}</span>
         </div>
       </div>
     </div>
