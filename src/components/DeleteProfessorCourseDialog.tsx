@@ -57,10 +57,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
         <Button 
           variant="ghost" 
           size="icon" 
-          className="rounded-full h-8 w-8 hover:bg-red-100 hover:text-red-600"
+          className="rounded-md h-8 w-8 flex items-center justify-center bg-[#ea384c] hover:bg-red-500"
           onClick={(e) => e.stopPropagation()}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 text-white" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
