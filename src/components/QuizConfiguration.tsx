@@ -19,7 +19,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 
 const formSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
@@ -122,7 +122,7 @@ const QuizConfiguration = () => {
 
   if (isError) {
     return (
-      <BackgroundGradient>
+      <StoryBackground>
         <div className="container mx-auto p-4">
           <Card className="w-full max-w-2xl mx-auto bg-white/90 backdrop-blur-sm border border-white/30 shadow-md">
             <CardContent className="p-6">
@@ -137,13 +137,13 @@ const QuizConfiguration = () => {
             </CardContent>
           </Card>
         </div>
-      </BackgroundGradient>
+      </StoryBackground>
     );
   }
 
   if (!lecture) {
     return (
-      <BackgroundGradient>
+      <StoryBackground>
         <div className="container mx-auto p-4">
           <Card className="w-full max-w-2xl mx-auto bg-white/90 backdrop-blur-sm border border-white/30 shadow-md">
             <CardContent className="p-6">
@@ -151,12 +151,12 @@ const QuizConfiguration = () => {
             </CardContent>
           </Card>
         </div>
-      </BackgroundGradient>
+      </StoryBackground>
     );
   }
 
   return (
-    <BackgroundGradient>
+    <StoryBackground>
       <div className="container mx-auto p-4">
         <Button
           variant="ghost"
@@ -308,7 +308,7 @@ const QuizConfiguration = () => {
           </CardContent>
         </Card>
       </div>
-    </BackgroundGradient>
+    </StoryBackground>
   );
 };
 

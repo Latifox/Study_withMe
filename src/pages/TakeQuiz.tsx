@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader, RefreshCw, ArrowLeft, Flame, BookOpen, Star } from "lucide-react";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 import { Question, QuizResponse, QuizData, isQuizData } from "@/types/quiz";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -333,12 +334,12 @@ const TakeQuiz = () => {
 
   if (isLoading) {
     return (
-      <BackgroundGradient>
+      <StoryBackground>
         <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
           <Loader className="w-8 h-8 animate-spin text-primary" />
           <p className="text-lg text-muted-foreground">Please wait while we generate your quiz...</p>
         </div>
-      </BackgroundGradient>
+      </StoryBackground>
     );
   }
 
@@ -347,7 +348,7 @@ const TakeQuiz = () => {
   }
 
   return (
-    <BackgroundGradient>
+    <StoryBackground>
       <div className="container mx-auto p-4">
         <div className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 p-4 border-b mb-4 rounded-lg shadow-sm">
           <div className="flex justify-between items-center">
@@ -475,7 +476,7 @@ const TakeQuiz = () => {
           </div>
         )}
       </div>
-    </BackgroundGradient>
+    </StoryBackground>
   );
 };
 
