@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -67,9 +66,7 @@ const Dashboard = () => {
   }
 
   return <div className="relative min-h-screen overflow-hidden">
-      {/* Bold animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
-        {/* Animated mesh pattern */}
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -81,16 +78,13 @@ const Dashboard = () => {
           </svg>
         </div>
         
-        {/* Animated orbs */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
         
-        {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 via-transparent to-transparent"></div>
       </div>
 
-      {/* Content */}
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -105,15 +99,11 @@ const Dashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-sm z-50">
-                {isTeacher && (
-                  <>
-                    <DropdownMenuItem onClick={switchToTeacherMode} className="cursor-pointer">
-                      <GraduationCap className="mr-2 h-4 w-4" />
-                      <span>Switch to Professor Mode</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+                <DropdownMenuItem onClick={switchToTeacherMode} className="cursor-pointer">
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  <span>Switch to Professor Mode</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
