@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { ArrowLeft, Loader2, ExternalLink, BookOpen, Flame, Star } from "lucide-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -181,7 +182,7 @@ const LectureSummary = () => {
 
   if (isLoading) {
     return (
-      <BackgroundGradient>
+      <StoryBackground>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
@@ -193,12 +194,12 @@ const LectureSummary = () => {
             </div>
           </div>
         </div>
-      </BackgroundGradient>
+      </StoryBackground>
     );
   }
 
   return (
-    <BackgroundGradient>
+    <StoryBackground>
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
           <Button
@@ -286,7 +287,7 @@ const LectureSummary = () => {
           </div>
         </div>
       </div>
-    </BackgroundGradient>
+    </StoryBackground>
   );
 };
 

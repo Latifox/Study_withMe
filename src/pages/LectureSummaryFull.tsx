@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from "@/components/ui/card";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 import { useToast } from "@/components/ui/use-toast";
 
 const LectureSummaryFull = () => {
@@ -70,7 +70,7 @@ const LectureSummaryFull = () => {
 
   if (isLoading) {
     return (
-      <BackgroundGradient>
+      <StoryBackground>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
@@ -80,12 +80,12 @@ const LectureSummaryFull = () => {
             </div>
           </div>
         </div>
-      </BackgroundGradient>
+      </StoryBackground>
     );
   }
 
   return (
-    <BackgroundGradient>
+    <StoryBackground>
       <div className="container mx-auto p-4 space-y-6">
         <div className="flex justify-between items-center">
           <Button
@@ -113,7 +113,7 @@ const LectureSummaryFull = () => {
           </CardContent>
         </Card>
       </div>
-    </BackgroundGradient>
+    </StoryBackground>
   );
 };
 
