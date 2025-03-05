@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, Loader, Send, BookOpen, Flame, Star } from "lucide-react";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -175,7 +175,7 @@ const LectureChat = () => {
   }
 
   return (
-    <BackgroundGradient>
+    <StoryBackground>
       <div className="flex flex-col h-screen max-h-screen">
         <div className="container mx-auto p-4">
           <div className="flex justify-between items-center mb-8">
@@ -244,7 +244,7 @@ const LectureChat = () => {
           </div>
         </div>
       </div>
-    </BackgroundGradient>
+    </StoryBackground>
   );
 };
 
