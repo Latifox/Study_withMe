@@ -29,17 +29,13 @@ const Dashboard = () => {
       return;
     }
 
-    // Check if the user has a teacher role and redirect
+    // Check if the user has a teacher role
     if (!loading && user) {
       const checkUserRole = async () => {
         const { data } = await supabase.auth.getUser();
         const accountType = data.user?.user_metadata?.account_type;
         
         setIsTeacher(accountType === 'teacher');
-        
-        if (accountType === 'teacher') {
-          navigate('/teacher-dashboard');
-        }
       };
       
       checkUserRole();
