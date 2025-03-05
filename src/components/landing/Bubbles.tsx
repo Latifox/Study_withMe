@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 
 type BubbleProps = {
@@ -29,9 +28,9 @@ const Bubbles = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Generate random bubbles - doubling the count from 50 to 100
+    // Generate random bubbles - reduced from 100 to 30 for performance
     const generateBubbles = () => {
-      const newBubbles = Array.from({ length: 100 }, (_, i) => ({
+      const newBubbles = Array.from({ length: 30 }, (_, i) => ({
         id: i,
         size: Math.floor(Math.random() * 60) + 20, // Size between 20px and 80px
         delay: Math.random() * 5, // Random delay up to 5s
@@ -189,7 +188,7 @@ const Bubbles = ({
   return (
     <div
       ref={containerRef}
-      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none`}
+      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none will-change-transform`}
       style={{
         height: sectionHeight,
         maxHeight: sectionHeight,
@@ -206,7 +205,7 @@ const Bubbles = ({
         return (
           <div
             key={bubble.id}
-            className="absolute rounded-full backdrop-blur-[1px]"
+            className="absolute rounded-full backdrop-blur-[1px] will-change-transform"
             style={{
               width: bubble.size,
               height: bubble.size,

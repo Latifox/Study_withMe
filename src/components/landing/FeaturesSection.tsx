@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect } from "react";
+
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
   ChevronLeft, 
@@ -65,21 +66,49 @@ const FeaturesSection = () => {
     containScroll: "trimSnaps",
   });
 
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
+    
+    // Create an IntersectionObserver to detect when the section is visible
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setIsVisible(entries[0].isIntersecting);
+      },
+      { threshold: 0.1 } // 10% of the element is visible
+    );
+    
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+    
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, [emblaApi, sectionRef]);
+
+  useEffect(() => {
+    if (!emblaApi || !isVisible) return;
+    
+    // Only auto-scroll when the section is visible and document is visible
     const autoScrollInterval = setInterval(() => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && isVisible) {
         scrollNext();
       }
     }, 5000);
+    
     return () => clearInterval(autoScrollInterval);
-  }, [emblaApi, scrollNext]);
+  }, [emblaApi, scrollNext, isVisible]);
 
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
+    <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
       <Bubbles position="left" tint="purple" />
       <Bubbles position="right" tint="purple" />
       
