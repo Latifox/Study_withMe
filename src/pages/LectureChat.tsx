@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -7,19 +8,15 @@ import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Loader, Send, BookOpen } from "lucide-react";
+import { ArrowLeft, Loader, Send, BookOpen, Flame, Star } from "lucide-react";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const LectureChat = () => {
-  const {
-    courseId,
-    lectureId
-  } = useParams();
+  const { courseId, lectureId } = useParams();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Array<{
     role: 'user' | 'assistant';
@@ -30,6 +27,9 @@ const LectureChat = () => {
   }]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [totalLectures, setTotalLectures] = useState(0);
+  const [totalXP, setTotalXP] = useState(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({
@@ -41,15 +41,87 @@ const LectureChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  const {
-    data: lecture
-  } = useQuery({
+  const { data: userProgress } = useQuery({
+    queryKey: ['chat-progress', lectureId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from('user_progress')
+        .select('score, completed_at')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false });
+      
+      return data || [];
+    }
+  });
+
+  const { data: quizProgressData } = useQuery({
+    queryKey: ['chat-quiz-progress'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from('quiz_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: true });
+      
+      return data || [];
+    }
+  });
+
+  useEffect(() => {
+    if (userProgress) {
+      const calculateStreak = () => {
+        if (!userProgress?.length) return 0;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const uniqueDates = new Set(
+          userProgress
+            .filter(p => p.completed_at)
+            .map(p => {
+              const date = new Date(p.completed_at!);
+              date.setHours(0, 0, 0, 0);
+              return date.toISOString();
+            })
+        );
+
+        let streak = 0;
+        let currentDate = today;
+
+        while (uniqueDates.has(currentDate.toISOString())) {
+          streak++;
+          currentDate = new Date(currentDate);
+          currentDate.setDate(currentDate.getDate() - 1);
+          currentDate.setHours(0, 0, 0, 0);
+        }
+
+        return streak;
+      };
+
+      const calculatedTotalXP = userProgress.reduce((sum, progress) => sum + (progress.score || 0), 0);
+      
+      setCurrentStreak(calculateStreak());
+      setTotalXP(calculatedTotalXP);
+    }
+  }, [userProgress]);
+
+  useEffect(() => {
+    if (quizProgressData) {
+      const calculatedTotalLectures = new Set(quizProgressData.map(p => p.lecture_id)).size;
+      setTotalLectures(calculatedTotalLectures);
+    }
+  }, [quizProgressData]);
+
+  const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("lectures").select("*").eq("id", parseInt(lectureId!)).single();
+      const { data, error } = await supabase.from("lectures").select("*").eq("id", parseInt(lectureId!)).single();
       if (error) throw error;
       return data;
     }
@@ -102,20 +174,51 @@ const LectureChat = () => {
     return <div>Loading...</div>;
   }
 
-  return <BackgroundGradient>
+  return (
+    <BackgroundGradient>
       <div className="flex flex-col h-screen max-h-screen">
         <div className="container mx-auto p-4">
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" onClick={() => navigate(`/course/${courseId}`)} className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Lectures
-            </Button>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
-                <BookOpen className="w-5 h-5 inline mr-1" />
-                Chat with your Lecture
-              </span>
-            </h1>
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate(`/course/${courseId}`)} 
+                className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Lectures
+              </Button>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
+                  <BookOpen className="w-5 h-5 inline mr-1" />
+                  Chat with your Lecture
+                </span>
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-5">
+              <div className={cn(
+                "flex items-center gap-3 px-5 py-3 rounded-full",
+                "bg-white/60 backdrop-blur-sm border border-white/50"
+              )}>
+                <Flame className="h-7 w-7 text-red-500 fill-red-500" />
+                <span className="font-bold text-xl">{currentStreak}</span>
+              </div>
+              <div className={cn(
+                "flex items-center gap-3 px-5 py-3 rounded-full",
+                "bg-white/60 backdrop-blur-sm border border-white/50"
+              )}>
+                <BookOpen className="h-7 w-7 text-emerald-200" />
+                <span className="font-bold text-xl">{totalLectures}</span>
+              </div>
+              <div className={cn(
+                "flex items-center gap-3 px-5 py-3 rounded-full",
+                "bg-white/60 backdrop-blur-sm border border-white/50"
+              )}>
+                <Star className="h-7 w-7 text-yellow-500 fill-yellow-500" />
+                <span className="font-bold text-xl">{totalXP}</span>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -141,7 +244,8 @@ const LectureChat = () => {
           </div>
         </div>
       </div>
-    </BackgroundGradient>;
+    </BackgroundGradient>
+  );
 };
 
 export default LectureChat;
