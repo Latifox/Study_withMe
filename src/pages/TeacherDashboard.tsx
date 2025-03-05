@@ -1,9 +1,8 @@
-
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, LogOut, GraduationCap } from "lucide-react";
+import { LogOut, GraduationCap } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -18,7 +17,6 @@ const TeacherDashboard = () => {
       navigate('/auth');
     }
     
-    // Check if the user has the teacher role
     if (!loading && user) {
       const checkUserRole = async () => {
         const { data } = await supabase.auth.getUser();
@@ -55,9 +53,7 @@ const TeacherDashboard = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Bold animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
-        {/* Animated mesh pattern */}
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -69,16 +65,13 @@ const TeacherDashboard = () => {
           </svg>
         </div>
         
-        {/* Animated orbs */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
         
-        {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/50 via-transparent to-transparent"></div>
       </div>
 
-      {/* Content */}
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -89,21 +82,7 @@ const TeacherDashboard = () => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/uploaded-courses')}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
-                  <BookOpen className="w-6 h-6" />
-                  Manage Regular Courses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-white/80 font-extrabold">
-                  View and manage all your created courses
-                </p>
-              </CardContent>
-            </Card>
-            
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-12">
             <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20" onClick={() => navigate('/professor-courses')}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white group-hover:text-white/90 font-bold">
