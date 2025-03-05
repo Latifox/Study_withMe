@@ -56,8 +56,28 @@ const Dashboard = () => {
     }
   };
 
-  const switchToTeacherMode = () => {
-    navigate('/teacher-dashboard');
+  const switchToTeacherMode = async () => {
+    try {
+      // Update user metadata to teacher mode
+      const { error } = await supabase.auth.updateUser({
+        data: { account_type: 'teacher' }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Mode changed",
+        description: "Switched to professor mode successfully",
+      });
+      
+      navigate('/teacher-dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Error switching modes",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {

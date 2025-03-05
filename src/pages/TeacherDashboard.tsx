@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -25,19 +24,6 @@ const TeacherDashboard = () => {
     if (!loading && !user) {
       navigate('/auth');
     }
-    
-    if (!loading && user) {
-      const checkUserRole = async () => {
-        const { data } = await supabase.auth.getUser();
-        const accountType = data.user?.user_metadata?.account_type;
-        
-        if (accountType !== 'teacher') {
-          navigate('/dashboard');
-        }
-      };
-      
-      checkUserRole();
-    }
   }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
@@ -54,8 +40,27 @@ const TeacherDashboard = () => {
     }
   };
 
-  const switchToStudentMode = () => {
-    navigate('/dashboard');
+  const switchToStudentMode = async () => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { account_type: 'student' }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Mode changed",
+        description: "Switched to student mode successfully",
+      });
+      
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Error switching modes",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
