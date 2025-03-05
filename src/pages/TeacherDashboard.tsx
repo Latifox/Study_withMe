@@ -6,29 +6,27 @@ import { LogOut, GraduationCap, ChevronDown, User } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    loading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
-
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
-
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const {
+        error
+      } = await supabase.auth.signOut();
       if (error) throw error;
       navigate('/');
     } catch (error: any) {
@@ -39,20 +37,20 @@ const TeacherDashboard = () => {
       });
     }
   };
-
   const switchToStudentMode = async () => {
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { account_type: 'student' }
+      const {
+        error
+      } = await supabase.auth.updateUser({
+        data: {
+          account_type: 'student'
+        }
       });
-      
       if (error) throw error;
-      
       toast({
         title: "Mode changed",
-        description: "Switched to student mode successfully",
+        description: "Switched to student mode successfully"
       });
-      
       navigate('/dashboard');
     } catch (error: any) {
       toast({
@@ -62,15 +60,12 @@ const TeacherDashboard = () => {
       });
     }
   };
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
       Loading...
     </div>;
   }
-
-  return (
-    <div className="relative min-h-screen overflow-hidden">
+  return <div className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -93,7 +88,7 @@ const TeacherDashboard = () => {
       <div className="relative p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-white">Teacher Dashboard</h1>
+            <h1 className="text-4xl font-bold text-white">Professor Dashboard</h1>
             
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -134,8 +129,6 @@ const TeacherDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default TeacherDashboard;
