@@ -1,14 +1,14 @@
-
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Loader2, ExternalLink, BookOpen } from "lucide-react";
+import { ArrowLeft, Loader2, ExternalLink, BookOpen, Flame, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import BackgroundGradient from "@/components/ui/BackgroundGradient";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 type Category = 'structure' | 'keyConcepts' | 'mainIdeas' | 'importantQuotes' | 'relationships' | 'supportingEvidence';
 
@@ -21,8 +21,87 @@ const LectureSummary = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>('structure');
   const { toast } = useToast();
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [totalLectures, setTotalLectures] = useState(0);
+  const [totalXP, setTotalXP] = useState(0);
 
-  // Fetch lecture data to ensure we have access to it
+  const { data: userProgress } = useQuery({
+    queryKey: ['highlights-progress', lectureId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from('user_progress')
+        .select('score, completed_at')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false });
+      
+      return data || [];
+    }
+  });
+
+  const { data: quizProgressData } = useQuery({
+    queryKey: ['highlights-quiz-progress'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from('quiz_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: true });
+      
+      return data || [];
+    }
+  });
+
+  useEffect(() => {
+    if (userProgress) {
+      const calculateStreak = () => {
+        if (!userProgress?.length) return 0;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const uniqueDates = new Set(
+          userProgress
+            .filter(p => p.completed_at)
+            .map(p => {
+              const date = new Date(p.completed_at!);
+              date.setHours(0, 0, 0, 0);
+              return date.toISOString();
+            })
+        );
+
+        let streak = 0;
+        let currentDate = today;
+
+        while (uniqueDates.has(currentDate.toISOString())) {
+          streak++;
+          currentDate = new Date(currentDate);
+          currentDate.setDate(currentDate.getDate() - 1);
+          currentDate.setHours(0, 0, 0, 0);
+        }
+
+        return streak;
+      };
+
+      const calculatedTotalXP = userProgress.reduce((sum, progress) => sum + (progress.score || 0), 0);
+      
+      setCurrentStreak(calculateStreak());
+      setTotalXP(calculatedTotalXP);
+    }
+  }, [userProgress]);
+
+  useEffect(() => {
+    if (quizProgressData) {
+      const calculatedTotalLectures = new Set(quizProgressData.map(p => p.lecture_id)).size;
+      setTotalLectures(calculatedTotalLectures);
+    }
+  }, [quizProgressData]);
+
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureId],
     queryFn: async () => {
@@ -37,7 +116,6 @@ const LectureSummary = () => {
     },
   });
 
-  // First set of highlights (first three cards)
   const { data: firstHighlights, isLoading: isLoadingFirst } = useQuery({
     queryKey: ["lecture-highlights-first", lectureId],
     queryFn: async () => {
@@ -64,7 +142,6 @@ const LectureSummary = () => {
     enabled: !!lecture
   });
 
-  // Second set of highlights (last three cards)
   const { data: secondHighlights, isLoading: isLoadingSecond } = useQuery({
     queryKey: ["lecture-highlights-second", lectureId],
     queryFn: async () => {
@@ -93,7 +170,6 @@ const LectureSummary = () => {
 
   const isLoading = isLoadingFirst || isLoadingSecond;
 
-  // Combine both sets of highlights
   const summaryData: SummaryContent = {
     structure: firstHighlights?.structure || '',
     keyConcepts: firstHighlights?.key_concepts || '',
@@ -133,6 +209,40 @@ const LectureSummary = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Lectures
           </Button>
+          
+          <div className="flex items-center gap-5">
+            <div className={cn(
+              "flex items-center gap-3 px-5 py-3 rounded-full",
+              "bg-white/60 backdrop-blur-sm border border-white/50"
+            )}>
+              <Flame className="h-7 w-7 text-red-500 fill-red-500" />
+              <span className="font-bold text-xl">{currentStreak}</span>
+            </div>
+            <div className={cn(
+              "flex items-center gap-3 px-5 py-3 rounded-full",
+              "bg-white/60 backdrop-blur-sm border border-white/50"
+            )}>
+              <BookOpen className="h-7 w-7 text-emerald-200" />
+              <span className="font-bold text-xl">{totalLectures}</span>
+            </div>
+            <div className={cn(
+              "flex items-center gap-3 px-5 py-3 rounded-full",
+              "bg-white/60 backdrop-blur-sm border border-white/50"
+            )}>
+              <Star className="h-7 w-7 text-yellow-500 fill-yellow-500" />
+              <span className="font-bold text-xl">{totalXP}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
+              <BookOpen className="w-5 h-5 inline mr-1" />
+              Highlights
+            </span>
+          </h1>
+          
           <Button 
             variant="outline"
             onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
@@ -143,15 +253,7 @@ const LectureSummary = () => {
           </Button>
         </div>
 
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
-            <BookOpen className="w-5 h-5 inline mr-1" />
-            Highlights
-          </span>
-        </h1>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column - Navigation Cards */}
           <div className="space-y-4">
             {[
               { id: 'structure', label: 'Structure' },
@@ -173,7 +275,6 @@ const LectureSummary = () => {
             ))}
           </div>
 
-          {/* Right Column - Content Display */}
           <div className="md:col-span-2">
             <Card className="p-6 bg-white/30 backdrop-blur-md border border-black/20 shadow-md">
               <div className="prose prose-sm max-w-none text-black">
