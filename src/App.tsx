@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import AccountType from "./pages/AccountType";
 import UploadedCourses from "./pages/UploadedCourses";
 import ProfessorCourses from "./pages/ProfessorCourses";
+import ProfessorCourseLectures from "./pages/ProfessorCourseLectures";
 import InvitedCourses from "./pages/InvitedCourses";
 import Course from "./pages/Course";
 import LectureChat from "./pages/LectureChat";
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/index" element={<LandingPage />} />
             <Route path="/uploaded-courses" element={<UploadedCourses />} />
             <Route path="/professor-courses" element={<ProfessorCourses />} />
+            <Route path="/professor-courses/:courseId" element={<ProfessorCourseLectures />} />
             <Route path="/invited-courses" element={<InvitedCourses />} />
             <Route path="/course/:courseId" element={<Course />} />
             <Route path="/course/:courseId/lecture/:lectureId/chat" element={<LectureChat />} />

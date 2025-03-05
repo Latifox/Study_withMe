@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,7 +90,7 @@ const ProfessorCourses = () => {
                   <CardContent className="space-y-2 pt-4">
                     <Button 
                       className="w-full"
-                      onClick={() => navigate(`/professor-course/${course.id}`)}
+                      onClick={() => navigate(`/professor-courses/${course.id}`)}
                     >
                       View Lectures
                     </Button>
