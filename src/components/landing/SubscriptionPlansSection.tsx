@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -25,7 +24,6 @@ const SubscriptionPlansSection = () => {
       ctaText: "Get Started",
       color: "bg-gradient-to-b from-purple-400 to-indigo-500",
       circleBorderColor: "border-indigo-300",
-      checkColor: "text-indigo-400",
     },
     {
       name: "STANDARD",
@@ -43,7 +41,6 @@ const SubscriptionPlansSection = () => {
       recommended: true,
       color: "bg-gradient-to-b from-orange-400 to-red-500",
       circleBorderColor: "border-orange-400",
-      checkColor: "text-orange-400",
     },
     {
       name: "PREMIUM",
@@ -53,7 +50,6 @@ const SubscriptionPlansSection = () => {
       ctaText: "Choose Plan",
       color: "bg-gradient-to-b from-cyan-400 to-blue-500",
       circleBorderColor: "border-blue-300",
-      checkColor: "text-blue-400",
     },
   ];
 
@@ -140,7 +136,7 @@ const SubscriptionPlansSection = () => {
                 >
                   {plan.features.map((feature, i) => (
                     <motion.li key={i} className="flex items-start" variants={featureItemVariants}>
-                      <Check className={`h-4 w-4 ${plan.checkColor} mr-2 mt-0.5 flex-shrink-0`} />
+                      <Check className="h-4 w-4 text-white mr-2 mt-0.5 flex-shrink-0" />
                       <span className="text-white text-sm">{feature}</span>
                     </motion.li>
                   ))}
