@@ -7,6 +7,15 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Function to generate a random course code
+const generateCourseCode = () => {
+  // Generate a random alphanumeric code (3 letters followed by 3 numbers)
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lettersCode = Array.from({ length: 3 }, () => letters.charAt(Math.floor(Math.random() * letters.length))).join('');
+  const numbersCode = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join('');
+  return `${lettersCode}-${numbersCode}`;
+};
+
 export function CreateCourseDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -32,11 +41,31 @@ export function CreateCourseDialog() {
       // Get the current user
       const { data: userData } = await supabase.auth.getUser();
       
+      // Generate a unique course code
+      let isUnique = false;
+      let courseCode = '';
+      
+      while (!isUnique) {
+        courseCode = generateCourseCode();
+        
+        // Check if the code already exists
+        const { data: existingCourses } = await supabase
+          .from('professor_courses')
+          .select('id')
+          .eq('course_code', courseCode)
+          .limit(1);
+          
+        isUnique = !existingCourses || existingCourses.length === 0;
+      }
+      
+      console.log('Generated unique course code:', courseCode);
+      
       const { data, error } = await supabase
         .from('professor_courses')
         .insert([{ 
           title: title.trim(),
-          owner_id: userData.user?.id
+          owner_id: userData.user?.id,
+          course_code: courseCode
         }])
         .select()
         .single();
