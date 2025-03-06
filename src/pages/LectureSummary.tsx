@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -201,14 +202,23 @@ const LectureSummary = () => {
     <StoryBackground>
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Lectures
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Lectures
+            </Button>
+            
+            <div className="px-4 py-2 rounded-md bg-white/60 backdrop-blur-sm border border-white/50">
+              <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent font-bold flex items-center gap-2">
+                <BookOpen className="w-5 h-5 inline" />
+                Highlights
+              </span>
+            </div>
+          </div>
           
           <div className="flex items-center gap-5">
             <div className={cn(
@@ -236,12 +246,7 @@ const LectureSummary = () => {
         </div>
 
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
-              <BookOpen className="w-5 h-5 inline mr-1" />
-              Highlights
-            </span>
-          </h1>
+          <div></div>
           
           <Button 
             variant="gradient"
