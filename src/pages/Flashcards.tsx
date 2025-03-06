@@ -27,6 +27,7 @@ const Flashcards = () => {
   const { data: savedFlashcards, isLoading: isLoadingSaved } = useQuery({
     queryKey: ['saved-flashcards', lectureId],
     queryFn: async () => {
+      console.log('Fetching saved flashcards for lecture:', lectureId);
       const { data, error } = await supabase
         .from('flashcards')
         .select('*')
@@ -37,6 +38,7 @@ const Flashcards = () => {
         console.error('Error fetching saved flashcards:', error);
         throw error;
       }
+      console.log('Retrieved flashcards:', data?.length || 0);
       return data as Flashcard[];
     }
   });
@@ -45,21 +47,31 @@ const Flashcards = () => {
   const { data: generatedFlashcards, isLoading: isGenerating, refetch: regenerateFlashcards } = useQuery({
     queryKey: ['generated-flashcards', lectureId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-flashcards', {
-        body: {
-          lectureId: parseInt(lectureId!),
-          count: 6
+      console.log('Generating flashcards for lecture:', lectureId);
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-flashcards', {
+          body: {
+            lectureId: parseInt(lectureId!),
+            count: 6
+          }
+        });
+        
+        if (error) {
+          console.error('Error generating flashcards:', error);
+          throw error;
         }
-      });
-      if (error) {
-        console.error('Error generating flashcards:', error);
-        throw error;
+        
+        console.log('Generated flashcards successfully:', data.flashcards?.length || 0);
+        return data.flashcards as Flashcard[];
+      } catch (e) {
+        console.error('Exception in generate-flashcards:', e);
+        throw e;
       }
-      return data.flashcards as Flashcard[];
     },
     enabled: false, // Don't run this query automatically
     meta: {
-      onError: () => {
+      onError: (error: any) => {
+        console.error('Error in generate-flashcards query:', error);
         toast({
           title: "Error",
           description: "Failed to generate flashcards. Please try again.",
@@ -72,6 +84,7 @@ const Flashcards = () => {
   // Mutation to save flashcards to the database
   const saveFlashcardsMutation = useMutation({
     mutationFn: async (flashcards: Flashcard[]) => {
+      console.log('Saving flashcards to database:', flashcards.length);
       const preparedFlashcards = flashcards.map(card => ({
         lecture_id: parseInt(lectureId!),
         question: card.question,
@@ -87,6 +100,7 @@ const Flashcards = () => {
         console.error('Error saving flashcards:', error);
         throw error;
       }
+      console.log('Flashcards saved successfully:', data?.length || 0);
       return data;
     },
     onSuccess: () => {
@@ -96,10 +110,11 @@ const Flashcards = () => {
         description: "Flashcards saved successfully!"
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Save flashcards mutation error:', error);
       toast({
         title: "Error",
-        description: "Failed to save flashcards. Please try again.",
+        description: `Failed to save flashcards: ${error.message || "Unknown error"}`,
         variant: "destructive"
       });
     }
@@ -108,6 +123,7 @@ const Flashcards = () => {
   // Check if we need to generate flashcards
   useEffect(() => {
     if (savedFlashcards && savedFlashcards.length === 0) {
+      console.log('No saved flashcards found, generating new ones');
       regenerateFlashcards();
     }
   }, [savedFlashcards, regenerateFlashcards]);
@@ -115,6 +131,7 @@ const Flashcards = () => {
   // Save generated flashcards to database
   useEffect(() => {
     if (generatedFlashcards && generatedFlashcards.length > 0 && !isGenerating) {
+      console.log('New flashcards generated, saving to database');
       saveFlashcardsMutation.mutate(generatedFlashcards);
     }
   }, [generatedFlashcards, isGenerating]);
@@ -133,13 +150,20 @@ const Flashcards = () => {
 
   const generateMoreFlashcards = async () => {
     try {
+      console.log('Generating more flashcards');
       const { data, error } = await supabase.functions.invoke('generate-flashcards', {
         body: {
           lectureId: parseInt(lectureId!),
           count: 3
         }
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error generating more flashcards:', error);
+        throw error;
+      }
+      
+      console.log('Generated additional flashcards:', data.flashcards?.length || 0);
       
       // Save the new flashcards directly
       saveFlashcardsMutation.mutate(data.flashcards);
@@ -148,10 +172,11 @@ const Flashcards = () => {
         title: "Success",
         description: "Generated new flashcards successfully!"
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Exception in generateMoreFlashcards:', error);
       toast({
         title: "Error",
-        description: "Failed to generate more flashcards. Please try again.",
+        description: `Failed to generate more flashcards: ${error.message || "Unknown error"}`,
         variant: "destructive"
       });
     }

@@ -101,14 +101,28 @@ serve(async (req) => {
     const flashcards = content.split('\n\n')
       .filter((card: string) => card.trim())
       .map((card: string) => {
-        const [question, answer] = card.split('\nAnswer: ');
-        return {
-          question: question.replace('Question: ', '').trim(),
-          answer: answer?.trim() || ''
-        };
+        // Log each card for debugging
+        console.log('Processing card:', card);
+        
+        // Check if the card contains both Question and Answer
+        if (!card.includes('Question:') || !card.includes('Answer:')) {
+          console.log('Card missing Question or Answer format:', card);
+          return null;
+        }
+        
+        try {
+          const [questionPart, answerPart] = card.split('\nAnswer: ');
+          return {
+            question: questionPart.replace('Question: ', '').trim(),
+            answer: answerPart?.trim() || ''
+          };
+        } catch (error) {
+          console.error('Error parsing flashcard:', error, 'Card:', card);
+          return null;
+        }
       })
-      .filter((card: { question: string, answer: string }) => 
-        card.question && card.answer
+      .filter((card: { question: string, answer: string } | null) => 
+        card !== null && card.question && card.answer
       );
 
     console.log('Returning flashcards:', flashcards.length);
