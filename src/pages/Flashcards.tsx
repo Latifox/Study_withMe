@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { ArrowLeft, Loader2, BookOpen } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import BackgroundGradient from "@/components/ui/BackgroundGradient";
+import StoryBackground from "@/components/ui/StoryBackground";
 
 interface Flashcard {
   id?: number;
@@ -178,17 +179,17 @@ const Flashcards = () => {
   const isLoading = isLoadingSaved || isGenerating || saveFlashcardsMutation.isPending;
 
   if (isLoading) {
-    return <BackgroundGradient>
+    return <StoryBackground>
         <div className="container mx-auto p-4">
           <div className="max-w-4xl mx-auto text-center py-8">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
             <p>Loading flashcards...</p>
           </div>
         </div>
-      </BackgroundGradient>;
+      </StoryBackground>;
   }
 
-  return <BackgroundGradient>
+  return <StoryBackground>
       <div className="container mx-auto p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-start space-x-4 mb-8">
@@ -232,7 +233,7 @@ const Flashcards = () => {
           </div>
         </div>
       </div>
-    </BackgroundGradient>;
+    </StoryBackground>;
 };
 
 export default Flashcards;
