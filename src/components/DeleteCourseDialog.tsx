@@ -35,6 +35,46 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
+        // Delete generated quizzes first (this is the constraint causing the error)
+        const { error: quizzesError } = await supabase
+          .from('generated_quizzes')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (quizzesError) throw quizzesError;
+        
+        // Delete quiz progress
+        const { error: quizProgressError } = await supabase
+          .from('quiz_progress')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (quizProgressError) throw quizProgressError;
+
+        // Delete user progress
+        const { error: userProgressError } = await supabase
+          .from('user_progress')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (userProgressError) throw userProgressError;
+
+        // Delete flashcards
+        const { error: flashcardsError } = await supabase
+          .from('flashcards')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (flashcardsError) throw flashcardsError;
+
+        // Delete lecture highlights
+        const { error: highlightsError } = await supabase
+          .from('lecture_highlights')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (highlightsError) throw highlightsError;
+
         // Delete segments content
         const { error: segmentsError } = await supabase
           .from('segments_content')
@@ -58,6 +98,14 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .in('lecture_id', lectureIds);
 
         if (segmentInfoError) throw segmentInfoError;
+
+        // Delete study plans
+        const { error: studyPlansError } = await supabase
+          .from('study_plans')
+          .delete()
+          .in('lecture_id', lectureIds);
+
+        if (studyPlansError) throw studyPlansError;
 
         // Delete all lectures
         const { error: lecturesError } = await supabase
