@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ const Flashcards = () => {
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const queryClient = useQueryClient();
 
-  // First query to fetch flashcards from the database
   const { data: savedFlashcards, isLoading: isLoadingSaved } = useQuery({
     queryKey: ['saved-flashcards', lectureId],
     queryFn: async () => {
@@ -43,7 +41,6 @@ const Flashcards = () => {
     }
   });
 
-  // Second query to generate flashcards if none exist
   const { data: generatedFlashcards, isLoading: isGenerating, refetch: regenerateFlashcards } = useQuery({
     queryKey: ['generated-flashcards', lectureId],
     queryFn: async () => {
@@ -68,7 +65,7 @@ const Flashcards = () => {
         throw e;
       }
     },
-    enabled: false, // Don't run this query automatically
+    enabled: false,
     meta: {
       onError: (error: any) => {
         console.error('Error in generate-flashcards query:', error);
@@ -81,7 +78,6 @@ const Flashcards = () => {
     }
   });
 
-  // Mutation to save flashcards to the database
   const saveFlashcardsMutation = useMutation({
     mutationFn: async (flashcards: Flashcard[]) => {
       console.log('Saving flashcards to database:', flashcards.length);
@@ -120,7 +116,6 @@ const Flashcards = () => {
     }
   });
 
-  // Check if we need to generate flashcards
   useEffect(() => {
     if (savedFlashcards && savedFlashcards.length === 0) {
       console.log('No saved flashcards found, generating new ones');
@@ -128,7 +123,6 @@ const Flashcards = () => {
     }
   }, [savedFlashcards, regenerateFlashcards]);
 
-  // Save generated flashcards to database
   useEffect(() => {
     if (generatedFlashcards && generatedFlashcards.length > 0 && !isGenerating) {
       console.log('New flashcards generated, saving to database');
@@ -165,7 +159,6 @@ const Flashcards = () => {
       
       console.log('Generated additional flashcards:', data.flashcards?.length || 0);
       
-      // Save the new flashcards directly
       saveFlashcardsMutation.mutate(data.flashcards);
       
       toast({
@@ -201,11 +194,11 @@ const Flashcards = () => {
           <div className="flex items-center justify-start space-x-4 mb-8">
             <Button 
               variant="ghost" 
-              onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}`)} 
+              onClick={() => navigate(`/course/${courseId}`)} 
               className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-md flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Lecture
+              Back to Course
             </Button>
             
             <div className="flex items-center gap-2 text-2xl font-bold">
