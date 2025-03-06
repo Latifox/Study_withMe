@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -217,7 +218,7 @@ const LearningPathway = ({
                               >
                                 <Star className={cn(
                                   "w-6 h-6", 
-                                  status === "completed" ? "text-green-400 fill-green-400" : "text-yellow-500 fill-yellow-500"
+                                  "text-yellow-500 fill-yellow-500" // Always keep star yellow
                                 )} />
                                 <span className={cn(
                                   "text-sm",
