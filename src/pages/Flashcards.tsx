@@ -214,7 +214,7 @@ const Flashcards = () => {
                   <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 shadow-md">
                     <p className="text-lg font-medium text-white">{flashcard.question}</p>
                   </Card>
-                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-purple-700 to-indigo-800 rotate-y-180 backface-hidden border border-purple-300/30 shadow-md">
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md">
                     <p className="text-lg text-white">{flashcard.answer}</p>
                   </Card>
                 </div>
