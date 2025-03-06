@@ -25,7 +25,6 @@ interface LearningPathwayProps {
   onNodeSelect: (nodeId: string) => void;
 }
 
-// Define a more specific type for our user progress payload
 interface UserProgressPayload {
   new: {
     segment_number: number;
@@ -80,7 +79,6 @@ const LearningPathway = ({
     };
     fetchUserProgress();
 
-    // Subscribe to real-time updates with proper typing
     const channel = supabase.channel('user-progress-updates').on('postgres_changes', {
       event: '*',
       schema: 'public',
@@ -108,7 +106,6 @@ const LearningPathway = ({
     if (node.prerequisites.length === 0) return true;
     return node.prerequisites.every(prereq => {
       const prereqScore = nodeProgress[prereq] || 0;
-      // Node is only available if the prerequisite node has been completed (score >= 10)
       return prereqScore >= 10;
     });
   };
@@ -171,7 +168,7 @@ const LearningPathway = ({
                           ? "bg-gray-800/50 cursor-not-allowed" 
                           : "hover:scale-105 hover:shadow-xl",
                         status === "completed" 
-                          ? "bg-yellow-600/30 border-2 border-yellow-400/70"
+                          ? "bg-green-700/30 border-2 border-green-400/70"
                           : "",
                         status === "available" 
                           ? "bg-yellow-500/20 border-2 border-yellow-300/50" 
@@ -183,18 +180,20 @@ const LearningPathway = ({
                       whileHover={status !== "locked" ? { scale: 1.05 } : {}}
                       whileTap={status !== "locked" ? { scale: 0.95 } : {}}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-20"></div>
+                      {status === "completed" && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-green-400/30 to-green-500/20 opacity-50"></div>
+                      )}
                       
                       <div className="flex items-center space-x-4">
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center",
                           "transition-all duration-300",
-                          status === "completed" ? "bg-yellow-500/80" : "",
+                          status === "completed" ? "bg-green-500 shadow-md shadow-green-500/30" : "",
                           status === "available" ? "bg-yellow-400/60" : "",
                           status === "locked" ? "bg-gray-700" : "",
                           isActive ? "ring-2 ring-yellow-400" : ""
                         )}>
-                          {status === "locked" ? <Lock className="w-4 h-4 text-gray-400" /> : status === "completed" ? <CheckCircle2 className="w-4 h-4 text-emerald-900" /> : <Circle className="w-4 h-4 text-emerald-900" />}
+                          {status === "locked" ? <Lock className="w-4 h-4 text-gray-400" /> : status === "completed" ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Circle className="w-4 h-4 text-emerald-900" />}
                         </div>
                         
                         <div className="text-left">
@@ -216,8 +215,14 @@ const LearningPathway = ({
                                 transition={{ duration: 0.3 }}
                                 key={currentScore}
                               >
-                                <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-                                <span className="text-sm text-yellow-200">{currentScore}/10</span>
+                                <Star className={cn(
+                                  "w-6 h-6", 
+                                  status === "completed" ? "text-green-400 fill-green-400" : "text-yellow-500 fill-yellow-500"
+                                )} />
+                                <span className={cn(
+                                  "text-sm",
+                                  status === "completed" ? "text-green-200" : "text-yellow-200"
+                                )}>{currentScore}/10</span>
                               </motion.div>
                             </div>
                           </div>
@@ -227,7 +232,10 @@ const LearningPathway = ({
                   </TooltipTrigger>
                   <TooltipContent 
                     side="right" 
-                    className="max-w-[300px] p-4 bg-gray-900/90 border-emerald-500/20"
+                    className={cn(
+                      "max-w-[300px] p-4 border",
+                      status === "completed" ? "bg-gray-900/90 border-green-500/40" : "bg-gray-900/90 border-emerald-500/20"
+                    )}
                   >
                     <div className="space-y-2">
                       <p className="font-semibold text-white">{node.title}</p>
@@ -248,6 +256,11 @@ const LearningPathway = ({
                           </ul>
                         </div>
                       )}
+                      {status === "completed" && (
+                        <div className="text-sm text-green-300 font-semibold mt-2">
+                          ✓ Completed
+                        </div>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -255,7 +268,10 @@ const LearningPathway = ({
 
               {index < nodes.length - 1 && (
                 <motion.div 
-                  className="h-8 w-0.5 bg-yellow-400/50 mx-auto my-2"
+                  className={cn(
+                    "h-8 w-0.5 mx-auto my-2",
+                    status === "completed" ? "bg-green-400/70" : "bg-yellow-400/50"
+                  )}
                   initial={{ height: 0 }}
                   animate={{ height: 32 }}
                   transition={{ delay: index * 0.1 + 0.2 }}
