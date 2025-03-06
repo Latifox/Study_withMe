@@ -51,42 +51,42 @@ serve(async (req) => {
 
     console.log('Successfully fetched lecture content and AI config');
 
-    // Generate flashcards using Gemini
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent', {
+    // Generate flashcards using OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
-        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
       },
       body: JSON.stringify({
-        contents: [
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that generates flashcards based on lecture content. Each flashcard should have a clear question and answer pair.'
+          },
           {
             role: 'user',
-            parts: [{
-              text: `Generate exactly ${count} flashcards based on this lecture content:\n\n${lecture.content}\n\n` +
+            content: `Generate exactly ${count} flashcards based on this lecture content:\n\n${lecture.content}\n\n` +
                     `Format each flashcard as:\nQuestion: [your question here]\nAnswer: [your answer here]\n\n` +
                     `Adjust output based on these parameters:\n` +
                     `- Creativity Level: ${aiConfig.creativity_level}\n` +
                     `- Detail Level: ${aiConfig.detail_level}`
-            }]
           }
         ],
-        generationConfig: {
-          temperature: aiConfig.temperature,
-          maxOutputTokens: 2048,
-        }
-      }),
+        temperature: aiConfig.temperature,
+      })
     });
 
     if (!response.ok) {
-      console.error('Google API error:', response.status);
-      throw new Error(`Google API error: ${response.status}`);
+      console.error('OpenAI API error:', response.status);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Raw Gemini response:', data);
+    console.log('Raw OpenAI response:', data);
 
-    const content = data.candidates[0].content.parts[0].text;
+    const content = data.choices[0].message.content;
     
     // Parse the response to extract flashcards
     const flashcards = content.split('\n\n')
