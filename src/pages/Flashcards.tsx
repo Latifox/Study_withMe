@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -212,11 +211,11 @@ const Flashcards = () => {
             {savedFlashcards && savedFlashcards.map((flashcard, index) => (
               <div key={flashcard.id} className="perspective-1000 cursor-pointer" onClick={() => handleCardClick(index)}>
                 <div className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${flippedCards.has(index) ? 'rotate-y-180' : ''}`}>
-                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-white/90 backdrop-blur-sm border border-purple-200/30 shadow-md">
-                    <p className="text-lg font-medium text-gray-800">{flashcard.question}</p>
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 shadow-md">
+                    <p className="text-lg font-medium text-white">{flashcard.question}</p>
                   </Card>
-                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-purple-50 to-indigo-50 rotate-y-180 backface-hidden border border-purple-200/30 shadow-md">
-                    <p className="text-lg text-gray-800">{flashcard.answer}</p>
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-purple-700 to-indigo-800 rotate-y-180 backface-hidden border border-purple-300/30 shadow-md">
+                    <p className="text-lg text-white">{flashcard.answer}</p>
                   </Card>
                 </div>
               </div>
