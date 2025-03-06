@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -116,19 +117,37 @@ const LectureSummary = () => {
     },
   });
 
+  // First check if highlights exist in the database before generating
+  const { data: existingHighlights, isLoading: isLoadingExisting } = useQuery({
+    queryKey: ["existing-lecture-highlights", lectureId],
+    queryFn: async () => {
+      console.log('Checking for existing highlights...');
+      const { data, error } = await supabase
+        .from("lecture_highlights")
+        .select("*")
+        .eq("lecture_id", parseInt(lectureId!))
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!lectureId
+  });
+
+  // Only run these queries if no existing highlights were found
   const { data: firstHighlights, isLoading: isLoadingFirst } = useQuery({
     queryKey: ["lecture-highlights-first", lectureId],
     queryFn: async () => {
       console.log('Generating first set of highlights...');
-      const { data: existingHighlights } = await supabase
-        .from("lecture_highlights")
-        .select("structure, key_concepts, main_ideas")
-        .eq("lecture_id", parseInt(lectureId!))
-        .maybeSingle();
-
+      
+      // If we already have highlights from the existingHighlights query, return those
       if (existingHighlights?.structure) {
-        console.log('Found existing first highlights');
-        return existingHighlights;
+        console.log('Using existing first highlights');
+        return {
+          structure: existingHighlights.structure,
+          key_concepts: existingHighlights.key_concepts,
+          main_ideas: existingHighlights.main_ideas
+        };
       }
 
       console.log('Generating new first highlights...');
@@ -139,22 +158,22 @@ const LectureSummary = () => {
       if (error) throw error;
       return data.content;
     },
-    enabled: !!lecture
+    enabled: !!lecture && !isLoadingExisting && !existingHighlights
   });
 
   const { data: secondHighlights, isLoading: isLoadingSecond } = useQuery({
     queryKey: ["lecture-highlights-second", lectureId],
     queryFn: async () => {
       console.log('Generating second set of highlights...');
-      const { data: existingHighlights } = await supabase
-        .from("lecture_highlights")
-        .select("important_quotes, relationships, supporting_evidence")
-        .eq("lecture_id", parseInt(lectureId!))
-        .maybeSingle();
-
+      
+      // If we already have highlights from the existingHighlights query, return those
       if (existingHighlights?.important_quotes) {
-        console.log('Found existing second highlights');
-        return existingHighlights;
+        console.log('Using existing second highlights');
+        return {
+          important_quotes: existingHighlights.important_quotes,
+          relationships: existingHighlights.relationships,
+          supporting_evidence: existingHighlights.supporting_evidence
+        };
       }
 
       console.log('Generating new second highlights...');
@@ -165,18 +184,19 @@ const LectureSummary = () => {
       if (error) throw error;
       return data.content;
     },
-    enabled: !!lecture
+    enabled: !!lecture && !isLoadingExisting && !existingHighlights
   });
 
-  const isLoading = isLoadingFirst || isLoadingSecond;
+  const isLoading = isLoadingExisting || isLoadingFirst || isLoadingSecond;
 
+  // Combine existing highlights with newly generated ones if needed
   const summaryData: SummaryContent = {
-    structure: firstHighlights?.structure || '',
-    keyConcepts: firstHighlights?.key_concepts || '',
-    mainIdeas: firstHighlights?.main_ideas || '',
-    importantQuotes: secondHighlights?.important_quotes || '',
-    relationships: secondHighlights?.relationships || '',
-    supportingEvidence: secondHighlights?.supporting_evidence || ''
+    structure: existingHighlights?.structure || firstHighlights?.structure || '',
+    keyConcepts: existingHighlights?.key_concepts || firstHighlights?.key_concepts || '',
+    mainIdeas: existingHighlights?.main_ideas || firstHighlights?.main_ideas || '',
+    importantQuotes: existingHighlights?.important_quotes || secondHighlights?.important_quotes || '',
+    relationships: existingHighlights?.relationships || secondHighlights?.relationships || '',
+    supportingEvidence: existingHighlights?.supporting_evidence || secondHighlights?.supporting_evidence || ''
   };
 
   if (isLoading) {
@@ -186,9 +206,13 @@ const LectureSummary = () => {
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
-              <p className="text-lg text-black">Generating highlights...</p>
+              <p className="text-lg text-black">
+                {existingHighlights ? "Loading highlights..." : "Generating highlights..."}
+              </p>
               <p className="text-sm text-muted-foreground">
-                This may take a moment as we analyze the lecture content.
+                {existingHighlights 
+                  ? "Loading existing highlights from the database."
+                  : "This may take a moment as we analyze the lecture content."}
               </p>
             </div>
           </div>
