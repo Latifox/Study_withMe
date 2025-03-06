@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Loader2, BookOpen, RotateCw } from "lucide-react";
+import { ArrowLeft, Loader2, BookOpen } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -181,8 +182,8 @@ const Flashcards = () => {
     return <StoryBackground>
         <div className="container mx-auto p-4">
           <div className="max-w-4xl mx-auto text-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-500" />
-            <p className="text-purple-700 font-medium">Loading flashcards...</p>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading flashcards...</p>
           </div>
         </div>
       </StoryBackground>;
@@ -209,26 +210,13 @@ const Flashcards = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {savedFlashcards && savedFlashcards.map((flashcard, index) => (
-              <div key={flashcard.id} className="perspective-1000 cursor-pointer group" onClick={() => handleCardClick(index)}>
+              <div key={flashcard.id} className="perspective-1000 cursor-pointer" onClick={() => handleCardClick(index)}>
                 <div className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${flippedCards.has(index) ? 'rotate-y-180' : ''}`}>
-                  <Card className="absolute w-full h-full backface-hidden bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 shadow-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-indigo-500"></div>
-                    <div className="absolute top-2 right-2">
-                      <RotateCw className="w-4 h-4 text-purple-400 opacity-70 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <div className="p-6 flex items-center justify-center text-center h-full">
-                      <p className="text-lg font-medium text-gray-800">{flashcard.question}</p>
-                    </div>
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-white/90 backdrop-blur-sm border border-purple-200/30 shadow-md">
+                    <p className="text-lg font-medium text-gray-800">{flashcard.question}</p>
                   </Card>
-                  
-                  <Card className="absolute w-full h-full backface-hidden rotate-y-180 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-purple-300 shadow-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-400"></div>
-                    <div className="absolute top-2 right-2">
-                      <RotateCw className="w-4 h-4 text-purple-400 opacity-70 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <div className="p-6 flex items-center justify-center text-center h-full">
-                      <p className="text-lg text-gray-800">{flashcard.answer}</p>
-                    </div>
+                  <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-purple-50 to-indigo-50 rotate-y-180 backface-hidden border border-purple-200/30 shadow-md">
+                    <p className="text-lg text-gray-800">{flashcard.answer}</p>
                   </Card>
                 </div>
               </div>
