@@ -38,12 +38,12 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       if (uploadError) throw uploadError;
       console.log('PDF uploaded successfully');
 
-      // Save lecture metadata and get the lecture ID
+      // Save lecture metadata to the professor_lectures table instead of lectures table
       console.log('Saving lecture to database...');
       const { data: lectureData, error: dbError } = await supabase
-        .from('lectures')
+        .from('professor_lectures')  // Changed from 'lectures' to 'professor_lectures'
         .insert({
-          course_id: parseInt(courseId),
+          professor_course_id: parseInt(courseId),  // Changed from 'course_id' to 'professor_course_id'
           title,
           pdf_path: filePath,
         })
@@ -84,7 +84,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       // Fetch the lecture to confirm content was saved correctly
       console.log('Fetching updated lecture to verify content was saved...');
       const { data: updatedLecture, error: fetchError } = await supabase
-        .from('lectures')
+        .from('professor_lectures')  // Changed from 'lectures' to 'professor_lectures'
         .select('content')
         .eq('id', lectureData.id)
         .single();
@@ -113,7 +113,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
           // Always get the most up-to-date content
           console.log('Fetching the most recent lecture content for segment generation...');
           const { data: lecture, error: lectureError } = await supabase
-            .from('lectures')
+            .from('professor_lectures')  // Changed from 'lectures' to 'professor_lectures'
             .select('content, title')
             .eq('id', lectureData.id)
             .single();
@@ -133,7 +133,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
             body: {
               lectureId: lectureData.id,
               lectureContent: lecture.content,
-              lectureTitle: title
+              lectureTitle: title,
+              isProfessorMode: true  // Add flag to indicate professor mode
             }
           });
 
@@ -184,7 +185,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
               segmentNumber: segment.sequence_number,
               segmentTitle: segment.title,
               segmentDescription: segment.segment_description,
-              lectureContent: updatedLecture.content
+              lectureContent: updatedLecture.content,
+              isProfessorMode: true  // Add flag to indicate professor mode
             }
           });
 
@@ -222,7 +224,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
 
       console.log('All segment content generated successfully');
 
-      await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+      await queryClient.invalidateQueries({ queryKey: ['professor-lectures', courseId] });
       
       await new Promise(resolve => setTimeout(resolve, 500));
 
