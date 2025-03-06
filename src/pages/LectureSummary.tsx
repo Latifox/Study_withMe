@@ -117,37 +117,19 @@ const LectureSummary = () => {
     },
   });
 
-  // First check if highlights exist in the database before generating
-  const { data: existingHighlights, isLoading: isLoadingExisting } = useQuery({
-    queryKey: ["existing-lecture-highlights", lectureId],
-    queryFn: async () => {
-      console.log('Checking for existing highlights...');
-      const { data, error } = await supabase
-        .from("lecture_highlights")
-        .select("*")
-        .eq("lecture_id", parseInt(lectureId!))
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!lectureId
-  });
-
-  // Only run these queries if no existing highlights were found
   const { data: firstHighlights, isLoading: isLoadingFirst } = useQuery({
     queryKey: ["lecture-highlights-first", lectureId],
     queryFn: async () => {
       console.log('Generating first set of highlights...');
-      
-      // If we already have highlights from the existingHighlights query, return those
+      const { data: existingHighlights } = await supabase
+        .from("lecture_highlights")
+        .select("structure, key_concepts, main_ideas")
+        .eq("lecture_id", parseInt(lectureId!))
+        .maybeSingle();
+
       if (existingHighlights?.structure) {
-        console.log('Using existing first highlights');
-        return {
-          structure: existingHighlights.structure,
-          key_concepts: existingHighlights.key_concepts,
-          main_ideas: existingHighlights.main_ideas
-        };
+        console.log('Found existing first highlights');
+        return existingHighlights;
       }
 
       console.log('Generating new first highlights...');
@@ -158,22 +140,22 @@ const LectureSummary = () => {
       if (error) throw error;
       return data.content;
     },
-    enabled: !!lecture && !isLoadingExisting && !existingHighlights
+    enabled: !!lecture
   });
 
   const { data: secondHighlights, isLoading: isLoadingSecond } = useQuery({
     queryKey: ["lecture-highlights-second", lectureId],
     queryFn: async () => {
       console.log('Generating second set of highlights...');
-      
-      // If we already have highlights from the existingHighlights query, return those
+      const { data: existingHighlights } = await supabase
+        .from("lecture_highlights")
+        .select("important_quotes, relationships, supporting_evidence")
+        .eq("lecture_id", parseInt(lectureId!))
+        .maybeSingle();
+
       if (existingHighlights?.important_quotes) {
-        console.log('Using existing second highlights');
-        return {
-          important_quotes: existingHighlights.important_quotes,
-          relationships: existingHighlights.relationships,
-          supporting_evidence: existingHighlights.supporting_evidence
-        };
+        console.log('Found existing second highlights');
+        return existingHighlights;
       }
 
       console.log('Generating new second highlights...');
@@ -184,19 +166,18 @@ const LectureSummary = () => {
       if (error) throw error;
       return data.content;
     },
-    enabled: !!lecture && !isLoadingExisting && !existingHighlights
+    enabled: !!lecture
   });
 
-  const isLoading = isLoadingExisting || isLoadingFirst || isLoadingSecond;
+  const isLoading = isLoadingFirst || isLoadingSecond;
 
-  // Combine existing highlights with newly generated ones if needed
   const summaryData: SummaryContent = {
-    structure: existingHighlights?.structure || firstHighlights?.structure || '',
-    keyConcepts: existingHighlights?.key_concepts || firstHighlights?.key_concepts || '',
-    mainIdeas: existingHighlights?.main_ideas || firstHighlights?.main_ideas || '',
-    importantQuotes: existingHighlights?.important_quotes || secondHighlights?.important_quotes || '',
-    relationships: existingHighlights?.relationships || secondHighlights?.relationships || '',
-    supportingEvidence: existingHighlights?.supporting_evidence || secondHighlights?.supporting_evidence || ''
+    structure: firstHighlights?.structure || '',
+    keyConcepts: firstHighlights?.key_concepts || '',
+    mainIdeas: firstHighlights?.main_ideas || '',
+    importantQuotes: secondHighlights?.important_quotes || '',
+    relationships: secondHighlights?.relationships || '',
+    supportingEvidence: secondHighlights?.supporting_evidence || ''
   };
 
   if (isLoading) {
@@ -206,13 +187,9 @@ const LectureSummary = () => {
           <div className="flex justify-center items-center h-[60vh]">
             <div className="text-center space-y-4">
               <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
-              <p className="text-lg text-black">
-                {existingHighlights ? "Loading highlights..." : "Generating highlights..."}
-              </p>
+              <p className="text-lg text-black">Generating highlights...</p>
               <p className="text-sm text-muted-foreground">
-                {existingHighlights 
-                  ? "Loading existing highlights from the database."
-                  : "This may take a moment as we analyze the lecture content."}
+                This may take a moment as we analyze the lecture content.
               </p>
             </div>
           </div>
@@ -225,14 +202,23 @@ const LectureSummary = () => {
     <StoryBackground>
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/course/${courseId}`)}
-            className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Lectures
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/course/${courseId}`)}
+              className="gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-none"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Lectures
+            </Button>
+            
+            <div className="px-4 py-2 rounded-md bg-white/60 backdrop-blur-sm border border-white/50">
+              <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent font-bold flex items-center gap-2">
+                <BookOpen className="w-5 h-5 inline" />
+                Highlights
+              </span>
+            </div>
+          </div>
           
           <div className="flex items-center gap-5">
             <div className={cn(
@@ -260,12 +246,7 @@ const LectureSummary = () => {
         </div>
 
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <span className="bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">
-              <BookOpen className="w-5 h-5 inline mr-1" />
-              Highlights
-            </span>
-          </h1>
+          <div></div>
           
           <Button 
             variant="gradient"

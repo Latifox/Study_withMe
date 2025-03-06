@@ -21,58 +21,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if highlights already exist for this lecture
-    console.log('Checking if highlights already exist for lecture:', lectureId);
-    const { data: existingHighlights, error: highlightsError } = await supabase
-      .from('lecture_highlights')
-      .select('*')
-      .eq('lecture_id', lectureId)
-      .maybeSingle();
-
-    if (highlightsError) {
-      console.error('Error checking existing highlights:', highlightsError);
-    }
-
-    // If we already have the requested highlights, return them without regenerating
-    if (existingHighlights) {
-      console.log('Found existing highlights for lecture:', lectureId);
-      
-      if (part === 'first-cards' && existingHighlights.structure) {
-        console.log('Returning existing first cards');
-        return new Response(JSON.stringify({ 
-          content: {
-            structure: existingHighlights.structure,
-            key_concepts: existingHighlights.key_concepts,
-            main_ideas: existingHighlights.main_ideas
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (part === 'second-cards' && existingHighlights.important_quotes) {
-        console.log('Returning existing second cards');
-        return new Response(JSON.stringify({ 
-          content: {
-            important_quotes: existingHighlights.important_quotes,
-            relationships: existingHighlights.relationships,
-            supporting_evidence: existingHighlights.supporting_evidence
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (part === 'full' && existingHighlights.full_content) {
-        console.log('Returning existing full content');
-        return new Response(JSON.stringify({ 
-          content: { full_content: existingHighlights.full_content }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
     // Fetch lecture content and AI config
     console.log('Fetching lecture and AI config data...');
     const [lectureResult, aiConfigResult] = await Promise.all([
