@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -245,9 +244,9 @@ const LectureSummary = () => {
           </h1>
           
           <Button 
-            variant="outline"
+            variant="gradient"
             onClick={() => navigate(`/course/${courseId}/lecture/${lectureId}/highlights/fullversion`)}
-            className="gap-2 bg-white/80 hover:bg-white"
+            className="gap-2 text-white"
           >
             Get Full Summary
             <ExternalLink className="w-4 h-4" />
