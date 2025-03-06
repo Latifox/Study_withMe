@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -9,28 +8,29 @@ import { useAuth } from "@/components/AuthProvider";
 import { FileText, ArrowLeft, Upload } from "lucide-react";
 import { useState } from "react";
 import FileUpload from "@/components/FileUpload";
-
 const ProfessorCourseLectures = () => {
-  const { courseId } = useParams();
+  const {
+    courseId
+  } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  
   const numericCourseId = courseId ? parseInt(courseId, 10) : undefined;
-
-  const { data: course } = useQuery({
+  const {
+    data: course
+  } = useQuery({
     queryKey: ['professor-course', numericCourseId],
     queryFn: async () => {
       if (!numericCourseId || !user) return null;
-      
-      const { data, error } = await supabase
-        .from('professor_courses')
-        .select('*')
-        .eq('id', numericCourseId)
-        .eq('owner_id', user.id)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('professor_courses').select('*').eq('id', numericCourseId).eq('owner_id', user.id).single();
       if (error) {
         console.error('Error fetching course details:', error);
         toast({
@@ -40,23 +40,23 @@ const ProfessorCourseLectures = () => {
         });
         throw error;
       }
-      
       return data;
     },
     enabled: !!numericCourseId && !!user
   });
-
-  const { data: lectures, isLoading } = useQuery({
+  const {
+    data: lectures,
+    isLoading
+  } = useQuery({
     queryKey: ['professor-lectures', numericCourseId],
     queryFn: async () => {
       if (!numericCourseId) return [];
-      
-      const { data, error } = await supabase
-        .from('professor_lectures')
-        .select('*')
-        .eq('professor_course_id', numericCourseId)
-        .order('created_at', { ascending: false });
-      
+      const {
+        data,
+        error
+      } = await supabase.from('professor_lectures').select('*').eq('professor_course_id', numericCourseId).order('created_at', {
+        ascending: false
+      });
       if (error) {
         console.error('Error fetching professor lectures:', error);
         toast({
@@ -66,14 +66,11 @@ const ProfessorCourseLectures = () => {
         });
         throw error;
       }
-      
       return data || [];
     },
     enabled: !!numericCourseId
   });
-
-  return (
-    <div className="relative min-h-screen overflow-hidden">
+  return <div className="relative min-h-screen overflow-hidden">
       {/* Background with gradient and animated blobs */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
         <div className="absolute inset-0 opacity-20">
@@ -98,11 +95,7 @@ const ProfessorCourseLectures = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/professor-courses')} 
-                className="mr-4 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white"
-              >
+              <Button variant="outline" onClick={() => navigate('/professor-courses')} className="mr-4 bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/20 text-white">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Courses
               </Button>
@@ -111,34 +104,19 @@ const ProfessorCourseLectures = () => {
                 <p className="text-white/80 mt-2">Manage your lectures for this course</p>
               </div>
             </div>
-            <Button 
-              className="bg-white/20 hover:bg-white/30 text-white"
-              onClick={() => setShowUploadDialog(true)}
-            >
+            <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowUploadDialog(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Upload Lecture
             </Button>
           </div>
           
-          {isLoading ? (
-            <div className="text-center py-8">
+          {isLoading ? <div className="text-center py-8">
               <p className="text-white/80">Loading lectures...</p>
-            </div>
-          ) : !lectures || lectures.length === 0 ? (
-            <div className="text-center py-8">
+            </div> : !lectures || lectures.length === 0 ? <div className="text-center py-8">
               <p className="text-white/80">No lectures in this course yet.</p>
-              <Button 
-                className="mt-4 bg-white/20 hover:bg-white/30 text-white"
-                onClick={() => setShowUploadDialog(true)}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Your First Lecture
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lectures.map((lecture) => (
-                <Card key={lecture.id} className="group hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] bg-white/10 backdrop-blur-md border-white/20">
+              
+            </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {lectures.map(lecture => <Card key={lecture.id} className="group hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] bg-white/10 backdrop-blur-md border-white/20">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white">
                       <FileText className="mr-2 h-5 w-5 text-white" />
@@ -149,33 +127,21 @@ const ProfessorCourseLectures = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button 
-                      className="w-full bg-white/20 hover:bg-white/30 text-white"
-                      onClick={() => {
-                        toast({
-                          title: "Coming Soon",
-                          description: "Lecture details view is under development",
-                        });
-                      }}
-                    >
+                    <Button className="w-full bg-white/20 hover:bg-white/30 text-white" onClick={() => {
+                toast({
+                  title: "Coming Soon",
+                  description: "Lecture details view is under development"
+                });
+              }}>
                       View Lecture
                     </Button>
                   </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                </Card>)}
+            </div>}
         </div>
       </div>
       
-      {showUploadDialog && (
-        <FileUpload 
-          courseId={courseId} 
-          onClose={() => setShowUploadDialog(false)} 
-        />
-      )}
-    </div>
-  );
+      {showUploadDialog && <FileUpload courseId={courseId} onClose={() => setShowUploadDialog(false)} />}
+    </div>;
 };
-
 export default ProfessorCourseLectures;
