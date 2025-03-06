@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
-export const useLectureUpload = (onClose: () => void, courseId?: string) => {
+export const useLectureUpload = (onClose: () => void, courseId?: string, mode: 'student' | 'professor' = 'student') => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -39,11 +39,16 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       console.log('PDF uploaded successfully');
 
       // Save lecture metadata and get the lecture ID
-      console.log('Saving lecture to database...');
+      console.log(`Saving lecture to database in ${mode} mode...`);
+      
+      // Use the appropriate table and field name based on mode
+      const tableName = mode === 'professor' ? 'professor_lectures' : 'lectures';
+      const courseIdField = mode === 'professor' ? 'professor_course_id' : 'course_id';
+      
       const { data: lectureData, error: dbError } = await supabase
-        .from('lectures')
+        .from(tableName)
         .insert({
-          course_id: parseInt(courseId),
+          [courseIdField]: parseInt(courseId),
           title,
           pdf_path: filePath,
         })
@@ -51,7 +56,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
         .single();
 
       if (dbError) throw dbError;
-      console.log('Lecture saved successfully:', lectureData);
+      console.log(`Lecture saved successfully to ${tableName}:`, lectureData);
 
       if (!lectureData?.id) {
         throw new Error('No lecture ID returned from database');
@@ -64,7 +69,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-text', {
         body: {
           filePath,
-          lectureId: lectureData.id.toString()
+          lectureId: lectureData.id.toString(),
+          mode // Pass mode information to the edge function
         }
       });
 
@@ -84,7 +90,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
       // Fetch the lecture to confirm content was saved correctly
       console.log('Fetching updated lecture to verify content was saved...');
       const { data: updatedLecture, error: fetchError } = await supabase
-        .from('lectures')
+        .from(tableName)
         .select('content')
         .eq('id', lectureData.id)
         .single();
@@ -113,7 +119,7 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
           // Always get the most up-to-date content
           console.log('Fetching the most recent lecture content for segment generation...');
           const { data: lecture, error: lectureError } = await supabase
-            .from('lectures')
+            .from(tableName)
             .select('content, title')
             .eq('id', lectureData.id)
             .single();
@@ -133,7 +139,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
             body: {
               lectureId: lectureData.id,
               lectureContent: lecture.content,
-              lectureTitle: title
+              lectureTitle: title,
+              mode // Pass mode information to the edge function
             }
           });
 
@@ -184,7 +191,8 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
               segmentNumber: segment.sequence_number,
               segmentTitle: segment.title,
               segmentDescription: segment.segment_description,
-              lectureContent: updatedLecture.content
+              lectureContent: updatedLecture.content,
+              mode // Pass mode information to the edge function
             }
           });
 
@@ -222,7 +230,12 @@ export const useLectureUpload = (onClose: () => void, courseId?: string) => {
 
       console.log('All segment content generated successfully');
 
-      await queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+      // Invalidate the appropriate query based on mode
+      const queryKey = mode === 'professor' 
+        ? ['professor-lectures', courseId] 
+        : ['lectures', courseId];
+        
+      await queryClient.invalidateQueries({ queryKey });
       
       await new Promise(resolve => setTimeout(resolve, 500));
 

@@ -19,18 +19,22 @@ serve(async (req) => {
   try {
     console.log('Received request to extract PDF text');
     
-    const { filePath, lectureId } = await req.json();
+    const { filePath, lectureId, mode = 'student' } = await req.json();
     
     if (!filePath || !lectureId) {
       throw new Error('No file path or lecture ID provided');
     }
 
-    console.log('Processing PDF file:', filePath);
+    console.log(`Processing PDF file: ${filePath} in ${mode} mode`);
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Determine the table name based on mode
+    const tableName = mode === 'professor' ? 'professor_lectures' : 'lectures';
+    console.log(`Using table: ${tableName}`);
 
     // Download file from storage
     const { data: fileData, error: downloadError } = await supabaseClient
@@ -82,9 +86,9 @@ serve(async (req) => {
     
     console.log('Detected language:', detectedLanguage);
 
-    // Update lecture content and language
+    // Update lecture content and language in the appropriate table
     const { error: lectureError } = await supabaseClient
-      .from('lectures')
+      .from(tableName)
       .update({ 
         content: normalizedText,
         original_language: detectedLanguage

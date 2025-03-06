@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { FileText, ArrowLeft, Upload } from "lucide-react";
 import { useState } from "react";
 import FileUpload from "@/components/FileUpload";
+
 const ProfessorCourseLectures = () => {
   const {
     courseId
@@ -70,8 +71,8 @@ const ProfessorCourseLectures = () => {
     },
     enabled: !!numericCourseId
   });
+
   return <div className="relative min-h-screen overflow-hidden">
-      {/* Background with gradient and animated blobs */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-violet-600">
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -141,7 +142,8 @@ const ProfessorCourseLectures = () => {
         </div>
       </div>
       
-      {showUploadDialog && <FileUpload courseId={courseId} onClose={() => setShowUploadDialog(false)} />}
+      {showUploadDialog && <FileUpload courseId={courseId} onClose={() => setShowUploadDialog(false)} mode="professor" />}
     </div>;
 };
+
 export default ProfessorCourseLectures;
