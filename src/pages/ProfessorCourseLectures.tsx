@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { FileText, ArrowLeft, Upload, Settings } from "lucide-react";
 import { useState } from "react";
 import FileUpload from "@/components/FileUpload";
+import { DeleteLectureDialog } from "@/components/DeleteLectureDialog";
 
 const ProfessorCourseLectures = () => {
   const {
@@ -137,6 +137,11 @@ const ProfessorCourseLectures = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                      <DeleteLectureDialog 
+                        lectureId={lecture.id} 
+                        lectureTitle={lecture.title} 
+                        courseId={numericCourseId || 0} 
+                      />
                       <Button 
                         variant="outline"
                         className="bg-white/10 hover:bg-white/20 text-white border-white/20"
