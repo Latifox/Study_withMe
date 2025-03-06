@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -123,3 +122,6 @@ export function DeleteProfessorCourseDialog({ courseId, courseTitle }: DeletePro
     </Dialog>
   );
 }
+
+// Alias for backward compatibility
+export const DeleteCourseDialog = DeleteProfessorCourseDialog;
