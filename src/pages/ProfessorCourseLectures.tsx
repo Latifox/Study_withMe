@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/components/AuthProvider";
-import { FileText, ArrowLeft, Upload } from "lucide-react";
+import { FileText, ArrowLeft, Upload, Settings } from "lucide-react";
 import { useState } from "react";
 import FileUpload from "@/components/FileUpload";
 
@@ -116,28 +117,50 @@ const ProfessorCourseLectures = () => {
             </div> : !lectures || lectures.length === 0 ? <div className="text-center py-8">
               <p className="text-white/80">No lectures in this course yet.</p>
               
-            </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lectures.map(lecture => <Card key={lecture.id} className="group hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] bg-white/10 backdrop-blur-md border-white/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-white">
-                      <FileText className="mr-2 h-5 w-5 text-white" />
-                      {lecture.title}
-                    </CardTitle>
-                    <CardDescription className="text-white/70">
-                      Created on {new Date(lecture.created_at).toLocaleDateString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full bg-white/20 hover:bg-white/30 text-white" onClick={() => {
-                toast({
-                  title: "Coming Soon",
-                  description: "Lecture details view is under development"
-                });
-              }}>
-                      View Lecture
-                    </Button>
+            </div> : <div className="grid gap-4">
+              {lectures.map(lecture => (
+                <Card 
+                  key={lecture.id}
+                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/10 backdrop-blur-md border-white/20 hover:scale-[1.02] hover:bg-white/20"
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "Lecture details view is under development"
+                    });
+                  }}
+                >
+                  <CardContent className="flex justify-between items-center p-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">{lecture.title}</h3>
+                      <p className="text-white/70">
+                        {new Date(lecture.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                      <Button 
+                        variant="outline"
+                        className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast({
+                            title: "Coming Soon",
+                            description: "Configure AI functionality is under development"
+                          });
+                        }}
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Configure AI
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                      >
+                        View Lecture
+                      </Button>
+                    </div>
                   </CardContent>
-                </Card>)}
+                </Card>
+              ))}
             </div>}
         </div>
       </div>
