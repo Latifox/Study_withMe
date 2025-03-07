@@ -28,15 +28,15 @@ const Bubbles = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Generate random bubbles - reduced from 100 to 30 for performance
+    // Generate exactly 10 larger bubbles
     const generateBubbles = () => {
-      const newBubbles = Array.from({ length: 30 }, (_, i) => ({
+      const newBubbles = Array.from({ length: 10 }, (_, i) => ({
         id: i,
-        size: Math.floor(Math.random() * 60) + 20, // Size between 20px and 80px
-        delay: Math.random() * 5, // Random delay up to 5s
+        size: Math.floor(Math.random() * 100) + 60, // Size between 60px and 160px (larger bubbles)
+        delay: Math.random() * 4, // Random delay up to 4s
         duration: Math.random() * 15 + 10, // Random duration between 10-25s
         opacity: Math.random() * 0.4 + 0.6, // Higher random opacity between 0.6 and 1.0
-        top: Math.random() * 40, // Random starting position from top 0-40%
+        top: Math.random() * 80, // Random starting position from top 0-80% (covering more vertical space)
         gradient: Math.floor(Math.random() * 4), // Random gradient type (0-3)
         blur: Math.random() * 5 + 2, // Random blur between 2px and 7px
       }));
@@ -188,7 +188,7 @@ const Bubbles = ({
   return (
     <div
       ref={containerRef}
-      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-32 md:w-40 pointer-events-none will-change-transform`}
+      className={`absolute ${position === "left" ? "left-0" : "right-0"} top-0 w-60 md:w-80 pointer-events-none will-change-transform`}
       style={{
         height: sectionHeight,
         maxHeight: sectionHeight,
@@ -209,7 +209,7 @@ const Bubbles = ({
             style={{
               width: bubble.size,
               height: bubble.size,
-              [position]: `${Math.random() * 60}%`,
+              [position]: `${Math.random() * 40}%`, // Adjusted horizontal position to ensure bubbles cover more area
               top: `${bubble.top}%`,
               background: bubbleStyle.background,
               border: bubbleStyle.border,
