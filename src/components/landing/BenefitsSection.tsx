@@ -1,8 +1,37 @@
-
+import { useEffect, useRef, useState } from "react";
 import { GraduationCap, School } from "lucide-react";
 import Bubbles from "./Bubbles";
+import { motion } from "framer-motion";
 
 const BenefitsSection = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+          // Once we've seen it, no need to keep observing
+          if (sectionRef.current) {
+            observer.unobserve(sectionRef.current);
+          }
+        }
+      },
+      { threshold: 0.2 } // 20% of the section is visible
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
   const studentBenefits = [
     "Personalized study plans tailored to your learning style and pace",
     "Interactive content that makes complex concepts easier to understand",
@@ -23,18 +52,104 @@ const BenefitsSection = () => {
     "Easy integration with your existing course materials and teaching style",
   ];
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: 0.1,
+        delayChildren: 0.3
+      }
+    }
+  };
+
+  const titleVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 10
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { 
+      opacity: 0,
+      y: 50,
+      scale: 0.9,
+      rotateY: 15
+    },
+    visible: index => ({
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      rotateY: 0,
+      transition: {
+        type: "spring",
+        stiffness: 80,
+        damping: 12,
+        delay: 0.2 + (index * 0.1)
+      }
+    })
+  };
+
+  const listItemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: index => ({
+      opacity: 1, 
+      x: 0,
+      transition: { 
+        duration: 0.4,
+        delay: 0.2 + (index * 0.08)
+      }
+    })
+  };
+
+  // Floating animation for the icons
+  const floatingIconVariants = {
+    floating: {
+      y: ["0px", "-10px", "0px"],
+      transition: {
+        duration: 2.5,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12 relative">
+    <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative overflow-hidden">
       {/* Bubble effects - Updated to blue on both sides */}
       <Bubbles position="left" tint="blue" />
       <Bubbles position="right" tint="blue" />
       
-      <div 
+      {/* Background energy effect */}
+      <motion.div 
+        className="absolute inset-0 pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={isVisible ? { opacity: 0.7 } : { opacity: 0 }}
+        transition={{ duration: 1, delay: 0.5 }}
+      >
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-400/20 blur-[100px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-indigo-400/20 blur-[100px]" />
+      </motion.div>
+      
+      <motion.div 
         className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
         style={{ 
           borderImage: 'linear-gradient(to bottom, #60a5fa, #2563eb) 1',
           borderStyle: 'solid'
         }}
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+        variants={titleVariants}
       >
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Who Benefits from{" "}
@@ -45,75 +160,142 @@ const BenefitsSection = () => {
         <p className="text-lg text-gray-700 text-center">
           Our platform serves both students and educators with specialized tools and features
         </p>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20">
-        <div className="flex justify-center relative">
-          <div 
-            className="absolute inset-0 rounded-xl animate-energy" 
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative z-20"
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+        variants={containerVariants}
+      >
+        <motion.div 
+          className="flex justify-center perspective-1000 relative"
+          custom={0}
+          variants={cardVariants}
+        >
+          <motion.div 
+            className="absolute inset-0 rounded-xl" 
+            animate={{
+              background: [
+                'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
+                'radial-gradient(circle at 70% 70%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
+                'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)'
+              ],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              repeatType: "reverse"
+            }}
             style={{
-              background: 'radial-gradient(circle at center, rgba(96, 165, 250, 0.7) 0%, transparent 80%)',
               filter: 'blur(20px)',
               transform: 'scale(1.3)',
               opacity: 0.85
             }}
           />
           
-          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10">
+          <motion.div 
+            className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10 transform-style-3d"
+            whileHover={{
+              boxShadow: "0 25px 50px -12px rgba(37, 99, 235, 0.4)",
+              transform: "translateY(-10px)"
+            }}
+            transition={{ duration: 0.3 }}
+          >
             <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
+              <motion.div 
+                className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4"
+                variants={floatingIconVariants}
+                animate="floating"
+              >
                 <GraduationCap className="h-6 w-6 text-white" />
-              </div>
+              </motion.div>
               <h3 className="text-2xl font-bold text-white">
                 For Students
               </h3>
             </div>
-            <ul className="space-y-3">
+            <motion.ul className="space-y-3">
               {studentBenefits.map((benefit, index) => (
-                <li key={index} className="flex items-start">
+                <motion.li 
+                  key={index} 
+                  className="flex items-start"
+                  custom={index}
+                  variants={listItemVariants}
+                >
                   <div className="mt-1 min-w-6 min-h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
                   <span className="text-white">{benefit}</span>
-                </li>
+                </motion.li>
               ))}
-            </ul>
-          </div>
-        </div>
+            </motion.ul>
+          </motion.div>
+        </motion.div>
 
-        <div className="flex justify-center relative">
-          <div 
-            className="absolute inset-0 rounded-xl animate-energy" 
+        <motion.div 
+          className="flex justify-center perspective-1000 relative"
+          custom={1}
+          variants={cardVariants}
+        >
+          <motion.div 
+            className="absolute inset-0 rounded-xl" 
+            animate={{
+              background: [
+                'radial-gradient(circle at 70% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
+                'radial-gradient(circle at 30% 70%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
+                'radial-gradient(circle at 70% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)'
+              ],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              repeatType: "reverse"
+            }}
             style={{
-              background: 'radial-gradient(circle at center, rgba(96, 165, 250, 0.7) 0%, transparent 80%)',
               filter: 'blur(20px)',
               transform: 'scale(1.3)',
               opacity: 0.85
             }}
           />
           
-          <div className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10">
+          <motion.div 
+            className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10 transform-style-3d"
+            whileHover={{
+              boxShadow: "0 25px 50px -12px rgba(37, 99, 235, 0.4)",
+              transform: "translateY(-10px)"
+            }}
+            transition={{ duration: 0.3 }}
+          >
             <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
+              <motion.div 
+                className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4"
+                variants={floatingIconVariants}
+                animate="floating"
+              >
                 <School className="h-6 w-6 text-white" />
-              </div>
+              </motion.div>
               <h3 className="text-2xl font-bold text-white">
                 For Teachers
               </h3>
             </div>
-            <ul className="space-y-3">
+            <motion.ul className="space-y-3">
               {teacherBenefits.map((benefit, index) => (
-                <li key={index} className="flex items-start">
+                <motion.li 
+                  key={index} 
+                  className="flex items-start"
+                  custom={index}
+                  variants={listItemVariants}
+                >
                   <div className="mt-1 min-w-6 min-h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
                   <span className="text-white">{benefit}</span>
-                </li>
+                </motion.li>
               ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+            </motion.ul>
+          </motion.div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
