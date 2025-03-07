@@ -175,8 +175,8 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Button 
-            variant="ghost" 
-            className="absolute top-4 left-4 text-gray-600 hover:text-gray-900"
+            variant="gradient"
+            className="absolute top-4 left-4 text-white hover:text-white"
             onClick={() => navigate('/')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
