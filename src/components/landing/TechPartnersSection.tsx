@@ -1,69 +1,55 @@
-
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-
 interface PartnerLogo {
   name: string;
   image: string;
   alt: string;
 }
-
 const TechPartnersSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-
-  const partners: PartnerLogo[] = [
-    {
-      name: "OpenAI",
-      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/1024px-OpenAI_Logo.svg.png",
-      alt: "OpenAI Logo"
-    },
-    {
-      name: "Perplexity",
-      image: "public/lovable-uploads/9f0e116f-f4dd-419f-903f-820f5ad56e08.png",
-      alt: "Perplexity Logo"
-    },
-    {
-      name: "Grok",
-      image: "public/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png", 
-      alt: "X.ai Logo"
-    },
-    {
-      name: "MistralAI",
-      image: "public/lovable-uploads/5e7d57a9-e929-4995-8863-537f267089dc.png",
-      alt: "MistralAI Logo"
-    },
-    {
-      name: "Anthropic",
-      image: "public/lovable-uploads/a21a04a4-1298-4d9f-ae4f-4431e76715d5.png",
-      alt: "Anthropic Logo"
-    },
-    {
-      name: "Landing.ai",
-      image: "public/lovable-uploads/52af45c5-9ce8-4340-8ed7-afe53be65e34.png",
-      alt: "Landing.ai Logo"
-    }
-  ];
-
+  const partners: PartnerLogo[] = [{
+    name: "OpenAI",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/1024px-OpenAI_Logo.svg.png",
+    alt: "OpenAI Logo"
+  }, {
+    name: "Perplexity",
+    image: "public/lovable-uploads/9f0e116f-f4dd-419f-903f-820f5ad56e08.png",
+    alt: "Perplexity Logo"
+  }, {
+    name: "Grok",
+    image: "public/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png",
+    alt: "X.ai Logo"
+  }, {
+    name: "MistralAI",
+    image: "public/lovable-uploads/5e7d57a9-e929-4995-8863-537f267089dc.png",
+    alt: "MistralAI Logo"
+  }, {
+    name: "Anthropic",
+    image: "public/lovable-uploads/a21a04a4-1298-4d9f-ae4f-4431e76715d5.png",
+    alt: "Anthropic Logo"
+  }, {
+    name: "Landing.ai",
+    image: "public/lovable-uploads/52af45c5-9ce8-4340-8ed7-afe53be65e34.png",
+    alt: "Landing.ai Logo"
+  }];
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsVisible(true);
-          // Once we've seen it, no need to keep observing
-          if (sectionRef.current) {
-            observer.unobserve(sectionRef.current);
-          }
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        // Once we've seen it, no need to keep observing
+        if (sectionRef.current) {
+          observer.unobserve(sectionRef.current);
         }
-      },
-      { threshold: 0.2 } // 20% of the section is visible
+      }
+    }, {
+      threshold: 0.2
+    } // 20% of the section is visible
     );
-
     if (sectionRef.current) {
       observer.observe(sectionRef.current);
     }
-
     return () => {
       if (sectionRef.current) {
         observer.unobserve(sectionRef.current);
@@ -73,7 +59,9 @@ const TechPartnersSection = () => {
 
   // Animation variants for the container and items
   const containerVariants = {
-    hidden: { opacity: 0 },
+    hidden: {
+      opacity: 0
+    },
     visible: {
       opacity: 1,
       transition: {
@@ -82,9 +70,11 @@ const TechPartnersSection = () => {
       }
     }
   };
-
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: {
+      y: 20,
+      opacity: 0
+    },
     visible: {
       y: 0,
       opacity: 1,
@@ -95,12 +85,7 @@ const TechPartnersSection = () => {
       }
     }
   };
-
-  return (
-    <div
-      ref={sectionRef}
-      className="py-16 md:py-20 overflow-hidden bg-white relative"
-    >
+  return <div ref={sectionRef} className="py-16 md:py-20 overflow-hidden bg-white relative">
       {/* Background elements */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-100 to-indigo-100"></div>
@@ -124,38 +109,20 @@ const TechPartnersSection = () => {
           </p>
         </div>
 
-        <motion.div
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8 max-w-5xl mx-auto"
-          initial="hidden"
-          animate={isVisible ? "visible" : "hidden"}
-          variants={containerVariants}
-        >
-          {partners.map((partner, index) => (
-            <motion.div
-              key={index}
-              className="flex flex-col items-center"
-              variants={itemVariants}
-            >
+        <motion.div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8 max-w-5xl mx-auto" initial="hidden" animate={isVisible ? "visible" : "hidden"} variants={containerVariants}>
+          {partners.map((partner, index) => <motion.div key={index} className="flex flex-col items-center" variants={itemVariants}>
               <Card className="w-full h-24 hover:shadow-lg transition-shadow duration-300">
                 <CardContent className="p-4 flex items-center justify-center h-full">
-                  <img
-                    src={partner.image}
-                    alt={partner.alt}
-                    className="h-12 md:h-14 object-contain"
-                    onError={(e) => {
-                      // Fallback for any broken image links
-                      e.currentTarget.src = "https://via.placeholder.com/150?text=AI+Partner";
-                    }}
-                  />
+                  <img src={partner.image} alt={partner.alt} className="h-12 md:h-14 object-contain" onError={e => {
+                // Fallback for any broken image links
+                e.currentTarget.src = "https://via.placeholder.com/150?text=AI+Partner";
+              }} />
                 </CardContent>
               </Card>
-              <p className="mt-2 text-sm text-gray-700 font-medium">{partner.name}</p>
-            </motion.div>
-          ))}
+              
+            </motion.div>)}
         </motion.div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default TechPartnersSection;
