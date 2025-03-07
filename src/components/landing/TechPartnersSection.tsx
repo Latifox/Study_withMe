@@ -104,9 +104,7 @@ const TechPartnersSection = () => {
               Powered by World-Leading AI Models
             </span>
           </h2>
-          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-            EduSync integrates cutting-edge technology from the most innovative AI companies in the world to deliver an exceptional learning experience.
-          </p>
+          <p className="text-lg text-gray-700 max-w-2xl mx-auto">EduSync integrates cutting-edge technology from the most innovative AI companies in the world to deliver an exceptional learning experience</p>
         </div>
 
         <motion.div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8 max-w-5xl mx-auto" initial="hidden" animate={isVisible ? "visible" : "hidden"} variants={containerVariants}>
