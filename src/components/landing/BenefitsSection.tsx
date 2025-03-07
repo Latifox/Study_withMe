@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GraduationCap, School } from "lucide-react";
 import Bubbles from "./Bubbles";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
 const BenefitsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -52,8 +52,7 @@ const BenefitsSection = () => {
     "Easy integration with your existing course materials and teaching style",
   ];
 
-  // Animation variants
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -65,7 +64,7 @@ const BenefitsSection = () => {
     }
   };
 
-  const titleVariants = {
+  const titleVariants: Variants = {
     hidden: { opacity: 0, y: 30 },
     visible: {
       opacity: 1,
@@ -78,7 +77,7 @@ const BenefitsSection = () => {
     }
   };
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { 
       opacity: 0,
       y: 50,
@@ -99,7 +98,7 @@ const BenefitsSection = () => {
     })
   };
 
-  const listItemVariants = {
+  const listItemVariants: Variants = {
     hidden: { opacity: 0, x: -20 },
     visible: index => ({
       opacity: 1, 
@@ -111,26 +110,21 @@ const BenefitsSection = () => {
     })
   };
 
-  // Floating animation for the icons
-  const floatingIconVariants = {
-    floating: {
-      y: ["0px", "-10px", "0px"],
-      transition: {
-        duration: 2.5,
-        repeat: Infinity,
-        repeatType: "reverse",
-        ease: "easeInOut"
-      }
+  const floatingAnimation = {
+    y: ["0px", "-10px", "0px"],
+    transition: {
+      duration: 2.5,
+      repeat: Infinity,
+      repeatType: "reverse" as const,
+      ease: "easeInOut"
     }
   };
 
   return (
     <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative overflow-hidden">
-      {/* Bubble effects - Updated to blue on both sides */}
       <Bubbles position="left" tint="blue" />
       <Bubbles position="right" tint="blue" />
       
-      {/* Background energy effect */}
       <motion.div 
         className="absolute inset-0 pointer-events-none"
         initial={{ opacity: 0 }}
@@ -185,7 +179,7 @@ const BenefitsSection = () => {
             transition={{
               duration: 8,
               repeat: Infinity,
-              repeatType: "reverse"
+              repeatType: "reverse" as const,
             }}
             style={{
               filter: 'blur(20px)',
@@ -205,8 +199,7 @@ const BenefitsSection = () => {
             <div className="flex items-center mb-6">
               <motion.div 
                 className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4"
-                variants={floatingIconVariants}
-                animate="floating"
+                animate={floatingAnimation}
               >
                 <GraduationCap className="h-6 w-6 text-white" />
               </motion.div>
@@ -249,7 +242,7 @@ const BenefitsSection = () => {
             transition={{
               duration: 8,
               repeat: Infinity,
-              repeatType: "reverse"
+              repeatType: "reverse" as const,
             }}
             style={{
               filter: 'blur(20px)',
@@ -269,8 +262,7 @@ const BenefitsSection = () => {
             <div className="flex items-center mb-6">
               <motion.div 
                 className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4"
-                variants={floatingIconVariants}
-                animate="floating"
+                animate={floatingAnimation}
               >
                 <School className="h-6 w-6 text-white" />
               </motion.div>
