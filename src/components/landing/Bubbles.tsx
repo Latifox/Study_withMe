@@ -5,6 +5,7 @@ type BubbleProps = {
   sectionHeight?: string;
   tint?: string;
   opacity?: number;
+  bubbleCount?: number;
 };
 
 const Bubbles = ({
@@ -12,6 +13,7 @@ const Bubbles = ({
   sectionHeight = "100%",
   tint = "purple",
   opacity = 0.25,
+  bubbleCount = 10,
 }: BubbleProps) => {
   const [bubbles, setBubbles] = useState<
     Array<{
@@ -28,28 +30,26 @@ const Bubbles = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Generate exactly 10 larger bubbles
     const generateBubbles = () => {
-      const newBubbles = Array.from({ length: 10 }, (_, i) => ({
+      const newBubbles = Array.from({ length: bubbleCount }, (_, i) => ({
         id: i,
-        size: Math.floor(Math.random() * 100) + 60, // Size between 60px and 160px (larger bubbles)
-        delay: Math.random() * 4, // Random delay up to 4s
-        duration: Math.random() * 15 + 10, // Random duration between 10-25s
-        opacity: Math.random() * 0.4 + 0.6, // Higher random opacity between 0.6 and 1.0
-        top: Math.random() * 80, // Random starting position from top 0-80% (covering more vertical space)
-        gradient: Math.floor(Math.random() * 4), // Random gradient type (0-3)
-        blur: Math.random() * 5 + 2, // Random blur between 2px and 7px
+        size: Math.floor(Math.random() * 100) + 60,
+        delay: Math.random() * 4,
+        duration: Math.random() * 15 + 10,
+        opacity: Math.random() * 0.4 + 0.6,
+        top: Math.random() * 80,
+        gradient: Math.floor(Math.random() * 4),
+        blur: Math.random() * 5 + 2,
       }));
       setBubbles(newBubbles);
     };
 
     generateBubbles();
-  }, []);
+  }, [bubbleCount]);
 
-  // Define vibrant color based on tint
   const getBubbleColor = (bubbleGradient: number) => {
     switch (tint) {
-      case "yellow": // XP card colors (even bolder yellows and ambers)
+      case "yellow":
         switch (bubbleGradient) {
           case 0:
             return {
@@ -72,7 +72,7 @@ const Bubbles = ({
               border: "1px solid rgba(250, 150, 0, 0.4)",
             };
         }
-      case "red": // Learning Streak colors (even bolder reds and oranges)
+      case "red":
         switch (bubbleGradient) {
           case 0:
             return {
@@ -192,8 +192,6 @@ const Bubbles = ({
       style={{
         height: sectionHeight,
         maxHeight: sectionHeight,
-        // Added fade-out effect at the bottom of the section using a CSS mask.
-        // Ensure the parent section has position: relative so the effect aligns with the section's bottom.
         maskImage:
           "linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)",
         WebkitMaskImage:
@@ -209,7 +207,7 @@ const Bubbles = ({
             style={{
               width: bubble.size,
               height: bubble.size,
-              [position]: `${Math.random() * 40}%`, // Adjusted horizontal position to ensure bubbles cover more area
+              [position]: `${Math.random() * 40}%`,
               top: `${bubble.top}%`,
               background: bubbleStyle.background,
               border: bubbleStyle.border,

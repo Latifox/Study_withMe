@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -74,9 +73,9 @@ const HeroSection = () => {
         variants={radiationVariants}
       />
       
-      {/* Bubble effects with bolder colors and constrained height */}
-      <Bubbles position="left" tint="purple" opacity={0.5} sectionHeight="80vh" />
-      <Bubbles position="right" tint="indigo" opacity={0.5} sectionHeight="80vh" />
+      {/* Bubble effects with bolder colors and constrained height - 20 bubbles for hero section */}
+      <Bubbles position="left" tint="purple" opacity={0.5} sectionHeight="80vh" bubbleCount={20} />
+      <Bubbles position="right" tint="indigo" opacity={0.5} sectionHeight="80vh" bubbleCount={20} />
       
       {/* Radiation effect from title */}
       <motion.div 
