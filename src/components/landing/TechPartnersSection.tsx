@@ -1,5 +1,7 @@
+
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface PartnerLogo {
   name: string;
@@ -19,27 +21,27 @@ const TechPartnersSection = () => {
     },
     {
       name: "Perplexity",
-      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Perplexity_AI_Logo.svg/1200px-Perplexity_AI_Logo.svg.png",
+      image: "public/lovable-uploads/9f0e116f-f4dd-419f-903f-820f5ad56e08.png",
       alt: "Perplexity Logo"
     },
     {
       name: "Grok",
-      image: "https://cdn-icons-png.flaticon.com/512/3953/3953226.png", // Generic AI icon for Grok
-      alt: "Grok Logo"
+      image: "public/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png", 
+      alt: "X.ai Logo"
     },
     {
       name: "MistralAI",
-      image: "https://mistral.ai/images/mistral-ai-logo.svg",
+      image: "public/lovable-uploads/5e7d57a9-e929-4995-8863-537f267089dc.png",
       alt: "MistralAI Logo"
     },
     {
       name: "Anthropic",
-      image: "https://storage.googleapis.com/sourcegraph-assets/blog/anthropic-logo.png",
+      image: "public/lovable-uploads/a21a04a4-1298-4d9f-ae4f-4431e76715d5.png",
       alt: "Anthropic Logo"
     },
     {
       name: "Landing.ai",
-      image: "https://landing.ai/wp-content/uploads/2021/11/landing-ai-logo.svg",
+      image: "public/lovable-uploads/52af45c5-9ce8-4340-8ed7-afe53be65e34.png",
       alt: "Landing.ai Logo"
     }
   ];
@@ -134,17 +136,19 @@ const TechPartnersSection = () => {
               className="flex flex-col items-center"
               variants={itemVariants}
             >
-              <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow duration-300 h-24 w-full flex items-center justify-center">
-                <img
-                  src={partner.image}
-                  alt={partner.alt}
-                  className="h-12 object-contain"
-                  onError={(e) => {
-                    // Fallback for any broken image links
-                    e.currentTarget.src = "https://via.placeholder.com/150?text=AI+Partner";
-                  }}
-                />
-              </div>
+              <Card className="w-full h-24 hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="p-4 flex items-center justify-center h-full">
+                  <img
+                    src={partner.image}
+                    alt={partner.alt}
+                    className="h-12 md:h-14 object-contain"
+                    onError={(e) => {
+                      // Fallback for any broken image links
+                      e.currentTarget.src = "https://via.placeholder.com/150?text=AI+Partner";
+                    }}
+                  />
+                </CardContent>
+              </Card>
               <p className="mt-2 text-sm text-gray-700 font-medium">{partner.name}</p>
             </motion.div>
           ))}
