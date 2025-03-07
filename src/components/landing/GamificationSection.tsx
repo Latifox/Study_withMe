@@ -1,35 +1,99 @@
-
 import { Star, Flame } from "lucide-react";
 import Bubbles from "./Bubbles";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 const GamificationSection = () => {
-  const gamificationElements = [{
-    icon: <Star className="h-8 w-8 text-white" />,
-    title: "Experience Points (XP)",
-    description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
-    gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
-    bubbleTint: "yellow", // Adding tint for XP card
-    glowColor: "rgba(255, 215, 0, 0.6)" // Brighter yellow glow color with higher opacity
-  }, {
-    icon: <Flame className="h-8 w-8 text-white" />,
-    title: "Learning Streaks",
-    description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
-    gradient: "bg-gradient-to-r from-red-500 to-orange-500",
-    bubbleTint: "red", // Adding tint for Learning Streaks card
-    glowColor: "rgba(255, 69, 0, 0.6)" // Brighter orange-red glow color with higher opacity
-  }];
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+          // Once we've seen it, no need to keep observing
+          if (sectionRef.current) {
+            observer.unobserve(sectionRef.current);
+          }
+        }
+      },
+      { threshold: 0.2 } // 20% of the section is visible
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
+  const gamificationElements = [
+    {
+      icon: <Star className="h-8 w-8 text-white" />,
+      title: "Experience Points (XP)",
+      description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
+      gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
+      bubbleTint: "yellow", // Adding tint for XP card
+      glowColor: "rgba(255, 215, 0, 0.6)" // Brighter yellow glow color with higher opacity
+    },
+    {
+      icon: <Flame className="h-8 w-8 text-white" />,
+      title: "Learning Streaks",
+      description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
+      gradient: "bg-gradient-to-r from-red-500 to-orange-500",
+      bubbleTint: "red", // Adding tint for Learning Streaks card
+      glowColor: "rgba(255, 69, 0, 0.6)" // Brighter orange-red glow color with higher opacity
+    }
+  ];
+
+  // Animation variants for the container and items
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        delayChildren: 0.3,
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { 
+      y: 50, 
+      opacity: 0 
+    },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 10
+      }
+    }
+  };
   
-  return <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
+  return (
+    <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative z-10">
       {/* Bubble effects - Update tints to match the cards */}
       <Bubbles position="left" tint={gamificationElements[0].bubbleTint} />
       <Bubbles position="right" tint={gamificationElements[1].bubbleTint} />
       
-      <div 
+      <motion.div 
         className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
         style={{ 
           borderImage: 'linear-gradient(to bottom, #FFC107, #FF9800) 1',
           borderStyle: 'solid'
         }}
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+        variants={itemVariants}
       >
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Learn with{" "}
@@ -41,11 +105,16 @@ const GamificationSection = () => {
           Our gamified learning approach keeps you motivated and tracks your progress through your
           educational journey
         </p>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20">
+      <motion.div 
+        className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20"
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+        variants={containerVariants}
+      >
         {gamificationElements.map((element, index) => (
-          <div key={index} className="relative">
+          <motion.div key={index} className="relative" variants={itemVariants}>
             {/* Enhanced energy radiation effect for each card */}
             <div 
               className="absolute inset-0 rounded-xl animate-energy" 
@@ -66,10 +135,11 @@ const GamificationSection = () => {
               <h3 className="text-xl font-bold text-white text-center mb-2">{element.title}</h3>
               <p className="text-white text-center text-sm">{element.description}</p>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
-    </div>;
+      </motion.div>
+    </div>
+  );
 };
 
 export default GamificationSection;
