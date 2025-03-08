@@ -1,3 +1,4 @@
+
 import { Star, Flame } from "lucide-react";
 import Bubbles from "./Bubbles";
 import { useEffect, useRef, useState } from "react";
@@ -115,11 +116,28 @@ const GamificationSection = () => {
       >
         {gamificationElements.map((element, index) => (
           <motion.div key={index} className="relative" variants={itemVariants}>
-            {/* Enhanced energy radiation effect for each card */}
-            <div 
-              className="absolute inset-0 rounded-xl animate-energy" 
+            {/* Replace static energy radiation with animated flowing glow effect */}
+            <motion.div 
+              className="absolute inset-0 rounded-xl" 
+              animate={{
+                background: index === 0 
+                  ? [
+                      'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.7) 0%, transparent 70%)',
+                      'radial-gradient(circle at 70% 70%, rgba(255, 215, 0, 0.7) 0%, transparent 70%)',
+                      'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.7) 0%, transparent 70%)'
+                    ]
+                  : [
+                      'radial-gradient(circle at 30% 30%, rgba(255, 69, 0, 0.7) 0%, transparent 70%)',
+                      'radial-gradient(circle at 70% 70%, rgba(255, 69, 0, 0.7) 0%, transparent 70%)',
+                      'radial-gradient(circle at 30% 30%, rgba(255, 69, 0, 0.7) 0%, transparent 70%)'
+                    ],
+              }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                repeatType: "reverse" as const,
+              }}
               style={{
-                background: `radial-gradient(circle at center, ${element.glowColor} 0%, transparent 80%)`,
                 filter: 'blur(20px)',
                 transform: 'scale(1.3)',
                 opacity: 0.85
