@@ -107,7 +107,6 @@ const HeroSection = () => {
         variants={radiationVariants}
       />
       
-      {/* Bubble effects with bolder colors and constrained height - 20 bubbles for hero section */}
       <Bubbles position="left" tint="purple" opacity={0.5} sectionHeight="80vh" bubbleCount={20} />
       <Bubbles position="right" tint="indigo" opacity={0.5} sectionHeight="80vh" bubbleCount={20} />
       
@@ -117,22 +116,51 @@ const HeroSection = () => {
         variants={radiationVariants}
       />
       
-      {/* Animated catchphrase - appears before the main title */}
+      {/* Enhanced catchphrase styling with background and more prominent colors */}
       <motion.div
-        className="text-xl md:text-2xl font-medium mb-4 text-center relative z-10"
+        className="relative z-10 px-4 py-2 mb-6 rounded-lg"
         variants={catchphraseVariants}
         initial="hidden"
         animate={isLoaded ? "visible" : "hidden"}
       >
-        {catchphraseArray.map((char, index) => (
-          <motion.span
-            key={index}
-            variants={characterVariants}
-            className={char === "." ? "text-purple-600 font-bold" : ""}
-          >
-            {char}
-          </motion.span>
-        ))}
+        {/* Subtle background for the catchphrase */}
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-100/30 to-indigo-100/30 rounded-lg backdrop-blur-sm z-0"></div>
+        
+        {/* Glowing border effect */}
+        <div className="absolute inset-0 rounded-lg border border-purple-300/40 z-0"></div>
+        
+        {/* Catchphrase text with enhanced styling */}
+        <div className="relative z-10 flex justify-center">
+          {catchphraseArray.map((char, index) => (
+            <motion.span
+              key={index}
+              variants={characterVariants}
+              className={
+                char === "." 
+                  ? "text-purple-600 font-bold text-2xl md:text-3xl" 
+                  : char === " " 
+                    ? "text-transparent w-2 md:w-3"
+                    : "text-gray-800 font-medium text-2xl md:text-3xl"
+              }
+            >
+              {char}
+            </motion.span>
+          ))}
+        </div>
+        
+        {/* Subtle pulsing glow under the catchphrase */}
+        <motion.div 
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-1 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full z-0"
+          animate={{
+            opacity: [0.4, 0.7, 0.4],
+            width: ["70%", "80%", "70%"]
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
       </motion.div>
       
       <motion.h1 
