@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,39 @@ const HeroSection = () => {
     }
   };
   
+  // Catchphrase animation variants - character by character reveal
+  const catchphraseVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      }
+    }
+  };
+  
+  const characterVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 20,
+      scale: 0.8 
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      scale: 1,
+      transition: { 
+        type: "spring",
+        damping: 12,
+        stiffness: 200
+      }
+    }
+  };
+  
+  // Catchphrase text - split into array for character animation
+  const catchphrase = "Your Professor. Your Platform. Your Pace.";
+  const catchphraseArray = catchphrase.split("");
+  
   return (
     <motion.div 
       className="container mx-auto px-4 py-16 md:py-32 flex flex-col items-center relative"
@@ -82,6 +116,24 @@ const HeroSection = () => {
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-4xl h-32 md:h-40 blur-[80px] rounded-full bg-gradient-to-r from-purple-600/30 to-indigo-600/30 z-0"
         variants={radiationVariants}
       />
+      
+      {/* Animated catchphrase - appears before the main title */}
+      <motion.div
+        className="text-xl md:text-2xl font-medium mb-4 text-center relative z-10"
+        variants={catchphraseVariants}
+        initial="hidden"
+        animate={isLoaded ? "visible" : "hidden"}
+      >
+        {catchphraseArray.map((char, index) => (
+          <motion.span
+            key={index}
+            variants={characterVariants}
+            className={char === "." ? "text-purple-600 font-bold" : ""}
+          >
+            {char}
+          </motion.span>
+        ))}
+      </motion.div>
       
       <motion.h1 
         className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-6 relative z-10"
