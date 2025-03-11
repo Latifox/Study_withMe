@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { GraduationCap, School } from "lucide-react";
-import Bubbles from "./Bubbles";
 import { motion, Variants } from "framer-motion";
 
 const BenefitsSection = () => {
@@ -122,9 +121,6 @@ const BenefitsSection = () => {
 
   return (
     <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative overflow-hidden">
-      <Bubbles position="left" tint="blue" />
-      <Bubbles position="right" tint="blue" />
-      
       <motion.div 
         className="absolute inset-0 pointer-events-none"
         initial={{ opacity: 0 }}

@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
-import Bubbles from "./Bubbles";
 import { motion } from "framer-motion";
 
 const HeroSection = () => {
@@ -106,9 +105,6 @@ const HeroSection = () => {
         }}
         variants={radiationVariants}
       />
-      
-      <Bubbles position="left" tint="purple" opacity={0.5} sectionHeight="80vh" bubbleCount={20} />
-      <Bubbles position="right" tint="indigo" opacity={0.5} sectionHeight="80vh" bubbleCount={20} />
       
       {/* Radiation effect from title */}
       <motion.div 
