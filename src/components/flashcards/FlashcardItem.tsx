@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,8 +78,6 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
   };
 
   const handleCardBackClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only flip the card if the click is directly on the card background
-    // not on any of its interactive children elements
     if (e.currentTarget === e.target) {
       onClick();
     }
@@ -93,7 +90,6 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
     }
   };
 
-  // Calculate styles based on expanded and active state
   const cardScale = isActive ? (isExpanded ? "scale-110 md:scale-125" : "scale-105") : "scale-100";
   const cardZIndex = isActive ? "z-20" : "z-0";
   const cardOpacity = isActive || activeIndex === null ? "opacity-100" : "opacity-50";
@@ -134,6 +130,10 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
           {!hasSubmitted ? (
             <>
               <div className="flex-1 flex flex-col items-center justify-center mb-2">
+                <div className="w-full mb-4 bg-white/10 p-3 rounded-md">
+                  <p className="text-white text-sm font-bold mb-1">Question:</p>
+                  <p className="text-white text-sm">{flashcard.question}</p>
+                </div>
                 <p className="text-white text-sm mb-2">Your answer:</p>
                 <Textarea
                   ref={textareaRef}
