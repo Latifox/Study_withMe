@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -118,8 +119,8 @@ const SubscriptionPlansSection = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 relative" ref={sectionRef}>
-      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 relative">
+    <div className="container mx-auto px-4 py-10 md:py-16 relative" ref={sectionRef}>
+      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-10 relative">
         <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-indigo-500 via-orange-500 to-cyan-500 -z-10"></div>
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
           Choose Your Plan
@@ -129,7 +130,7 @@ const SubscriptionPlansSection = () => {
         </p>
       </div>
 
-      <div className="relative h-[750px] md:h-[600px] flex items-center justify-center">
+      <div className="relative h-[750px] md:h-[600px] flex items-center justify-center mb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
           {subscriptionPlans.map((plan, index) => {
             const { translateX, translateY, scale, zIndex, opacity } = getCardPositions(index);
