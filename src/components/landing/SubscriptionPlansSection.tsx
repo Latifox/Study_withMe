@@ -1,13 +1,26 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Check } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
+import { useEffect } from "react";
+import { useInView } from "framer-motion";
+import { useRef } from "react";
 
 const SubscriptionPlansSection = () => {
   const navigate = useNavigate();
+  const controls = useAnimation();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 });
 
   const handleSignUp = () => navigate("/auth?tab=register");
+
+  useEffect(() => {
+    if (isInView) {
+      controls.start("visible");
+    }
+  }, [isInView, controls]);
 
   const subscriptionPlans = [
     {
@@ -82,6 +95,39 @@ const SubscriptionPlansSection = () => {
     }
   };
 
+  // New card position variants for the stacked effect
+  const stackedCardVariants = {
+    hidden: (index: number) => ({
+      opacity: index === 1 ? 0.9 : 0.6,
+      scale: index === 1 ? 0.95 : 0.9,
+      x: 0,
+      y: 0,
+      zIndex: 3 - Math.abs(1 - index),
+      rotateY: 0,
+    }),
+    visible: (index: number) => ({
+      opacity: 1,
+      scale: index === 1 ? 1.1 : 1,
+      x: index === 0 ? '-90%' : index === 2 ? '90%' : 0,
+      y: 0,
+      zIndex: index === 1 ? 10 : 5,
+      rotateY: 0,
+      transition: {
+        type: "spring",
+        stiffness: 50,
+        damping: 15,
+        delay: index === 1 ? 0.2 : index === 0 ? 0 : 0.4,
+      }
+    }),
+    hover: { 
+      y: -8,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }
+  };
+
   const featuresVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -98,7 +144,7 @@ const SubscriptionPlansSection = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 relative">
+    <div className="container mx-auto px-4 py-16 md:py-24 relative" ref={sectionRef}>
       <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 relative">
         <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-indigo-500 via-orange-500 to-cyan-500 -z-10"></div>
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
@@ -110,16 +156,19 @@ const SubscriptionPlansSection = () => {
       </div>
 
       <motion.div 
-        className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto"
+        className="flex justify-center items-center h-[500px] perspective-1000 transform-style-3d"
         variants={containerVariants}
         initial="hidden"
-        animate="visible"
+        animate={controls}
       >
         {subscriptionPlans.map((plan, index) => (
           <motion.div 
             key={index} 
-            className={`${plan.recommended ? "md:transform md:-my-4 md:scale-110 z-10" : ""}`}
-            variants={cardVariants}
+            className={`absolute w-full md:w-[30%] ${index === 1 ? "z-10" : "z-5"}`}
+            custom={index}
+            variants={stackedCardVariants}
+            initial="hidden"
+            animate={controls}
             whileHover="hover"
           >
             <Card className={`h-full flex flex-col border-0 overflow-hidden rounded-3xl shadow-xl ${plan.color}`}>
