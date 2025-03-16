@@ -233,50 +233,6 @@ export type Database = {
           },
         ]
       }
-      lecture_podcast: {
-        Row: {
-          created_at: string
-          expert_script: string
-          full_script: string
-          host_script: string
-          id: number
-          is_processed: boolean | null
-          lecture_id: number | null
-          student_script: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          expert_script: string
-          full_script: string
-          host_script: string
-          id?: never
-          is_processed?: boolean | null
-          lecture_id?: number | null
-          student_script?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          expert_script?: string
-          full_script?: string
-          host_script?: string
-          id?: never
-          is_processed?: boolean | null
-          lecture_id?: number | null
-          student_script?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lecture_podcast_lecture_id_fkey"
-            columns: ["lecture_id"]
-            isOneToOne: false
-            referencedRelation: "lectures"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       lecture_segments: {
         Row: {
           created_at: string
