@@ -22,7 +22,7 @@ const StoryMainContent = ({
   return (
     <Card className="relative overflow-hidden bg-transparent border-none shadow-none">
       {/* Completely transparent container */}
-      <div className="relative p-8 rounded-lg">
+      <div className="relative p-8 rounded-lg bg-transparent">
         {/* Content container with bold text */}
         <div className="relative z-10 font-medium">
           <StoryContainer
