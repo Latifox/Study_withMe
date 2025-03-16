@@ -52,10 +52,14 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
     try {
       const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
         body: {
-          message: `I'm learning with flashcards. The question is: "${flashcard.question}". My answer is: "${userAnswer}". 
-          The correct answer is: "${flashcard.answer}". 
-          Please provide feedback on my answer in 2-3 sentences. Rate how accurate my answer is on a scale from 1-10. 
-          Keep your response concise and focused on comparing my answer to the correct one.`,
+          message: `I'm evaluating a student's answer to a flashcard question.
+          Question: "${flashcard.question}"
+          Student's answer: "${userAnswer}"
+          Correct answer: "${flashcard.answer}"
+          
+          Compare the student's answer with the correct answer and rate it on a scale from 1-10.
+          Provide brief, specific feedback (2-3 sentences) explaining why the answer is correct or incorrect.
+          Focus ONLY on comparing the student's answer with the correct answer, not on providing additional information.`,
           lectureId: flashcard.lecture_id
         }
       });
