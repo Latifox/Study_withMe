@@ -147,10 +147,7 @@ const EducationalFlowTimeline = () => {
           </span>{" "}
           Creates Value
         </h3>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Our platform creates a seamless flow of information between students and teachers, 
-          using AI to transform learning experiences into valuable insights.
-        </p>
+        
       </motion.div>
 
       <motion.div className="relative" variants={containerVariants} initial="hidden" animate={isVisible ? "visible" : "hidden"}>
