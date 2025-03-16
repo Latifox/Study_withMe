@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GraduationCap, School } from "lucide-react";
 import { motion, Variants } from "framer-motion";
+import EducationalFlowTimeline from "./EducationalFlowTimeline";
 
 const BenefitsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -242,6 +243,8 @@ const BenefitsSection = () => {
           </motion.div>
         </motion.div>
       </motion.div>
+      
+      <EducationalFlowTimeline />
     </div>
   );
 };
