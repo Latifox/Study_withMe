@@ -95,10 +95,11 @@ const GamificationSection = () => {
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Learn with{" "}
           <span 
-            className="bg-clip-text text-transparent" 
+            className="text-transparent bg-clip-text" 
             style={{ 
-              background: 'linear-gradient(90deg, #f5cb5c 0%, #2dd4bf 50%, #ef4444 100%)',
-              WebkitBackgroundClip: 'text'
+              backgroundImage: 'linear-gradient(90deg, #f5cb5c 0%, #2dd4bf 50%, #ef4444 100%)',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent'  // Ensuring the text is transparent for the gradient to show
             }}
           >
             Purpose
