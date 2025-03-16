@@ -1,4 +1,3 @@
-
 import { BookOpen, Star, Flame } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -53,7 +52,6 @@ const GamificationSection = () => {
     }
   ];
 
-  // Animation variants for the container and items
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -95,7 +93,14 @@ const GamificationSection = () => {
       >
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Learn with{" "}
-          <span className="bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
+          <span 
+            className="bg-clip-text text-transparent" 
+            style={{ 
+              background: 'linear-gradient(to right, #f5cb5c, #2dd4bf, #ef4444)',  
+              backgroundSize: '200% auto',
+              WebkitBackgroundClip: 'text'
+            }}
+          >
             Purpose
           </span>
         </h2>
