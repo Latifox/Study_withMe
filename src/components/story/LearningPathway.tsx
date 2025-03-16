@@ -136,7 +136,7 @@ const LearningPathway = ({
   };
 
   return <div className="relative w-full min-h-[600px] p-8">
-    <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 to-teal-500/10 rounded-lg"></div>
+    <div className="absolute inset-0 rounded-lg"></div>
     
     <div className="relative">
       <div className="flex flex-col items-center space-y-6">
