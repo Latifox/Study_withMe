@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 
 interface Flashcard {
   id?: number;
@@ -99,6 +99,21 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
           className="absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md"
           onClick={handleCardBackClick}
         >
+          <div className="absolute top-2 right-2 z-20">
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 text-white" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="sr-only">Turn card</span>
+            </Button>
+          </div>
+          
           {!hasSubmitted ? (
             <>
               <div className="flex-1 flex flex-col items-center justify-center mb-2">
