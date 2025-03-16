@@ -136,7 +136,7 @@ const FeaturesSection = () => {
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex">
             {features.map((feature, i) => (
-              <div key={i} className="flex-shrink-0 w-full md:w-1/3 px-4 relative group">
+              <div key={i} className="flex-shrink-0 w-full md:w-1/4 px-4 relative group">
                 <div 
                   className="absolute inset-0 rounded-xl animate-energy-glow" 
                   style={{
