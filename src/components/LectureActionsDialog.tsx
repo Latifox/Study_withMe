@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity } from "lucide-react";
+import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity, BrainCircuit, Mic } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface LectureActionsDialogProps {
@@ -51,6 +51,16 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
 
   const handleStoryModeAction = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/story`);
+    onClose();
+  };
+
+  const handleMindmapAction = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/mindmap`);
+    onClose();
+  };
+
+  const handlePodcastAction = () => {
+    navigate(`/course/${courseId}/lecture/${lectureId}/podcast`);
     onClose();
   };
 
@@ -110,6 +120,22 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           >
             <HelpCircle className="w-5 h-5" />
             Quiz
+          </Button>
+          <Button
+            onClick={handleMindmapAction}
+            className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
+            size="lg"
+          >
+            <BrainCircuit className="w-5 h-5" />
+            Mindmap
+          </Button>
+          <Button
+            onClick={handlePodcastAction}
+            className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
+            size="lg"
+          >
+            <Mic className="w-5 h-5" />
+            Podcast
           </Button>
           <Button
             onClick={handleResourcesAction}

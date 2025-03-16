@@ -44,6 +44,22 @@ export const defaultSteps: LearningStep[] = [
   },
   {
     step: 6,
+    title: "Visual Learning",
+    description: "Visualize concepts and their relationships through an interactive mindmap",
+    action: "mindmap",
+    timeEstimate: "5-10 minutes",
+    benefits: ["Spatial organization", "Connection between concepts", "Visual memory"]
+  },
+  {
+    step: 7,
+    title: "Audio Learning",
+    description: "Listen to lecture content in podcast format for on-the-go learning",
+    action: "podcast",
+    timeEstimate: "15-20 minutes",
+    benefits: ["Learn while commuting", "Auditory learning style", "Reinforcement"]
+  },
+  {
+    step: 8,
     title: "Explore Further",
     description: "Access additional resources and related materials",
     action: "resources",

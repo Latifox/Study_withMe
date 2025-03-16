@@ -69,6 +69,8 @@ const App = () => (
               path="/course/:courseId/lecture/:lectureId/story/content/:nodeId" 
               element={<StoryContent />} 
             />
+            <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<NotFound />} />
+            <Route path="/course/:courseId/lecture/:lectureId/podcast" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

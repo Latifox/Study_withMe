@@ -32,6 +32,12 @@ const LearningStepCard = ({ step, courseId, lectureId }: LearningStepCardProps) 
       case 'quiz':
         navigate(`/course/${courseId}/lecture/${lectureId}/take-quiz`);
         break;
+      case 'mindmap':
+        navigate(`/course/${courseId}/lecture/${lectureId}/mindmap`);
+        break;
+      case 'podcast':
+        navigate(`/course/${courseId}/lecture/${lectureId}/podcast`);
+        break;
       case 'resources':
         navigate(`/course/${courseId}/lecture/${lectureId}/resources`);
         break;

@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -57,10 +58,13 @@ serve(async (req) => {
     
     Analyze the lecture content and create a structured learning journey that follows this specific order:
     1. Big Picture Understanding (Summary)
-    2. Interactive Learning (Chat)
-    3. Knowledge Reinforcement (Flashcards)
-    4. Knowledge Testing (Quiz)
-    5. Further Exploration (Resources)
+    2. Interactive Story Mode (Story)
+    3. Interactive Learning (Chat)
+    4. Knowledge Reinforcement (Flashcards)
+    5. Knowledge Testing (Quiz)
+    6. Visual Learning (Mindmap)
+    7. Audio Learning (Podcast)
+    8. Further Exploration (Resources)
 
     Return ONLY a JSON object with this exact structure (no markdown, no extra text):
     {
@@ -77,6 +81,14 @@ serve(async (req) => {
         },
         {
           "step": 2,
+          "title": "Interactive Story Mode",
+          "description": "string",
+          "action": "story",
+          "timeEstimate": "string",
+          "benefits": ["array"]
+        },
+        {
+          "step": 3,
           "title": "Interactive Learning Session",
           "description": "string",
           "action": "chat",
@@ -84,7 +96,7 @@ serve(async (req) => {
           "benefits": ["array"]
         },
         {
-          "step": 3,
+          "step": 4,
           "title": "Reinforce Your Knowledge",
           "description": "string",
           "action": "flashcards",
@@ -92,7 +104,7 @@ serve(async (req) => {
           "benefits": ["array"]
         },
         {
-          "step": 4,
+          "step": 5,
           "title": "Test Your Understanding",
           "description": "string",
           "action": "quiz",
@@ -100,7 +112,23 @@ serve(async (req) => {
           "benefits": ["array"]
         },
         {
-          "step": 5,
+          "step": 6,
+          "title": "Visual Learning",
+          "description": "string",
+          "action": "mindmap",
+          "timeEstimate": "string",
+          "benefits": ["array"]
+        },
+        {
+          "step": 7,
+          "title": "Audio Learning",
+          "description": "string",
+          "action": "podcast",
+          "timeEstimate": "string",
+          "benefits": ["array"]
+        },
+        {
+          "step": 8,
           "title": "Explore Further",
           "description": "string",
           "action": "resources",
