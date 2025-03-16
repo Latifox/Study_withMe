@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -78,19 +77,17 @@ const SubscriptionPlansSection = () => {
 
   const getCardPositions = (index: number) => {
     if (!hasAnimated) {
-      // Stacked position (all cards in center, with only Standard visible)
       return {
         translateX: 0,
-        translateY: index === 1 ? 0 : index === 0 ? -5 : 5, // Slight offset for stacking effect
+        translateY: index === 1 ? 0 : index === 0 ? -5 : 5,
         scale: index === 1 ? 1 : 0.9,
         zIndex: 3 - index,
         opacity: index === 1 ? 1 : 0.4,
       };
     } else {
-      // Expanded position (cards side by side)
       return {
         translateX: index === 0 ? "-100%" : index === 2 ? "100%" : 0,
-        translateY: index === 1 ? -20 : 0, // Elevate the center card slightly
+        translateY: index === 1 ? -20 : 0,
         scale: index === 1 ? 1.1 : 1,
         zIndex: index === 1 ? 10 : 1,
         opacity: 1,
@@ -115,9 +112,9 @@ const SubscriptionPlansSection = () => {
 
   const transitionConfig = {
     type: "spring", 
-    stiffness: 100, 
-    damping: 15,
-    mass: 1
+    stiffness: 50,
+    damping: 25,
+    mass: 1.5
   };
 
   return (
