@@ -1,3 +1,4 @@
+
 import { Quote } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -96,10 +97,6 @@ const TestimonialsSection = () => {
 
   return (
     <div className="py-16 md:py-24 relative overflow-hidden">
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl opacity-50 animate-blob"></div>
-      <div className="absolute top-32 -right-24 w-64 h-64 bg-orange-500/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-24 left-48 w-64 h-64 bg-cyan-500/20 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
-      
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl relative inline-block">
@@ -196,10 +193,6 @@ const TestimonialsSection = () => {
             </motion.div>
           ))}
         </motion.div>
-        
-        <div className="absolute inset-0 pointer-events-none opacity-10">
-          <div className="h-full w-full" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-        </div>
       </div>
 
       <style>
