@@ -112,9 +112,10 @@ const SubscriptionPlansSection = () => {
 
   const transitionConfig = {
     type: "spring", 
-    stiffness: 50,
-    damping: 25,
-    mass: 1.5
+    stiffness: 30,
+    damping: 30,
+    mass: 2.5,
+    duration: 1.2
   };
 
   return (
