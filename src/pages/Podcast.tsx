@@ -69,7 +69,7 @@ const Podcast = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-podcast-conversation', {
-        body: { lectureId },
+        body: { lectureId: Number(lectureId) },
       });
 
       if (error) throw error;
