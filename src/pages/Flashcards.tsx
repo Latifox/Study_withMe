@@ -8,12 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import StoryBackground from "@/components/ui/StoryBackground";
 import { cn } from "@/lib/utils";
+
 interface Flashcard {
   id?: number;
   question: string;
   answer: string;
   lecture_id?: number;
 }
+
 const Flashcards = () => {
   const {
     courseId,
@@ -28,6 +30,7 @@ const Flashcards = () => {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [totalLectures, setTotalLectures] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
+
   const {
     data: savedFlashcards,
     isLoading: isLoadingSaved
@@ -47,6 +50,7 @@ const Flashcards = () => {
       return data as Flashcard[];
     }
   });
+
   const {
     data: generatedFlashcards,
     isLoading: isGenerating,
@@ -88,6 +92,7 @@ const Flashcards = () => {
       }
     }
   });
+
   const saveFlashcardsMutation = useMutation({
     mutationFn: async (flashcards: Flashcard[]) => {
       console.log('Saving flashcards to database:', flashcards.length);
@@ -125,6 +130,7 @@ const Flashcards = () => {
       });
     }
   });
+
   const {
     data: userProgress
   } = useQuery({
@@ -144,6 +150,7 @@ const Flashcards = () => {
       return data || [];
     }
   });
+
   const {
     data: quizProgressData
   } = useQuery({
@@ -163,6 +170,7 @@ const Flashcards = () => {
       return data || [];
     }
   });
+
   useEffect(() => {
     if (userProgress) {
       const calculateStreak = () => {
@@ -189,24 +197,28 @@ const Flashcards = () => {
       setTotalXP(calculatedTotalXP);
     }
   }, [userProgress]);
+
   useEffect(() => {
     if (quizProgressData) {
       const calculatedTotalLectures = new Set(quizProgressData.map(p => p.lecture_id)).size;
       setTotalLectures(calculatedTotalLectures);
     }
   }, [quizProgressData]);
+
   useEffect(() => {
     if (savedFlashcards && savedFlashcards.length === 0) {
       console.log('No saved flashcards found, generating new ones');
       regenerateFlashcards();
     }
   }, [savedFlashcards, regenerateFlashcards]);
+
   useEffect(() => {
     if (generatedFlashcards && generatedFlashcards.length > 0 && !isGenerating) {
       console.log('New flashcards generated, saving to database');
       saveFlashcardsMutation.mutate(generatedFlashcards);
     }
   }, [generatedFlashcards, isGenerating]);
+
   const handleCardClick = (index: number) => {
     setFlippedCards(prev => {
       const newSet = new Set(prev);
@@ -218,6 +230,7 @@ const Flashcards = () => {
       return newSet;
     });
   };
+
   const generateMoreFlashcards = async () => {
     try {
       console.log('Generating more flashcards');
@@ -249,7 +262,9 @@ const Flashcards = () => {
       });
     }
   };
+
   const isLoading = isLoadingSaved || isGenerating || saveFlashcardsMutation.isPending;
+
   if (isLoading) {
     return <StoryBackground>
         <div className="container mx-auto p-4">
@@ -260,6 +275,7 @@ const Flashcards = () => {
         </div>
       </StoryBackground>;
   }
+
   return <StoryBackground>
       <div className="container mx-auto p-4">
         <div className="max-w-4xl mx-auto">
@@ -292,7 +308,7 @@ const Flashcards = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {savedFlashcards && savedFlashcards.map((flashcard, index) => <div key={flashcard.id} className="perspective-1000 cursor-pointer" onClick={() => handleCardClick(index)}>
                 <div className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${flippedCards.has(index) ? 'rotate-y-180' : ''}`}>
                   <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 shadow-md">
@@ -314,4 +330,5 @@ const Flashcards = () => {
       </div>
     </StoryBackground>;
 };
+
 export default Flashcards;
