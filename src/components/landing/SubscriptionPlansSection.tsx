@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -130,7 +129,7 @@ const SubscriptionPlansSection = () => {
         </p>
       </div>
 
-      <div className="relative h-[750px] md:h-[600px] flex items-start justify-center">
+      <div className="relative h-[650px] md:h-[550px] flex items-start justify-center">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto w-full mt-[120px] md:mt-[100px]">
           {subscriptionPlans.map((plan, index) => {
             const { translateX, translateY, scale, zIndex, opacity } = getCardPositions(index);
