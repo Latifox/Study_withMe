@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,9 +18,10 @@ interface FlashcardItemProps {
   onClick: () => void;
   index: number;
   activeIndex: number | null;
+  onExpandChange?: (expanded: boolean) => void;
 }
 
-const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: FlashcardItemProps) => {
+const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex, onExpandChange }: FlashcardItemProps) => {
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +45,10 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
       setHasSubmitted(false);
     }
   }, [isFlipped]);
+
+  useEffect(() => {
+    onExpandChange?.(isActive && isExpanded);
+  }, [isActive, isExpanded, onExpandChange]);
 
   const handleSubmitAnswer = async () => {
     if (!userAnswer.trim() || isSubmitting) return;
@@ -98,7 +102,6 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
   const cardSize = isActive && isExpanded ? "md:w-[500px] md:h-[300px]" : "w-full h-64";
   const cardShadow = isActive && isExpanded ? "shadow-xl" : "shadow-md";
   
-  // Add a stronger backdrop blur when a card is active and expanded
   const backgroundBlur = isActive && isExpanded ? "backdrop-blur-2xl" : "";
 
   return (

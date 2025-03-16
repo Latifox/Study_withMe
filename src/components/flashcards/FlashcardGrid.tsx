@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import FlashcardItem from "./FlashcardItem";
 
@@ -18,6 +18,7 @@ interface FlashcardGridProps {
 const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
+  const [isCardExpanded, setIsCardExpanded] = useState(false);
 
   const handleCardClick = (index: number) => {
     // If card is already active and flipped, deactivate it
@@ -28,6 +29,7 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
         return newSet;
       });
       setActiveCardIndex(null);
+      setIsCardExpanded(false);
       return;
     }
     
@@ -49,9 +51,14 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
     });
   };
 
+  // Track when a card is expanded
+  const handleCardExpand = (expanded: boolean) => {
+    setIsCardExpanded(expanded);
+  };
+
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className={`relative ${isCardExpanded ? 'before:absolute before:inset-0 before:bg-black/50 before:backdrop-blur-xl before:z-10' : ''}`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-20">
         {flashcards.map((flashcard, index) => (
           <FlashcardItem 
             key={flashcard.id} 
@@ -60,11 +67,12 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
             onClick={() => handleCardClick(index)}
             index={index}
             activeIndex={activeCardIndex}
+            onExpandChange={handleCardExpand}
           />
         ))}
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center relative z-20">
         <Button 
           onClick={onGenerateMore}
           className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-medium px-6 py-2 rounded-md shadow-md"
@@ -72,7 +80,7 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
           Generate More Flashcards
         </Button>
       </div>
-    </>
+    </div>
   );
 };
 
