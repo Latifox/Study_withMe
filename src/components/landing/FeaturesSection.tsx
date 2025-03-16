@@ -73,7 +73,7 @@ const FeaturesSection = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
-    slidesToScroll: 4,
+    slidesToScroll: 1,
     containScroll: "trimSnaps",
     dragFree: false,
   });
@@ -183,3 +183,4 @@ const FeaturesSection = () => {
 };
 
 export default FeaturesSection;
+
