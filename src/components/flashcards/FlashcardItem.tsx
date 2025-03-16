@@ -73,6 +73,14 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
     }
   };
 
+  const handleCardBackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only flip the card if the click is directly on the card background
+    // not on any of its interactive children elements
+    if (e.currentTarget === e.target) {
+      onClick();
+    }
+  };
+
   const cardScale = isActive ? "scale-105" : "scale-100";
   const cardZIndex = isActive ? "z-10" : "z-0";
   const cardOpacity = isActive || activeIndex === null ? "opacity-100" : "opacity-50";
@@ -87,7 +95,10 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
           <p className="text-lg font-medium text-white">{flashcard.question}</p>
         </Card>
         
-        <Card className="absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md">
+        <Card 
+          className="absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md"
+          onClick={handleCardBackClick}
+        >
           {!hasSubmitted ? (
             <>
               <div className="flex-1 flex flex-col items-center justify-center mb-2">
