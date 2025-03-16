@@ -1,3 +1,4 @@
+
 import { BookOpen, Star, Flame } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -96,8 +97,7 @@ const GamificationSection = () => {
           <span 
             className="bg-clip-text text-transparent" 
             style={{ 
-              background: 'linear-gradient(to right, #f5cb5c, #2dd4bf, #ef4444)',  
-              backgroundSize: '200% auto',
+              background: 'linear-gradient(90deg, #f5cb5c 0%, #2dd4bf 50%, #ef4444 100%)',
               WebkitBackgroundClip: 'text'
             }}
           >
