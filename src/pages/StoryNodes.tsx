@@ -10,14 +10,17 @@ import StoryLoading from "@/components/story/StoryLoading";
 import StoryError from "@/components/story/StoryError";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-
 const StoryNodes = () => {
-  const { courseId, lectureId } = useParams();
+  const {
+    courseId,
+    lectureId
+  } = useParams();
   const navigate = useNavigate();
   const [completedNodes] = useState(new Set<string>());
   const [loadingNode, setLoadingNode] = useState<string | null>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const {
     data: userProgress,
     isLoading: isUserProgressLoading
@@ -25,75 +28,61 @@ const StoryNodes = () => {
     queryKey: ['user-progress'],
     queryFn: async () => {
       const {
-        data: { user }
+        data: {
+          user
+        }
       } = await supabase.auth.getUser();
       if (!user) return null;
-      const { data } = await supabase
-        .from('user_progress')
-        .select('score, completed_at')
-        .eq('user_id', user.id)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false });
+      const {
+        data
+      } = await supabase.from('user_progress').select('score, completed_at').eq('user_id', user.id).not('completed_at', 'is', null).order('completed_at', {
+        ascending: false
+      });
       return data;
     }
   });
-
   const {
     data: quizProgressData
   } = useQuery({
     queryKey: ['quiz-progress'],
     queryFn: async () => {
       const {
-        data: { user }
+        data: {
+          user
+        }
       } = await supabase.auth.getUser();
       if (!user) return null;
-      
-      const { data } = await supabase
-        .from('quiz_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('completed_at', { ascending: true });
-      
+      const {
+        data
+      } = await supabase.from('quiz_progress').select('*').eq('user_id', user.id).order('completed_at', {
+        ascending: true
+      });
       return data || [];
     }
   });
-
   const calculateStreak = () => {
     if (!userProgress?.length) return 0;
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const uniqueDates = new Set(
-      userProgress
-        .filter(p => p.completed_at)
-        .map(p => {
-          const date = new Date(p.completed_at);
-          date.setHours(0, 0, 0, 0);
-          return date.toISOString();
-        })
-    );
-
+    const uniqueDates = new Set(userProgress.filter(p => p.completed_at).map(p => {
+      const date = new Date(p.completed_at);
+      date.setHours(0, 0, 0, 0);
+      return date.toISOString();
+    }));
     let streak = 0;
     let currentDate = today;
-
     while (uniqueDates.has(currentDate.toISOString())) {
       streak++;
       currentDate = new Date(currentDate);
       currentDate.setDate(currentDate.getDate() - 1);
       currentDate.setHours(0, 0, 0, 0);
     }
-
     return streak;
   };
-
-  const totalLectures = quizProgressData ? 
-    new Set(quizProgressData.map(p => p.lecture_id)).size : 0;
-    
+  const totalLectures = quizProgressData ? new Set(quizProgressData.map(p => p.lecture_id)).size : 0;
   const totalXP = userProgress?.reduce((sum, progress) => sum + (progress.score || 0), 0) || 0;
   const completedNodesCount = userProgress?.filter(progress => (progress.score || 0) >= 10).length || 0;
   const currentStreak = calculateStreak();
-
   const {
     data: storyContent,
     isLoading,
@@ -126,32 +115,25 @@ const StoryNodes = () => {
       };
     }
   });
-
   const handleBack = () => {
     navigate(`/course/${courseId}`);
   };
-
   const handleNodeSelect = async (nodeId: string) => {
     setLoadingNode(nodeId);
     navigate(`/course/${courseId}/lecture/${lectureId}/story/content/${nodeId}`);
   };
-
   const handleStudyInDetail = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
   };
-
   if (isLoading) {
     return <div className="container mx-auto p-4"><StoryLoading /></div>;
   }
-
   if (error || !storyContent) {
     return <div className="container mx-auto p-4">
       <StoryError message={error instanceof Error ? error.message : "Failed to load story content"} onBack={handleBack} />
     </div>;
   }
-
-  return (
-    <div className="relative min-h-screen overflow-hidden">
+  return <div className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600">
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -172,72 +154,65 @@ const StoryNodes = () => {
       </div>
 
       <div className="container mx-auto p-4 relative">
-        <motion.div 
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center justify-between mb-6"
-        >
-          <Button 
-            variant="ghost" 
-            onClick={handleBack} 
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white transition-all duration-300 hover:scale-105"
-          >
+        <motion.div initial={{
+        y: -20,
+        opacity: 0
+      }} animate={{
+        y: 0,
+        opacity: 1
+      }} transition={{
+        duration: 0.5
+      }} className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={handleBack} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white transition-all duration-300 hover:scale-105">
             <ArrowLeft className="h-4 w-4" />
             Back to Lectures
           </Button>
 
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              onClick={handleStudyInDetail} 
-              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-105"
-            >
+            <Button variant="outline" onClick={handleStudyInDetail} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20 transition-all duration-300 hover:scale-105">
               <BookOpen className="h-4 w-4" />
               Study in Detail
             </Button>
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
-            >
+            <motion.div whileHover={{
+            scale: 1.05
+          }} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
               <Flame className="h-5 w-5 text-red-500 fill-red-500" />
               <span className="font-bold text-white">{currentStreak}</span>
             </motion.div>
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
-            >
+            <motion.div whileHover={{
+            scale: 1.05
+          }} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
               <BookOpen className="h-5 w-5 text-emerald-200" />
               <span className="font-bold text-white">{totalLectures}</span>
             </motion.div>
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
-            >
+            <motion.div whileHover={{
+            scale: 1.05
+          }} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
               <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
               <span className="font-bold text-white">{totalXP}</span>
             </motion.div>
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
+        <motion.div initial={{
+        y: 20,
+        opacity: 0
+      }} animate={{
+        y: 0,
+        opacity: 1
+      }} transition={{
+        duration: 0.5,
+        delay: 0.2
+      }}>
           <Card className="p-6 bg-white/10 backdrop-blur-md border-white/20 shadow-xl relative overflow-hidden">
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.2, 1],
-                rotate: [0, 5, -5, 0]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className="absolute top-4 right-4"
-            >
+            <motion.div animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 5, -5, 0]
+          }} transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }} className="absolute top-4 right-4">
               <Sparkles className="w-6 h-6 text-emerald-200" />
             </motion.div>
 
@@ -253,37 +228,32 @@ const StoryNodes = () => {
             </div>
 
             <div className="relative z-10 mb-8">
-              <motion.h1 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-3xl font-bold text-center text-white mb-2"
-              >
+              <motion.h1 initial={{
+              opacity: 0,
+              y: -10
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              delay: 0.3
+            }} className="text-3xl font-bold text-center text-white mb-2">
                 Your Learning Adventure
               </motion.h1>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-center text-emerald-100 opacity-80"
-              >
-                Complete nodes to earn XP and unlock new content
-              </motion.p>
+              <motion.p initial={{
+              opacity: 0
+            }} animate={{
+              opacity: 1
+            }} transition={{
+              delay: 0.4
+            }} className="text-center text-emerald-100 opacity-80">Complete chapters to earn XP and unlock new content</motion.p>
             </div>
 
             <div className="relative z-10">
-              <LearningPathway 
-                nodes={storyContent?.segments || []} 
-                completedNodes={completedNodes} 
-                currentNode={loadingNode} 
-                onNodeSelect={handleNodeSelect} 
-              />
+              <LearningPathway nodes={storyContent?.segments || []} completedNodes={completedNodes} currentNode={loadingNode} onNodeSelect={handleNodeSelect} />
             </div>
           </Card>
         </motion.div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default StoryNodes;
