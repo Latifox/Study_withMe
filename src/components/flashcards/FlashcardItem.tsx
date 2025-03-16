@@ -27,24 +27,22 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isAnswering, setIsAnswering] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isActive = activeIndex === index;
 
   useEffect(() => {
-    if (isActive && textareaRef.current && isAnswering) {
+    if (isActive && textareaRef.current) {
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 300);
     }
-  }, [isActive, isAnswering]);
+  }, [isActive]);
 
   useEffect(() => {
     if (!isFlipped) {
       setUserAnswer("");
       setFeedback("");
       setHasSubmitted(false);
-      setIsAnswering(false);
     }
   }, [isFlipped]);
 
@@ -77,7 +75,6 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
     } finally {
       setIsSubmitting(false);
       setHasSubmitted(true);
-      onClick(); // Flip the card to show the answer and feedback
     }
   };
 
@@ -96,11 +93,6 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
     }
   };
 
-  const startAnswering = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsAnswering(true);
-  };
-
   // Calculate styles based on expanded and active state
   const cardScale = isActive ? (isExpanded ? "scale-110 md:scale-125" : "scale-105") : "scale-100";
   const cardZIndex = isActive ? "z-20" : "z-0";
@@ -115,69 +107,10 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
       onClick={handleCardClick}
     >
       <div className={`relative ${cardSize} transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-        {/* Front side - Question */}
         <Card className={`absolute w-full h-full p-6 flex flex-col items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 ${cardShadow}`}>
-          {!isAnswering ? (
-            // Default question view
-            <>
-              <p className="text-lg font-medium text-white">{flashcard.question}</p>
-              {isActive && (
-                <Button 
-                  onClick={startAnswering}
-                  className="mt-4 bg-white/20 hover:bg-white/30 text-white"
-                >
-                  Answer This Card
-                </Button>
-              )}
-            </>
-          ) : (
-            // Answering mode - still on question side
-            <div className="flex flex-col items-center justify-between w-full h-full">
-              <p className="text-lg font-medium text-white mb-2">{flashcard.question}</p>
-              
-              <div className="w-full flex-1 mb-2">
-                <p className="text-white text-sm mb-1">Your answer:</p>
-                <Textarea
-                  ref={textareaRef}
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  className="w-full text-sm bg-white/10 text-white border-white/20 placeholder-white/50 resize-none"
-                  placeholder="Type your answer here..."
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              
-              <div className="flex w-full gap-2">
-                <Button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubmitAnswer();
-                  }}
-                  disabled={isSubmitting}
-                  className="flex-1 bg-white/20 hover:bg-white/30 text-white"
-                >
-                  {isSubmitting ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Checking...</>
-                  ) : (
-                    'Submit Answer'
-                  )}
-                </Button>
-                <Button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsAnswering(false);
-                  }}
-                  variant="ghost"
-                  className="bg-white/10 hover:bg-white/20 text-white"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
+          <p className="text-lg font-medium text-white">{flashcard.question}</p>
         </Card>
         
-        {/* Back side - Answer and Feedback */}
         <Card 
           className={`absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 ${cardShadow}`}
           onClick={handleCardBackClick}
@@ -191,7 +124,6 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
                 e.stopPropagation();
                 onClick();
                 setIsExpanded(false);
-                setIsAnswering(false);
               }}
             >
               <RotateCcw className="h-4 w-4" />
@@ -199,36 +131,65 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
             </Button>
           </div>
           
-          <div className="flex flex-col h-full justify-between">
-            <div className="overflow-auto text-sm text-white mb-2">
-              <div className="mb-2 flex items-start">
-                <p className="font-bold">Your answer:</p>
-                <p className="ml-2 text-left">{userAnswer}</p>
+          {!hasSubmitted ? (
+            <>
+              <div className="flex-1 flex flex-col items-center justify-center mb-2">
+                <p className="text-white text-sm mb-2">Your answer:</p>
+                <Textarea
+                  ref={textareaRef}
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  className="w-full text-sm bg-white/10 text-white border-white/20 placeholder-white/50 resize-none"
+                  placeholder="Type your answer here..."
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
-              <div className="border-t border-white/20 pt-2 mb-2">
-                <p className="font-bold flex items-center">
-                  <CheckCircle2 className="h-4 w-4 mr-1 text-green-300" /> 
-                  Correct answer:
-                </p>
-                <p className="text-left">{flashcard.answer}</p>
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSubmitAnswer();
+                }}
+                disabled={isSubmitting}
+                className="w-full bg-white/20 hover:bg-white/30 text-white"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Checking...</>
+                ) : (
+                  'Submit Answer'
+                )}
+              </Button>
+            </>
+          ) : (
+            <div className="flex flex-col h-full justify-between">
+              <div className="overflow-auto text-sm text-white mb-2">
+                <div className="mb-2 flex items-start">
+                  <p className="font-bold">Your answer:</p>
+                  <p className="ml-2 text-left">{userAnswer}</p>
+                </div>
+                <div className="border-t border-white/20 pt-2 mb-2">
+                  <p className="font-bold flex items-center">
+                    <CheckCircle2 className="h-4 w-4 mr-1 text-green-300" /> 
+                    Correct answer:
+                  </p>
+                  <p className="text-left">{flashcard.answer}</p>
+                </div>
+                <div className="border-t border-white/20 pt-2">
+                  <p className="font-bold">Feedback:</p>
+                  <p className="text-left text-xs">{feedback}</p>
+                </div>
               </div>
-              <div className="border-t border-white/20 pt-2">
-                <p className="font-bold">Feedback:</p>
-                <p className="text-left text-xs">{feedback}</p>
-              </div>
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                  setIsExpanded(false);
+                }}
+                className="w-full bg-white/20 hover:bg-white/30 text-white"
+              >
+                Close
+              </Button>
             </div>
-            <Button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-                setIsExpanded(false);
-                setIsAnswering(false);
-              }}
-              className="w-full bg-white/20 hover:bg-white/30 text-white"
-            >
-              Close
-            </Button>
-          </div>
+          )}
         </Card>
       </div>
     </div>
