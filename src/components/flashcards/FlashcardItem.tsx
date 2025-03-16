@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,8 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex, onEx
   const cardZIndex = isActive ? "z-20" : "z-0";
   const cardOpacity = isActive || activeIndex === null ? "opacity-100" : "opacity-50";
   const cardPosition = isActive && isExpanded ? "md:fixed md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2" : "";
-  const cardSize = isActive && isExpanded ? "md:w-[500px] md:h-[300px]" : "w-full h-64";
+  // Increase the height of the expanded card
+  const cardSize = isActive && isExpanded ? "md:w-[500px] md:h-[400px]" : "w-full h-64";
   const cardShadow = isActive && isExpanded ? "shadow-xl" : "shadow-md";
   
   const backgroundBlur = isActive && isExpanded ? "backdrop-blur-2xl" : "";
