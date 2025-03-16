@@ -1,9 +1,12 @@
+
 import { useEffect, useRef, useState } from "react";
 import { BookOpenText, Brain, ChartBar, ArrowRight, UserX, Lightbulb, GraduationCap, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+
 const EducationalFlowTimeline = () => {
   const [isVisible, setIsVisible] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
@@ -15,15 +18,18 @@ const EducationalFlowTimeline = () => {
     }, {
       threshold: 0.3
     });
+
     if (timelineRef.current) {
       observer.observe(timelineRef.current);
     }
+
     return () => {
       if (timelineRef.current) {
         observer.unobserve(timelineRef.current);
       }
     };
   }, []);
+
   const timelineSteps = [{
     id: 1,
     title: "Student Activities",
@@ -61,123 +67,140 @@ const EducationalFlowTimeline = () => {
         </div>,
     delay: 0.25
   }];
+
   const containerVariants = {
-    hidden: {
-      opacity: 0,
-      y: 50
-    },
+    hidden: { opacity: 0, scale: 0.9 },
     visible: {
       opacity: 1,
-      y: 0,
+      scale: 1,
       transition: {
         type: "spring",
-        stiffness: 70,
-        // Increased from 50 for faster animation
-        damping: 15,
-        // Reduced from 20 for faster animation
+        stiffness: 80,
+        damping: 12,
         when: "beforeChildren",
-        staggerChildren: 0.1 // Reduced from 0.2 for faster staggering
+        staggerChildren: 0.08
       }
     }
   };
+
   const itemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20
-    },
+    hidden: { opacity: 0, scale: 0.8 },
     visible: (delay: number) => ({
       opacity: 1,
-      y: 0,
+      scale: 1,
       transition: {
         type: "spring",
-        stiffness: 70,
-        // Increased from 40 for faster animation
-        damping: 12,
-        // Reduced from 15 for faster animation
+        stiffness: 80,
+        damping: 10,
         delay
       }
     })
   };
-  const arrowVariants = {
-    hidden: {
-      opacity: 0,
-      width: 0
-    },
-    visible: {
-      opacity: 1,
-      width: "100%",
-      transition: {
-        type: "spring",
-        stiffness: 60,
-        // Increased from 30 for faster animation
-        damping: 8,
-        // Reduced from 10 for faster animation
-        delay: 0.2 // Reduced from 0.5 for faster appearance
-      }
-    }
-  };
+
   const pulseAnimation = {
-    scale: [1, 1.1, 1],
+    scale: [1, 1.08, 1],
     opacity: [0.8, 1, 0.8],
     transition: {
-      duration: 2,
-      // Reduced from 3 for faster animation
+      duration: 1.8,
       repeat: Infinity,
       repeatType: "reverse" as const
     }
   };
-  const dataFlowAnimation = {
-    x: [0, 10, 0],
-    transition: {
-      duration: 1.5,
-      // Reduced from 2 for faster animation
-      repeat: Infinity,
-      ease: "linear"
+
+  const connectingLineVariants = {
+    hidden: { pathLength: 0, opacity: 0 },
+    visible: {
+      pathLength: 1,
+      opacity: 1,
+      transition: {
+        pathLength: { 
+          type: "spring", 
+          duration: 1.5, 
+          bounce: 0 
+        },
+        opacity: { duration: 0.3 }
+      }
     }
   };
-  return <div ref={timelineRef} className="mt-16 max-w-6xl mx-auto px-4">
-      <motion.div className="text-center mb-12" initial={{
-      opacity: 0,
-      y: 20
-    }} animate={isVisible ? {
-      opacity: 1,
-      y: 0
-    } : {
-      opacity: 0,
-      y: 20
-    }} transition={{
-      duration: 0.4 // Reduced from 0.6 for faster animation
-    }}>
-        
-        
-      </motion.div>
 
-      <motion.div className="relative" variants={containerVariants} initial="hidden" animate={isVisible ? "visible" : "hidden"}>
-        {/* Timeline Track */}
-        <div className="absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full mx-10 md:mx-20" />
+  return (
+    <div ref={timelineRef} className="mt-16 max-w-6xl mx-auto px-4">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+        className="relative flex justify-center"
+      >
+        {/* Center Circle */}
+        <motion.div 
+          className="absolute w-32 h-32 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center z-10"
+          animate={pulseAnimation}
+        >
+          <div className="text-white text-center">
+            <p className="font-bold">Continuous</p>
+            <p className="text-sm">Learning Cycle</p>
+          </div>
+        </motion.div>
 
-        {/* Timeline Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 relative z-10">
-          {timelineSteps.map((step, index) => <motion.div key={step.id} className="flex flex-col items-center" custom={step.delay} variants={itemVariants}>
-              <motion.div className="w-16 h-16 rounded-full bg-gradient-to-b from-blue-400 to-blue-600 flex items-center justify-center mb-3" animate={pulseAnimation}>
-                {step.icon}
+        {/* SVG for connecting circular lines */}
+        <svg className="absolute w-full h-full" viewBox="0 0 400 400" style={{ maxWidth: '600px' }}>
+          <motion.circle
+            cx="200"
+            cy="200"
+            r="150"
+            fill="none"
+            stroke="url(#circleGradient)"
+            strokeWidth="2"
+            strokeDasharray="15,10"
+            variants={connectingLineVariants}
+            className="opacity-60"
+          />
+          <defs>
+            <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#60A5FA" />
+              <stop offset="100%" stopColor="#3B82F6" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        {/* Timeline items positioned in a circle */}
+        <div className="relative w-[350px] h-[350px] md:w-[500px] md:h-[500px]">
+          {timelineSteps.map((step, index) => {
+            // Calculate position on a circle
+            const angle = (index * (360 / timelineSteps.length)) * (Math.PI / 180);
+            const radius = 180; // Adjust this value to change the size of the circle
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            
+            return (
+              <motion.div 
+                key={step.id}
+                custom={step.delay}
+                variants={itemVariants}
+                className="absolute w-24 md:w-28 text-center"
+                style={{ 
+                  left: `calc(50% + ${x}px - 12px)`, 
+                  top: `calc(50% + ${y}px - 12px)`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <motion.div 
+                  className="w-16 h-16 rounded-full bg-gradient-to-b from-blue-400 to-blue-600 flex items-center justify-center mb-3 mx-auto"
+                  animate={pulseAnimation}
+                >
+                  {step.icon}
+                </motion.div>
+                <h4 className="font-semibold text-center mb-1">{step.title}</h4>
+                <p className="text-xs text-gray-500 text-center max-w-[120px] mx-auto">
+                  {step.description}
+                </p>
               </motion.div>
-              <div className="h-8" /> {/* Spacer for timeline alignment */}
-              <h4 className="font-semibold text-center mb-1">{step.title}</h4>
-              <p className="text-sm text-gray-500 text-center max-w-[200px]">
-                {step.description}
-              </p>
-
-              {/* Flow arrows between steps (except last) */}
-              {index < timelineSteps.length - 1 && <motion.div className="absolute top-24 transform -translate-y-1/2 hidden md:block" style={{
-            left: `${index * 20 + 16}%`,
-            width: '8%'
-          }} variants={arrowVariants}>
-                  
-                </motion.div>}
-            </motion.div>)}
+            );
+          })}
         </div>
       </motion.div>
-    </div>;
+    </div>
+  );
 };
+
 export default EducationalFlowTimeline;
