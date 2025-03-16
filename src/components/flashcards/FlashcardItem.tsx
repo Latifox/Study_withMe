@@ -1,6 +1,10 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 interface Flashcard {
   id?: number;
@@ -13,17 +17,135 @@ interface FlashcardItemProps {
   flashcard: Flashcard;
   isFlipped: boolean;
   onClick: () => void;
+  index: number;
+  activeIndex: number | null;
 }
 
-const FlashcardItem = ({ flashcard, isFlipped, onClick }: FlashcardItemProps) => {
+const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: FlashcardItemProps) => {
+  const [userAnswer, setUserAnswer] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isActive = activeIndex === index;
+
+  useEffect(() => {
+    if (isActive && textareaRef.current) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 300);
+    }
+  }, [isActive]);
+
+  useEffect(() => {
+    if (!isFlipped) {
+      setUserAnswer("");
+      setFeedback("");
+      setHasSubmitted(false);
+    }
+  }, [isFlipped]);
+
+  const handleSubmitAnswer = async () => {
+    if (!userAnswer.trim() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-with-lecture', {
+        body: {
+          message: `I'm learning with flashcards. The question is: "${flashcard.question}". My answer is: "${userAnswer}". 
+          The correct answer is: "${flashcard.answer}". 
+          Please provide feedback on my answer in 2-3 sentences. Rate how accurate my answer is on a scale from 1-10. 
+          Keep your response concise and focused on comparing my answer to the correct one.`,
+          lectureId: flashcard.lecture_id
+        }
+      });
+
+      if (error) throw error;
+      
+      const aiResponse = data.choices[0].message.content;
+      setFeedback(aiResponse);
+    } catch (error) {
+      console.error("Error getting AI feedback:", error);
+      setFeedback("Sorry, I couldn't evaluate your answer. The correct answer is: " + flashcard.answer);
+    } finally {
+      setIsSubmitting(false);
+      setHasSubmitted(true);
+    }
+  };
+
+  const cardScale = isActive ? "scale-105" : "scale-100";
+  const cardZIndex = isActive ? "z-10" : "z-0";
+  const cardOpacity = isActive || activeIndex === null ? "opacity-100" : "opacity-50";
+
   return (
-    <div className="perspective-1000 cursor-pointer" onClick={onClick}>
+    <div 
+      className={`perspective-1000 cursor-pointer transition-all duration-300 ${cardScale} ${cardZIndex} ${cardOpacity}`}
+      onClick={() => !isActive && onClick()}
+    >
       <div className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-        <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 shadow-md">
+        <Card className="absolute w-full h-full p-6 flex flex-col items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 shadow-md">
           <p className="text-lg font-medium text-white">{flashcard.question}</p>
         </Card>
-        <Card className="absolute w-full h-full p-6 flex items-center justify-center text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md">
-          <p className="text-lg text-white">{flashcard.answer}</p>
+        
+        <Card className="absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md">
+          {!hasSubmitted ? (
+            <>
+              <div className="flex-1 flex flex-col items-center justify-center mb-2">
+                <p className="text-white text-sm mb-2">Your answer:</p>
+                <Textarea
+                  ref={textareaRef}
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  className="w-full text-sm bg-white/10 text-white border-white/20 placeholder-white/50 resize-none"
+                  placeholder="Type your answer here..."
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSubmitAnswer();
+                }}
+                disabled={isSubmitting}
+                className="w-full bg-white/20 hover:bg-white/30 text-white"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Checking...</>
+                ) : (
+                  'Submit Answer'
+                )}
+              </Button>
+            </>
+          ) : (
+            <div className="flex flex-col h-full justify-between">
+              <div className="overflow-auto text-sm text-white mb-2">
+                <div className="mb-2 flex items-start">
+                  <p className="font-bold">Your answer:</p>
+                  <p className="ml-2 text-left">{userAnswer}</p>
+                </div>
+                <div className="border-t border-white/20 pt-2 mb-2">
+                  <p className="font-bold flex items-center">
+                    <CheckCircle2 className="h-4 w-4 mr-1 text-green-300" /> 
+                    Correct answer:
+                  </p>
+                  <p className="text-left">{flashcard.answer}</p>
+                </div>
+                <div className="border-t border-white/20 pt-2">
+                  <p className="font-bold">Feedback:</p>
+                  <p className="text-left text-xs">{feedback}</p>
+                </div>
+              </div>
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                className="w-full bg-white/20 hover:bg-white/30 text-white"
+              >
+                Close
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     </div>

@@ -17,15 +17,34 @@ interface FlashcardGridProps {
 
 const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+  const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
 
   const handleCardClick = (index: number) => {
+    // If card is already active and flipped, deactivate it
+    if (activeCardIndex === index && flippedCards.has(index)) {
+      setFlippedCards(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(index);
+        return newSet;
+      });
+      setActiveCardIndex(null);
+      return;
+    }
+    
+    // If another card is active, deactivate it first
+    if (activeCardIndex !== null && activeCardIndex !== index) {
+      setFlippedCards(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(activeCardIndex);
+        return newSet;
+      });
+    }
+    
+    // Activate the clicked card
+    setActiveCardIndex(index);
     setFlippedCards(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
+      newSet.add(index);
       return newSet;
     });
   };
@@ -39,6 +58,8 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
             flashcard={flashcard} 
             isFlipped={flippedCards.has(index)}
             onClick={() => handleCardClick(index)}
+            index={index}
+            activeIndex={activeCardIndex}
           />
         ))}
       </div>
