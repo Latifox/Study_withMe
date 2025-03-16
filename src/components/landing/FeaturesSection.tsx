@@ -72,9 +72,10 @@ const FeaturesSection = () => {
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
-    align: "center",
-    slidesToScroll: 1,
+    align: "start",
+    slidesToScroll: 4,
     containScroll: "trimSnaps",
+    dragFree: false,
   });
 
   const sectionRef = useRef<HTMLDivElement>(null);
