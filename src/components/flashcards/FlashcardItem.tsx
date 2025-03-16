@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,9 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
   const cardPosition = isActive && isExpanded ? "md:fixed md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2" : "";
   const cardSize = isActive && isExpanded ? "md:w-[500px] md:h-[300px]" : "w-full h-64";
   const cardShadow = isActive && isExpanded ? "shadow-xl" : "shadow-md";
+  
+  // Add a stronger backdrop blur when a card is active and expanded
+  const backgroundBlur = isActive && isExpanded ? "backdrop-blur-2xl" : "";
 
   return (
     <div 
@@ -108,7 +112,7 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
         </Card>
         
         <Card 
-          className={`absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 ${cardShadow}`}
+          className={`absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 ${cardShadow} ${backgroundBlur}`}
           onClick={handleCardBackClick}
         >
           <div className="absolute top-2 right-2 z-20">
