@@ -26,6 +26,7 @@ import Resources from "./pages/Resources";
 import Story from "./pages/Story";
 import StoryNodes from "./pages/StoryNodes";
 import StoryContent from "./pages/StoryContent";
+import Podcast from "./pages/Podcast";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,7 +71,7 @@ const App = () => (
               element={<StoryContent />} 
             />
             <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<NotFound />} />
-            <Route path="/course/:courseId/lecture/:lectureId/podcast" element={<NotFound />} />
+            <Route path="/course/:courseId/lecture/:lectureId/podcast" element={<Podcast />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
