@@ -8,7 +8,6 @@ import TechPartnersSection from "@/components/landing/TechPartnersSection";
 import SubscriptionPlansSection from "@/components/landing/SubscriptionPlansSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import Footer from "@/components/landing/Footer";
-import PulseWaveEffect from "@/components/landing/PulseWaveEffect";
 
 const LandingPage = () => {
   return (
@@ -30,9 +29,6 @@ const LandingPage = () => {
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
       </div>
-      
-      {/* Pulse Wave Effect overlay */}
-      <PulseWaveEffect />
       
       {/* Content */}
       <div className="relative z-10">
