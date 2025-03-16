@@ -77,7 +77,11 @@ const GamificationSection = () => {
   return (
     <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative z-10">
       <motion.div 
-        className="bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border border-gray-200"
+        className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
+        style={{ 
+          borderImage: 'linear-gradient(to bottom, #FFC107, #FF9800) 1',
+          borderStyle: 'solid'
+        }}
         initial="hidden"
         animate={isVisible ? "visible" : "hidden"}
         variants={itemVariants}
