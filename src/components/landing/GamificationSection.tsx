@@ -85,7 +85,7 @@ const GamificationSection = () => {
       <motion.div 
         className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
         style={{ 
-          borderImage: 'linear-gradient(90deg, #f5cb5c 0%, #2dd4bf 50%, #ef4444 100%) 1',
+          borderImage: 'linear-gradient(90deg, #FFC107 0%, #2dd4bf 50%, #ef4444 100%) 1',
           borderStyle: 'solid'
         }}
         initial="hidden"
@@ -97,7 +97,7 @@ const GamificationSection = () => {
           <span 
             className="text-transparent bg-clip-text" 
             style={{ 
-              backgroundImage: 'linear-gradient(90deg, #f5cb5c 0%, #2dd4bf 50%, #ef4444 100%)',
+              backgroundImage: 'linear-gradient(90deg, #FFC107 0%, #2dd4bf 50%, #ef4444 100%)',
               WebkitBackgroundClip: 'text',
               color: 'transparent'  // Ensuring the text is transparent for the gradient to show
             }}
