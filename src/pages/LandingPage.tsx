@@ -38,9 +38,7 @@ const LandingPage = () => {
         <BenefitsSection />
         <FeaturesSection />
         <TechPartnersSection />
-        <div className="overflow-hidden">
-          <SubscriptionPlansSection />
-        </div>
+        <SubscriptionPlansSection />
         <TestimonialsSection />
         <Footer />
       </div>
