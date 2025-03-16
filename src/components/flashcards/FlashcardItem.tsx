@@ -26,6 +26,7 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isActive = activeIndex === index;
 
@@ -85,22 +86,33 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
     }
   };
 
-  const cardScale = isActive ? "scale-105" : "scale-100";
-  const cardZIndex = isActive ? "z-10" : "z-0";
+  const handleCardClick = () => {
+    if (!isActive) {
+      setIsExpanded(true);
+      onClick();
+    }
+  };
+
+  // Calculate styles based on expanded and active state
+  const cardScale = isActive ? (isExpanded ? "scale-110 md:scale-125" : "scale-105") : "scale-100";
+  const cardZIndex = isActive ? "z-20" : "z-0";
   const cardOpacity = isActive || activeIndex === null ? "opacity-100" : "opacity-50";
+  const cardPosition = isActive && isExpanded ? "md:fixed md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2" : "";
+  const cardSize = isActive && isExpanded ? "md:w-[500px] md:h-[300px]" : "w-full h-64";
+  const cardShadow = isActive && isExpanded ? "shadow-xl" : "shadow-md";
 
   return (
     <div 
-      className={`perspective-1000 cursor-pointer transition-all duration-300 ${cardScale} ${cardZIndex} ${cardOpacity}`}
-      onClick={() => !isActive && onClick()}
+      className={`perspective-1000 cursor-pointer transition-all duration-300 ${cardScale} ${cardZIndex} ${cardOpacity} ${cardPosition}`}
+      onClick={handleCardClick}
     >
-      <div className={`relative w-full h-64 transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-        <Card className="absolute w-full h-full p-6 flex flex-col items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 shadow-md">
+      <div className={`relative ${cardSize} transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+        <Card className={`absolute w-full h-full p-6 flex flex-col items-center justify-center text-center backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 border border-purple-300/30 ${cardShadow}`}>
           <p className="text-lg font-medium text-white">{flashcard.question}</p>
         </Card>
         
         <Card 
-          className="absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 shadow-md"
+          className={`absolute w-full h-full p-4 flex flex-col justify-between text-center bg-gradient-to-br from-yellow-400 to-red-600 rotate-y-180 backface-hidden border border-orange-300/30 ${cardShadow}`}
           onClick={handleCardBackClick}
         >
           <div className="absolute top-2 right-2 z-20">
@@ -111,6 +123,7 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
               onClick={(e) => {
                 e.stopPropagation();
                 onClick();
+                setIsExpanded(false);
               }}
             >
               <RotateCcw className="h-4 w-4" />
@@ -169,6 +182,7 @@ const FlashcardItem = ({ flashcard, isFlipped, onClick, index, activeIndex }: Fl
                 onClick={(e) => {
                   e.stopPropagation();
                   onClick();
+                  setIsExpanded(false);
                 }}
                 className="w-full bg-white/20 hover:bg-white/30 text-white"
               >

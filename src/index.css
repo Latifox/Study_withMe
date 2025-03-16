@@ -114,10 +114,23 @@
   }
 }
 
+@keyframes expandCard {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.25);
+  }
+}
+
 .animate-slide-in {
   animation: slideInFromBottom 0.3s ease-out forwards;
 }
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-expand {
+  animation: expandCard 0.3s ease-out forwards;
 }
