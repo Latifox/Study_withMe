@@ -11,7 +11,9 @@ import {
   HeartPulse, 
   HelpCircle, 
   Link2, 
-  Settings 
+  Settings,
+  Network,
+  BookAudio
 } from "lucide-react";
 
 const FeaturesSection = () => {
@@ -45,6 +47,16 @@ const FeaturesSection = () => {
       icon: <HelpCircle className="h-6 w-6 text-purple-600" />,
       title: "Quiz",
       description: "Test your knowledge with AI-generated quizzes based on your lectures.",
+    },
+    {
+      icon: <Network className="h-6 w-6 text-purple-600" />,
+      title: "Mindmap",
+      description: "Visualize concepts and their relationships through interactive visual diagrams.",
+    },
+    {
+      icon: <BookAudio className="h-6 w-6 text-purple-600" />,
+      title: "Podcast",
+      description: "Listen to your lecture content in podcast format for on-the-go learning.",
     },
     {
       icon: <Link2 className="h-6 w-6 text-purple-600" />,
