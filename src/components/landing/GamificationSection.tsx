@@ -1,4 +1,5 @@
-import { Star, Flame } from "lucide-react";
+
+import { BookOpen, Star, Flame } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
@@ -37,6 +38,12 @@ const GamificationSection = () => {
       title: "Experience Points (XP)",
       description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
       gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
+    },
+    {
+      icon: <BookOpen className="h-8 w-8 text-white" />,
+      title: "Lecture Tracking",
+      description: "Monitor your completed lectures and visualize your educational journey with comprehensive analytics.",
+      gradient: "bg-gradient-to-r from-teal-500 to-teal-600",
     },
     {
       icon: <Flame className="h-8 w-8 text-white" />,
@@ -99,7 +106,7 @@ const GamificationSection = () => {
       </motion.div>
 
       <motion.div 
-        className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-20"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative z-20"
         initial="hidden"
         animate={isVisible ? "visible" : "hidden"}
         variants={containerVariants}
