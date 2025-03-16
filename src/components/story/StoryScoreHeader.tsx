@@ -1,7 +1,7 @@
 
-import { Flame, BookOpen, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Flame, BookOpen, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -104,11 +104,12 @@ const StoryScoreHeader = ({ currentScore, currentStep, onBack, lectureId }: Stor
       <Button
         variant="ghost"
         onClick={onBack}
-        className="hover:scale-105 transition-transform border border-black"
+        className="hover:scale-105 transition-transform bg-white/10 backdrop-blur-sm border border-white/20 text-white"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Learning Pathway
       </Button>
+      
       <div className="flex items-center gap-5">
         <div className={cn(
           "flex items-center gap-3 px-4 py-2 rounded-full",
