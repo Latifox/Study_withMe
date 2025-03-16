@@ -8,7 +8,7 @@ import {
   UserX, 
   Lightbulb,
   GraduationCap,
-  Cards
+  FileText
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -48,7 +48,7 @@ const EducationalFlowTimeline = () => {
       icon: (
         <div className="flex space-x-2">
           <BookOpenText className="h-6 w-6 text-blue-100" />
-          <Cards className="h-6 w-6 text-blue-100" />
+          <FileText className="h-6 w-6 text-blue-100" />
         </div>
       ),
       delay: 0.1
