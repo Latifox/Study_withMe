@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -95,23 +94,22 @@ const SubscriptionPlansSection = () => {
     }
   };
 
-  // New card position variants for the stacked effect
   const stackedCardVariants = {
     hidden: (index: number) => ({
-      opacity: index === 1 ? 0.9 : 0.6,
-      scale: index === 1 ? 0.95 : 0.9,
+      opacity: index === 1 ? 1 : 0.8,
+      scale: 1,
       x: 0,
       y: 0,
       zIndex: 3 - Math.abs(1 - index),
-      rotateY: 0,
+      position: "absolute",
     }),
     visible: (index: number) => ({
       opacity: 1,
       scale: index === 1 ? 1.1 : 1,
-      x: index === 0 ? '-90%' : index === 2 ? '90%' : 0,
+      x: index === 0 ? '-120%' : index === 2 ? '120%' : 0,
       y: 0,
       zIndex: index === 1 ? 10 : 5,
-      rotateY: 0,
+      position: "relative",
       transition: {
         type: "spring",
         stiffness: 50,
@@ -155,62 +153,64 @@ const SubscriptionPlansSection = () => {
         </p>
       </div>
 
-      <motion.div 
-        className="flex justify-center items-center h-[500px] perspective-1000 transform-style-3d"
-        variants={containerVariants}
-        initial="hidden"
-        animate={controls}
-      >
-        {subscriptionPlans.map((plan, index) => (
-          <motion.div 
-            key={index} 
-            className={`absolute w-full md:w-[30%] ${index === 1 ? "z-10" : "z-5"}`}
-            custom={index}
-            variants={stackedCardVariants}
-            initial="hidden"
-            animate={controls}
-            whileHover="hover"
-          >
-            <Card className={`h-full flex flex-col border-0 overflow-hidden rounded-3xl shadow-xl ${plan.color}`}>
-              <CardHeader className="pt-6 pb-2 px-6">
-                <div className="flex flex-col items-center">
-                  <h3 className="text-xl font-bold text-white tracking-wider">{plan.name}</h3>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="flex-grow px-6 pt-2 pb-4 flex flex-col">
-                <motion.ul 
-                  className="space-y-2 mb-8"
-                  variants={featuresVariants}
-                >
-                  {plan.features.map((feature, i) => (
-                    <motion.li key={i} className="flex items-start" variants={featureItemVariants}>
-                      <Check className="h-4 w-4 text-white mr-2 mt-0.5 flex-shrink-0" />
-                      <span className="text-white text-sm">{feature}</span>
-                    </motion.li>
-                  ))}
-                </motion.ul>
-                
-                <div className="flex justify-center mt-auto">
-                  <div className="bg-gray-900 text-white rounded-full p-4 flex flex-col items-center justify-center w-32 h-32 border-4 border-white/20">
-                    <div className="text-3xl font-bold">{plan.price}</div>
-                    <div className="text-xs font-medium mt-1">{plan.period}</div>
+      <div className="flex justify-center items-center relative h-[650px]">
+        <motion.div 
+          className="flex justify-center items-center w-full perspective-1000"
+          variants={containerVariants}
+          initial="hidden"
+          animate={controls}
+        >
+          {subscriptionPlans.map((plan, index) => (
+            <motion.div 
+              key={index} 
+              className="w-full md:w-[350px] mx-auto"
+              custom={index}
+              variants={stackedCardVariants}
+              initial="hidden"
+              animate={controls}
+              whileHover="hover"
+            >
+              <Card className={`h-full flex flex-col border-0 overflow-hidden rounded-3xl shadow-xl ${plan.color}`}>
+                <CardHeader className="pt-6 pb-2 px-6">
+                  <div className="flex flex-col items-center">
+                    <h3 className="text-xl font-bold text-white tracking-wider">{plan.name}</h3>
                   </div>
-                </div>
-              </CardContent>
-              
-              <CardFooter className="pt-0 pb-6 px-6">
-                <Button
-                  className="w-full bg-white hover:bg-gray-100 text-gray-800 border-0 rounded-full py-5 font-medium"
-                  onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
-                >
-                  {plan.ctaText}
-                </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        ))}
-      </motion.div>
+                </CardHeader>
+                
+                <CardContent className="flex-grow px-6 pt-2 pb-4 flex flex-col">
+                  <motion.ul 
+                    className="space-y-2 mb-8"
+                    variants={featuresVariants}
+                  >
+                    {plan.features.map((feature, i) => (
+                      <motion.li key={i} className="flex items-start" variants={featureItemVariants}>
+                        <Check className="h-4 w-4 text-white mr-2 mt-0.5 flex-shrink-0" />
+                        <span className="text-white text-sm">{feature}</span>
+                      </motion.li>
+                    ))}
+                  </motion.ul>
+                  
+                  <div className="flex justify-center mt-auto">
+                    <div className="bg-gray-900 text-white rounded-full p-4 flex flex-col items-center justify-center w-32 h-32 border-4 border-white/20">
+                      <div className="text-3xl font-bold">{plan.price}</div>
+                      <div className="text-xs font-medium mt-1">{plan.period}</div>
+                    </div>
+                  </div>
+                </CardContent>
+                
+                <CardFooter className="pt-0 pb-6 px-6">
+                  <Button
+                    className="w-full bg-white hover:bg-gray-100 text-gray-800 border-0 rounded-full py-5 font-medium"
+                    onClick={() => (plan.recommended ? handleSignUp() : navigate("/auth"))}
+                  >
+                    {plan.ctaText}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
     </div>
   );
 };
