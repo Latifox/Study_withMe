@@ -37,16 +37,12 @@ const GamificationSection = () => {
       title: "Experience Points (XP)",
       description: "Earn XP as you complete learning activities. Track your progress and level up your knowledge.",
       gradient: "bg-gradient-to-r from-yellow-500 to-amber-600",
-      bubbleTint: "yellow", // Adding tint for XP card
-      glowColor: "rgba(255, 215, 0, 0.6)" // Brighter yellow glow color with higher opacity
     },
     {
       icon: <Flame className="h-8 w-8 text-white" />,
       title: "Learning Streaks",
       description: "Build and maintain daily learning streaks. Consistency is the key to mastery and retention.",
       gradient: "bg-gradient-to-r from-red-500 to-orange-500",
-      bubbleTint: "red", // Adding tint for Learning Streaks card
-      glowColor: "rgba(255, 69, 0, 0.6)" // Brighter orange-red glow color with higher opacity
     }
   ];
 
@@ -110,34 +106,6 @@ const GamificationSection = () => {
       >
         {gamificationElements.map((element, index) => (
           <motion.div key={index} className="relative" variants={itemVariants}>
-            {/* Replace static energy radiation with animated flowing glow effect */}
-            <motion.div 
-              className="absolute inset-0 rounded-xl" 
-              animate={{
-                background: index === 0 
-                  ? [
-                      'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.7) 0%, transparent 70%)',
-                      'radial-gradient(circle at 70% 70%, rgba(255, 215, 0, 0.7) 0%, transparent 70%)',
-                      'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.7) 0%, transparent 70%)'
-                    ]
-                  : [
-                      'radial-gradient(circle at 30% 30%, rgba(255, 69, 0, 0.7) 0%, transparent 70%)',
-                      'radial-gradient(circle at 70% 70%, rgba(255, 69, 0, 0.7) 0%, transparent 70%)',
-                      'radial-gradient(circle at 30% 30%, rgba(255, 69, 0, 0.7) 0%, transparent 70%)'
-                    ],
-              }}
-              transition={{
-                duration: 8,
-                repeat: Infinity,
-                repeatType: "reverse" as const,
-              }}
-              style={{
-                filter: 'blur(20px)',
-                transform: 'scale(1.3)',
-                opacity: 0.85
-              }}
-            />
-            
             <div className={`${element.gradient} p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 max-w-xs mx-auto w-full relative z-10`}>
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-white/20 p-3 rounded-full flex items-center justify-center shadow-lg">

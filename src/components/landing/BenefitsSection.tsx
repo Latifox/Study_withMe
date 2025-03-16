@@ -124,11 +124,11 @@ const BenefitsSection = () => {
       <motion.div 
         className="absolute inset-0 pointer-events-none"
         initial={{ opacity: 0 }}
-        animate={isVisible ? { opacity: 0.7 } : { opacity: 0 }}
+        animate={isVisible ? { opacity: 0.4 } : { opacity: 0 }}
         transition={{ duration: 1, delay: 0.5 }}
       >
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-400/20 blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-indigo-400/20 blur-[100px]" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-400/10 blur-[100px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-indigo-400/10 blur-[100px]" />
       </motion.div>
       
       <motion.div 
@@ -163,27 +163,6 @@ const BenefitsSection = () => {
           custom={0}
           variants={cardVariants}
         >
-          <motion.div 
-            className="absolute inset-0 rounded-xl" 
-            animate={{
-              background: [
-                'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
-                'radial-gradient(circle at 70% 70%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
-                'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)'
-              ],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              repeatType: "reverse" as const,
-            }}
-            style={{
-              filter: 'blur(20px)',
-              transform: 'scale(1.3)',
-              opacity: 0.85
-            }}
-          />
-          
           <motion.div 
             className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10 transform-style-3d"
             whileHover={{
@@ -226,27 +205,6 @@ const BenefitsSection = () => {
           custom={1}
           variants={cardVariants}
         >
-          <motion.div 
-            className="absolute inset-0 rounded-xl" 
-            animate={{
-              background: [
-                'radial-gradient(circle at 70% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
-                'radial-gradient(circle at 30% 70%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)',
-                'radial-gradient(circle at 70% 30%, rgba(96, 165, 250, 0.7) 0%, transparent 70%)'
-              ],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              repeatType: "reverse" as const,
-            }}
-            style={{
-              filter: 'blur(20px)',
-              transform: 'scale(1.3)',
-              opacity: 0.85
-            }}
-          />
-          
           <motion.div 
             className="bg-gradient-to-b from-blue-400 to-blue-600 p-8 rounded-xl shadow-lg border border-blue-200 transform transition-all hover:scale-105 max-w-sm w-full relative z-10 transform-style-3d"
             whileHover={{
