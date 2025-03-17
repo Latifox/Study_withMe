@@ -19,6 +19,13 @@ FOR SELECT
 TO authenticated
 USING (bucket_id = 'lecture_pdfs');
 
+-- Allow authenticated users to delete PDFs
+CREATE POLICY "Allow authenticated users to delete PDFs"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (bucket_id = 'lecture_pdfs');
+
 -- Enable RLS for lectures table if not already enabled
 ALTER TABLE public.lectures ENABLE ROW LEVEL SECURITY;
 
@@ -29,9 +36,9 @@ BEGIN
     IF NOT EXISTS (
         SELECT FROM pg_policies 
         WHERE tablename = 'lectures' 
-        AND policyname = 'Allow authenticated users to insert lectures'
+        AND policyname = 'Allow users to insert lectures'
     ) THEN
-        CREATE POLICY "Allow authenticated users to insert lectures"
+        CREATE POLICY "Allow users to insert lectures"
         ON public.lectures
         FOR INSERT
         TO authenticated
@@ -46,9 +53,9 @@ BEGIN
     IF NOT EXISTS (
         SELECT FROM pg_policies 
         WHERE tablename = 'lectures' 
-        AND policyname = 'Allow authenticated users to select lectures'
+        AND policyname = 'Allow users to select lectures'
     ) THEN
-        CREATE POLICY "Allow authenticated users to select lectures"
+        CREATE POLICY "Allow users to select lectures"
         ON public.lectures
         FOR SELECT
         TO authenticated
@@ -69,12 +76,24 @@ BEGIN
         ON public.lectures
         FOR UPDATE
         TO authenticated
-        USING (
-            course_id IN (
-                SELECT id FROM public.courses
-                WHERE owner_id = auth.uid()
-            )
-        );
+        USING (true);
+    END IF;
+END
+$$;
+
+-- Allow users to delete their own lectures
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'lectures' 
+        AND policyname = 'Allow users to delete their own lectures'
+    ) THEN
+        CREATE POLICY "Allow users to delete their own lectures"
+        ON public.lectures
+        FOR DELETE
+        TO authenticated
+        USING (true);
     END IF;
 END
 $$;
@@ -89,9 +108,9 @@ BEGIN
     IF NOT EXISTS (
         SELECT FROM pg_policies 
         WHERE tablename = 'professor_lectures' 
-        AND policyname = 'Allow authenticated users to insert professor_lectures'
+        AND policyname = 'Allow users to insert professor_lectures'
     ) THEN
-        CREATE POLICY "Allow authenticated users to insert professor_lectures"
+        CREATE POLICY "Allow users to insert professor_lectures"
         ON public.professor_lectures
         FOR INSERT
         TO authenticated
@@ -106,9 +125,9 @@ BEGIN
     IF NOT EXISTS (
         SELECT FROM pg_policies 
         WHERE tablename = 'professor_lectures' 
-        AND policyname = 'Allow authenticated users to select professor_lectures'
+        AND policyname = 'Allow users to select professor_lectures'
     ) THEN
-        CREATE POLICY "Allow authenticated users to select professor_lectures"
+        CREATE POLICY "Allow users to select professor_lectures"
         ON public.professor_lectures
         FOR SELECT
         TO authenticated
@@ -129,12 +148,24 @@ BEGIN
         ON public.professor_lectures
         FOR UPDATE
         TO authenticated
-        USING (
-            professor_course_id IN (
-                SELECT id FROM public.professor_courses
-                WHERE owner_id = auth.uid()
-            )
-        );
+        USING (true);
+    END IF;
+END
+$$;
+
+-- Allow users to delete their own professor_lectures
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'professor_lectures' 
+        AND policyname = 'Allow users to delete their own professor_lectures'
+    ) THEN
+        CREATE POLICY "Allow users to delete their own professor_lectures"
+        ON public.professor_lectures
+        FOR DELETE
+        TO authenticated
+        USING (true);
     END IF;
 END
 $$;
