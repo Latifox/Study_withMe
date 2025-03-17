@@ -10,7 +10,6 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
-import AudioWaveform from "@/components/AudioWaveform";
 
 interface PodcastData {
   id: number;
@@ -523,10 +522,6 @@ const Podcast = () => {
                         <Download className="w-4 h-4" />
                         Download Podcast
                       </Button>
-                    </div>
-                    
-                    <div className="mb-2">
-                      <AudioWaveform audioRef={audioRef} isPlaying={isPlaying} />
                     </div>
                     
                     <div className="flex flex-col space-y-4">
