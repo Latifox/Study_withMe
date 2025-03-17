@@ -425,7 +425,7 @@ const Podcast = () => {
                 Back to Course
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">Lecture Podcast</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Podcast</h1>
           </div>
           {!isGenerating && !podcast && <Button onClick={generatePodcast} className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md">
               <Headphones className="w-4 h-4 mr-2" />
