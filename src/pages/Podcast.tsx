@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider"; 
 import { 
   ArrowLeft, RefreshCw, Headphones, Mic, User, 
-  Play, Pause, VolumeX, Volume2, Download 
+  Play, Pause, VolumeX, Volume2, Download,
+  SkipBack, SkipForward
 } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
 
@@ -58,6 +60,9 @@ const Podcast = () => {
   const [volume, setVolume] = useState(1);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isPollingSatus, setIsPollingSatus] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isDraggingTime, setIsDraggingTime] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
   const {
@@ -391,6 +396,71 @@ const Podcast = () => {
     return podcast?.is_processed && podcast?.audio_url || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
   };
 
+  useEffect(() => {
+    const updateTime = () => {
+      if (audioRef.current && !isDraggingTime) {
+        setCurrentTime(audioRef.current.currentTime);
+      }
+    };
+
+    const handleLoadedMetadata = () => {
+      if (audioRef.current) {
+        setDuration(audioRef.current.duration);
+      }
+    };
+
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      audioElement.addEventListener('timeupdate', updateTime);
+      audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+    }
+
+    return () => {
+      if (audioElement) {
+        audioElement.removeEventListener('timeupdate', updateTime);
+        audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      }
+    };
+  }, [isDraggingTime]);
+
+  const handleTimeChange = (value: number[]) => {
+    const newTime = value[0];
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const handleSeekBackward = () => {
+    if (audioRef.current) {
+      const newTime = Math.max(0, audioRef.current.currentTime - 10);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleSeekForward = () => {
+    if (audioRef.current) {
+      const newTime = Math.min(duration, audioRef.current.currentTime + 10);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : newVolume;
+    }
+  };
+
   return (
     <PodcastBackground>
       <div className="container max-w-6xl py-8">
@@ -434,7 +504,13 @@ const Podcast = () => {
         </div>
 
         <div className="hidden">
-          <audio ref={audioRef} onEnded={handleAudioEnded} controls className="w-full mb-4" />
+          <audio 
+            ref={audioRef} 
+            onEnded={handleAudioEnded} 
+            controls 
+            className="w-full mb-4" 
+            onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
+          />
         </div>
 
         {isGenerating && 
@@ -478,38 +554,90 @@ const Podcast = () => {
 
             {hasPodcastAudio() && 
               <Card className="p-4 mb-4 bg-white/80 backdrop-blur-sm border border-white/50 shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={togglePlayPause} 
+                        className="mr-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50"
+                      >
+                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={toggleMute} 
+                        className="mr-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50"
+                      >
+                        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                      </Button>
+                      <span className="text-sm font-medium text-gray-700">
+                        {isPlaying ? "Playing full podcast" : "Podcast ready"}
+                      </span>
+                    </div>
+                    
                     <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={togglePlayPause} 
-                      className="mr-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50"
+                      variant="outline" 
+                      size="sm" 
+                      onClick={downloadPodcast} 
+                      className="flex items-center bg-white/90 hover:bg-white border-blue-200 text-blue-700 hover:text-blue-800"
                     >
-                      {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Podcast
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={toggleMute} 
-                      className="mr-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50"
-                    >
-                      {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                    </Button>
-                    <span className="text-sm font-medium text-gray-700">
-                      {isPlaying ? "Playing full podcast" : "Podcast ready"}
-                    </span>
                   </div>
                   
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={downloadPodcast} 
-                    className="flex items-center bg-white/90 hover:bg-white border-blue-200 text-blue-700 hover:text-blue-800"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Podcast
-                  </Button>
+                  {(isPlaying || currentTime > 0) && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleSeekBackward}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50"
+                        >
+                          <SkipBack className="h-4 w-4" />
+                        </Button>
+                        <div className="flex-1 flex items-center space-x-2">
+                          <span className="text-xs text-gray-600 min-w-[40px]">{formatTime(currentTime)}</span>
+                          <Slider
+                            value={[currentTime]}
+                            min={0}
+                            max={duration || 100}
+                            step={0.1}
+                            onValueChange={handleTimeChange}
+                            onValueCommit={() => setIsDraggingTime(false)}
+                            className="flex-1"
+                            onMouseDown={() => setIsDraggingTime(true)}
+                            onMouseUp={() => setIsDraggingTime(false)}
+                          />
+                          <span className="text-xs text-gray-600 min-w-[40px]">{formatTime(duration)}</span>
+                        </div>
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleSeekForward}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50"
+                        >
+                          <SkipForward className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 pl-10 pr-10">
+                        <Volume2 className="h-4 w-4 text-gray-500" />
+                        <Slider
+                          value={[volume]}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          onValueChange={handleVolumeChange}
+                          className="w-24"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Card>
             }
