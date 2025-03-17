@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -36,9 +37,181 @@ interface WondercraftPodcastResponse {
   message?: string;
 }
 
+interface AudioVisualizerProps {
+  audioElement: HTMLAudioElement | null;
+  isPlaying: boolean;
+}
+
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5";
 const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a";
 const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e";
+
+// New component for Audio Visualization
+const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ audioElement, isPlaying }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number>();
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [dataArray, setDataArray] = useState<Uint8Array | null>(null);
+  const [source, setSource] = useState<MediaElementAudioSourceNode | null>(null);
+
+  useEffect(() => {
+    if (!audioElement) return;
+
+    // Initialize audio context and analyzer on mount
+    const initAudioContext = () => {
+      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyzerNode = context.createAnalyser();
+      analyzerNode.fftSize = 256;
+      const bufferLength = analyzerNode.frequencyBinCount;
+      const dataArr = new Uint8Array(bufferLength);
+      
+      const sourceNode = context.createMediaElementSource(audioElement);
+      sourceNode.connect(analyzerNode);
+      analyzerNode.connect(context.destination);
+      
+      setAudioContext(context);
+      setAnalyser(analyzerNode);
+      setDataArray(dataArr);
+      setSource(sourceNode);
+    };
+
+    if (!audioContext) {
+      try {
+        initAudioContext();
+      } catch (error) {
+        console.error('Failed to initialize audio context:', error);
+      }
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      
+      // Cleanup audio context when component unmounts
+      if (audioContext && audioContext.state !== 'closed') {
+        if (source) {
+          source.disconnect();
+        }
+        if (analyser) {
+          analyser.disconnect();
+        }
+      }
+    };
+  }, [audioElement, audioContext]);
+
+  useEffect(() => {
+    if (!analyser || !dataArray || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set up canvas dimensions
+    const resizeCanvas = () => {
+      const { width, height } = canvas.getBoundingClientRect();
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Animation function to draw visualization
+    const draw = () => {
+      if (!ctx || !analyser || !dataArray) return;
+      
+      animationRef.current = requestAnimationFrame(draw);
+      
+      // Get frequency data
+      analyser.getByteFrequencyData(dataArray);
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw the static base wave (bottom part)
+      const baseWaveHeight = canvas.height * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      ctx.bezierCurveTo(
+        canvas.width * 0.25, canvas.height - baseWaveHeight * 0.5, 
+        canvas.width * 0.75, canvas.height - baseWaveHeight * 0.7,
+        canvas.width, canvas.height
+      );
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.fillStyle = 'url(#audio-gradient)';
+      ctx.fill();
+      
+      // Only draw the dynamic top part if the audio is playing
+      if (isPlaying) {
+        // Calculate the number of bars to display
+        const barCount = Math.min(dataArray.length, 64);
+        const barWidth = canvas.width / barCount;
+        const barMaxHeight = canvas.height * 0.6;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+        
+        // Draw the dynamic top part based on frequency data
+        for (let i = 0; i < barCount; i++) {
+          const barHeight = (dataArray[i] / 255) * barMaxHeight;
+          const x = i * barWidth;
+          const y = canvas.height - baseWaveHeight - barHeight;
+          
+          if (i === 0) {
+            ctx.moveTo(x, canvas.height - baseWaveHeight);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        
+        // Complete the path back to start
+        ctx.lineTo(canvas.width, canvas.height - baseWaveHeight);
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        
+        // Create gradient for the dynamic part
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+        gradient.addColorStop(0, 'rgba(79, 70, 229, 0.6)');  // indigo-600 with transparency
+        gradient.addColorStop(1, 'rgba(168, 85, 247, 0.6)');  // purple-500 with transparency
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      }
+    };
+
+    // Start or stop the animation based on isPlaying
+    if (isPlaying) {
+      if (audioContext?.state === 'suspended') {
+        audioContext.resume();
+      }
+      draw();
+    } else {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [analyser, dataArray, isPlaying, audioContext]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="absolute inset-0 w-full h-full opacity-80" 
+      style={{ zIndex: 2, pointerEvents: 'none' }}
+    />
+  );
+};
 
 const Podcast = () => {
   const {
@@ -504,9 +677,9 @@ const Podcast = () => {
             {hasPodcastAudio() && 
               <Card className="p-6 mb-6 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-200/50 shadow-lg rounded-2xl overflow-hidden">
                 <div className="relative">
+                  {/* Custom AudioVisualizer component */}
                   <div className="absolute inset-0 opacity-20">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                      <path d="M0,0 Q150,28 300,18 T600,25 T900,18 T1200,30 V100 H0 V0 Z" className="animate-[blob_15s_ease-in-out_infinite]" fill="url(#audio-gradient)" />
                       <defs>
                         <linearGradient id="audio-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor="#4338ca" />
@@ -514,6 +687,12 @@ const Podcast = () => {
                         </linearGradient>
                       </defs>
                     </svg>
+                    
+                    {/* New audio visualizer */}
+                    {audioRef.current && <AudioVisualizer 
+                      audioElement={audioRef.current} 
+                      isPlaying={isPlaying}
+                    />}
                   </div>
                 
                   <div className="relative z-10 flex flex-col space-y-6">
