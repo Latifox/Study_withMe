@@ -87,7 +87,7 @@ const Podcast = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-podcast-conversation', {
-        body: { lectureId: Number(lectureId) },
+        body: { lectureId: parseInt(lectureId) }, // Fixed type error: parsing string to number
       });
 
       if (error) throw error;
