@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -20,22 +19,22 @@ interface PodcastData {
   is_processed: boolean;
 }
 
-interface ElevenLabsPodcastResponse {
-  podcast_id: string;
-  task_id: string;
+interface WondercraftPodcastResponse {
+  id: string;
   status: string;
-  url: string;
+  episode_url?: string;
+  state?: string;
 }
 
-const HOST_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku"; // Lily
-const GUEST_VOICE_ID = "onwK4e9ZLuTAKqWW03F9"; // Daniel
+const HOST_VOICE_ID = "female_narrator_1"; // Default for Wondercraft female voice
+const GUEST_VOICE_ID = "male_narrator_1"; // Default for Wondercraft male voice
 
 const Podcast = () => {
   const { courseId, lectureId } = useParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [podcast, setPodcast] = useState<PodcastData | null>(null);
-  const [podcastAudio, setPodcastAudio] = useState<ElevenLabsPodcastResponse | null>(null);
+  const [podcastAudio, setPodcastAudio] = useState<WondercraftPodcastResponse | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeTab, setActiveTab] = useState("full");
@@ -118,9 +117,8 @@ const Podcast = () => {
     setIsGeneratingAudio(true);
     try {
       console.log('Generating audio for podcast with script length:', podcast.full_script.length);
-      console.log('Calling elevenlabs-podcast function with host voice ID:', HOST_VOICE_ID, 'and guest voice ID:', GUEST_VOICE_ID);
+      console.log('Calling wondercraft-podcast function with host voice ID:', HOST_VOICE_ID, 'and guest voice ID:', GUEST_VOICE_ID);
       
-      // Call the ElevenLabs podcast creation API - use the full script as is
       const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
         body: { 
           script: podcast.full_script, // Using full_script with HOST: and GUEST: prefixes intact
@@ -130,26 +128,33 @@ const Podcast = () => {
       });
 
       if (error) {
-        console.error('Error response from elevenlabs-podcast function:', error);
+        console.error('Error response from wondercraft-podcast function:', error);
         throw error;
       }
       
-      console.log('Response from elevenlabs-podcast function:', data);
+      console.log('Response from wondercraft-podcast function:', data);
       
       if (data?.podcastData) {
         setPodcastAudio(data.podcastData);
         
-        if (data.podcastData.url) {
+        const audioUrl = data.podcastData.episode_url || data.podcastData.url;
+        
+        if (audioUrl) {
           if (audioRef.current) {
-            audioRef.current.src = data.podcastData.url;
+            audioRef.current.src = audioUrl;
             audioRef.current.volume = isMuted ? 0 : volume;
           }
+          
+          toast({
+            title: "Success",
+            description: "Podcast audio generated successfully",
+          });
+        } else if (data.podcastData.status === 'processing' || data.podcastData.state === 'processing') {
+          toast({
+            title: "Processing",
+            description: "Your podcast is being generated. Please check back in a few minutes.",
+          });
         }
-        
-        toast({
-          title: "Success",
-          description: "Podcast audio generated successfully",
-        });
       }
     } catch (error) {
       console.error('Error generating podcast audio:', error);
@@ -174,7 +179,6 @@ const Podcast = () => {
     }
     
     try {
-      // Call the text-to-speech function
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
         body: { 
           text, 
@@ -185,7 +189,6 @@ const Podcast = () => {
       if (error) throw error;
       
       if (data?.audioContent) {
-        // Convert base64 audio to a blob
         const binaryString = atob(data.audioContent);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -194,7 +197,6 @@ const Podcast = () => {
         const blob = new Blob([bytes], { type: 'audio/mp3' });
         const url = URL.createObjectURL(blob);
         
-        // Play the audio
         if (audioRef.current) {
           audioRef.current.src = url;
           audioRef.current.volume = isMuted ? 0 : volume;
@@ -236,7 +238,6 @@ const Podcast = () => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     
-    // Stop any currently playing audio when changing tabs
     if (audioRef.current && isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -249,15 +250,16 @@ const Podcast = () => {
     ));
   };
 
-  // Handle audio ended event
   const handleAudioEnded = () => {
     setIsPlaying(false);
   };
 
   const downloadPodcast = () => {
-    if (podcastAudio?.url) {
+    const downloadUrl = podcastAudio?.episode_url || podcastAudio?.url;
+    
+    if (downloadUrl) {
       const link = document.createElement('a');
-      link.href = podcastAudio.url;
+      link.href = downloadUrl;
       link.download = 'podcast.mp3';
       document.body.appendChild(link);
       link.click();
@@ -305,7 +307,6 @@ const Podcast = () => {
         )}
       </div>
 
-      {/* Hidden audio element for TTS playback */}
       <audio 
         ref={audioRef} 
         onEnded={handleAudioEnded}
@@ -339,8 +340,7 @@ const Podcast = () => {
 
       {!isLoading && !isGenerating && podcast && (
         <>
-          {/* Audio controls */}
-          {podcastAudio && podcastAudio.url && (
+          {podcastAudio && (podcastAudio.episode_url || podcastAudio.url) && (
             <Card className="p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
