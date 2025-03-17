@@ -15,9 +15,9 @@ serve(async (req) => {
     console.log('Request body received:', JSON.stringify(requestBody));
     
     const { script } = requestBody;
-    // Update default voice IDs to valid Wondercraft voice IDs
-    const hostVoiceId = requestBody.hostVoiceId || "male_english_us_1"; // Default Wondercraft voice ID
-    const guestVoiceId = requestBody.guestVoiceId || "female_english_us_1"; // Default Wondercraft voice ID
+    // Use the new custom voice IDs with fallbacks to the previous ones
+    const hostVoiceId = requestBody.hostVoiceId || "1da32dae-a953-4e5f-81df-94e4bb1965e5"; 
+    const guestVoiceId = requestBody.guestVoiceId || "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; 
     
     console.log(`Using Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
     

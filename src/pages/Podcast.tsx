@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -27,8 +28,8 @@ interface WondercraftPodcastResponse {
   state?: string;
 }
 
-const HOST_VOICE_ID = "male_english_us_1"; // Valid Wondercraft voice ID
-const GUEST_VOICE_ID = "female_english_us_1"; // Valid Wondercraft voice ID
+const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5"; // Updated custom voice ID
+const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; // Updated custom voice ID
 
 const Podcast = () => {
   const { courseId, lectureId } = useParams();
