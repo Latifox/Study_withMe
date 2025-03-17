@@ -86,8 +86,9 @@ const Podcast = () => {
     
     setIsGenerating(true);
     try {
+      console.log('Generating podcast for lecture ID:', lectureId);
       const { data, error } = await supabase.functions.invoke('generate-podcast-conversation', {
-        body: { lectureId: parseInt(lectureId) }, // Fixed type error: parsing string to number
+        body: { lectureId: parseInt(lectureId) },
       });
 
       if (error) throw error;
@@ -116,6 +117,9 @@ const Podcast = () => {
     
     setIsGeneratingAudio(true);
     try {
+      console.log('Generating audio for podcast with script length:', podcast.full_script.length);
+      console.log('Calling elevenlabs-podcast function with host voice ID:', HOST_VOICE_ID, 'and guest voice ID:', GUEST_VOICE_ID);
+      
       // Call the ElevenLabs podcast creation API
       const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
         body: { 
@@ -125,7 +129,12 @@ const Podcast = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error response from elevenlabs-podcast function:', error);
+        throw error;
+      }
+      
+      console.log('Response from elevenlabs-podcast function:', data);
       
       if (data?.podcastData) {
         setPodcastAudio(data.podcastData);

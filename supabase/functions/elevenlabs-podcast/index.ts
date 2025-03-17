@@ -8,10 +8,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('elevenlabs-podcast function called');
+
   try {
-    const { script, hostVoiceId, guestVoiceId } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body received:', JSON.stringify(requestBody));
+    
+    const { script, hostVoiceId, guestVoiceId } = requestBody;
     
     if (!script) {
+      console.error('Missing required parameter: script');
       throw new Error('Script is required');
     }
     
@@ -22,11 +28,19 @@ serve(async (req) => {
     console.log(`Creating podcast with Host Voice ID: ${defaultHostVoiceId} and Guest Voice ID: ${defaultGuestVoiceId}`);
     console.log(`Script length: ${script.length} characters`);
     
+    // Check for API key
+    const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
+    if (!apiKey) {
+      console.error('ELEVENLABS_API_KEY environment variable is not set');
+      throw new Error('ElevenLabs API key is missing');
+    }
+    
+    console.log('Sending request to ElevenLabs Studio API');
     // Send request to ElevenLabs Studio API
     const response = await fetch("https://api.elevenlabs.io/v1/studio/projects/podcast", {
       method: 'POST',
       headers: {
-        'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') || '',
+        'xi-api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -44,16 +58,18 @@ serve(async (req) => {
       }),
     });
 
+    console.log('ElevenLabs API response status:', response.status);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error('ElevenLabs API error:', errorText);
-      throw new Error('Failed to create podcast');
+      throw new Error(`Failed to create podcast: ${response.status} ${errorText}`);
     }
 
     // Get the response data
     const podcastData = await response.json();
     
-    console.log('Successfully created podcast with ElevenLabs');
+    console.log('Successfully created podcast with ElevenLabs:', JSON.stringify(podcastData));
     
     return new Response(JSON.stringify({ 
       success: true, 
