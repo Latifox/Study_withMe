@@ -19,6 +19,8 @@ interface PodcastData {
   expert_script: string;
   student_script: string;
   is_processed: boolean;
+  audio_url?: string;
+  job_id?: string;
 }
 
 interface WondercraftPodcastResponse {
@@ -85,6 +87,29 @@ const Podcast = () => {
 
       if (data) {
         setPodcast(data);
+        
+        // If the podcast is processed and has an audio URL, set it up for playback
+        if (data.is_processed && data.audio_url) {
+          console.log('Podcast has an existing audio URL:', data.audio_url);
+          
+          // Create artificial podcastAudio object to maintain compatibility
+          setPodcastAudio({
+            url: data.audio_url,
+            finished: true,
+            progress: 100
+          });
+          
+          // Initialize audio player with stored URL
+          if (audioRef.current) {
+            audioRef.current.src = data.audio_url;
+            audioRef.current.volume = isMuted ? 0 : volume;
+          }
+        } 
+        // If the podcast has a job ID but isn't finished, start polling
+        else if (data.job_id && !data.is_processed) {
+          console.log('Podcast has a job ID but is not processed yet. Starting polling:', data.job_id);
+          startPollingJobStatus(data.job_id);
+        }
       }
     } catch (error) {
       console.error('Error fetching podcast:', error);
@@ -142,7 +167,8 @@ const Podcast = () => {
           script: podcast.full_script, // Using full_script with HOST: and GUEST: prefixes intact
           hostVoiceId: HOST_VOICE_ID,
           guestVoiceId: GUEST_VOICE_ID,
-          musicId: MUSIC_ID
+          musicId: MUSIC_ID,
+          lectureId: parseInt(lectureId!) // Pass the lecture ID to the edge function
         },
       });
 
@@ -196,7 +222,10 @@ const Podcast = () => {
       try {
         console.log('Polling job status for job ID:', jobId);
         const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
-          body: { jobId },
+          body: { 
+            jobId,
+            lectureId: parseInt(lectureId!) // Pass the lecture ID for database updates
+          },
         });
         
         if (error) {
@@ -234,6 +263,9 @@ const Podcast = () => {
               audioRef.current.src = audioUrl;
               audioRef.current.volume = isMuted ? 0 : volume;
             }
+            
+            // Refresh podcast data to get the updated audio_url
+            fetchPodcast();
             
             // Stop polling
             window.clearInterval(pollIntervalRef.current!);
@@ -353,7 +385,18 @@ const Podcast = () => {
   };
 
   const downloadPodcast = () => {
-    // Get the audio URL, checking all possible properties
+    // First check if podcast has a stored audio URL
+    if (podcast?.audio_url) {
+      const link = document.createElement('a');
+      link.href = podcast.audio_url;
+      link.download = 'podcast.mp3';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+    
+    // Fallback to podcastAudio state
     const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
     
     if (downloadUrl) {
@@ -370,6 +413,12 @@ const Podcast = () => {
   const calculateProgress = () => {
     if (!podcastAudio) return 0;
     return podcastAudio.progress || 0;
+  };
+
+  // Function to determine if we already have a processed podcast
+  const hasPodcastAudio = () => {
+    return (podcast?.is_processed && podcast?.audio_url) || 
+           (podcastAudio && (podcastAudio.url || podcastAudio.episode_url));
   };
 
   return (
@@ -396,18 +445,20 @@ const Podcast = () => {
               <RefreshCw className="w-4 h-4 mr-2" />
               Regenerate Script
             </Button>
-            <Button 
-              onClick={generateAudio} 
-              disabled={isGeneratingAudio || isPollingSatus}
-              variant="default"
-            >
-              {isGeneratingAudio || isPollingSatus ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Headphones className="w-4 h-4 mr-2" />
-              )}
-              Generate Audio
-            </Button>
+            {!hasPodcastAudio() && (
+              <Button 
+                onClick={generateAudio} 
+                disabled={isGeneratingAudio || isPollingSatus}
+                variant="default"
+              >
+                {isGeneratingAudio || isPollingSatus ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Headphones className="w-4 h-4 mr-2" />
+                )}
+                Generate Audio
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -458,7 +509,7 @@ const Podcast = () => {
             </Card>
           )}
 
-          {podcastAudio && ((podcastAudio.url || podcastAudio.episode_url)) && (
+          {hasPodcastAudio() && (
             <Card className="p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">

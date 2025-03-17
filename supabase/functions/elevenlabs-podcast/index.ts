@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.31.0";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -10,11 +11,16 @@ serve(async (req) => {
 
   console.log('elevenlabs-podcast function called');
 
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
     const requestBody = await req.json();
     console.log('Request body received:', JSON.stringify(requestBody));
     
-    const { script, jobId } = requestBody;
+    const { script, jobId, lectureId } = requestBody;
     // Use the new custom voice IDs with fallbacks to the previous ones
     const hostVoiceId = requestBody.hostVoiceId || "1da32dae-a953-4e5f-81df-94e4bb1965e5"; 
     const guestVoiceId = requestBody.guestVoiceId || "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; 
@@ -71,9 +77,31 @@ serve(async (req) => {
         const altStatusData = await altResponse.json();
         console.log('Job status response from alternative endpoint:', JSON.stringify(altStatusData));
         
+        // If podcast is finished and we have a URL and a lecture ID, update the database
+        if (lectureId && altStatusData.finished === true && (altStatusData.url || altStatusData.episode_url)) {
+          const audioUrl = altStatusData.url || altStatusData.episode_url;
+          
+          console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
+          const { error: updateError } = await supabase
+            .from('lecture_podcast')
+            .update({
+              audio_url: audioUrl,
+              is_processed: true,
+              job_id: jobId
+            })
+            .eq('lecture_id', lectureId);
+            
+          if (updateError) {
+            console.error('Error updating podcast info in database:', updateError);
+          } else {
+            console.log('Successfully updated podcast audio URL in database');
+          }
+        }
+        
         return new Response(JSON.stringify({ 
           success: true, 
-          podcastData: altStatusData
+          podcastData: altStatusData,
+          lectureId
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -82,9 +110,31 @@ serve(async (req) => {
       const statusData = await statusResponse.json();
       console.log('Job status response from original endpoint:', JSON.stringify(statusData));
       
+      // If podcast is finished and we have a URL and a lecture ID, update the database
+      if (lectureId && statusData.finished === true && (statusData.url || statusData.episode_url)) {
+        const audioUrl = statusData.url || statusData.episode_url;
+        
+        console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
+        const { error: updateError } = await supabase
+          .from('lecture_podcast')
+          .update({
+            audio_url: audioUrl,
+            is_processed: true,
+            job_id: jobId
+          })
+          .eq('lecture_id', lectureId);
+          
+        if (updateError) {
+          console.error('Error updating podcast info in database:', updateError);
+        } else {
+          console.log('Successfully updated podcast audio URL in database');
+        }
+      }
+      
       return new Response(JSON.stringify({ 
         success: true, 
-        podcastData: statusData
+        podcastData: statusData,
+        lectureId
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -97,6 +147,11 @@ serve(async (req) => {
     if (!script) {
       console.error('Missing required parameter: script');
       throw new Error('Script is required');
+    }
+    
+    if (!lectureId) {
+      console.error('Missing required parameter: lectureId');
+      throw new Error('Lecture ID is required');
     }
     
     console.log(`Script length: ${script.length} characters`);
@@ -246,11 +301,28 @@ serve(async (req) => {
     if (podcastData.job_id) {
       console.log(`Podcast job created with ID: ${podcastData.job_id}`);
       console.log(`Status check endpoint will be: https://api.wondercraft.ai/v1/podcast/scripted/${podcastData.job_id}`);
+      
+      // Save the job ID to the database
+      console.log(`Updating job ID for lecture ID: ${lectureId}`);
+      const { error: updateError } = await supabase
+        .from('lecture_podcast')
+        .update({
+          job_id: podcastData.job_id,
+          is_processed: false
+        })
+        .eq('lecture_id', lectureId);
+        
+      if (updateError) {
+        console.error('Error updating podcast job ID in database:', updateError);
+      } else {
+        console.log('Successfully updated podcast job ID in database');
+      }
     }
     
     return new Response(JSON.stringify({ 
       success: true, 
-      podcastData: podcastData
+      podcastData: podcastData,
+      lectureId
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
