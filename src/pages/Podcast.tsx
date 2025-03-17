@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, RefreshCw, Headphones, Mic, User, UserCheck, Play, Pause, VolumeX, Volume2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface PodcastData {
@@ -20,25 +20,28 @@ interface PodcastData {
   is_processed: boolean;
 }
 
-interface TextToSpeechOptions {
-  voiceId?: string;
+interface ElevenLabsPodcastResponse {
+  podcast_id: string;
+  task_id: string;
+  status: string;
+  url: string;
 }
 
 const HOST_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku"; // Lily
-const EXPERT_VOICE_ID = "onwK4e9ZLuTAKqWW03F9"; // Daniel
-const STUDENT_VOICE_ID = "XB0fDUnXU5powFXDhCwa"; // Charlotte
+const GUEST_VOICE_ID = "onwK4e9ZLuTAKqWW03F9"; // Daniel
 
 const Podcast = () => {
   const { courseId, lectureId } = useParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [podcast, setPodcast] = useState<PodcastData | null>(null);
+  const [podcastAudio, setPodcastAudio] = useState<ElevenLabsPodcastResponse | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeTab, setActiveTab] = useState("full");
-  const [currentVoiceId, setCurrentVoiceId] = useState(HOST_VOICE_ID);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
@@ -47,19 +50,6 @@ const Podcast = () => {
       fetchPodcast();
     }
   }, [lectureId]);
-
-  useEffect(() => {
-    // Update voice ID based on active tab
-    if (activeTab === "host") {
-      setCurrentVoiceId(HOST_VOICE_ID);
-    } else if (activeTab === "expert") {
-      setCurrentVoiceId(EXPERT_VOICE_ID);
-    } else if (activeTab === "student") {
-      setCurrentVoiceId(STUDENT_VOICE_ID);
-    } else {
-      setCurrentVoiceId(HOST_VOICE_ID);
-    }
-  }, [activeTab]);
 
   const fetchPodcast = async () => {
     if (!lectureId) return;
@@ -121,7 +111,50 @@ const Podcast = () => {
     }
   };
 
-  const playTextToSpeech = async (text: string, options?: TextToSpeechOptions) => {
+  const generateAudio = async () => {
+    if (!podcast) return;
+    
+    setIsGeneratingAudio(true);
+    try {
+      // Call the ElevenLabs podcast creation API
+      const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
+        body: { 
+          script: podcast.full_script,
+          hostVoiceId: HOST_VOICE_ID,
+          guestVoiceId: GUEST_VOICE_ID
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data?.podcastData) {
+        setPodcastAudio(data.podcastData);
+        
+        if (data.podcastData.url) {
+          if (audioRef.current) {
+            audioRef.current.src = data.podcastData.url;
+            audioRef.current.volume = isMuted ? 0 : volume;
+          }
+        }
+        
+        toast({
+          title: "Success",
+          description: "Podcast audio generated successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error generating podcast audio:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate podcast audio",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const playTextToSpeech = async (text: string) => {
     if (!text) return;
     
     setIsAudioLoading(true);
@@ -132,14 +165,11 @@ const Podcast = () => {
     }
     
     try {
-      // Get the voice ID to use
-      const voiceId = options?.voiceId || currentVoiceId;
-      
       // Call the text-to-speech function
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
         body: { 
           text, 
-          voiceId 
+          voiceId: activeTab === "host" ? HOST_VOICE_ID : GUEST_VOICE_ID 
         },
       });
 
@@ -215,6 +245,17 @@ const Podcast = () => {
     setIsPlaying(false);
   };
 
+  const downloadPodcast = () => {
+    if (podcastAudio?.url) {
+      const link = document.createElement('a');
+      link.href = podcastAudio.url;
+      link.download = 'podcast.mp3';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="container max-w-6xl py-8">
       <div className="flex items-center justify-between mb-6">
@@ -234,10 +275,24 @@ const Podcast = () => {
           </Button>
         )}
         {!isGenerating && podcast && (
-          <Button onClick={generatePodcast} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Regenerate Podcast
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={generatePodcast} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Regenerate Script
+            </Button>
+            <Button 
+              onClick={generateAudio} 
+              disabled={isGeneratingAudio}
+              variant="default"
+            >
+              {isGeneratingAudio ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Headphones className="w-4 h-4 mr-2" />
+              )}
+              Generate Audio
+            </Button>
+          </div>
         )}
       </div>
 
@@ -245,7 +300,8 @@ const Podcast = () => {
       <audio 
         ref={audioRef} 
         onEnded={handleAudioEnded}
-        className="hidden"
+        controls
+        className="w-full mb-4"
       />
 
       {isGenerating && (
@@ -275,40 +331,47 @@ const Podcast = () => {
       {!isLoading && !isGenerating && podcast && (
         <>
           {/* Audio controls */}
-          <Card className="p-4 mb-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={togglePlayPause} 
-                disabled={isAudioLoading}
-                className="mr-2"
-              >
-                {isAudioLoading ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : isPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={toggleMute}
-                className="mr-2"
-              >
-                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
-              <span className="text-sm font-medium">
-                {isAudioLoading ? "Loading audio..." : isPlaying ? "Playing" : "Ready to play"}
-              </span>
-            </div>
-            
-            <div className="text-sm text-gray-500">
-              {activeTab === "host" ? "Host Voice" : activeTab === "expert" ? "Expert Voice" : activeTab === "student" ? "Student Voice" : "Host Voice"}
-            </div>
-          </Card>
+          {podcastAudio && podcastAudio.url && (
+            <Card className="p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={togglePlayPause}
+                    className="mr-2"
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-5 h-5" />
+                    ) : (
+                      <Play className="w-5 h-5" />
+                    )}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={toggleMute}
+                    className="mr-2"
+                  >
+                    {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </Button>
+                  <span className="text-sm font-medium">
+                    {isPlaying ? "Playing full podcast" : "Podcast ready"}
+                  </span>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={downloadPodcast}
+                  className="flex items-center"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Podcast
+                </Button>
+              </div>
+            </Card>
+          )}
 
           <Tabs defaultValue="full" className="w-full" onValueChange={handleTabChange}>
             <TabsList className="mb-4">
@@ -320,13 +383,9 @@ const Podcast = () => {
                 <Mic className="w-4 h-4" />
                 Host Script
               </TabsTrigger>
-              <TabsTrigger value="expert" className="flex items-center gap-1">
-                <UserCheck className="w-4 h-4" />
-                Expert Script
-              </TabsTrigger>
-              <TabsTrigger value="student" className="flex items-center gap-1">
+              <TabsTrigger value="guest" className="flex items-center gap-1">
                 <User className="w-4 h-4" />
-                Student Script
+                Guest Script
               </TabsTrigger>
             </TabsList>
 
@@ -334,18 +393,20 @@ const Podcast = () => {
               <Card className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">Complete Podcast Script</h2>
-                  <Button 
-                    size="sm" 
-                    onClick={() => playTextToSpeech(podcast.host_script, { voiceId: HOST_VOICE_ID })}
-                    disabled={isAudioLoading}
-                  >
-                    {isAudioLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2" />
-                    )}
-                    Listen to Host
-                  </Button>
+                  {!podcastAudio && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => playTextToSpeech(podcast.host_script)}
+                      disabled={isAudioLoading}
+                    >
+                      {isAudioLoading ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-2" />
+                      )}
+                      Listen to Host
+                    </Button>
+                  )}
                 </div>
                 <Separator className="mb-4" />
                 <div className="whitespace-pre-line">
@@ -358,18 +419,20 @@ const Podcast = () => {
               <Card className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">Host Script</h2>
-                  <Button 
-                    size="sm" 
-                    onClick={() => playTextToSpeech(podcast.host_script, { voiceId: HOST_VOICE_ID })}
-                    disabled={isAudioLoading}
-                  >
-                    {isAudioLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2" />
-                    )}
-                    Listen
-                  </Button>
+                  {!podcastAudio && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => playTextToSpeech(podcast.host_script)}
+                      disabled={isAudioLoading}
+                    >
+                      {isAudioLoading ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-2" />
+                      )}
+                      Listen
+                    </Button>
+                  )}
                 </div>
                 <Separator className="mb-4" />
                 <div className="prose max-w-none">
@@ -378,50 +441,28 @@ const Podcast = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="expert">
+            <TabsContent value="guest">
               <Card className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">Expert Script</h2>
-                  <Button 
-                    size="sm" 
-                    onClick={() => playTextToSpeech(podcast.expert_script, { voiceId: EXPERT_VOICE_ID })}
-                    disabled={isAudioLoading}
-                  >
-                    {isAudioLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2" />
-                    )}
-                    Listen
-                  </Button>
+                  <h2 className="text-xl font-semibold">Guest Script</h2>
+                  {!podcastAudio && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => playTextToSpeech(podcast.expert_script)}
+                      disabled={isAudioLoading}
+                    >
+                      {isAudioLoading ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-2" />
+                      )}
+                      Listen
+                    </Button>
+                  )}
                 </div>
                 <Separator className="mb-4" />
                 <div className="prose max-w-none">
                   {formatScript(podcast.expert_script)}
-                </div>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="student">
-              <Card className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">Student Script</h2>
-                  <Button 
-                    size="sm" 
-                    onClick={() => playTextToSpeech(podcast.student_script, { voiceId: STUDENT_VOICE_ID })}
-                    disabled={isAudioLoading}
-                  >
-                    {isAudioLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2" />
-                    )}
-                    Listen
-                  </Button>
-                </div>
-                <Separator className="mb-4" />
-                <div className="prose max-w-none">
-                  {formatScript(podcast.student_script)}
                 </div>
               </Card>
             </TabsContent>

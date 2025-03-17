@@ -83,13 +83,12 @@ serve(async (req) => {
     ${lecture.content}
     
     FORMAT:
-    Create a natural, engaging podcast conversation between three personas:
+    Create a natural, engaging podcast conversation between two personas:
     1. HOST: A friendly, curious podcast host who guides the conversation
-    2. EXPERT: A knowledgeable academic/professional who provides detailed explanations
-    3. STUDENT: An enthusiastic learner who asks clarifying questions
-
+    2. GUEST: A knowledgeable expert who provides detailed explanations
+    
     REQUIREMENTS:
-    - Include a proper introduction with the host welcoming listeners and introducing the topic and guests
+    - Include a proper introduction with the host welcoming listeners and introducing the topic and guest
     - Create natural transitions between topics
     - Include questions, responses, and back-and-forth exchanges
     - Make sure the conversation flows naturally with appropriate segues
@@ -102,8 +101,7 @@ serve(async (req) => {
     
     FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT WITH CLEAR SPEAKER INDICATORS, for example:
     HOST: Welcome to our podcast! Today we're discussing...
-    EXPERT: Thank you for having me. This topic is fascinating because...
-    STUDENT: I've always wondered about...
+    GUEST: Thank you for having me. This topic is fascinating because...
     
     Please create a complete podcast episode that covers the key points from the lecture in an engaging way.
     `;
@@ -137,26 +135,22 @@ serve(async (req) => {
 
     // Parse the script to separate by speaker
     const hostLines = [];
-    const expertLines = [];
-    const studentLines = [];
+    const guestLines = [];
     
     const lines = fullScript.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line.startsWith('HOST:')) {
         hostLines.push(line.substring(5).trim());
-      } else if (line.startsWith('EXPERT:')) {
-        expertLines.push(line.substring(7).trim());
-      } else if (line.startsWith('STUDENT:')) {
-        studentLines.push(line.substring(8).trim());
+      } else if (line.startsWith('GUEST:')) {
+        guestLines.push(line.substring(6).trim());
       }
     }
 
     const hostScript = hostLines.join('\n\n');
-    const expertScript = expertLines.join('\n\n');
-    const studentScript = studentLines.join('\n\n');
+    const guestScript = guestLines.join('\n\n');
 
-    console.log('Extracted script segments - Host:', hostLines.length, 'lines, Expert:', expertLines.length, 'lines, Student:', studentLines.length, 'lines');
+    console.log('Extracted script segments - Host:', hostLines.length, 'lines, Guest:', guestLines.length, 'lines');
 
     // Store the podcast in the database
     const { data: podcastData, error: podcastError } = await supabaseClient
@@ -165,9 +159,8 @@ serve(async (req) => {
         lecture_id: lectureId,
         full_script: fullScript,
         host_script: hostScript,
-        expert_script: expertScript,
-        student_script: studentScript,
-        is_processed: true
+        expert_script: guestScript,
+        student_script: "" // Keeping this field for backward compatibility
       })
       .select()
       .single();

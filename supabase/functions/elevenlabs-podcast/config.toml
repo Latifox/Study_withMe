@@ -1,0 +1,8 @@
+
+project_id = "bjpawnertrqwtgyvrhml"
+
+[global]
+version = "v1.67.2"
+
+[functions.elevenlabs-podcast]
+verify_jwt = true
