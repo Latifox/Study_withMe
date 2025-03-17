@@ -142,11 +142,11 @@ serve(async (req) => {
       script: formattedScript,
       // Custom music settings with the provided music ID
       music_spec: {
-        music_id: musicId, // Use the specific music ID
+        music_id: "168bab40-3ead-4699-80a4-c97a7d613e3e", // Use the specific music ID
         fade_in_ms: 1000,
         fade_out_ms: 1000,
         playback_start: 0,
-        playback_end: null, // Let Wondercraft determine the end automatically
+        playback_end: 1000, // Let Wondercraft determine the end automatically
         volume: 0.05
       }
     };
