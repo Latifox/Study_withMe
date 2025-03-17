@@ -8,7 +8,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('wondercraft-podcast function called');
+  console.log('elevenlabs-podcast function called');
 
   try {
     const requestBody = await req.json();
@@ -23,6 +23,7 @@ serve(async (req) => {
     
     console.log(`Creating podcast with Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
     console.log(`Script length: ${script.length} characters`);
+    console.log(`Script first 100 characters: "${script.substring(0, 100)}..."`);
     
     // Check for API key
     const apiKey = Deno.env.get('WONDERCRAFT_API_KEY');
@@ -37,17 +38,46 @@ serve(async (req) => {
     const formattedScript = [];
     
     console.log('Formatting script for Wondercraft API...');
+    console.log(`Script has ${scriptLines.length} lines`);
     
+    // Log a few sample lines to debug
+    if (scriptLines.length > 0) {
+      console.log('Sample lines from script:');
+      for (let i = 0; i < Math.min(5, scriptLines.length); i++) {
+        console.log(`Line ${i}: "${scriptLines[i]}"`);
+      }
+    }
+    
+    // Enhanced script parsing with more flexible matching
     for (let i = 0; i < scriptLines.length; i++) {
       const line = scriptLines[i].trim();
-      if (line.startsWith('HOST:')) {
+      
+      // Skip empty lines
+      if (line === '') continue;
+      
+      // Try to match HOST: or GUEST: with more flexible patterns
+      if (line.toUpperCase().startsWith('HOST:')) {
         formattedScript.push({
           text: line.substring(5).trim(),
           voice_id: hostVoiceId
         });
-      } else if (line.startsWith('GUEST:')) {
+      } else if (line.toUpperCase().startsWith('GUEST:')) {
         formattedScript.push({
           text: line.substring(6).trim(),
+          voice_id: guestVoiceId
+        });
+      } else if (line.match(/^HOST\s*:/i)) {
+        // Match with possible space between HOST and :
+        const textContent = line.replace(/^HOST\s*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
+          voice_id: hostVoiceId
+        });
+      } else if (line.match(/^GUEST\s*:/i)) {
+        // Match with possible space between GUEST and :
+        const textContent = line.replace(/^GUEST\s*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
           voice_id: guestVoiceId
         });
       }
@@ -55,9 +85,49 @@ serve(async (req) => {
     
     console.log(`Formatted script with ${formattedScript.length} segments`);
     
+    // If no segments found, try alternative parsing approach
     if (formattedScript.length === 0) {
-      console.error('No valid script segments were found');
-      throw new Error('Script format is invalid, no HOST: or GUEST: prefixes found');
+      console.log('No segments found with standard parsing, trying alternative approach...');
+      
+      // Try to parse blocks of text separated by blank lines
+      let currentSpeaker = 'host'; // Start with host
+      let currentText = '';
+      
+      for (let i = 0; i < scriptLines.length; i++) {
+        const line = scriptLines[i].trim();
+        
+        if (line === '') {
+          // End of paragraph, add the current text if not empty
+          if (currentText !== '') {
+            formattedScript.push({
+              text: currentText.trim(),
+              voice_id: currentSpeaker === 'host' ? hostVoiceId : guestVoiceId
+            });
+            
+            // Switch speaker for next paragraph
+            currentSpeaker = currentSpeaker === 'host' ? 'guest' : 'host';
+            currentText = '';
+          }
+        } else {
+          // Add this line to the current text
+          currentText += ' ' + line;
+        }
+      }
+      
+      // Add the last paragraph if not empty
+      if (currentText !== '') {
+        formattedScript.push({
+          text: currentText.trim(),
+          voice_id: currentSpeaker === 'host' ? hostVoiceId : guestVoiceId
+        });
+      }
+      
+      console.log(`Alternative parsing found ${formattedScript.length} segments`);
+    }
+    
+    if (formattedScript.length === 0) {
+      console.error('No valid script segments were found after all parsing attempts');
+      throw new Error('Script format is invalid, no valid segments could be extracted');
     }
     
     // Create request body for Wondercraft
@@ -74,7 +144,8 @@ serve(async (req) => {
       }
     };
     
-    console.log('Sending request to Wondercraft API:', JSON.stringify(wondercraftBody));
+    console.log('Sending request to Wondercraft API with payload structure:');
+    console.log(`- Number of script segments: ${wondercraftBody.script.length}`);
     
     // Send request to Wondercraft API
     const response = await fetch("https://api.wondercraft.ai/v1/podcast/scripted", {
@@ -107,7 +178,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in wondercraft-podcast function:', error);
+    console.error('Error in elevenlabs-podcast function:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
