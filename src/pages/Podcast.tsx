@@ -30,6 +30,7 @@ interface WondercraftPodcastResponse {
 
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5"; // Updated custom voice ID
 const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; // Updated custom voice ID
+const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e"; // Specific music ID
 
 const Podcast = () => {
   const { courseId, lectureId } = useParams();
@@ -125,7 +126,8 @@ const Podcast = () => {
         body: { 
           script: podcast.full_script, // Using full_script with HOST: and GUEST: prefixes intact
           hostVoiceId: HOST_VOICE_ID,
-          guestVoiceId: GUEST_VOICE_ID
+          guestVoiceId: GUEST_VOICE_ID,
+          musicId: MUSIC_ID
         },
       });
 

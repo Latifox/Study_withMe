@@ -18,8 +18,11 @@ serve(async (req) => {
     // Use the new custom voice IDs with fallbacks to the previous ones
     const hostVoiceId = requestBody.hostVoiceId || "1da32dae-a953-4e5f-81df-94e4bb1965e5"; 
     const guestVoiceId = requestBody.guestVoiceId || "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; 
+    // Use the specific music ID provided
+    const musicId = requestBody.musicId || "168bab40-3ead-4699-80a4-c97a7d613e3e";
     
     console.log(`Using Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
+    console.log(`Using Music ID: ${musicId}`);
     
     if (!script) {
       console.error('Missing required parameter: script');
@@ -137,9 +140,9 @@ serve(async (req) => {
     // Create request body for Wondercraft
     const wondercraftBody = {
       script: formattedScript,
-      // Default music settings
+      // Custom music settings with the provided music ID
       music_spec: {
-        music_id: "ambient", // A default music ID
+        music_id: musicId, // Use the specific music ID
         fade_in_ms: 1000,
         fade_out_ms: 1000,
         playback_start: 0,
@@ -151,6 +154,7 @@ serve(async (req) => {
     console.log('Sending request to Wondercraft API with payload structure:');
     console.log(`- Number of script segments: ${wondercraftBody.script.length}`);
     console.log('- Sample voice IDs being used:', wondercraftBody.script.length > 0 ? wondercraftBody.script[0].voice_id : 'none');
+    console.log('- Music ID being used:', wondercraftBody.music_spec.music_id);
     
     // Send request to Wondercraft API
     const response = await fetch("https://api.wondercraft.ai/v1/podcast/scripted", {
