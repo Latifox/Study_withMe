@@ -72,14 +72,16 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
         ))}
       </div>
 
-      <div className="flex justify-center relative z-20">
-        <Button 
-          onClick={onGenerateMore}
-          className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-medium px-6 py-2 rounded-md shadow-md"
-        >
-          Generate More Flashcards
-        </Button>
-      </div>
+      {!isCardExpanded && (
+        <div className="flex justify-center relative z-20">
+          <Button 
+            onClick={onGenerateMore}
+            className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-medium px-6 py-2 rounded-md shadow-md"
+          >
+            Generate More Flashcards
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
