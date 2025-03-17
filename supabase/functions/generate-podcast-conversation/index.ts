@@ -84,8 +84,8 @@ serve(async (req) => {
     
     FORMAT:
     Create a natural, engaging podcast conversation between two personas:
-    1. HOST: A friendly, curious female podcast host who guides the conversation
-    2. GUEST: A knowledgeable male expert who provides detailed explanations
+    1. The host, a friendly, curious female podcast host who guides the conversation
+    2. The guest, a knowledgeable male expert who provides detailed explanations
     
     REQUIREMENTS:
     - Include a proper introduction with the host welcoming listeners and introducing the topic and guest
@@ -99,9 +99,7 @@ serve(async (req) => {
     
     ${config.custom_instructions ? `ADDITIONAL INSTRUCTIONS:\n${config.custom_instructions}\n` : ''}
     
-    FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT WITH CLEAR SPEAKER INDICATORS, for example:
-    HOST: Welcome to our podcast! Today we're discussing...
-    GUEST: Thank you for having me. This topic is fascinating because...
+    FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT EACH PARAGRAPH REPRESENTING A PERSON'S REPLY, DON'T USE ROLE IDENTIFIERS, SEPARATE EACH PARAGRAPH WITH AN EMPTY LINE, THE FIRST LINE OF THE DIALOGUE SHOULD BE THE HOST.
     
     Please create a complete podcast episode that covers the key points from the lecture in an engaging way.
     `;
