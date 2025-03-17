@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ interface WondercraftPodcastResponse {
   id: string;
   status: string;
   episode_url?: string;
+  url?: string;
   state?: string;
 }
 
@@ -137,6 +139,7 @@ const Podcast = () => {
       if (data?.podcastData) {
         setPodcastAudio(data.podcastData);
         
+        // Get the audio URL, checking both possible properties
         const audioUrl = data.podcastData.episode_url || data.podcastData.url;
         
         if (audioUrl) {
@@ -255,6 +258,7 @@ const Podcast = () => {
   };
 
   const downloadPodcast = () => {
+    // Get the audio URL, checking both possible properties
     const downloadUrl = podcastAudio?.episode_url || podcastAudio?.url;
     
     if (downloadUrl) {
