@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -28,8 +27,8 @@ interface WondercraftPodcastResponse {
   state?: string;
 }
 
-const HOST_VOICE_ID = "female_narrator_1"; // Default for Wondercraft female voice
-const GUEST_VOICE_ID = "male_narrator_1"; // Default for Wondercraft male voice
+const HOST_VOICE_ID = "male_english_us_1"; // Valid Wondercraft voice ID
+const GUEST_VOICE_ID = "female_english_us_1"; // Valid Wondercraft voice ID
 
 const Podcast = () => {
   const { courseId, lectureId } = useParams();
@@ -152,7 +151,7 @@ const Podcast = () => {
             title: "Success",
             description: "Podcast audio generated successfully",
           });
-        } else if (data.podcastData.status === 'processing' || data.podcastData.state === 'processing') {
+        } else if (data.podcastData.state === 'processing') {
           toast({
             title: "Processing",
             description: "Your podcast is being generated. Please check back in a few minutes.",

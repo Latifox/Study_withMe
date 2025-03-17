@@ -14,14 +14,18 @@ serve(async (req) => {
     const requestBody = await req.json();
     console.log('Request body received:', JSON.stringify(requestBody));
     
-    const { script, hostVoiceId, guestVoiceId } = requestBody;
+    const { script } = requestBody;
+    // Update default voice IDs to valid Wondercraft voice IDs
+    const hostVoiceId = requestBody.hostVoiceId || "male_english_us_1"; // Default Wondercraft voice ID
+    const guestVoiceId = requestBody.guestVoiceId || "female_english_us_1"; // Default Wondercraft voice ID
+    
+    console.log(`Using Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
     
     if (!script) {
       console.error('Missing required parameter: script');
       throw new Error('Script is required');
     }
     
-    console.log(`Creating podcast with Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
     console.log(`Script length: ${script.length} characters`);
     console.log(`Script first 100 characters: "${script.substring(0, 100)}..."`);
     
@@ -146,6 +150,7 @@ serve(async (req) => {
     
     console.log('Sending request to Wondercraft API with payload structure:');
     console.log(`- Number of script segments: ${wondercraftBody.script.length}`);
+    console.log('- Sample voice IDs being used:', wondercraftBody.script.length > 0 ? wondercraftBody.script[0].voice_id : 'none');
     
     // Send request to Wondercraft API
     const response = await fetch("https://api.wondercraft.ai/v1/podcast/scripted", {
