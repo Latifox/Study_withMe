@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -31,7 +32,8 @@ serve(async (req) => {
     if (jobId) {
       console.log(`Checking status for job ID: ${jobId}`);
       
-      const statusResponse = await fetch(`https://api.wondercraft.ai/v1/podcast/jobs/${jobId}`, {
+      // Update to use the correct endpoint as per documentation
+      const statusResponse = await fetch(`https://api.wondercraft.ai/v1/podcast/${jobId}`, {
         method: 'GET',
         headers: {
           'X-API-KEY': apiKey,

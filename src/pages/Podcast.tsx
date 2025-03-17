@@ -29,6 +29,8 @@ interface WondercraftPodcastResponse {
   url?: string;
   state?: string;
   progress?: number;
+  finished?: boolean;
+  error?: boolean;
 }
 
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5"; // Updated custom voice ID
@@ -188,21 +190,26 @@ const Podcast = () => {
     // Setup polling interval (check every 5 seconds)
     const intervalId = window.setInterval(async () => {
       try {
+        console.log('Polling job status for job ID:', jobId);
         const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
           body: { jobId },
         });
         
         if (error) throw error;
         
+        console.log('Status polling response:', data);
+        
         if (data?.podcastData) {
           setPodcastAudio(data.podcastData);
           
-          // Get the audio URL or completion status
+          // Check for completion based on different API responses
+          const finished = data.podcastData.finished;
           const status = data.podcastData.status || data.podcastData.state;
-          const audioUrl = data.podcastData.episode_url || data.podcastData.url;
+          const audioUrl = data.podcastData.url || data.podcastData.episode_url;
+          const error = data.podcastData.error;
           
-          // If ready and URL available, stop polling and update audio
-          if ((status === 'completed' || status === 'ready') && audioUrl) {
+          // If finished flag is true or status is completed/ready and URL available
+          if ((finished === true || status === 'completed' || status === 'ready') && audioUrl) {
             setIsPollingSatus(false);
             setIsGeneratingAudio(false);
             
@@ -219,7 +226,7 @@ const Podcast = () => {
               title: "Success",
               description: "Podcast audio is ready to play",
             });
-          } else if (status === 'failed') {
+          } else if (error === true || status === 'failed') {
             throw new Error('Podcast generation failed');
           }
         }
@@ -329,8 +336,8 @@ const Podcast = () => {
   };
 
   const downloadPodcast = () => {
-    // Get the audio URL, checking both possible properties
-    const downloadUrl = podcastAudio?.episode_url || podcastAudio?.url;
+    // Get the audio URL, checking all possible properties
+    const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
     
     if (downloadUrl) {
       const link = document.createElement('a');
@@ -434,7 +441,7 @@ const Podcast = () => {
             </Card>
           )}
 
-          {podcastAudio && (podcastAudio.episode_url || podcastAudio.url) && (
+          {podcastAudio && ((podcastAudio.url || podcastAudio.episode_url)) && (
             <Card className="p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
