@@ -1,5 +1,5 @@
 
-import { BookOpen, MessageSquare, Activity, Brain, Network, FileText } from "lucide-react";
+import { BookOpen, MessageSquare, Activity, Brain, Network, FileText, MapPin, Headphones } from "lucide-react";
 
 export const getActionIcon = (action: string) => {
   switch (action) {
@@ -13,6 +13,10 @@ export const getActionIcon = (action: string) => {
       return Activity;
     case 'quiz':
       return Brain;
+    case 'mindmap':
+      return MapPin;
+    case 'podcast':
+      return Headphones;
     case 'resources':
       return Network;
     default:
