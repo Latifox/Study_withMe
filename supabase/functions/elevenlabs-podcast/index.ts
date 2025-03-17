@@ -1,15 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Wondercraft API endpoints
-const WONDERCRAFT_API_URL = "https://api.wondercraft.ai/api/podcast";
-const WONDERCRAFT_ALTERNATIVE_URL = "https://api.wondercraft.ai/api/v2/jobs";
+import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.31.0";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -17,285 +9,342 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const WONDERCRAFT_API_KEY = Deno.env.get('WONDERCRAFT_API_KEY');
-  if (!WONDERCRAFT_API_KEY) {
-    return new Response(
-      JSON.stringify({ error: "Wondercraft API key not configured" }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
+  console.log('elevenlabs-podcast function called');
+
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { script, hostVoiceId, guestVoiceId, musicId, lectureId, jobId } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body received:', JSON.stringify(requestBody));
     
-    // If jobId is provided, query job status
+    const { script, jobId, lectureId } = requestBody;
+    // Use the new custom voice IDs with fallbacks to the previous ones
+    const hostVoiceId = requestBody.hostVoiceId || "1da32dae-a953-4e5f-81df-94e4bb1965e5"; 
+    const guestVoiceId = requestBody.guestVoiceId || "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; 
+    // Use the specific music ID provided
+    const musicId = requestBody.musicId || "168bab40-3ead-4699-80a4-c97a7d613e3e";
+    
+    // Check for API key
+    const apiKey = Deno.env.get('WONDERCRAFT_API_KEY');
+    if (!apiKey) {
+      console.error('WONDERCRAFT_API_KEY environment variable is not set');
+      throw new Error('Wondercraft API key is missing');
+    }
+
+    // If jobId is provided, we're checking status of an existing job
     if (jobId) {
       console.log(`Checking status for job ID: ${jobId}`);
       
-      // Try both API endpoints for status updates
-      try {
-        // First, try the main endpoint
-        const mainResponse = await fetch(`${WONDERCRAFT_API_URL}/${jobId}`, {
+      // Try the original endpoint format first (match what we get from the creation response)
+      const statusEndpoint = `https://api.wondercraft.ai/v1/podcast/scripted/${jobId}`;
+      console.log(`Trying endpoint: ${statusEndpoint}`);
+      
+      const statusResponse = await fetch(statusEndpoint, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!statusResponse.ok) {
+        console.error(`Status check failed with status: ${statusResponse.status}`);
+        const errorText = await statusResponse.text();
+        console.error('Error response body:', errorText);
+        
+        // If the first endpoint fails, try alternative endpoint format
+        const alternativeEndpoint = `https://api.wondercraft.ai/v1/podcast/${jobId}`;
+        console.log(`Trying alternative endpoint: ${alternativeEndpoint}`);
+        
+        const altResponse = await fetch(alternativeEndpoint, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${WONDERCRAFT_API_KEY}`,
+            'X-API-KEY': apiKey,
             'Content-Type': 'application/json',
           },
         });
         
-        if (mainResponse.ok) {
-          const jobStatus = await mainResponse.json();
-          console.log('Job status response from main endpoint:', JSON.stringify(jobStatus));
-          
-          // If the podcast is finished, update the lecture_podcast record
-          if (jobStatus.episode_url && lectureId) {
-            await updatePodcastRecord(lectureId, jobStatus.episode_url, jobId);
-          }
-          
-          return new Response(
-            JSON.stringify({ podcastData: jobStatus }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          console.warn('Main endpoint returned error, trying alternative endpoint...');
+        if (!altResponse.ok) {
+          console.error(`Alternative status check failed with status: ${altResponse.status}`);
+          const altErrorText = await altResponse.text();
+          console.error('Alternative error response body:', altErrorText);
+          throw new Error(`Failed to check job status: ${altResponse.status} ${altErrorText}`);
         }
-      } catch (error) {
-        console.warn('Error with main status endpoint, trying alternative:', error);
+        
+        const altStatusData = await altResponse.json();
+        console.log('Job status response from alternative endpoint:', JSON.stringify(altStatusData));
+        
+        // If podcast is finished and we have a URL and a lecture ID, update the database
+        if (lectureId && altStatusData.finished === true && (altStatusData.url || altStatusData.episode_url)) {
+          const audioUrl = altStatusData.url || altStatusData.episode_url;
+          
+          console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
+          const { error: updateError } = await supabase
+            .from('lecture_podcast')
+            .update({
+              audio_url: audioUrl,
+              is_processed: true,
+              job_id: jobId
+            })
+            .eq('lecture_id', lectureId);
+            
+          if (updateError) {
+            console.error('Error updating podcast info in database:', updateError);
+          } else {
+            console.log('Successfully updated podcast audio URL in database');
+          }
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          podcastData: altStatusData,
+          lectureId
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       
-      // If the main endpoint fails, try the alternative endpoint
-      try {
-        const alternativeResponse = await fetch(`${WONDERCRAFT_ALTERNATIVE_URL}/${jobId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${WONDERCRAFT_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const statusData = await statusResponse.json();
+      console.log('Job status response from original endpoint:', JSON.stringify(statusData));
+      
+      // If podcast is finished and we have a URL and a lecture ID, update the database
+      if (lectureId && statusData.finished === true && (statusData.url || statusData.episode_url)) {
+        const audioUrl = statusData.url || statusData.episode_url;
         
-        if (alternativeResponse.ok) {
-          const alternativeStatus = await alternativeResponse.json();
-          console.log('Job status response from alternative endpoint:', JSON.stringify(alternativeStatus));
+        console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
+        const { error: updateError } = await supabase
+          .from('lecture_podcast')
+          .update({
+            audio_url: audioUrl,
+            is_processed: true,
+            job_id: jobId
+          })
+          .eq('lecture_id', lectureId);
           
-          // If the podcast is finished, update the lecture_podcast record
-          if (alternativeStatus.finished && alternativeStatus.url && lectureId) {
-            await updatePodcastRecord(lectureId, alternativeStatus.url, jobId);
-          }
-          
-          return new Response(
-            JSON.stringify({ podcastData: alternativeStatus }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        if (updateError) {
+          console.error('Error updating podcast info in database:', updateError);
         } else {
-          const errorText = await alternativeResponse.text();
-          throw new Error(`Alternative status endpoint returned error: ${errorText}`);
+          console.log('Successfully updated podcast audio URL in database');
         }
-      } catch (error) {
-        console.error('Error with alternative status endpoint:', error);
-        throw error;
       }
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        podcastData: statusData,
+        lectureId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     
-    // If no jobId, generate a new podcast
-    if (!script || !hostVoiceId || !guestVoiceId || !lectureId) {
-      return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Otherwise, we're creating a new podcast
+    console.log(`Using Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
+    console.log(`Using Music ID: ${musicId}`);
+    
+    if (!script) {
+      console.error('Missing required parameter: script');
+      throw new Error('Script is required');
     }
     
-    console.log(`Generating podcast with hostVoiceId: ${hostVoiceId}, guestVoiceId: ${guestVoiceId}`);
+    if (!lectureId) {
+      console.error('Missing required parameter: lectureId');
+      throw new Error('Lecture ID is required');
+    }
+    
     console.log(`Script length: ${script.length} characters`);
     console.log(`Script first 100 characters: "${script.substring(0, 100)}..."`);
     
-    // Format script by ensuring no role prefixes remain in the text sent to Wondercraft
+    // Format script for Wondercraft by removing role markers
     const scriptLines = script.split('\n');
     const formattedScript = [];
     
-    // Clean regex patterns to match and remove various forms of speaker indicators
-    const hostPatterns = [
-      /^HOST\s*:/i,
-      /^\*\*HOST\*\*\s*:/i,
-      /^HOST\s*-/i,
-      /^\[HOST\]\s*/i
-    ];
+    console.log('Formatting script for Wondercraft API...');
+    console.log(`Script has ${scriptLines.length} lines`);
     
-    const guestPatterns = [
-      /^GUEST\s*:/i,
-      /^\*\*GUEST\*\*\s*:/i,
-      /^GUEST\s*-/i,
-      /^\[GUEST\]\s*/i
-    ];
+    // Log a few sample lines to debug
+    if (scriptLines.length > 0) {
+      console.log('Sample lines from script:');
+      for (let i = 0; i < Math.min(5, scriptLines.length); i++) {
+        console.log(`Line ${i}: "${scriptLines[i]}"`);
+      }
+    }
     
-    // Process each line to remove role prefixes and assign correct voice
+    // Enhanced script parsing with role prefix removal
     for (let i = 0; i < scriptLines.length; i++) {
       const line = scriptLines[i].trim();
       
       // Skip empty lines
       if (line === '') continue;
       
-      // Process host lines
-      let isHost = false;
-      let isGuest = false;
-      let textContent = line;
-      
-      // Check for host patterns
-      for (const pattern of hostPatterns) {
-        if (pattern.test(line)) {
-          textContent = line.replace(pattern, '').trim();
-          isHost = true;
-          break;
-        }
-      }
-      
-      // Check for guest patterns if not already matched as host
-      if (!isHost) {
-        for (const pattern of guestPatterns) {
-          if (pattern.test(line)) {
-            textContent = line.replace(pattern, '').trim();
-            isGuest = true;
-            break;
-          }
-        }
-      }
-      
-      // If line has content after processing, add it to script
-      if (textContent && (isHost || isGuest)) {
+      // Try to match HOST: or GUEST: with more flexible patterns and remove prefixes
+      if (line.toUpperCase().startsWith('HOST:')) {
+        formattedScript.push({
+          text: line.substring(5).trim(), // Remove the "HOST:" prefix
+          voice_id: hostVoiceId
+        });
+      } else if (line.toUpperCase().startsWith('GUEST:')) {
+        formattedScript.push({
+          text: line.substring(6).trim(), // Remove the "GUEST:" prefix
+          voice_id: guestVoiceId
+        });
+      } else if (line.match(/^HOST\s*:/i)) {
+        // Match with possible space between HOST and :
+        const textContent = line.replace(/^HOST\s*:/i, '').trim();
         formattedScript.push({
           text: textContent,
-          voice_id: isHost ? hostVoiceId : guestVoiceId
+          voice_id: hostVoiceId
+        });
+      } else if (line.match(/^GUEST\s*:/i)) {
+        // Match with possible space between GUEST and :
+        const textContent = line.replace(/^GUEST\s*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
+          voice_id: guestVoiceId
+        });
+      } else if (line.match(/^\*\*HOST\*\*:/i)) {
+        // Match markdown format
+        const textContent = line.replace(/^\*\*HOST\*\*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
+          voice_id: hostVoiceId
+        });
+      } else if (line.match(/^\*\*GUEST\*\*:/i)) {
+        // Match markdown format
+        const textContent = line.replace(/^\*\*GUEST\*\*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
+          voice_id: guestVoiceId
         });
       }
     }
     
-    // If no lines were processed correctly, try alternating assumption
+    console.log(`Formatted script with ${formattedScript.length} segments`);
+    
+    // If no segments found, try alternative parsing approach
     if (formattedScript.length === 0) {
-      console.log('No speaker indicators found, assuming alternating host/guest pattern');
-      let isHostTurn = true; // Start with host
+      console.log('No segments found with standard parsing, trying alternative approach...');
+      
+      // Try to parse blocks of text separated by blank lines
+      let currentSpeaker = 'host'; // Start with host
+      let currentText = '';
       
       for (let i = 0; i < scriptLines.length; i++) {
         const line = scriptLines[i].trim();
+        
         if (line === '') {
-          // Empty line might indicate speaker change, but don't toggle yet
-          continue;
-        }
-        
-        // Add non-empty paragraph with assumed speaker
-        formattedScript.push({
-          text: line,
-          voice_id: isHostTurn ? hostVoiceId : guestVoiceId
-        });
-        
-        // Look ahead to see if next line is empty (paragraph break)
-        if (i + 1 < scriptLines.length && scriptLines[i + 1].trim() === '') {
-          isHostTurn = !isHostTurn; // Toggle speaker for next paragraph
+          // End of paragraph, add the current text if not empty
+          if (currentText !== '') {
+            formattedScript.push({
+              text: currentText.trim(),
+              voice_id: currentSpeaker === 'host' ? hostVoiceId : guestVoiceId
+            });
+            
+            // Switch speaker for next paragraph
+            currentSpeaker = currentSpeaker === 'host' ? 'guest' : 'host';
+            currentText = '';
+          }
+        } else {
+          // Add this line to the current text
+          currentText += ' ' + line;
         }
       }
+      
+      // Add the last paragraph if not empty
+      if (currentText !== '') {
+        formattedScript.push({
+          text: currentText.trim(),
+          voice_id: currentSpeaker === 'host' ? hostVoiceId : guestVoiceId
+        });
+      }
+      
+      console.log(`Alternative parsing found ${formattedScript.length} segments`);
     }
     
-    console.log(`Processed ${formattedScript.length} script segments for Wondercraft`);
+    if (formattedScript.length === 0) {
+      console.error('No valid script segments were found after all parsing attempts');
+      throw new Error('Script format is invalid, no valid segments could be extracted');
+    }
     
-    // Configure music if provided
-    const musicConfig = musicId ? {
-      music_id: musicId,
-      music_volume: 0.05,  // Set a low volume for background music
-      fade_in: 1.5,        // Fade in duration in seconds
-      fade_out: 2.0,       // Fade out duration in seconds
-    } : undefined;
-    
-    // Prepare the podcast generation payload
-    const podcastPayload = {
-      title: "Educational Podcast",
+    // Create request body for Wondercraft
+    const wondercraftBody = {
       script: formattedScript,
-      settings: {
-        audio_style: "podcast",
-        pacing: 1.05,       // Slightly faster than natural
-        silences: {
-          speaker_change: 0.6, // Pause between speakers
-          paragraph_change: 0.4, // Pause between paragraphs
-          sentence_end: 0.2,    // Pause at end of sentences
-        },
-        ...(musicConfig && { music: musicConfig })
+      // Custom music settings with the provided music ID
+      music_spec: {
+        music_id: musicId, // Use the specific music ID
+        fade_in_ms: 1000,
+        fade_out_ms: 1000,
+        playback_start: 0,
+        playback_end: 1000, // Let Wondercraft determine the end automatically
+        volume: 0.05
       }
     };
     
-    console.log('Sending request to Wondercraft...');
+    console.log('Sending request to Wondercraft API with payload structure:');
+    console.log(`- Number of script segments: ${wondercraftBody.script.length}`);
+    console.log('- Sample voice IDs being used:', wondercraftBody.script.length > 0 ? wondercraftBody.script[0].voice_id : 'none');
+    console.log('- Music ID being used:', wondercraftBody.music_spec.music_id);
     
-    const response = await fetch(WONDERCRAFT_API_URL, {
+    // Send request to Wondercraft API for podcast creation
+    const response = await fetch("https://api.wondercraft.ai/v1/podcast/scripted", {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${WONDERCRAFT_API_KEY}`,
+        'X-API-KEY': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(podcastPayload),
+      body: JSON.stringify(wondercraftBody),
     });
+
+    console.log('Wondercraft API response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Wondercraft API error:', errorText);
-      throw new Error(`Failed to generate podcast: ${errorText}`);
+      throw new Error(`Failed to create podcast: ${response.status} ${errorText}`);
     }
-    
+
+    // Get the response data
     const podcastData = await response.json();
-    console.log('Wondercraft API response:', JSON.stringify(podcastData));
     
-    // If we have a job ID and lecture ID, store the job ID in the database
-    if (podcastData.id && lectureId) {
-      const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
+    console.log('Successfully created podcast with Wondercraft:', JSON.stringify(podcastData));
+    
+    // Store the endpoint used for creation to use the same format for status checks
+    if (podcastData.job_id) {
+      console.log(`Podcast job created with ID: ${podcastData.job_id}`);
+      console.log(`Status check endpoint will be: https://api.wondercraft.ai/v1/podcast/scripted/${podcastData.job_id}`);
       
-      console.log(`Updating lecture_podcast record for lecture ${lectureId} with job ID ${podcastData.id}`);
-      const { error } = await supabaseClient
+      // Save the job ID to the database
+      console.log(`Updating job ID for lecture ID: ${lectureId}`);
+      const { error: updateError } = await supabase
         .from('lecture_podcast')
-        .update({ job_id: podcastData.id })
+        .update({
+          job_id: podcastData.job_id,
+          is_processed: false
+        })
         .eq('lecture_id', lectureId);
-      
-      if (error) {
-        console.error('Error updating podcast record with job ID:', error);
+        
+      if (updateError) {
+        console.error('Error updating podcast job ID in database:', updateError);
+      } else {
+        console.log('Successfully updated podcast job ID in database');
       }
     }
     
-    return new Response(
-      JSON.stringify({ podcastData }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ 
+      success: true, 
+      podcastData: podcastData,
+      lectureId
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   } catch (error) {
     console.error('Error in elevenlabs-podcast function:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
-
-// Helper function to update the podcast record when processing is complete
-async function updatePodcastRecord(lectureId: number, audioUrl: string, jobId: string) {
-  try {
-    console.log(`Updating lecture_podcast record for lecture ${lectureId} with audio URL`);
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    
-    const { error } = await supabaseClient
-      .from('lecture_podcast')
-      .update({ 
-        audio_url: audioUrl,
-        job_id: jobId,
-        is_processed: true 
-      })
-      .eq('lecture_id', lectureId);
-    
-    if (error) {
-      console.error('Error updating podcast record with audio URL:', error);
-      throw error;
-    }
-    
-    console.log('Successfully updated podcast record with audio URL');
-  } catch (error) {
-    console.error('Error in updatePodcastRecord:', error);
-    throw error;
-  }
-}

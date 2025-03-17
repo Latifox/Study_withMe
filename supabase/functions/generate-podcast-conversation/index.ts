@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -98,14 +99,9 @@ serve(async (req) => {
     
     ${config.custom_instructions ? `ADDITIONAL INSTRUCTIONS:\n${config.custom_instructions}\n` : ''}
     
-    IMPORTANT FORMATTING INSTRUCTIONS:
-    - DO NOT include a title at the beginning of the script
-    - DO NOT use prefixes like "HOST:" or "GUEST:" in the dialogue
-    - Instead, alternate between the host and guest speakers directly
-    - Begin with the host's welcome message directly like "Welcome to our podcast!"
-    - If needed, add notes like "(Intro music fades in)" in parentheses
-    - Structure the conversation as alternating paragraphs with a clear line break between speakers
-    - The first paragraph should be the host, second the guest, and so on
+    FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT WITH CLEAR SPEAKER INDICATORS, for example:
+    HOST: Welcome to our podcast! Today we're discussing...
+    GUEST: Thank you for having me. This topic is fascinating because...
     
     Please create a complete podcast episode that covers the key points from the lecture in an engaging way.
     `;
@@ -134,26 +130,8 @@ serve(async (req) => {
     }
 
     const data = await openAIResponse.json();
-    let fullScript = data.choices[0].message.content;
+    const fullScript = data.choices[0].message.content;
     console.log('Received podcast script with length:', fullScript.length);
-
-    // Parse the script to add HOST/GUEST prefixes for internal storage and processing
-    // This allows the existing parsing logic to work while keeping the audio clean
-    const paragraphs = fullScript.split(/\n\n+/);
-    let processedScript = "";
-    let isHost = true; // Start with host
-
-    for (let i = 0; i < paragraphs.length; i++) {
-      const paragraph = paragraphs[i].trim();
-      if (paragraph) {
-        // Skip empty paragraphs
-        const prefix = isHost ? "HOST: " : "GUEST: ";
-        processedScript += prefix + paragraph + "\n\n";
-        isHost = !isHost; // Toggle between host and guest
-      }
-    }
-
-    fullScript = processedScript.trim();
 
     // Parse the script to separate by speaker but don't use these for elevenlabs
     const hostLines = [];
