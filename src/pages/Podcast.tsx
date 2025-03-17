@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -21,11 +22,13 @@ interface PodcastData {
 }
 
 interface WondercraftPodcastResponse {
-  id: string;
-  status: string;
+  id?: string;
+  job_id?: string;
+  status?: string;
   episode_url?: string;
   url?: string;
   state?: string;
+  progress?: number;
 }
 
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5"; // Updated custom voice ID
@@ -44,13 +47,22 @@ const Podcast = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isPollingSatus, setIsPollingSatus] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (lectureId) {
       fetchPodcast();
     }
+    
+    return () => {
+      // Cleanup polling interval on unmount
+      if (pollIntervalRef.current) {
+        window.clearInterval(pollIntervalRef.current);
+      }
+    };
   }, [lectureId]);
 
   const fetchPodcast = async () => {
@@ -141,24 +153,17 @@ const Podcast = () => {
       if (data?.podcastData) {
         setPodcastAudio(data.podcastData);
         
-        // Get the audio URL, checking both possible properties
-        const audioUrl = data.podcastData.episode_url || data.podcastData.url;
+        // Check if job ID is returned (async processing)
+        const jobId = data.podcastData.job_id || data.podcastData.id;
         
-        if (audioUrl) {
-          if (audioRef.current) {
-            audioRef.current.src = audioUrl;
-            audioRef.current.volume = isMuted ? 0 : volume;
-          }
-          
-          toast({
-            title: "Success",
-            description: "Podcast audio generated successfully",
-          });
-        } else if (data.podcastData.state === 'processing') {
+        if (jobId) {
           toast({
             title: "Processing",
-            description: "Your podcast is being generated. Please check back in a few minutes.",
+            description: "Your podcast is being generated. We'll update you when it's ready.",
           });
+          
+          // Start polling for job status
+          startPollingJobStatus(jobId);
         }
       }
     } catch (error) {
@@ -168,9 +173,73 @@ const Podcast = () => {
         description: "Failed to generate podcast audio",
         variant: "destructive",
       });
-    } finally {
       setIsGeneratingAudio(false);
     }
+  };
+
+  const startPollingJobStatus = (jobId: string) => {
+    setIsPollingSatus(true);
+    
+    // Clear any existing interval
+    if (pollIntervalRef.current) {
+      window.clearInterval(pollIntervalRef.current);
+    }
+    
+    // Setup polling interval (check every 5 seconds)
+    const intervalId = window.setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
+          body: { jobId },
+        });
+        
+        if (error) throw error;
+        
+        if (data?.podcastData) {
+          setPodcastAudio(data.podcastData);
+          
+          // Get the audio URL or completion status
+          const status = data.podcastData.status || data.podcastData.state;
+          const audioUrl = data.podcastData.episode_url || data.podcastData.url;
+          
+          // If ready and URL available, stop polling and update audio
+          if ((status === 'completed' || status === 'ready') && audioUrl) {
+            setIsPollingSatus(false);
+            setIsGeneratingAudio(false);
+            
+            if (audioRef.current) {
+              audioRef.current.src = audioUrl;
+              audioRef.current.volume = isMuted ? 0 : volume;
+            }
+            
+            // Stop polling
+            window.clearInterval(pollIntervalRef.current!);
+            pollIntervalRef.current = null;
+            
+            toast({
+              title: "Success",
+              description: "Podcast audio is ready to play",
+            });
+          } else if (status === 'failed') {
+            throw new Error('Podcast generation failed');
+          }
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to check podcast status",
+          variant: "destructive",
+        });
+        
+        // Stop polling on error
+        window.clearInterval(pollIntervalRef.current!);
+        pollIntervalRef.current = null;
+        setIsPollingSatus(false);
+        setIsGeneratingAudio(false);
+      }
+    }, 5000);
+    
+    pollIntervalRef.current = intervalId;
   };
 
   const playTextToSpeech = async (text: string) => {
@@ -273,6 +342,12 @@ const Podcast = () => {
     }
   };
 
+  // Calculate completion percentage for progress bar
+  const calculateProgress = () => {
+    if (!podcastAudio) return 0;
+    return podcastAudio.progress || 0;
+  };
+
   return (
     <div className="container max-w-6xl py-8">
       <div className="flex items-center justify-between mb-6">
@@ -299,10 +374,10 @@ const Podcast = () => {
             </Button>
             <Button 
               onClick={generateAudio} 
-              disabled={isGeneratingAudio}
+              disabled={isGeneratingAudio || isPollingSatus}
               variant="default"
             >
-              {isGeneratingAudio ? (
+              {isGeneratingAudio || isPollingSatus ? (
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Headphones className="w-4 h-4 mr-2" />
@@ -346,6 +421,19 @@ const Podcast = () => {
 
       {!isLoading && !isGenerating && podcast && (
         <>
+          {isPollingSatus && (
+            <Card className="p-4 mb-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Generating podcast audio...</p>
+                  <span className="text-sm text-muted-foreground">{Math.round(calculateProgress())}%</span>
+                </div>
+                <Progress value={calculateProgress()} className="h-2" />
+                <p className="text-xs text-muted-foreground">This may take a few minutes. Please wait while we create your audio.</p>
+              </div>
+            </Card>
+          )}
+
           {podcastAudio && (podcastAudio.episode_url || podcastAudio.url) && (
             <Card className="p-4 mb-4">
               <div className="flex items-center justify-between">

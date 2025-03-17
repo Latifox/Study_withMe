@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -14,13 +13,50 @@ serve(async (req) => {
     const requestBody = await req.json();
     console.log('Request body received:', JSON.stringify(requestBody));
     
-    const { script } = requestBody;
+    const { script, jobId } = requestBody;
     // Use the new custom voice IDs with fallbacks to the previous ones
     const hostVoiceId = requestBody.hostVoiceId || "1da32dae-a953-4e5f-81df-94e4bb1965e5"; 
     const guestVoiceId = requestBody.guestVoiceId || "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; 
     // Use the specific music ID provided
     const musicId = requestBody.musicId || "168bab40-3ead-4699-80a4-c97a7d613e3e";
     
+    // Check for API key
+    const apiKey = Deno.env.get('WONDERCRAFT_API_KEY');
+    if (!apiKey) {
+      console.error('WONDERCRAFT_API_KEY environment variable is not set');
+      throw new Error('Wondercraft API key is missing');
+    }
+
+    // If jobId is provided, we're checking status of an existing job
+    if (jobId) {
+      console.log(`Checking status for job ID: ${jobId}`);
+      
+      const statusResponse = await fetch(`https://api.wondercraft.ai/v1/podcast/jobs/${jobId}`, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!statusResponse.ok) {
+        const errorText = await statusResponse.text();
+        console.error('Error checking job status:', errorText);
+        throw new Error(`Failed to check job status: ${statusResponse.status} ${errorText}`);
+      }
+      
+      const statusData = await statusResponse.json();
+      console.log('Job status response:', JSON.stringify(statusData));
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        podcastData: statusData
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Otherwise, we're creating a new podcast
     console.log(`Using Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
     console.log(`Using Music ID: ${musicId}`);
     
@@ -31,13 +67,6 @@ serve(async (req) => {
     
     console.log(`Script length: ${script.length} characters`);
     console.log(`Script first 100 characters: "${script.substring(0, 100)}..."`);
-    
-    // Check for API key
-    const apiKey = Deno.env.get('WONDERCRAFT_API_KEY');
-    if (!apiKey) {
-      console.error('WONDERCRAFT_API_KEY environment variable is not set');
-      throw new Error('Wondercraft API key is missing');
-    }
     
     // Format script for Wondercraft
     // Parse the script to separate by HOST: and GUEST: prefixes
@@ -142,7 +171,7 @@ serve(async (req) => {
       script: formattedScript,
       // Custom music settings with the provided music ID
       music_spec: {
-        music_id: "8e4f0788-ad19-4ef0-b9c2-49c9587d0024", // Use the specific music ID
+        music_id: musicId, // Use the specific music ID
         fade_in_ms: 1000,
         fade_out_ms: 1000,
         playback_start: 0,
