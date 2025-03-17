@@ -56,6 +56,9 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
     setIsCardExpanded(expanded);
   };
 
+  // Determine if button should be shown - only when no card is active
+  const showGenerateButton = activeCardIndex === null;
+
   return (
     <div className={`relative ${isCardExpanded ? 'before:absolute before:inset-0 before:bg-black/50 before:backdrop-blur-xl before:z-10' : ''}`}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-20">
@@ -72,7 +75,7 @@ const FlashcardGrid = ({ flashcards, onGenerateMore }: FlashcardGridProps) => {
         ))}
       </div>
 
-      {!isCardExpanded && (
+      {showGenerateButton && (
         <div className="flex justify-center relative z-20">
           <Button 
             onClick={onGenerateMore}
