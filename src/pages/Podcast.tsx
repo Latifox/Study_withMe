@@ -31,6 +31,7 @@ interface WondercraftPodcastResponse {
   progress?: number;
   finished?: boolean;
   error?: boolean;
+  message?: string;
 }
 
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5"; // Updated custom voice ID
@@ -187,7 +188,10 @@ const Podcast = () => {
       window.clearInterval(pollIntervalRef.current);
     }
     
-    // Setup polling interval (check every 5 seconds)
+    let failedAttempts = 0;
+    const maxFailedAttempts = 5;
+    
+    // Setup polling interval (check every 8 seconds)
     const intervalId = window.setInterval(async () => {
       try {
         console.log('Polling job status for job ID:', jobId);
@@ -195,7 +199,19 @@ const Podcast = () => {
           body: { jobId },
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error polling job status:', error);
+          failedAttempts++;
+          
+          if (failedAttempts >= maxFailedAttempts) {
+            throw new Error(`Failed to check podcast status after ${maxFailedAttempts} attempts`);
+          }
+          
+          return; // Continue polling even if this attempt failed
+        }
+        
+        // Reset failed attempts counter on success
+        failedAttempts = 0;
         
         console.log('Status polling response:', data);
         
@@ -207,6 +223,7 @@ const Podcast = () => {
           const status = data.podcastData.status || data.podcastData.state;
           const audioUrl = data.podcastData.url || data.podcastData.episode_url;
           const error = data.podcastData.error;
+          const errorMessage = data.podcastData.message;
           
           // If finished flag is true or status is completed/ready and URL available
           if ((finished === true || status === 'completed' || status === 'ready') && audioUrl) {
@@ -227,7 +244,7 @@ const Podcast = () => {
               description: "Podcast audio is ready to play",
             });
           } else if (error === true || status === 'failed') {
-            throw new Error('Podcast generation failed');
+            throw new Error(errorMessage || 'Podcast generation failed');
           }
         }
       } catch (error) {
@@ -244,7 +261,7 @@ const Podcast = () => {
         setIsPollingSatus(false);
         setIsGeneratingAudio(false);
       }
-    }, 5000);
+    }, 8000); // Increased polling interval to 8 seconds to avoid rate limits
     
     pollIntervalRef.current = intervalId;
   };

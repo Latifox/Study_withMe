@@ -32,8 +32,11 @@ serve(async (req) => {
     if (jobId) {
       console.log(`Checking status for job ID: ${jobId}`);
       
-      // Update to use the correct endpoint as per documentation
-      const statusResponse = await fetch(`https://api.wondercraft.ai/v1/podcast/${jobId}`, {
+      // Try the original endpoint format first (match what we get from the creation response)
+      const statusEndpoint = `https://api.wondercraft.ai/v1/podcast/scripted/${jobId}`;
+      console.log(`Trying endpoint: ${statusEndpoint}`);
+      
+      const statusResponse = await fetch(statusEndpoint, {
         method: 'GET',
         headers: {
           'X-API-KEY': apiKey,
@@ -42,13 +45,42 @@ serve(async (req) => {
       });
       
       if (!statusResponse.ok) {
+        console.error(`Status check failed with status: ${statusResponse.status}`);
         const errorText = await statusResponse.text();
-        console.error('Error checking job status:', errorText);
-        throw new Error(`Failed to check job status: ${statusResponse.status} ${errorText}`);
+        console.error('Error response body:', errorText);
+        
+        // If the first endpoint fails, try alternative endpoint format
+        const alternativeEndpoint = `https://api.wondercraft.ai/v1/podcast/${jobId}`;
+        console.log(`Trying alternative endpoint: ${alternativeEndpoint}`);
+        
+        const altResponse = await fetch(alternativeEndpoint, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!altResponse.ok) {
+          console.error(`Alternative status check failed with status: ${altResponse.status}`);
+          const altErrorText = await altResponse.text();
+          console.error('Alternative error response body:', altErrorText);
+          throw new Error(`Failed to check job status: ${altResponse.status} ${altErrorText}`);
+        }
+        
+        const altStatusData = await altResponse.json();
+        console.log('Job status response from alternative endpoint:', JSON.stringify(altStatusData));
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          podcastData: altStatusData
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       
       const statusData = await statusResponse.json();
-      console.log('Job status response:', JSON.stringify(statusData));
+      console.log('Job status response from original endpoint:', JSON.stringify(statusData));
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -187,7 +219,7 @@ serve(async (req) => {
     console.log('- Sample voice IDs being used:', wondercraftBody.script.length > 0 ? wondercraftBody.script[0].voice_id : 'none');
     console.log('- Music ID being used:', wondercraftBody.music_spec.music_id);
     
-    // Send request to Wondercraft API
+    // Send request to Wondercraft API for podcast creation
     const response = await fetch("https://api.wondercraft.ai/v1/podcast/scripted", {
       method: 'POST',
       headers: {
@@ -209,6 +241,12 @@ serve(async (req) => {
     const podcastData = await response.json();
     
     console.log('Successfully created podcast with Wondercraft:', JSON.stringify(podcastData));
+    
+    // Store the endpoint used for creation to use the same format for status checks
+    if (podcastData.job_id) {
+      console.log(`Podcast job created with ID: ${podcastData.job_id}`);
+      console.log(`Status check endpoint will be: https://api.wondercraft.ai/v1/podcast/scripted/${podcastData.job_id}`);
+    }
     
     return new Response(JSON.stringify({ 
       success: true, 
