@@ -409,10 +409,7 @@ const Podcast = () => {
             Generate Podcast
           </Button>}
         {!isGenerating && podcast && <div className="flex gap-2">
-            <Button onClick={generatePodcast} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Regenerate Script
-            </Button>
+            
             {!hasPodcastAudio() && <Button onClick={generateAudio} disabled={isGeneratingAudio || isPollingSatus} variant="default">
                 {isGeneratingAudio || isPollingSatus ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Headphones className="w-4 h-4 mr-2" />}
                 Generate Audio
