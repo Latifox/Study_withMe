@@ -235,34 +235,40 @@ export type Database = {
       }
       lecture_podcast: {
         Row: {
+          audio_url: string | null
           created_at: string
           expert_script: string
           full_script: string
           host_script: string
           id: number
           is_processed: boolean | null
+          job_id: string | null
           lecture_id: number | null
           student_script: string | null
           updated_at: string
         }
         Insert: {
+          audio_url?: string | null
           created_at?: string
           expert_script: string
           full_script: string
           host_script: string
           id?: never
           is_processed?: boolean | null
+          job_id?: string | null
           lecture_id?: number | null
           student_script?: string | null
           updated_at?: string
         }
         Update: {
+          audio_url?: string | null
           created_at?: string
           expert_script?: string
           full_script?: string
           host_script?: string
           id?: never
           is_processed?: boolean | null
+          job_id?: string | null
           lecture_id?: number | null
           student_script?: string | null
           updated_at?: string
