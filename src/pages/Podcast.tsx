@@ -120,10 +120,10 @@ const Podcast = () => {
       console.log('Generating audio for podcast with script length:', podcast.full_script.length);
       console.log('Calling elevenlabs-podcast function with host voice ID:', HOST_VOICE_ID, 'and guest voice ID:', GUEST_VOICE_ID);
       
-      // Call the ElevenLabs podcast creation API
+      // Call the ElevenLabs podcast creation API - use the full script as is
       const { data, error } = await supabase.functions.invoke('elevenlabs-podcast', {
         body: { 
-          script: podcast.full_script,
+          script: podcast.full_script, // Using full_script with HOST: and GUEST: prefixes intact
           hostVoiceId: HOST_VOICE_ID,
           guestVoiceId: GUEST_VOICE_ID
         },

@@ -133,7 +133,7 @@ serve(async (req) => {
     const fullScript = data.choices[0].message.content;
     console.log('Received podcast script with length:', fullScript.length);
 
-    // Parse the script to separate by speaker
+    // Parse the script to separate by speaker but don't use these for elevenlabs
     const hostLines = [];
     const guestLines = [];
     
