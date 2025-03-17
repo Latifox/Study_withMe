@@ -55,7 +55,7 @@ export const defaultSteps: LearningStep[] = [
     title: "Audio Learning",
     description: "Listen to lecture content in podcast format for on-the-go learning",
     action: "podcast",
-    timeEstimate: "15-20 minutes",
+    timeEstimate: "4-7 minutes",
     benefits: ["Learn while commuting", "Auditory learning style", "Reinforcement"]
   },
   {
