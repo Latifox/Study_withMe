@@ -59,7 +59,7 @@ const Podcast = () => {
       const { data, error } = await supabase
         .from('lecture_podcast')
         .select('*')
-        .eq('lecture_id', lectureId)
+        .eq('lecture_id', parseInt(lectureId))
         .single();
 
       if (error && error.code !== 'PGRST116') {
