@@ -84,8 +84,8 @@ serve(async (req) => {
     
     FORMAT:
     Create a natural, engaging podcast conversation between two personas:
-    1. HOST: A friendly, curious podcast host who guides the conversation
-    2. GUEST: A knowledgeable expert who provides detailed explanations
+    1. HOST: A friendly, curious female podcast host who guides the conversation
+    2. GUEST: A knowledgeable male expert who provides detailed explanations
     
     REQUIREMENTS:
     - Include a proper introduction with the host welcoming listeners and introducing the topic and guest

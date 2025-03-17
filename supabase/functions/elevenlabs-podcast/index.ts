@@ -157,8 +157,7 @@ serve(async (req) => {
     console.log(`Script length: ${script.length} characters`);
     console.log(`Script first 100 characters: "${script.substring(0, 100)}..."`);
     
-    // Format script for Wondercraft
-    // Parse the script to separate by HOST: and GUEST: prefixes
+    // Format script for Wondercraft by removing role markers
     const scriptLines = script.split('\n');
     const formattedScript = [];
     
@@ -173,22 +172,22 @@ serve(async (req) => {
       }
     }
     
-    // Enhanced script parsing with more flexible matching
+    // Enhanced script parsing with role prefix removal
     for (let i = 0; i < scriptLines.length; i++) {
       const line = scriptLines[i].trim();
       
       // Skip empty lines
       if (line === '') continue;
       
-      // Try to match HOST: or GUEST: with more flexible patterns
+      // Try to match HOST: or GUEST: with more flexible patterns and remove prefixes
       if (line.toUpperCase().startsWith('HOST:')) {
         formattedScript.push({
-          text: line.substring(5).trim(),
+          text: line.substring(5).trim(), // Remove the "HOST:" prefix
           voice_id: hostVoiceId
         });
       } else if (line.toUpperCase().startsWith('GUEST:')) {
         formattedScript.push({
-          text: line.substring(6).trim(),
+          text: line.substring(6).trim(), // Remove the "GUEST:" prefix
           voice_id: guestVoiceId
         });
       } else if (line.match(/^HOST\s*:/i)) {
@@ -201,6 +200,20 @@ serve(async (req) => {
       } else if (line.match(/^GUEST\s*:/i)) {
         // Match with possible space between GUEST and :
         const textContent = line.replace(/^GUEST\s*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
+          voice_id: guestVoiceId
+        });
+      } else if (line.match(/^\*\*HOST\*\*:/i)) {
+        // Match markdown format
+        const textContent = line.replace(/^\*\*HOST\*\*:/i, '').trim();
+        formattedScript.push({
+          text: textContent,
+          voice_id: hostVoiceId
+        });
+      } else if (line.match(/^\*\*GUEST\*\*:/i)) {
+        // Match markdown format
+        const textContent = line.replace(/^\*\*GUEST\*\*:/i, '').trim();
         formattedScript.push({
           text: textContent,
           voice_id: guestVoiceId
