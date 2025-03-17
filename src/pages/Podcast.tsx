@@ -482,10 +482,7 @@ const Podcast = () => {
                 Full Conversation
               </TabsTrigger>
               
-              <TabsTrigger value="guest" className="flex items-center gap-1">
-                <User className="w-4 h-4" />
-                Guest Script
-              </TabsTrigger>
+              
             </TabsList>
 
             <TabsContent value="full">
