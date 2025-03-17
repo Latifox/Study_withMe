@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -446,12 +447,12 @@ const Podcast = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Link to={`/course/${courseId}`}>
-              <Button variant="outline" size="sm" className="bg-white/80 backdrop-blur-sm border border-white/50 hover:bg-white/90">
+              <Button variant="gradient" size="sm" className="text-white hover:opacity-90">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Course
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">Podcast</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">Podcast</h1>
           </div>
           {!isGenerating && !podcast && <Button onClick={generatePodcast} className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md">
               <Headphones className="w-4 h-4 mr-2" />
