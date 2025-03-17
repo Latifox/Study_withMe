@@ -504,18 +504,6 @@ const Podcast = () => {
             {hasPodcastAudio() && 
               <Card className="p-6 mb-6 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-200/50 shadow-lg rounded-2xl overflow-hidden">
                 <div className="relative">
-                  <div className="absolute inset-0 opacity-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                      <path d="M0,0 Q150,28 300,18 T600,25 T900,18 T1200,30 V100 H0 V0 Z" className="animate-[blob_15s_ease-in-out_infinite]" fill="url(#audio-gradient)" />
-                      <defs>
-                        <linearGradient id="audio-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#4338ca" />
-                          <stop offset="100%" stopColor="#a855f7" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                  </div>
-                
                   <div className="relative z-10 flex flex-col space-y-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
