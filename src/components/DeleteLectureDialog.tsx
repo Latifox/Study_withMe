@@ -24,6 +24,21 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
     try {
       console.log('Deleting lecture:', lectureId);
       
+      // First get the PDF path for this lecture
+      const mode = window.location.href.includes('professor-course') ? 'professor' : 'student';
+      const tableName = mode === 'professor' ? 'professor_lectures' : 'lectures';
+      
+      const { data: lectureData, error: fetchError } = await supabase
+        .from(tableName)
+        .select('pdf_path')
+        .eq('id', lectureId)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching lecture PDF path:', fetchError);
+        throw fetchError;
+      }
+      
       // Delete quiz progress
       const { error: quizError } = await supabase
         .from('quiz_progress')
@@ -92,7 +107,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
 
       // Finally delete the lecture
       const { error: lectureError } = await supabase
-        .from('lectures')
+        .from(tableName)
         .delete()
         .eq('id', lectureId);
 
@@ -101,12 +116,35 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         throw lectureError;
       }
 
+      // Delete the PDF file from storage if it exists
+      if (lectureData?.pdf_path) {
+        const { error: storageError } = await supabase
+          .storage
+          .from('lecture_pdfs')
+          .remove([lectureData.pdf_path]);
+        
+        if (storageError) {
+          console.error('Error deleting PDF from storage:', storageError);
+          // Don't throw here, as the lecture is already deleted
+          toast({
+            title: "Warning",
+            description: "Lecture deleted but PDF file removal failed",
+            variant: "default",
+          });
+        }
+      }
+
       toast({
         title: "Success",
         description: "Lecture deleted successfully",
       });
       
-      queryClient.invalidateQueries({ queryKey: ['lectures', courseId] });
+      // Determine the appropriate query key based on mode
+      const queryKey = mode === 'professor' 
+        ? ['professor-lectures', courseId] 
+        : ['lectures', courseId];
+        
+      queryClient.invalidateQueries({ queryKey });
       setOpen(false);
     } catch (error: any) {
       console.error('Delete error:', error);
