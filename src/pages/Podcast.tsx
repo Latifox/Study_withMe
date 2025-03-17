@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
+
 interface PodcastData {
   id: number;
   lecture_id: number;
@@ -21,6 +22,7 @@ interface PodcastData {
   audio_url?: string;
   job_id?: string;
 }
+
 interface WondercraftPodcastResponse {
   id?: string;
   job_id?: string;
@@ -33,9 +35,10 @@ interface WondercraftPodcastResponse {
   error?: boolean;
   message?: string;
 }
-const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5"; // Updated custom voice ID
-const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; // Updated custom voice ID
-const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e"; // Specific music ID
+
+const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5";
+const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a";
+const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e";
 
 const Podcast = () => {
   const {
@@ -61,6 +64,7 @@ const Podcast = () => {
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     if (lectureId) {
       fetchPodcast();
@@ -71,6 +75,7 @@ const Podcast = () => {
       }
     };
   }, [lectureId]);
+
   const fetchPodcast = async () => {
     if (!lectureId) return;
     setIsLoading(true);
@@ -111,6 +116,7 @@ const Podcast = () => {
       setIsLoading(false);
     }
   };
+
   const generatePodcast = async () => {
     if (!lectureId) return;
     setIsGenerating(true);
@@ -143,6 +149,7 @@ const Podcast = () => {
       setIsGenerating(false);
     }
   };
+
   const generateAudio = async () => {
     if (!podcast) return;
     setIsGeneratingAudio(true);
@@ -187,6 +194,7 @@ const Podcast = () => {
       setIsGeneratingAudio(false);
     }
   };
+
   const startPollingJobStatus = (jobId: string) => {
     setIsPollingSatus(true);
     if (pollIntervalRef.current) {
@@ -256,6 +264,7 @@ const Podcast = () => {
     }, 8000);
     pollIntervalRef.current = intervalId;
   };
+
   const playTextToSpeech = async (text: string) => {
     if (!text) return;
     setIsAudioLoading(true);
@@ -302,6 +311,7 @@ const Podcast = () => {
       setIsAudioLoading(false);
     }
   };
+
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -313,12 +323,14 @@ const Podcast = () => {
       }
     }
   };
+
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (audioRef.current && isPlaying) {
@@ -326,12 +338,15 @@ const Podcast = () => {
       setIsPlaying(false);
     }
   };
+
   const formatScript = (script: string) => {
     return script.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph}</p>);
   };
+
   const handleAudioEnded = () => {
     setIsPlaying(false);
   };
+
   const downloadPodcast = () => {
     if (podcast?.audio_url) {
       const link = document.createElement('a');
@@ -352,24 +367,29 @@ const Podcast = () => {
       document.body.removeChild(link);
     }
   };
+
   const calculateProgress = () => {
     if (!podcastAudio) return 0;
     return podcastAudio.progress || 0;
   };
+
   const hasPodcastAudio = () => {
     return podcast?.is_processed && podcast?.audio_url || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
   };
+
   useEffect(() => {
     const updateTime = () => {
       if (audioRef.current && !isDraggingTime) {
         setCurrentTime(audioRef.current.currentTime);
       }
     };
+
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
         setDuration(audioRef.current.duration);
       }
     };
+
     const audioElement = audioRef.current;
     if (audioElement) {
       audioElement.addEventListener('timeupdate', updateTime);
@@ -382,6 +402,7 @@ const Podcast = () => {
       }
     };
   }, [isDraggingTime]);
+
   const handleTimeChange = (value: number[]) => {
     const newTime = value[0];
     setCurrentTime(newTime);
@@ -389,11 +410,13 @@ const Podcast = () => {
       audioRef.current.currentTime = newTime;
     }
   };
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
+
   const handleSeekBackward = () => {
     if (audioRef.current) {
       const newTime = Math.max(0, audioRef.current.currentTime - 10);
@@ -401,6 +424,7 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
+
   const handleSeekForward = () => {
     if (audioRef.current) {
       const newTime = Math.min(duration, audioRef.current.currentTime + 10);
@@ -408,6 +432,7 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
+
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
@@ -415,6 +440,7 @@ const Podcast = () => {
       audioRef.current.volume = isMuted ? 0 : newVolume;
     }
   };
+
   return <PodcastBackground>
       <div className="container max-w-6xl py-8">
         <div className="flex items-center justify-between mb-6">
@@ -475,46 +501,122 @@ const Podcast = () => {
                 </div>
               </Card>}
 
-            {hasPodcastAudio() && <Card className="p-4 mb-4 bg-white/80 backdrop-blur-sm border border-white/50 shadow-md">
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Button variant="ghost" size="icon" onClick={togglePlayPause} className="mr-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50">
-                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            {hasPodcastAudio() && 
+              <Card className="p-6 mb-6 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-200/50 shadow-lg rounded-2xl overflow-hidden">
+                <div className="relative">
+                  <div className="absolute inset-0 opacity-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                      <path d="M0,0 Q150,28 300,18 T600,25 T900,18 T1200,30 V100 H0 V0 Z" className="animate-[blob_15s_ease-in-out_infinite]" fill="url(#audio-gradient)" />
+                      <defs>
+                        <linearGradient id="audio-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#4338ca" />
+                          <stop offset="100%" stopColor="#a855f7" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                
+                  <div className="relative z-10 flex flex-col space-y-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 flex-shrink-0 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                          <Headphones className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">Lecture Podcast</h3>
+                          <p className="text-sm text-gray-600">
+                            {formatTime(duration)} minute{duration > 60 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Button variant="outline" onClick={downloadPodcast} className="bg-white/70 hover:bg-white border-indigo-200 text-indigo-700 hover:text-indigo-800 flex items-center gap-2 transition-all hover:shadow-md">
+                        <Download className="w-4 h-4" />
+                        Download Podcast
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={toggleMute} className="mr-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50">
-                        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                      </Button>
-                      <span className="text-sm font-medium text-gray-700">
-                        {isPlaying ? "Playing full podcast" : "Podcast ready"}
-                      </span>
                     </div>
                     
-                    <Button variant="outline" size="sm" onClick={downloadPodcast} className="flex items-center bg-white/90 hover:bg-white border-blue-200 text-blue-700 hover:text-blue-800">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Podcast
-                    </Button>
-                  </div>
-                  
-                  {(isPlaying || currentTime > 0) && <div className="space-y-2 pt-1">
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="icon" onClick={handleSeekBackward} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50">
-                          <SkipBack className="h-4 w-4" />
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex items-center justify-center space-x-4">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleSeekBackward} 
+                          className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/50 transition-all"
+                        >
+                          <SkipBack className="h-6 w-6" />
                         </Button>
-                        <div className="flex-1 flex items-center space-x-2">
-                          <span className="text-xs text-gray-600 min-w-[40px]">{formatTime(currentTime)}</span>
-                          <Slider value={[currentTime]} min={0} max={duration || 100} step={0.1} onValueChange={handleTimeChange} onValueCommit={() => setIsDraggingTime(false)} className="flex-1" onMouseDown={() => setIsDraggingTime(true)} onMouseUp={() => setIsDraggingTime(false)} />
-                          <span className="text-xs text-gray-600 min-w-[40px]">{formatTime(duration)}</span>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={handleSeekForward} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50/50">
-                          <SkipForward className="h-4 w-4" />
+                        
+                        <Button 
+                          onClick={togglePlayPause} 
+                          className={`h-14 w-14 rounded-full flex items-center justify-center transition-all shadow-md ${isPlaying 
+                            ? 'bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700' 
+                            : 'bg-gradient-to-tr from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600'}`}
+                        >
+                          {isPlaying 
+                            ? <Pause className="h-6 w-6 text-white" /> 
+                            : <Play className="h-6 w-6 text-white translate-x-0.5" />}
+                        </Button>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleSeekForward} 
+                          className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/50 transition-all"
+                        >
+                          <SkipForward className="h-6 w-6" />
                         </Button>
                       </div>
                       
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+                          <span>{formatTime(currentTime)}</span>
+                          <span>{formatTime(duration)}</span>
+                        </div>
+                        <div className="relative h-2 group">
+                          <Slider 
+                            value={[currentTime]} 
+                            min={0} 
+                            max={duration || 100} 
+                            step={0.1} 
+                            onValueChange={handleTimeChange} 
+                            onValueCommit={() => setIsDraggingTime(false)} 
+                            onMouseDown={() => setIsDraggingTime(true)} 
+                            onMouseUp={() => setIsDraggingTime(false)}
+                            className="h-2"
+                          />
+                          <div 
+                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full pointer-events-none" 
+                            style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                          />
+                        </div>
+                      </div>
                       
-                    </div>}
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={toggleMute} 
+                          className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/50 transition-all"
+                        >
+                          {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </Button>
+                        <div className="w-24">
+                          <Slider
+                            value={[volume]}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            onValueChange={handleVolumeChange}
+                            className="h-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </Card>}
+              </Card>
+            }
 
             <Tabs defaultValue="full" className="w-full" onValueChange={handleTabChange}>
               <TabsList className="mb-4 bg-white/50 backdrop-blur-sm p-1 rounded-lg border border-white/50">
@@ -590,4 +692,5 @@ const Podcast = () => {
       </div>
     </PodcastBackground>;
 };
+
 export default Podcast;
