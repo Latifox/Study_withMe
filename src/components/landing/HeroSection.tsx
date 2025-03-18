@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -125,7 +124,6 @@ const HeroSection = () => {
         variants={catchphraseVariants}
         initial="hidden"
         animate={isLoaded ? "visible" : "hidden"}
-        // Removed the style={calculateParallaxTransform(0.5)} from here
       >
         <div className="relative z-10 flex justify-center">
           {catchphraseArray.map((char, index) => (
