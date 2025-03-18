@@ -1,4 +1,3 @@
-
 import { BookOpen, Star, Flame } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -92,7 +91,7 @@ const GamificationSection = () => {
         animate={isVisible ? "visible" : "hidden"}
         variants={itemVariants}
       >
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
           Learn with{" "}
           <span 
             className="text-transparent bg-clip-text" 
@@ -105,7 +104,7 @@ const GamificationSection = () => {
             Purpose
           </span>
         </h2>
-        <p className="text-lg text-gray-700 text-center">
+        <p className="text-lg text-white text-center">
           Our gamified learning approach keeps you motivated and tracks your progress through your
           educational journey
         </p>
