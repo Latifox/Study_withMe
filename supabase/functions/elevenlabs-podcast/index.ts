@@ -81,6 +81,56 @@ serve(async (req) => {
         if (lectureId && altStatusData.finished === true && (altStatusData.url || altStatusData.episode_url)) {
           const audioUrl = altStatusData.url || altStatusData.episode_url;
           
+          // NEW: Download and store the audio file if we have a URL
+          if (audioUrl) {
+            try {
+              console.log(`Downloading audio file from: ${audioUrl}`);
+              const audioResponse = await fetch(audioUrl);
+              if (!audioResponse.ok) {
+                throw new Error(`Failed to download audio: ${audioResponse.status}`);
+              }
+              
+              const audioArrayBuffer = await audioResponse.arrayBuffer();
+              const audioBuffer = new Uint8Array(audioArrayBuffer);
+              
+              const fileName = `podcast_${lectureId}_${Date.now()}.mp3`;
+              const filePath = `lecture_${lectureId}/${fileName}`;
+              
+              console.log(`Uploading audio file to storage: ${filePath}`);
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('podcast_audio')
+                .upload(filePath, audioBuffer, {
+                  contentType: 'audio/mpeg',
+                  cacheControl: '3600'
+                });
+              
+              if (uploadError) {
+                console.error('Error uploading audio to storage:', uploadError);
+                // Continue with the external URL if upload fails
+              } else {
+                console.log('Successfully uploaded audio to storage:', uploadData);
+                
+                // Update the podcast record with the stored file path
+                console.log(`Updating podcast with stored audio path: ${filePath}`);
+                const { error: updatePathError } = await supabase
+                  .from('lecture_podcast')
+                  .update({
+                    stored_audio_path: filePath
+                  })
+                  .eq('lecture_id', lectureId);
+                
+                if (updatePathError) {
+                  console.error('Error updating stored audio path:', updatePathError);
+                } else {
+                  console.log('Successfully updated stored audio path');
+                }
+              }
+            } catch (downloadError) {
+              console.error('Error processing audio download and storage:', downloadError);
+              // Continue with external URL if download/storage fails
+            }
+          }
+          
           console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
           const { error: updateError } = await supabase
             .from('lecture_podcast')
@@ -113,6 +163,56 @@ serve(async (req) => {
       // If podcast is finished and we have a URL and a lecture ID, update the database
       if (lectureId && statusData.finished === true && (statusData.url || statusData.episode_url)) {
         const audioUrl = statusData.url || statusData.episode_url;
+        
+        // NEW: Download and store the audio file if we have a URL
+        if (audioUrl) {
+          try {
+            console.log(`Downloading audio file from: ${audioUrl}`);
+            const audioResponse = await fetch(audioUrl);
+            if (!audioResponse.ok) {
+              throw new Error(`Failed to download audio: ${audioResponse.status}`);
+            }
+            
+            const audioArrayBuffer = await audioResponse.arrayBuffer();
+            const audioBuffer = new Uint8Array(audioArrayBuffer);
+            
+            const fileName = `podcast_${lectureId}_${Date.now()}.mp3`;
+            const filePath = `lecture_${lectureId}/${fileName}`;
+            
+            console.log(`Uploading audio file to storage: ${filePath}`);
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('podcast_audio')
+              .upload(filePath, audioBuffer, {
+                contentType: 'audio/mpeg',
+                cacheControl: '3600'
+              });
+            
+            if (uploadError) {
+              console.error('Error uploading audio to storage:', uploadError);
+              // Continue with the external URL if upload fails
+            } else {
+              console.log('Successfully uploaded audio to storage:', uploadData);
+              
+              // Update the podcast record with the stored file path
+              console.log(`Updating podcast with stored audio path: ${filePath}`);
+              const { error: updatePathError } = await supabase
+                .from('lecture_podcast')
+                .update({
+                  stored_audio_path: filePath
+                })
+                .eq('lecture_id', lectureId);
+              
+              if (updatePathError) {
+                console.error('Error updating stored audio path:', updatePathError);
+              } else {
+                console.log('Successfully updated stored audio path');
+              }
+            }
+          } catch (downloadError) {
+            console.error('Error processing audio download and storage:', downloadError);
+            // Continue with external URL if download/storage fails
+          }
+        }
         
         console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
         const { error: updateError } = await supabase

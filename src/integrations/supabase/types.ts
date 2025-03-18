@@ -244,6 +244,7 @@ export type Database = {
           is_processed: boolean | null
           job_id: string | null
           lecture_id: number | null
+          stored_audio_path: string | null
           student_script: string | null
           updated_at: string
         }
@@ -257,6 +258,7 @@ export type Database = {
           is_processed?: boolean | null
           job_id?: string | null
           lecture_id?: number | null
+          stored_audio_path?: string | null
           student_script?: string | null
           updated_at?: string
         }
@@ -270,6 +272,7 @@ export type Database = {
           is_processed?: boolean | null
           job_id?: string | null
           lecture_id?: number | null
+          stored_audio_path?: string | null
           student_script?: string | null
           updated_at?: string
         }

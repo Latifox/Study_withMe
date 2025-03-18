@@ -35,19 +35,48 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
-        // Step 1: First handle the foreign key constraint by explicitly deleting from lecture_podcast
-        console.log('Deleting lecture podcasts for lecture IDs:', lectureIds);
+        // Step 1: First check and delete any podcast connections and files
+        console.log('Checking for podcast connections for lecture IDs:', lectureIds);
+        
+        // Get podcast records to check for stored files
+        const { data: podcastRecords, error: podcastRecordsError } = await supabase
+          .from('lecture_podcast')
+          .select('id, stored_audio_path')
+          .in('lecture_id', lectureIds);
+          
+        if (podcastRecordsError && !podcastRecordsError.message.includes('no rows')) {
+          console.error('Error fetching podcast records:', podcastRecordsError);
+          // Continue with deletion anyway
+        } else if (podcastRecords && podcastRecords.length > 0) {
+          // Delete any stored audio files if they exist
+          for (const record of podcastRecords) {
+            if (record.stored_audio_path) {
+              console.log('Deleting stored podcast audio file:', record.stored_audio_path);
+              const { error: storageError } = await supabase
+                .storage
+                .from('podcast_audio')
+                .remove([record.stored_audio_path]);
+                
+              if (storageError) {
+                console.log('Error deleting podcast audio file (continuing):', storageError);
+                // Continue with deletion even if file removal fails
+              }
+            }
+          }
+        }
+        
+        // Delete podcast records
         const { error: podcastsError } = await supabase
           .from('lecture_podcast')
           .delete()
           .in('lecture_id', lectureIds);
-        
-        // If there's an error but it's not "no rows" error, throw it
+          
         if (podcastsError && !podcastsError.message.includes('no rows')) {
-          console.error('Error deleting podcasts:', podcastsError);
+          console.error('Error deleting podcast connections:', podcastsError);
           throw podcastsError;
         }
         
+        // Continue with the rest of the deletion process
         // Step 2: Now delete generated quizzes
         const { error: quizzesError } = await supabase
           .from('generated_quizzes')

@@ -39,13 +39,36 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         throw fetchError;
       }
       
-      // Delete lecture podcast records first (this fixes the foreign key constraint error)
+      // Step 1: Check for stored podcast audio files and delete them if they exist
+      const { data: podcastData, error: podcastFetchError } = await supabase
+        .from('lecture_podcast')
+        .select('stored_audio_path')
+        .eq('lecture_id', lectureId)
+        .single();
+        
+      if (podcastFetchError && podcastFetchError.code !== 'PGRST116') {
+        console.error('Error fetching podcast data:', podcastFetchError);
+        // Continue with deletion anyway
+      } else if (podcastData && podcastData.stored_audio_path) {
+        console.log('Deleting stored podcast audio file:', podcastData.stored_audio_path);
+        const { error: storageError } = await supabase
+          .storage
+          .from('podcast_audio')
+          .remove([podcastData.stored_audio_path]);
+          
+        if (storageError) {
+          console.log('Error deleting podcast audio file (continuing):', storageError);
+          // Continue with deletion even if file removal fails
+        }
+      }
+      
+      // Step 2: Delete lecture podcast records first (this fixes the foreign key constraint error)
       const { error: podcastError } = await supabase
         .from('lecture_podcast')
         .delete()
         .eq('lecture_id', lectureId);
         
-      if (podcastError) {
+      if (podcastError && !podcastError.message.includes('no rows')) {
         console.error('Error deleting lecture podcast:', podcastError);
         throw podcastError;
       }

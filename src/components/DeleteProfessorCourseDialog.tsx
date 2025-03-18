@@ -35,8 +35,37 @@ export function DeleteProfessorCourseDialog({ courseId, courseTitle }: DeletePro
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
-        // Step 1: First check and delete any podcast connections if they exist for professor lectures
+        // Step 1: First check and delete any podcast connections and files
         console.log('Checking for podcast connections for lecture IDs:', lectureIds);
+        
+        // Get podcast records to check for stored files
+        const { data: podcastRecords, error: podcastRecordsError } = await supabase
+          .from('lecture_podcast')
+          .select('id, stored_audio_path')
+          .in('lecture_id', lectureIds);
+          
+        if (podcastRecordsError && !podcastRecordsError.message.includes('no rows')) {
+          console.error('Error fetching podcast records:', podcastRecordsError);
+          // Continue with deletion anyway
+        } else if (podcastRecords && podcastRecords.length > 0) {
+          // Delete any stored audio files if they exist
+          for (const record of podcastRecords) {
+            if (record.stored_audio_path) {
+              console.log('Deleting stored podcast audio file:', record.stored_audio_path);
+              const { error: storageError } = await supabase
+                .storage
+                .from('podcast_audio')
+                .remove([record.stored_audio_path]);
+                
+              if (storageError) {
+                console.log('Error deleting podcast audio file (continuing):', storageError);
+                // Continue with deletion even if file removal fails
+              }
+            }
+          }
+        }
+        
+        // Delete podcast records
         const { error: podcastsError } = await supabase
           .from('lecture_podcast')
           .delete()

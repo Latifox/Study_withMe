@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +21,7 @@ interface PodcastData {
   is_processed: boolean;
   audio_url?: string;
   job_id?: string;
+  stored_audio_path?: string;
 }
 
 interface WondercraftPodcastResponse {
@@ -90,18 +90,73 @@ const Podcast = () => {
       }
       if (data) {
         setPodcast(data);
-        if (data.is_processed && data.audio_url) {
-          console.log('Podcast has an existing audio URL:', data.audio_url);
-          setPodcastAudio({
-            url: data.audio_url,
-            finished: true,
-            progress: 100
-          });
-          if (audioRef.current) {
-            audioRef.current.src = data.audio_url;
-            audioRef.current.volume = isMuted ? 0 : volume;
+        if (data.is_processed) {
+          console.log('Podcast is processed, checking for audio source');
+          
+          // First try the local stored audio if available
+          if (data.stored_audio_path) {
+            console.log('Using stored audio file path:', data.stored_audio_path);
+            try {
+              // Get a public URL for the stored audio file
+              const { data: publicUrlData, error: publicUrlError } = await supabase
+                .storage
+                .from('podcast_audio')
+                .getPublicUrl(data.stored_audio_path);
+              
+              if (publicUrlError) {
+                console.error('Error getting public URL for stored audio:', publicUrlError);
+                // Fall back to the external URL
+                if (data.audio_url) {
+                  setPodcastAudio({
+                    url: data.audio_url,
+                    finished: true,
+                    progress: 100
+                  });
+                }
+              } else if (publicUrlData && publicUrlData.publicUrl) {
+                console.log('Successfully retrieved public URL for stored audio:', publicUrlData.publicUrl);
+                setPodcastAudio({
+                  url: publicUrlData.publicUrl,
+                  finished: true,
+                  progress: 100
+                });
+              }
+              
+              if (audioRef.current) {
+                // Set the source to either the local stored file or the external URL
+                const audioSource = (publicUrlData && publicUrlData.publicUrl) ? publicUrlData.publicUrl : data.audio_url;
+                audioRef.current.src = audioSource;
+                audioRef.current.volume = isMuted ? 0 : volume;
+              }
+            } catch (storageError) {
+              console.error('Error accessing stored audio file:', storageError);
+              // Fall back to the external URL if available
+              if (data.audio_url) {
+                setPodcastAudio({
+                  url: data.audio_url,
+                  finished: true,
+                  progress: 100
+                });
+                if (audioRef.current) {
+                  audioRef.current.src = data.audio_url;
+                  audioRef.current.volume = isMuted ? 0 : volume;
+                }
+              }
+            }
+          } else if (data.audio_url) {
+            // Fall back to the external URL if no stored path is available
+            console.log('Using external audio URL:', data.audio_url);
+            setPodcastAudio({
+              url: data.audio_url,
+              finished: true,
+              progress: 100
+            });
+            if (audioRef.current) {
+              audioRef.current.src = data.audio_url;
+              audioRef.current.volume = isMuted ? 0 : volume;
+            }
           }
-        } else if (data.job_id && !data.is_processed) {
+        } else if (data.job_id) {
           console.log('Podcast has a job ID but is not processed yet. Starting polling:', data.job_id);
           startPollingJobStatus(data.job_id);
         }
@@ -349,6 +404,37 @@ const Podcast = () => {
   };
 
   const downloadPodcast = () => {
+    if (podcast?.stored_audio_path) {
+      supabase.storage
+        .from('podcast_audio')
+        .getPublicUrl(podcast.stored_audio_path)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error getting public URL for download:', error);
+            // Fall back to external URL
+            if (podcast?.audio_url) {
+              const link = document.createElement('a');
+              link.href = podcast.audio_url;
+              link.download = 'podcast.mp3';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+            return;
+          }
+          
+          if (data && data.publicUrl) {
+            const link = document.createElement('a');
+            link.href = data.publicUrl;
+            link.download = `lecture_${lectureId}_podcast.mp3`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        });
+      return;
+    }
+    
     if (podcast?.audio_url) {
       const link = document.createElement('a');
       link.href = podcast.audio_url;
@@ -358,6 +444,7 @@ const Podcast = () => {
       document.body.removeChild(link);
       return;
     }
+    
     const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
     if (downloadUrl) {
       const link = document.createElement('a');
@@ -375,7 +462,8 @@ const Podcast = () => {
   };
 
   const hasPodcastAudio = () => {
-    return podcast?.is_processed && podcast?.audio_url || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
+    return (podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path)) || 
+           (podcastAudio && (podcastAudio.url || podcastAudio.episode_url));
   };
 
   useEffect(() => {
