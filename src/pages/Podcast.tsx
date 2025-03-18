@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +73,10 @@ const Podcast = () => {
       if (pollIntervalRef.current) {
         window.clearInterval(pollIntervalRef.current);
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
     };
   }, [lectureId]);
 
@@ -100,6 +103,7 @@ const Podcast = () => {
           if (audioRef.current) {
             audioRef.current.src = data.audio_url;
             audioRef.current.volume = isMuted ? 0 : volume;
+            audioRef.current.load();
           }
         } else if (data.job_id && !data.is_processed) {
           console.log('Podcast has a job ID but is not processed yet. Starting polling:', data.job_id);
@@ -314,14 +318,37 @@ const Podcast = () => {
   };
 
   const togglePlayPause = () => {
+    console.log("Toggle play/pause called", { isPlaying, audioElement: audioRef.current });
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        audioRef.current.play();
-        setIsPlaying(true);
+        const audioUrl = podcast?.audio_url || podcastAudio?.url || podcastAudio?.episode_url;
+        if (audioUrl && (!audioRef.current.src || audioRef.current.src === "")) {
+          console.log("Setting audio source to:", audioUrl);
+          audioRef.current.src = audioUrl;
+          audioRef.current.load();
+        }
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log("Audio playback started successfully");
+              setIsPlaying(true);
+            })
+            .catch(error => {
+              console.error("Error playing audio:", error);
+              toast({
+                title: "Playback Error",
+                description: "There was an issue playing the audio. Please try again.",
+                variant: "destructive"
+              });
+            });
+        }
       }
+    } else {
+      console.error("Audio element reference is not available");
     }
   };
 
@@ -345,6 +372,7 @@ const Podcast = () => {
   };
 
   const handleAudioEnded = () => {
+    console.log("Audio playback ended");
     setIsPlaying(false);
   };
 
@@ -387,19 +415,31 @@ const Podcast = () => {
 
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
+        console.log("Audio metadata loaded, duration:", audioRef.current.duration);
         setDuration(audioRef.current.duration);
       }
+    };
+
+    const handleLoadError = (error) => {
+      console.error("Error loading audio:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load audio file",
+        variant: "destructive"
+      });
     };
 
     const audioElement = audioRef.current;
     if (audioElement) {
       audioElement.addEventListener('timeupdate', updateTime);
       audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audioElement.addEventListener('error', handleLoadError);
     }
     return () => {
       if (audioElement) {
         audioElement.removeEventListener('timeupdate', updateTime);
         audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audioElement.removeEventListener('error', handleLoadError);
       }
     };
   }, [isDraggingTime]);
@@ -466,8 +506,13 @@ const Podcast = () => {
             </div>}
         </div>
 
-        <div className="hidden">
-          <audio ref={audioRef} onEnded={handleAudioEnded} controls className="w-full mb-4" onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)} />
+        <div className="sr-only">
+          <audio 
+            ref={audioRef} 
+            onEnded={handleAudioEnded} 
+            preload="auto"
+            onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)} 
+          />
         </div>
 
         {isGenerating && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
