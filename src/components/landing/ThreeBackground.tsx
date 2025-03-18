@@ -15,12 +15,17 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: {
 }) {
   const { scene } = useGLTF('/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png', true);
   const meshRef = useRef<THREE.Group>(null);
+  const fallbackRef = useRef<THREE.Mesh>(null);
   
   // Gentle floating animation
   useFrame((state) => {
     if (meshRef.current) {
       meshRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
       meshRef.current.rotation.y += 0.001;
+    }
+    if (fallbackRef.current) {
+      fallbackRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
+      fallbackRef.current.rotation.y += 0.001;
     }
   });
   
@@ -38,7 +43,7 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: {
       {modelLoaded ? (
         <primitive ref={meshRef} object={scene} />
       ) : (
-        <mesh ref={meshRef}>
+        <mesh ref={fallbackRef}>
           <sphereGeometry args={[0.5, 32, 32]} />
           <meshStandardMaterial color="#8B5CF6" />
         </mesh>
