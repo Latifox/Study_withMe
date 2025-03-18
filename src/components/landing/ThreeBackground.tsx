@@ -1,10 +1,9 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Text3D, OrbitControls, Points, PointMaterial } from '@react-three/drei';
+import { OrbitControls, Points, PointMaterial } from '@react-three/drei';
 import * as random from 'maath/random';
 import * as THREE from 'three';
-import { useSpring, animated } from '@react-spring/three';
 import { Vector3, Euler } from 'three';
 
 // Brain model that represents AI/Education
@@ -39,63 +38,26 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: {
   );
 }
 
-// Interactive 3D Text
-function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }: {
-  text: string;
+// Simplified 3D Text
+function SimpleText({ position = [0, 0, 0], color = "#ffffff" }: {
   position: [number, number, number];
-  size?: number;
   color?: string;
 }) {
   const textRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
-  const { viewport } = useThree();
-  
-  // Make text responsive
-  const scaleFactor = Math.min(1, viewport.width / 10);
-  const adjustedSize = size * scaleFactor;
-  
-  // Animation for hover effect
-  const springs = useSpring({
-    color: hovered ? "#8B5CF6" : color,
-    scale: hovered ? [1.1, 1.1, 1.1] : [1, 1, 1],
-    config: { mass: 1, tension: 280, friction: 60 }
-  });
   
   useFrame((state) => {
     if (textRef.current) {
-      // Subtle wave animation
-      const letters = textRef.current.children;
-      for (let i = 0; i < letters.length; i++) {
-        const letter = letters[i];
-        letter.position.y = Math.sin(state.clock.getElapsedTime() * 2 + i * 0.1) * 0.05;
-      }
+      textRef.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.3) * 0.1;
+      textRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
     }
   });
   
   return (
     <group ref={textRef} position={new Vector3(...position)}>
-      {text.split('').map((char, i) => (
-        <animated.mesh
-          key={i}
-          position={[i * adjustedSize * 0.6 - (text.length * adjustedSize * 0.3), 0, 0]}
-          onPointerOver={() => setHovered(true)}
-          onPointerOut={() => setHovered(false)}
-          // @ts-ignore - this is valid for react-spring/three
-          scale={springs.scale}
-        >
-          <Text3D
-            font="/fonts/inter_bold.json"
-            size={adjustedSize}
-            height={0.05}
-          >
-            {char}
-            <animated.meshStandardMaterial 
-              // @ts-ignore - this is valid for react-spring/three
-              color={springs.color} 
-            />
-          </Text3D>
-        </animated.mesh>
-      ))}
+      <mesh>
+        <sphereGeometry args={[0.2, 16, 16]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
     </group>
   );
 }
@@ -108,7 +70,7 @@ function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
 }) {
   const points = useRef<THREE.Points>(null);
   
-  // Explicitly cast to Float32Array
+  // Create particles
   const [sphere] = useState(() => {
     const arr = random.inSphere(new Float32Array(count * 3), { radius: 1.5 });
     return arr as Float32Array;
@@ -155,11 +117,7 @@ function Scene({ mousePos }: { mousePos: React.RefObject<{x: number, y: number}>
       <pointLight position={[10, 10, 10]} intensity={0.5} />
       <ParticleField mousePos={mousePos} />
       <BrainModel position={[0, 0, -1]} scale={0.4} rotation={[0, Math.PI, 0]} />
-      <AnimatedText 
-        text="AI EDUCATION" 
-        position={[0, 0.5, 0]} 
-        size={0.15} 
-      />
+      <SimpleText position={[0, 0.5, 0]} color="#ffffff" />
       <OrbitControls 
         enableZoom={false} 
         enablePan={false} 
@@ -194,6 +152,9 @@ export default function ThreeBackground() {
         camera={{ position: [0, 0, 2], fov: 50 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
+        onCreated={({ gl }) => {
+          gl.setClearColor('#000000', 0);
+        }}
       >
         <Scene mousePos={mousePos} />
       </Canvas>

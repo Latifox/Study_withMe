@@ -1,5 +1,5 @@
 
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import NavigationBar from "@/components/landing/NavigationBar";
 import HeroSection from "@/components/landing/HeroSection";
 import GamificationSection from "@/components/landing/GamificationSection";
@@ -23,7 +23,7 @@ const LoadingFallback = () => (
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-gray-900 relative">
+    <div className="min-h-screen bg-gray-900 relative overflow-hidden">
       {/* Content */}
       <div className="relative z-10">
         <NavigationBar />
