@@ -35,56 +35,75 @@ export function DeleteProfessorCourseDialog({ courseId, courseTitle }: DeletePro
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
-        // Handle podcast connections if they exist for professor lectures
+        // Step 1: First check and delete any podcast connections if they exist for professor lectures
+        console.log('Checking for podcast connections for lecture IDs:', lectureIds);
         const { error: podcastsError } = await supabase
           .from('lecture_podcast')
           .delete()
           .in('lecture_id', lectureIds);
           
         if (podcastsError && !podcastsError.message.includes('no rows')) {
+          console.error('Error deleting podcast connections:', podcastsError);
           throw podcastsError;
         }
         
-        // Delete professor segments content
+        // Step 2: Delete professor segments content
         const { error: segmentsError } = await supabase
           .from('professor_segments_content')
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (segmentsError) throw segmentsError;
+        if (segmentsError && !segmentsError.message.includes('no rows')) {
+          console.error('Error deleting professor segments content:', segmentsError);
+          throw segmentsError;
+        }
 
-        // Delete professor segments info
+        // Step 3: Delete professor segments info
         const { error: segmentInfoError } = await supabase
           .from('professor_lecture_segments')
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (segmentInfoError) throw segmentInfoError;
+        if (segmentInfoError && !segmentInfoError.message.includes('no rows')) {
+          console.error('Error deleting professor segments info:', segmentInfoError);
+          throw segmentInfoError;
+        }
 
-        // Delete all lectures
+        // Step 4: Delete all lectures
+        console.log('Deleting professor lectures for course ID:', courseId);
         const { error: lecturesError } = await supabase
           .from('professor_lectures')
           .delete()
           .eq('professor_course_id', courseId);
 
-        if (lecturesError) throw lecturesError;
+        if (lecturesError) {
+          console.error('Error deleting professor lectures:', lecturesError);
+          throw lecturesError;
+        }
       }
 
-      // Delete student enrollment records
+      // Step 5: Delete student enrollment records
       const { error: enrollmentError } = await supabase
         .from('student_enrolled_courses')
         .delete()
         .eq('course_id', courseId);
 
-      if (enrollmentError) throw enrollmentError;
+      if (enrollmentError && !enrollmentError.message.includes('no rows')) {
+        console.error('Error deleting student enrollments:', enrollmentError);
+        throw enrollmentError;
+      }
 
-      // Finally delete the course
+      // Step 6: Finally delete the course
+      console.log('Deleting the professor course itself:', courseId);
       const { error: courseError } = await supabase
         .from('professor_courses')
         .delete()
         .eq('id', courseId);
 
-      if (courseError) throw courseError;
+      if (courseError) {
+        console.error('Error deleting professor course:', courseError);
+        throw courseError;
+      }
 
       toast({
         title: "Success",

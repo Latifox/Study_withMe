@@ -35,21 +35,29 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
-        // Delete lecture podcasts first (this fixes the foreign key constraint error)
+        // Step 1: First handle the foreign key constraint by explicitly deleting from lecture_podcast
+        console.log('Deleting lecture podcasts for lecture IDs:', lectureIds);
         const { error: podcastsError } = await supabase
           .from('lecture_podcast')
           .delete()
           .in('lecture_id', lectureIds);
-          
-        if (podcastsError) throw podcastsError;
         
-        // Delete generated quizzes first (this is the constraint causing the error)
+        // If there's an error but it's not "no rows" error, throw it
+        if (podcastsError && !podcastsError.message.includes('no rows')) {
+          console.error('Error deleting podcasts:', podcastsError);
+          throw podcastsError;
+        }
+        
+        // Step 2: Now delete generated quizzes
         const { error: quizzesError } = await supabase
           .from('generated_quizzes')
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (quizzesError) throw quizzesError;
+        if (quizzesError && !quizzesError.message.includes('no rows')) {
+          console.error('Error deleting quizzes:', quizzesError);
+          throw quizzesError;
+        }
         
         // Delete quiz progress
         const { error: quizProgressError } = await supabase
@@ -57,7 +65,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (quizProgressError) throw quizProgressError;
+        if (quizProgressError && !quizProgressError.message.includes('no rows')) {
+          console.error('Error deleting quiz progress:', quizProgressError);
+          throw quizProgressError;
+        }
 
         // Delete user progress
         const { error: userProgressError } = await supabase
@@ -65,7 +76,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (userProgressError) throw userProgressError;
+        if (userProgressError && !userProgressError.message.includes('no rows')) {
+          console.error('Error deleting user progress:', userProgressError);
+          throw userProgressError;
+        }
 
         // Delete flashcards
         const { error: flashcardsError } = await supabase
@@ -73,7 +87,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (flashcardsError) throw flashcardsError;
+        if (flashcardsError && !flashcardsError.message.includes('no rows')) {
+          console.error('Error deleting flashcards:', flashcardsError);
+          throw flashcardsError;
+        }
 
         // Delete lecture highlights
         const { error: highlightsError } = await supabase
@@ -81,7 +98,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (highlightsError) throw highlightsError;
+        if (highlightsError && !highlightsError.message.includes('no rows')) {
+          console.error('Error deleting highlights:', highlightsError);
+          throw highlightsError;
+        }
 
         // Delete segments content
         const { error: segmentsError } = await supabase
@@ -89,7 +109,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (segmentsError) throw segmentsError;
+        if (segmentsError && !segmentsError.message.includes('no rows')) {
+          console.error('Error deleting segments:', segmentsError);
+          throw segmentsError;
+        }
 
         // Delete AI configs
         const { error: configError } = await supabase
@@ -97,7 +120,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (configError) throw configError;
+        if (configError && !configError.message.includes('no rows')) {
+          console.error('Error deleting AI configs:', configError);
+          throw configError;
+        }
 
         // Delete segments info
         const { error: segmentInfoError } = await supabase
@@ -105,7 +131,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (segmentInfoError) throw segmentInfoError;
+        if (segmentInfoError && !segmentInfoError.message.includes('no rows')) {
+          console.error('Error deleting segment info:', segmentInfoError);
+          throw segmentInfoError;
+        }
 
         // Delete study plans
         const { error: studyPlansError } = await supabase
@@ -113,24 +142,35 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           .delete()
           .in('lecture_id', lectureIds);
 
-        if (studyPlansError) throw studyPlansError;
+        if (studyPlansError && !studyPlansError.message.includes('no rows')) {
+          console.error('Error deleting study plans:', studyPlansError);
+          throw studyPlansError;
+        }
 
-        // Delete all lectures
+        // Step 3: Finally delete the lectures
+        console.log('Deleting lectures for course ID:', courseId);
         const { error: lecturesError } = await supabase
           .from('lectures')
           .delete()
           .eq('course_id', courseId);
 
-        if (lecturesError) throw lecturesError;
+        if (lecturesError) {
+          console.error('Error deleting lectures:', lecturesError);
+          throw lecturesError;
+        }
       }
 
-      // Finally delete the course
+      // Step 4: Finally delete the course itself
+      console.log('Deleting the course itself:', courseId);
       const { error: courseError } = await supabase
         .from('courses')
         .delete()
         .eq('id', courseId);
 
-      if (courseError) throw courseError;
+      if (courseError) {
+        console.error('Error deleting course:', courseError);
+        throw courseError;
+      }
 
       toast({
         title: "Success",
