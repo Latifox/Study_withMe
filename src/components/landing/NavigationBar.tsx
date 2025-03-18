@@ -8,7 +8,7 @@ const NavigationBar = () => {
 
   return (
     <nav className="px-8 py-4 flex justify-between items-center backdrop-blur-sm bg-white/30">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         <BookOpen className="h-6 w-6 text-purple-600" />
         <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
           EduSync AI
