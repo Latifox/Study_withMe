@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,6 +17,10 @@ export default {
     'to-amber-600',
     'from-purple-400',
     'to-indigo-500',
+    'blur-xl',
+    'blur-2xl',
+    'animate-pulse-beam',
+    'animate-glow-beam',
   ],
   prefix: "",
   theme: {
@@ -127,6 +130,34 @@ export default {
           '100%': {
             transform: 'translate(0px, 0px) scale(1)'
           }
+        },
+        'pulse-beam': {
+          '0%': {
+            opacity: '0.6',
+            transform: 'scaleX(0.9) scaleY(0.95)'
+          },
+          '50%': {
+            opacity: '0.8', 
+            transform: 'scaleX(1.1) scaleY(1.05)'
+          },
+          '100%': {
+            opacity: '0.6',
+            transform: 'scaleX(0.9) scaleY(0.95)'
+          }
+        },
+        'glow-beam': {
+          '0%': {
+            opacity: '0.4',
+            transform: 'scaleX(0.85) scaleY(0.9)'
+          },
+          '50%': {
+            opacity: '0.7',
+            transform: 'scaleX(1.15) scaleY(1.1)'
+          },
+          '100%': {
+            opacity: '0.4',
+            transform: 'scaleX(0.85) scaleY(0.9)'
+          }
         }
       },
       animation: {
@@ -137,7 +168,9 @@ export default {
         'energy-glow': 'energy-glow 3s ease-in-out infinite',
         'flip': 'flip 0.6s ease-out forwards',
         'flip-back': 'flip-back 0.6s ease-out forwards',
-        'blob': 'blob 7s infinite'
+        'blob': 'blob 7s infinite',
+        'pulse-beam': 'pulse-beam 4s ease-in-out infinite',
+        'glow-beam': 'glow-beam 6s ease-in-out infinite'
       },
       typography: {
         DEFAULT: {

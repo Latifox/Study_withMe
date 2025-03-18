@@ -81,6 +81,12 @@ export default function ThreeBackground() {
   
   return (
     <div className="absolute inset-0 -z-10">
+      {/* Purple Light Beam */}
+      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[20vw] h-[70vh] pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/60 via-purple-500/20 to-transparent animate-pulse-beam rounded-full blur-2xl"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-400/50 via-violet-500/30 to-transparent animate-glow-beam rounded-full blur-xl"></div>
+      </div>
+      
       <Canvas 
         camera={{ position: [0, 0, 2], fov: 50 }}
         dpr={[1, 2]}
