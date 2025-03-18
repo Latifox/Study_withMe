@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import ThreeBackground from "./ThreeBackground";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -11,7 +11,6 @@ const HeroSection = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   
   useEffect(() => {
-    // Set isLoaded to true after a short delay to trigger animations
     const timer = setTimeout(() => {
       setIsLoaded(true);
     }, 300);
@@ -21,7 +20,6 @@ const HeroSection = () => {
   
   const handleGetStarted = () => navigate("/auth");
   
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -43,7 +41,6 @@ const HeroSection = () => {
     }
   };
   
-  // Catchphrase animation variants - character by character reveal
   const catchphraseVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -72,31 +69,24 @@ const HeroSection = () => {
     }
   };
   
-  // Catchphrase text - split into array for character animation
   const catchphrase = "Your Professor. Your Platform. Your Pace.";
   const catchphraseArray = catchphrase.split("");
   
   return (
     <motion.div 
-      className="container mx-auto px-4 py-16 md:py-32 flex flex-col items-center relative"
+      className="container mx-auto px-4 py-16 md:py-32 flex flex-col items-center relative overflow-hidden min-h-screen"
       initial="hidden"
       animate={isLoaded ? "visible" : "hidden"}
       variants={containerVariants}
     >
-      {/* Enhanced catchphrase styling with background */}
+      <ThreeBackground />
+      
       <motion.div
-        className="relative z-10 px-4 py-2 mb-6 rounded-lg"
+        className="relative z-10 px-6 py-3 mb-8 rounded-xl backdrop-blur-lg bg-white/10 border border-purple-500/20"
         variants={catchphraseVariants}
         initial="hidden"
         animate={isLoaded ? "visible" : "hidden"}
       >
-        {/* Subtle background for the catchphrase */}
-        <div className="absolute inset-0 bg-white/20 rounded-lg backdrop-blur-sm z-0"></div>
-        
-        {/* Border effect */}
-        <div className="absolute inset-0 rounded-lg border border-gray-300/40 z-0"></div>
-        
-        {/* Catchphrase text with enhanced styling */}
         <div className="relative z-10 flex justify-center">
           {catchphraseArray.map((char, index) => (
             <motion.span
@@ -104,57 +94,47 @@ const HeroSection = () => {
               variants={characterVariants}
               className={
                 char === "." 
-                  ? "text-purple-600 font-bold text-2xl md:text-3xl" 
+                  ? "text-purple-400 font-bold text-2xl md:text-3xl" 
                   : char === " " 
                     ? "text-transparent w-2 md:w-3"
-                    : "text-gray-800 font-medium text-2xl md:text-3xl"
+                    : "text-white font-medium text-2xl md:text-3xl"
               }
             >
               {char}
             </motion.span>
           ))}
         </div>
-        
-        {/* Subtle pulsing underline */}
-        <motion.div 
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-1 bg-gray-400 rounded-full z-0"
-          animate={{
-            opacity: [0.3, 0.5, 0.3],
-            width: ["70%", "75%", "70%"]
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
       </motion.div>
       
       <motion.h1 
-        className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-6 relative z-10"
+        className="text-4xl md:text-6xl font-bold text-center max-w-4xl mb-8 relative z-10 text-white"
         variants={itemVariants}
       >
         Transform Your Learning Experience with{" "}
-        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
           AI-Powered Education
         </span>
       </motion.h1>
       
       <motion.p 
-        className="text-lg md:text-xl text-gray-700 text-center max-w-2xl mb-12 relative z-10"
+        className="text-lg md:text-xl text-purple-100 text-center max-w-2xl mb-12 relative z-10"
         variants={itemVariants}
       >
         Upload your course materials and let our AI guide you on a journey of discovery, transforming
         learning into a meaningful exploration of growth and understanding!
       </motion.p>
       
-      <motion.div variants={itemVariants}>
+      <motion.div 
+        variants={itemVariants}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
         <Button
           size="lg"
           onClick={handleGetStarted}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
-          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-lg px-8 py-6 h-auto transition-all duration-300 shadow-lg hover:shadow-purple-500/25 text-white"
         >
           Get Started{" "}
           {isHovering ? (
