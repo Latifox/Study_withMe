@@ -24,6 +24,16 @@ const LoadingFallback = () => (
 const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+      {/* Sun-like Rays */}
+      <div className="sunray-container">
+        <div className="sunray-beam"></div>
+        <div className="ray-rotate">
+          {[...Array(18)].map((_, i) => (
+            <div key={i} className={`sunray ray-${i + 1}`}></div>
+          ))}
+        </div>
+      </div>
+
       {/* Content */}
       <div className="relative z-10">
         <NavigationBar />
