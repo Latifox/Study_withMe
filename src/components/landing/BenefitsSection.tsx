@@ -142,13 +142,13 @@ const BenefitsSection = () => {
         animate={isVisible ? "visible" : "hidden"}
         variants={titleVariants}
       >
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
           Who Benefits from{" "}
           <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
             EduSync AI
           </span>
         </h2>
-        <p className="text-lg text-gray-700 text-center">
+        <p className="text-lg text-white text-center">
           Our platform serves both students and educators with specialized tools and features
         </p>
       </motion.div>
