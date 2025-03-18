@@ -87,6 +87,30 @@ export default function ThreeBackground() {
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-400/50 via-violet-500/30 to-transparent animate-glow-beam rounded-full blur-xl"></div>
       </div>
       
+      {/* Sun-like Light Arrays */}
+      <div className="absolute top-[10vh] left-1/2 transform -translate-x-1/2 pointer-events-none">
+        {/* Light Ray 1 */}
+        <div className="absolute h-[60vh] w-[2px] bg-gradient-to-b from-purple-300/70 to-transparent rotate-[-30deg] origin-top animate-ray-1 blur-sm"></div>
+        
+        {/* Light Ray 2 */}
+        <div className="absolute h-[50vh] w-[2px] bg-gradient-to-b from-purple-400/70 to-transparent rotate-[-15deg] origin-top animate-ray-2 blur-sm"></div>
+        
+        {/* Light Ray 3 */}
+        <div className="absolute h-[70vh] w-[3px] bg-gradient-to-b from-indigo-300/70 to-transparent rotate-[0deg] origin-top animate-ray-3 blur-sm"></div>
+        
+        {/* Light Ray 4 */}
+        <div className="absolute h-[50vh] w-[2px] bg-gradient-to-b from-purple-400/70 to-transparent rotate-[15deg] origin-top animate-ray-4 blur-sm"></div>
+        
+        {/* Light Ray 5 */}
+        <div className="absolute h-[60vh] w-[2px] bg-gradient-to-b from-purple-300/70 to-transparent rotate-[30deg] origin-top animate-ray-5 blur-sm"></div>
+        
+        {/* Wide Light Ray 1 */}
+        <div className="absolute h-[40vh] w-[25vw] bg-gradient-to-b from-purple-500/20 to-transparent rotate-[-20deg] origin-top animate-wide-ray-1 blur-lg"></div>
+        
+        {/* Wide Light Ray 2 */}
+        <div className="absolute h-[40vh] w-[25vw] bg-gradient-to-b from-purple-500/20 to-transparent rotate-[20deg] origin-top animate-wide-ray-2 blur-lg"></div>
+      </div>
+      
       <Canvas 
         camera={{ position: [0, 0, 2], fov: 50 }}
         dpr={[1, 2]}

@@ -10,6 +10,7 @@ import SubscriptionPlansSection from "@/components/landing/SubscriptionPlansSect
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import Footer from "@/components/landing/Footer";
 import { Loader } from "lucide-react";
+import ThreeBackground from "@/components/landing/ThreeBackground";
 
 // Loading component for suspense fallback
 const LoadingFallback = () => (
@@ -24,6 +25,9 @@ const LoadingFallback = () => (
 const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+      {/* Background with light effects */}
+      <ThreeBackground />
+      
       {/* Content */}
       <div className="relative z-10">
         <NavigationBar />

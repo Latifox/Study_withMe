@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { motion, useAnimation } from "framer-motion";
-import ThreeBackground from "./ThreeBackground";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -121,8 +120,6 @@ const HeroSection = () => {
       animate={isLoaded ? "visible" : "hidden"}
       variants={containerVariants}
     >
-      <ThreeBackground />
-      
       <motion.div
         className="relative z-10 px-6 py-3 mb-8 rounded-xl backdrop-blur-lg bg-white/10 border border-purple-500/20"
         variants={catchphraseVariants}
