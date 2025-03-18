@@ -3,10 +3,10 @@ import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Points, PointMaterial } from '@react-three/drei';
 import * as random from 'maath/random';
-import { Mesh, Vector3 } from 'three';
+import { Points as ThreePoints } from 'three';
 
 function StarField() {
-  const ref = useRef<Mesh>(null);
+  const ref = useRef<ThreePoints>(null);
   
   useFrame((state) => {
     if (ref.current) {
@@ -15,7 +15,8 @@ function StarField() {
     }
   });
 
-  const sphere = random.inSphere(new Float32Array(5000), { radius: 1.5 });
+  // Explicitly create a Float32Array for the sphere positions
+  const sphere = random.inSphere(new Float32Array(5000), { radius: 1.5 }) as Float32Array;
 
   return (
     <group rotation={[0, 0, Math.PI / 4]}>
@@ -46,3 +47,4 @@ export default function ThreeBackground() {
     </div>
   );
 }
+
