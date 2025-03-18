@@ -345,6 +345,16 @@
   }
 }
 
+.ray-rotate {
+  animation: ray-rotate 120s linear infinite;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform-origin: center;
+  width: 100%;
+  height: 100%;
+}
+
 .sunray-container {
   position: absolute;
   top: 0;
@@ -489,8 +499,4 @@
   transform: translateX(-50%) rotate(340deg);
   animation: ray-pulse 5.2s infinite ease-in-out, ray-grow 7.2s infinite ease-in-out;
   animation-delay: 3.4s;
-}
-
-.ray-rotate {
-  animation: ray-rotate 120s linear infinite;
 }

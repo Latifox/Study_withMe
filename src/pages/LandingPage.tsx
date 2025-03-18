@@ -25,11 +25,22 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gray-900 relative overflow-hidden">
       {/* Sun-like Rays */}
-      <div className="sunray-container">
-        <div className="sunray-beam"></div>
-        <div className="ray-rotate">
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-[5]">
+        {/* Main light beam */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[20vw] h-[70vh] bg-gradient-to-b from-purple-500/50 to-transparent rounded-b-full filter blur-[20px] opacity-70"></div>
+        
+        {/* Rotating rays container */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 ray-rotate">
           {[...Array(18)].map((_, i) => (
-            <div key={i} className={`sunray ray-${i + 1}`}></div>
+            <div 
+              key={i} 
+              className={`absolute top-0 left-1/2 -translate-x-1/2 h-[15vh] w-[2px] bg-gradient-to-b from-purple-400 to-transparent rounded-b-full opacity-50 filter blur-[3px]`}
+              style={{ 
+                transform: `translateX(-50%) rotate(${i * 20}deg)`, 
+                animationDelay: `${i * 0.2}s`,
+                animation: `ray-pulse ${4 + (i % 5) * 0.2}s infinite ease-in-out, ray-grow ${6 + (i % 5) * 0.4}s infinite ease-in-out` 
+              }}
+            ></div>
           ))}
         </div>
       </div>
