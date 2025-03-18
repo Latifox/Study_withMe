@@ -5,12 +5,16 @@ import { Text3D, OrbitControls, useGLTF, Points, PointMaterial } from '@react-th
 import * as random from 'maath/random';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
-import { Vector3 } from 'three';
+import { Vector3, Euler } from 'three';
 
 // Brain model that represents AI/Education
-function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }) {
+function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: { 
+  position?: [number, number, number]; 
+  scale?: number; 
+  rotation?: [number, number, number]; 
+}) {
   const { scene } = useGLTF('/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png', true);
-  const meshRef = useRef();
+  const meshRef = useRef<THREE.Group>(null);
   
   // Gentle floating animation
   useFrame((state) => {
@@ -30,7 +34,7 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }) {
   }, [scene]);
   
   return (
-    <group position={position} scale={scale} rotation={rotation}>
+    <group position={new Vector3(...position)} scale={scale} rotation={new Euler(...rotation)}>
       {modelLoaded ? (
         <primitive ref={meshRef} object={scene} />
       ) : (
@@ -44,8 +48,13 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }) {
 }
 
 // Interactive 3D Text
-function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }) {
-  const textRef = useRef();
+function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }: {
+  text: string;
+  position: [number, number, number];
+  size?: number;
+  color?: string;
+}) {
+  const textRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   const { viewport } = useThree();
   
@@ -72,13 +81,14 @@ function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }) {
   });
   
   return (
-    <group ref={textRef} position={position}>
+    <group ref={textRef} position={new Vector3(...position)}>
       {text.split('').map((char, i) => (
         <animated.mesh
           key={i}
           position={[i * adjustedSize * 0.6 - (text.length * adjustedSize * 0.3), 0, 0]}
           onPointerOver={() => setHovered(true)}
           onPointerOut={() => setHovered(false)}
+          // @ts-ignore - this is valid for react-spring/three
           scale={springs.scale}
         >
           <Text3D
@@ -87,7 +97,10 @@ function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }) {
             height={0.05}
           >
             {char}
-            <animated.meshStandardMaterial color={springs.color} />
+            <animated.meshStandardMaterial 
+              // @ts-ignore - this is valid for react-spring/three
+              color={springs.color} 
+            />
           </Text3D>
         </animated.mesh>
       ))}
@@ -96,9 +109,16 @@ function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }) {
 }
 
 // Interactive particle system
-function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }) {
-  const points = useRef();
-  const [sphere] = useState(() => random.inSphere(new Float32Array(count * 3), { radius: 1.5 }));
+function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
+  count?: number;
+  mousePos: React.RefObject<{x: number, y: number}>;
+  color?: string;
+}) {
+  const points = useRef<THREE.Points>(null);
+  // Explicitly cast to Float32Array
+  const [sphere] = useState(() => 
+    random.inSphere(new Float32Array(count * 3), { radius: 1.5 }) as Float32Array
+  );
   
   useFrame((state) => {
     if (points.current) {
@@ -134,7 +154,7 @@ function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }) {
 }
 
 // Main scene setup
-function Scene({ mousePos }) {
+function Scene({ mousePos }: { mousePos: React.RefObject<{x: number, y: number}> }) {
   return (
     <>
       <ambientLight intensity={0.5} />
@@ -156,10 +176,10 @@ function Scene({ mousePos }) {
 }
 
 export default function ThreeBackground() {
-  const mousePos = useRef({ x: 0, y: 0 });
+  const mousePos = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
   
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent) => {
       // Normalize mouse position
       mousePos.current = {
         x: (e.clientX / window.innerWidth) * 2 - 1,
