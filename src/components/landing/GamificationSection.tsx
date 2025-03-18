@@ -1,6 +1,27 @@
+
 import { BookOpen, Star, Flame } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+
+const GradientMeshBackground = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden z-0 opacity-60">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-indigo-800/20 to-blue-900/30 animate-gradient-slow"></div>
+      <div 
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 20% 30%, rgba(147, 51, 234, 0.2) 0%, transparent 30%),
+            radial-gradient(circle at 80% 70%, rgba(79, 70, 229, 0.3) 0%, transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(124, 58, 237, 0.2) 0%, transparent 60%)
+          `,
+          animation: 'gradientMove 15s ease infinite alternate'
+        }}
+      ></div>
+      <div className="mesh-grid"></div>
+    </div>
+  );
+};
 
 const GamificationSection = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -81,6 +102,9 @@ const GamificationSection = () => {
   
   return (
     <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative z-10">
+      {/* Gradient Mesh Background */}
+      <GradientMeshBackground />
+      
       <motion.div 
         className="bg-white/10 backdrop-blur-sm p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-12 relative z-10 border-2 rounded-xl"
         style={{ 
