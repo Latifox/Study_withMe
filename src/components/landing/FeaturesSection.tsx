@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
@@ -123,12 +122,12 @@ const FeaturesSection = () => {
     <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 overflow-hidden relative">
       <div className="bg-white/10 backdrop-blur-sm p-6 shadow-xl hover:shadow-2xl transition-shadow mx-auto max-w-3xl mb-16 border-2 border-purple-500 relative z-10">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-          <span className="text-black">Feature Rich</span>{" "}
+          <span className="text-white">Feature Rich</span>{" "}
           <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
             Learning Platform
           </span>
         </h2>
-        <p className="text-lg text-gray-700 text-center">
+        <p className="text-lg text-white text-center">
           Discover all the tools designed to enhance your educational experience
         </p>
       </div>
@@ -183,4 +182,3 @@ const FeaturesSection = () => {
 };
 
 export default FeaturesSection;
-
