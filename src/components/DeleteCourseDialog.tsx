@@ -35,6 +35,14 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
+        // Delete lecture podcasts first (this fixes the foreign key constraint error)
+        const { error: podcastsError } = await supabase
+          .from('lecture_podcast')
+          .delete()
+          .in('lecture_id', lectureIds);
+          
+        if (podcastsError) throw podcastsError;
+        
         // Delete generated quizzes first (this is the constraint causing the error)
         const { error: quizzesError } = await supabase
           .from('generated_quizzes')

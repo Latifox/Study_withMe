@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -33,6 +34,16 @@ export function DeleteProfessorCourseDialog({ courseId, courseTitle }: DeletePro
       // Delete related content for each lecture
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
+        
+        // Handle podcast connections if they exist for professor lectures
+        const { error: podcastsError } = await supabase
+          .from('lecture_podcast')
+          .delete()
+          .in('lecture_id', lectureIds);
+          
+        if (podcastsError && !podcastsError.message.includes('no rows')) {
+          throw podcastsError;
+        }
         
         // Delete professor segments content
         const { error: segmentsError } = await supabase

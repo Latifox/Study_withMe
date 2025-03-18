@@ -39,6 +39,17 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         throw fetchError;
       }
       
+      // Delete lecture podcast records first (this fixes the foreign key constraint error)
+      const { error: podcastError } = await supabase
+        .from('lecture_podcast')
+        .delete()
+        .eq('lecture_id', lectureId);
+        
+      if (podcastError) {
+        console.error('Error deleting lecture podcast:', podcastError);
+        throw podcastError;
+      }
+      
       // Delete quiz progress
       const { error: quizError } = await supabase
         .from('quiz_progress')
