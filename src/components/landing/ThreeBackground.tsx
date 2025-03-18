@@ -1,7 +1,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Text3D, OrbitControls, useGLTF, Points, PointMaterial } from '@react-three/drei';
+import { Text3D, OrbitControls, Points, PointMaterial } from '@react-three/drei';
 import * as random from 'maath/random';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
@@ -13,9 +13,7 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: {
   scale?: number; 
   rotation?: [number, number, number]; 
 }) {
-  const { scene } = useGLTF('/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png', true);
-  const meshRef = useRef<THREE.Group>(null);
-  const fallbackRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   
   // Gentle floating animation
   useFrame((state) => {
@@ -23,31 +21,20 @@ function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: {
       meshRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
       meshRef.current.rotation.y += 0.001;
     }
-    if (fallbackRef.current) {
-      fallbackRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
-      fallbackRef.current.rotation.y += 0.001;
-    }
   });
-  
-  // Fallback to a 3D sphere if the model fails to load
-  const [modelLoaded, setModelLoaded] = useState(false);
-  
-  useEffect(() => {
-    if (scene) {
-      setModelLoaded(true);
-    }
-  }, [scene]);
   
   return (
     <group position={new Vector3(...position)} scale={scale} rotation={new Euler(...rotation)}>
-      {modelLoaded ? (
-        <primitive ref={meshRef} object={scene} />
-      ) : (
-        <mesh ref={fallbackRef}>
-          <sphereGeometry args={[0.5, 32, 32]} />
-          <meshStandardMaterial color="#8B5CF6" />
-        </mesh>
-      )}
+      <mesh ref={meshRef}>
+        <icosahedronGeometry args={[0.5, 2]} />
+        <meshStandardMaterial 
+          color="#8B5CF6" 
+          emissive="#4C1D95"
+          emissiveIntensity={0.2}
+          roughness={0.3}
+          metalness={0.8}
+        />
+      </mesh>
     </group>
   );
 }
@@ -120,10 +107,12 @@ function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
   color?: string;
 }) {
   const points = useRef<THREE.Points>(null);
+  
   // Explicitly cast to Float32Array
-  const [sphere] = useState(() => 
-    random.inSphere(new Float32Array(count * 3), { radius: 1.5 }) as Float32Array
-  );
+  const [sphere] = useState(() => {
+    const arr = random.inSphere(new Float32Array(count * 3), { radius: 1.5 });
+    return arr as Float32Array;
+  });
   
   useFrame((state) => {
     if (points.current) {
