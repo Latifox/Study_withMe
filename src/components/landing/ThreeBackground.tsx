@@ -1,50 +1,188 @@
 
-import { useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Points, PointMaterial } from '@react-three/drei';
+import { useRef, useEffect, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Text3D, OrbitControls, useGLTF, Points, PointMaterial } from '@react-three/drei';
 import * as random from 'maath/random';
-import { Points as ThreePoints } from 'three';
+import * as THREE from 'three';
+import { useSpring, animated } from '@react-spring/three';
+import { Vector3 } from 'three';
 
-function StarField() {
-  const ref = useRef<ThreePoints>(null);
+// Brain model that represents AI/Education
+function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }) {
+  const { scene } = useGLTF('/lovable-uploads/cb7788ae-2e82-482c-95a3-c4a34287fa9a.png', true);
+  const meshRef = useRef();
   
+  // Gentle floating animation
   useFrame((state) => {
-    if (ref.current) {
-      ref.current.rotation.x = Math.sin(state.clock.getElapsedTime() * 0.3) * 0.2;
-      ref.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.2) * 0.2;
+    if (meshRef.current) {
+      meshRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
+      meshRef.current.rotation.y += 0.001;
     }
   });
-
-  // Explicitly create a Float32Array for the sphere positions
-  const sphere = random.inSphere(new Float32Array(5000), { radius: 1.5 }) as Float32Array;
-
+  
+  // Fallback to a 3D sphere if the model fails to load
+  const [modelLoaded, setModelLoaded] = useState(false);
+  
+  useEffect(() => {
+    if (scene) {
+      setModelLoaded(true);
+    }
+  }, [scene]);
+  
   return (
-    <group rotation={[0, 0, Math.PI / 4]}>
-      <Points
-        ref={ref}
-        positions={sphere}
-        stride={3}
-        frustumCulled={false}
-      >
-        <PointMaterial
-          transparent
-          color="#8B5CF6"
-          size={0.002}
-          sizeAttenuation={true}
-          depthWrite={false}
-        />
-      </Points>
+    <group position={position} scale={scale} rotation={rotation}>
+      {modelLoaded ? (
+        <primitive ref={meshRef} object={scene} />
+      ) : (
+        <mesh ref={meshRef}>
+          <sphereGeometry args={[0.5, 32, 32]} />
+          <meshStandardMaterial color="#8B5CF6" />
+        </mesh>
+      )}
     </group>
   );
 }
 
+// Interactive 3D Text
+function AnimatedText({ text, position, size = 0.2, color = "#ffffff" }) {
+  const textRef = useRef();
+  const [hovered, setHovered] = useState(false);
+  const { viewport } = useThree();
+  
+  // Make text responsive
+  const scaleFactor = Math.min(1, viewport.width / 10);
+  const adjustedSize = size * scaleFactor;
+  
+  // Animation for hover effect
+  const springs = useSpring({
+    color: hovered ? "#8B5CF6" : color,
+    scale: hovered ? [1.1, 1.1, 1.1] : [1, 1, 1],
+    config: { mass: 1, tension: 280, friction: 60 }
+  });
+  
+  useFrame((state) => {
+    if (textRef.current) {
+      // Subtle wave animation
+      const letters = textRef.current.children;
+      for (let i = 0; i < letters.length; i++) {
+        const letter = letters[i];
+        letter.position.y = Math.sin(state.clock.getElapsedTime() * 2 + i * 0.1) * 0.05;
+      }
+    }
+  });
+  
+  return (
+    <group ref={textRef} position={position}>
+      {text.split('').map((char, i) => (
+        <animated.mesh
+          key={i}
+          position={[i * adjustedSize * 0.6 - (text.length * adjustedSize * 0.3), 0, 0]}
+          onPointerOver={() => setHovered(true)}
+          onPointerOut={() => setHovered(false)}
+          scale={springs.scale}
+        >
+          <Text3D
+            font="/fonts/inter_bold.json"
+            size={adjustedSize}
+            height={0.05}
+          >
+            {char}
+            <animated.meshStandardMaterial color={springs.color} />
+          </Text3D>
+        </animated.mesh>
+      ))}
+    </group>
+  );
+}
+
+// Interactive particle system
+function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }) {
+  const points = useRef();
+  const [sphere] = useState(() => random.inSphere(new Float32Array(count * 3), { radius: 1.5 }));
+  
+  useFrame((state) => {
+    if (points.current) {
+      points.current.rotation.x = Math.sin(state.clock.getElapsedTime() * 0.3) * 0.2;
+      points.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.2) * 0.2;
+      
+      // Interact with mouse position if available
+      if (mousePos.current) {
+        const { x, y } = mousePos.current;
+        points.current.rotation.x += (y * 0.01 - points.current.rotation.x) * 0.1;
+        points.current.rotation.y += (x * 0.01 - points.current.rotation.y) * 0.1;
+      }
+    }
+  });
+  
+  return (
+    <Points
+      ref={points}
+      positions={sphere}
+      stride={3}
+      frustumCulled={false}
+    >
+      <PointMaterial
+        transparent
+        color={color}
+        size={0.005}
+        sizeAttenuation={true}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </Points>
+  );
+}
+
+// Main scene setup
+function Scene({ mousePos }) {
+  return (
+    <>
+      <ambientLight intensity={0.5} />
+      <pointLight position={[10, 10, 10]} intensity={0.5} />
+      <ParticleField mousePos={mousePos} />
+      <BrainModel position={[0, 0, -1]} scale={0.4} rotation={[0, Math.PI, 0]} />
+      <AnimatedText 
+        text="AI EDUCATION" 
+        position={[0, 0.5, 0]} 
+        size={0.15} 
+      />
+      <OrbitControls 
+        enableZoom={false} 
+        enablePan={false} 
+        enableRotate={false} 
+      />
+    </>
+  );
+}
+
 export default function ThreeBackground() {
+  const mousePos = useRef({ x: 0, y: 0 });
+  
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      // Normalize mouse position
+      mousePos.current = {
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: -(e.clientY / window.innerHeight) * 2 + 1
+      };
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+  
   return (
     <div className="absolute inset-0 -z-10">
-      <Canvas camera={{ position: [0, 0, 1] }}>
-        <StarField />
+      <Canvas 
+        camera={{ position: [0, 0, 2], fov: 50 }}
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true }}
+      >
+        <Scene mousePos={mousePos} />
       </Canvas>
     </div>
   );
 }
-

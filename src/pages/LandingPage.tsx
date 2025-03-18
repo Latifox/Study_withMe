@@ -1,3 +1,5 @@
+
+import { lazy, Suspense } from "react";
 import NavigationBar from "@/components/landing/NavigationBar";
 import HeroSection from "@/components/landing/HeroSection";
 import GamificationSection from "@/components/landing/GamificationSection";
@@ -7,6 +9,17 @@ import TechPartnersSection from "@/components/landing/TechPartnersSection";
 import SubscriptionPlansSection from "@/components/landing/SubscriptionPlansSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import Footer from "@/components/landing/Footer";
+import { Loader } from "lucide-react";
+
+// Loading component for suspense fallback
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gray-900">
+    <div className="flex flex-col items-center">
+      <Loader className="h-12 w-12 text-purple-500 animate-spin" />
+      <p className="mt-4 text-white font-medium">Loading amazing experience...</p>
+    </div>
+  </div>
+);
 
 const LandingPage = () => {
   return (
@@ -14,14 +27,16 @@ const LandingPage = () => {
       {/* Content */}
       <div className="relative z-10">
         <NavigationBar />
-        <HeroSection />
-        <GamificationSection />
-        <BenefitsSection />
-        <FeaturesSection />
-        <TechPartnersSection />
-        <SubscriptionPlansSection />
-        <TestimonialsSection />
-        <Footer />
+        <Suspense fallback={<LoadingFallback />}>
+          <HeroSection />
+          <GamificationSection />
+          <BenefitsSection />
+          <FeaturesSection />
+          <TechPartnersSection />
+          <SubscriptionPlansSection />
+          <TestimonialsSection />
+          <Footer />
+        </Suspense>
       </div>
     </div>
   );
