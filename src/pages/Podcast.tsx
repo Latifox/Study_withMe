@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -7,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, RefreshCw, Headphones, Mic, User, Download } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
-import { AudioPlayer } from "@/components/ui/AudioPlayer";
 
 interface PodcastData {
   id: number;
@@ -50,9 +51,15 @@ const Podcast = () => {
   const [podcast, setPodcast] = useState<PodcastData | null>(null);
   const [podcastAudio, setPodcastAudio] = useState<WondercraftPodcastResponse | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [activeTab, setActiveTab] = useState("full");
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isPollingSatus, setIsPollingSatus] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isDraggingTime, setIsDraggingTime] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
   const {
@@ -93,7 +100,6 @@ const Podcast = () => {
           if (audioRef.current) {
             audioRef.current.src = data.audio_url;
             audioRef.current.volume = isMuted ? 0 : volume;
-            audioRef.current.load();
           }
         } else if (data.job_id && !data.is_processed) {
           console.log('Podcast has a job ID but is not processed yet. Starting polling:', data.job_id);
@@ -263,6 +269,7 @@ const Podcast = () => {
   const playTextToSpeech = async (text: string) => {
     if (!text) return;
     setIsAudioLoading(true);
+    setIsPlaying(false);
     if (audioRef.current) {
       audioRef.current.pause();
     }
@@ -290,6 +297,8 @@ const Podcast = () => {
         if (audioRef.current) {
           audioRef.current.src = url;
           audioRef.current.volume = isMuted ? 0 : volume;
+          audioRef.current.play();
+          setIsPlaying(true);
         }
       }
     } catch (error) {
@@ -304,16 +313,52 @@ const Podcast = () => {
     }
   };
 
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    if (audioRef.current && isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
   };
 
   const formatScript = (script: string) => {
     return script.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph}</p>);
   };
 
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+
   const downloadPodcast = () => {
-    const downloadUrl = podcast?.audio_url || podcastAudio?.url || podcastAudio?.episode_url;
+    if (podcast?.audio_url) {
+      const link = document.createElement('a');
+      link.href = podcast.audio_url;
+      link.download = 'podcast.mp3';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+    const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
     if (downloadUrl) {
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -330,29 +375,70 @@ const Podcast = () => {
   };
 
   const hasPodcastAudio = () => {
-    return (podcast?.is_processed && podcast?.audio_url) || 
-           (podcastAudio && (podcastAudio.url || podcastAudio.episode_url));
+    return podcast?.is_processed && podcast?.audio_url || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
   };
 
-  const getAudioUrl = () => {
-    return podcast?.audio_url || podcastAudio?.url || podcastAudio?.episode_url;
+  useEffect(() => {
+    const updateTime = () => {
+      if (audioRef.current && !isDraggingTime) {
+        setCurrentTime(audioRef.current.currentTime);
+      }
+    };
+
+    const handleLoadedMetadata = () => {
+      if (audioRef.current) {
+        setDuration(audioRef.current.duration);
+      }
+    };
+
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      audioElement.addEventListener('timeupdate', updateTime);
+      audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+    }
+    return () => {
+      if (audioElement) {
+        audioElement.removeEventListener('timeupdate', updateTime);
+        audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      }
+    };
+  }, [isDraggingTime]);
+
+  const handleTimeChange = (value: number[]) => {
+    const newTime = value[0];
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
   };
 
-  const handleAudioError = (error: Error) => {
-    console.error("Audio player error:", error);
-    
-    // If we're still polling for a job, don't show error - it might not be ready yet
-    if (isPollingSatus) return;
-    
-    // If the audio URL is from a pre-signed URL that's expired, try to fetch a fresh URL
-    if (podcast?.job_id && podcast?.is_processed) {
-      toast({
-        title: "Refreshing Audio",
-        description: "The audio link may have expired. Trying to refresh...",
-      });
-      
-      // Attempt to get a fresh status which could contain a new URL
-      startPollingJobStatus(podcast.job_id);
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const handleSeekBackward = () => {
+    if (audioRef.current) {
+      const newTime = Math.max(0, audioRef.current.currentTime - 10);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleSeekForward = () => {
+    if (audioRef.current) {
+      const newTime = Math.min(duration, audioRef.current.currentTime + 10);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : newVolume;
     }
   };
 
@@ -378,6 +464,10 @@ const Podcast = () => {
                   Generate Audio
                 </Button>}
             </div>}
+        </div>
+
+        <div className="hidden">
+          <audio ref={audioRef} onEnded={handleAudioEnded} controls className="w-full mb-4" onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)} />
         </div>
 
         {isGenerating && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
@@ -423,7 +513,9 @@ const Podcast = () => {
                         </div>
                         <div>
                           <h3 className="text-lg font-semibold text-gray-800">Lecture Podcast</h3>
-                          <p className="text-sm text-gray-600">Listen to this lecture as a podcast</p>
+                          <p className="text-sm text-gray-600">
+                            {formatTime(duration)} minute{duration > 60 ? 's' : ''}
+                          </p>
                         </div>
                       </div>
                       
@@ -433,10 +525,83 @@ const Podcast = () => {
                       </Button>
                     </div>
                     
-                    <AudioPlayer 
-                      audioUrl={getAudioUrl()} 
-                      onError={handleAudioError}
-                    />
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex items-center justify-center space-x-4">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleSeekBackward} 
+                          className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/50 transition-all"
+                        >
+                          <SkipBack className="h-6 w-6" />
+                        </Button>
+                        
+                        <Button 
+                          onClick={togglePlayPause} 
+                          className={`h-14 w-14 rounded-full flex items-center justify-center transition-all shadow-md ${isPlaying 
+                            ? 'bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700' 
+                            : 'bg-gradient-to-tr from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600'}`}
+                        >
+                          {isPlaying 
+                            ? <Pause className="h-6 w-6 text-white" /> 
+                            : <Play className="h-6 w-6 text-white translate-x-0.5" />}
+                        </Button>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleSeekForward} 
+                          className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/50 transition-all"
+                        >
+                          <SkipForward className="h-6 w-6" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+                          <span>{formatTime(currentTime)}</span>
+                          <span>{formatTime(duration)}</span>
+                        </div>
+                        <div className="relative h-2 group">
+                          <Slider 
+                            value={[currentTime]} 
+                            min={0} 
+                            max={duration || 100} 
+                            step={0.1} 
+                            onValueChange={handleTimeChange} 
+                            onValueCommit={() => setIsDraggingTime(false)} 
+                            onMouseDown={() => setIsDraggingTime(true)} 
+                            onMouseUp={() => setIsDraggingTime(false)}
+                            className="h-2"
+                          />
+                          <div 
+                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full pointer-events-none" 
+                            style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={toggleMute} 
+                          className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/50 transition-all"
+                        >
+                          {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </Button>
+                        <div className="w-24">
+                          <Slider
+                            value={[volume]}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            onValueChange={handleVolumeChange}
+                            className="h-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -455,13 +620,45 @@ const Podcast = () => {
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold text-gray-800">Complete Podcast Script</h2>
                     {!podcastAudio && <Button size="sm" onClick={() => playTextToSpeech(podcast.host_script)} disabled={isAudioLoading} className="bg-blue-500 hover:bg-blue-600 text-white">
-                        {isAudioLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Headphones className="w-4 h-4 mr-2" />}
+                        {isAudioLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
                         Listen to Host
                       </Button>}
                   </div>
                   <Separator className="mb-4" />
                   <div className="whitespace-pre-line text-gray-700 leading-relaxed">
                     {podcast.full_script}
+                  </div>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="host">
+                <Card className="p-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-md">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-800">Host Script</h2>
+                    {!podcastAudio && <Button size="sm" onClick={() => playTextToSpeech(podcast.host_script)} disabled={isAudioLoading} className="bg-blue-500 hover:bg-blue-600 text-white">
+                        {isAudioLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                        Listen
+                      </Button>}
+                  </div>
+                  <Separator className="mb-4" />
+                  <div className="prose max-w-none text-gray-700">
+                    {formatScript(podcast.host_script)}
+                  </div>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="guest">
+                <Card className="p-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-md">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-800">Guest Script</h2>
+                    {!podcastAudio && <Button size="sm" onClick={() => playTextToSpeech(podcast.expert_script)} disabled={isAudioLoading} className="bg-blue-500 hover:bg-blue-600 text-white">
+                        {isAudioLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                        Listen
+                      </Button>}
+                  </div>
+                  <Separator className="mb-4" />
+                  <div className="prose max-w-none text-gray-700">
+                    {formatScript(podcast.expert_script)}
                   </div>
                 </Card>
               </TabsContent>

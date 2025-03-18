@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -20,17 +19,8 @@ export default {
     'to-indigo-500',
     'blur-xl',
     'blur-2xl',
-    'blur-sm',
-    'blur-lg',
     'animate-pulse-beam',
     'animate-glow-beam',
-    'animate-ray-1',
-    'animate-ray-2',
-    'animate-ray-3',
-    'animate-ray-4',
-    'animate-ray-5',
-    'animate-wide-ray-1',
-    'animate-wide-ray-2',
   ],
   prefix: "",
   theme: {
@@ -168,104 +158,6 @@ export default {
             opacity: '0.4',
             transform: 'scaleX(0.85) scaleY(0.9)'
           }
-        },
-        'ray-pulse-1': {
-          '0%': {
-            opacity: '0.5',
-            transform: 'rotate(-30deg) scaleY(0.9)'
-          },
-          '50%': {
-            opacity: '0.7',
-            transform: 'rotate(-32deg) scaleY(1.05)'
-          },
-          '100%': {
-            opacity: '0.5',
-            transform: 'rotate(-30deg) scaleY(0.9)'
-          }
-        },
-        'ray-pulse-2': {
-          '0%': {
-            opacity: '0.6',
-            transform: 'rotate(-15deg) scaleY(0.95)'
-          },
-          '50%': {
-            opacity: '0.8',
-            transform: 'rotate(-16deg) scaleY(1.02)'
-          },
-          '100%': {
-            opacity: '0.6',
-            transform: 'rotate(-15deg) scaleY(0.95)'
-          }
-        },
-        'ray-pulse-3': {
-          '0%': {
-            opacity: '0.7',
-            transform: 'rotate(0deg) scaleY(0.92)'
-          },
-          '50%': {
-            opacity: '0.9',
-            transform: 'rotate(0deg) scaleY(1.08)'
-          },
-          '100%': {
-            opacity: '0.7',
-            transform: 'rotate(0deg) scaleY(0.92)'
-          }
-        },
-        'ray-pulse-4': {
-          '0%': {
-            opacity: '0.6',
-            transform: 'rotate(15deg) scaleY(0.95)'
-          },
-          '50%': {
-            opacity: '0.8',
-            transform: 'rotate(16deg) scaleY(1.02)'
-          },
-          '100%': {
-            opacity: '0.6',
-            transform: 'rotate(15deg) scaleY(0.95)'
-          }
-        },
-        'ray-pulse-5': {
-          '0%': {
-            opacity: '0.5',
-            transform: 'rotate(30deg) scaleY(0.9)'
-          },
-          '50%': {
-            opacity: '0.7',
-            transform: 'rotate(32deg) scaleY(1.05)'
-          },
-          '100%': {
-            opacity: '0.5',
-            transform: 'rotate(30deg) scaleY(0.9)'
-          }
-        },
-        'wide-ray-pulse-1': {
-          '0%': {
-            opacity: '0.2',
-            transform: 'rotate(-20deg) scaleX(0.9)'
-          },
-          '50%': {
-            opacity: '0.3',
-            transform: 'rotate(-20deg) scaleX(1.1)'
-          },
-          '100%': {
-            opacity: '0.2',
-            transform: 'rotate(-20deg) scaleX(0.9)'
-          }
-        },
-        'wide-ray-pulse-2': {
-          '0%': {
-            opacity: '0.2',
-            transform: 'rotate(20deg) scaleX(0.9)'
-          },
-          '50%': {
-            opacity: '0.3',
-            transform: 'rotate(20deg) scaleX(1.1)'
-          },
-          '100%': {
-            opacity: '0.2',
-            transform: 'rotate(20deg) scaleX(0.9)'
-          }
         }
       },
       animation: {
@@ -278,14 +170,7 @@ export default {
         'flip-back': 'flip-back 0.6s ease-out forwards',
         'blob': 'blob 7s infinite',
         'pulse-beam': 'pulse-beam 4s ease-in-out infinite',
-        'glow-beam': 'glow-beam 6s ease-in-out infinite',
-        'ray-1': 'ray-pulse-1 7s ease-in-out infinite',
-        'ray-2': 'ray-pulse-2 8s ease-in-out infinite',
-        'ray-3': 'ray-pulse-3 6s ease-in-out infinite',
-        'ray-4': 'ray-pulse-4 8s ease-in-out infinite',
-        'ray-5': 'ray-pulse-5 7s ease-in-out infinite',
-        'wide-ray-1': 'wide-ray-pulse-1 10s ease-in-out infinite',
-        'wide-ray-2': 'wide-ray-pulse-2 10s ease-in-out infinite'
+        'glow-beam': 'glow-beam 6s ease-in-out infinite'
       },
       typography: {
         DEFAULT: {
