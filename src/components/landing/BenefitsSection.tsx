@@ -1,21 +1,7 @@
-
 import { useEffect, useRef, useState } from "react";
 import { GraduationCap, School } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import EducationalFlowTimeline from "./EducationalFlowTimeline";
-
-const WavesBackground = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden opacity-70 z-0">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-blue-800/20 to-indigo-900/30"></div>
-      <div className="wave-container">
-        <div className="wave wave-1"></div>
-        <div className="wave wave-2"></div>
-        <div className="wave wave-3"></div>
-      </div>
-    </div>
-  );
-};
 
 const BenefitsSection = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -136,9 +122,6 @@ const BenefitsSection = () => {
 
   return (
     <div ref={sectionRef} className="container mx-auto px-4 py-16 md:py-24 relative overflow-hidden">
-      {/* Wave Background */}
-      <WavesBackground />
-      
       <motion.div 
         className="absolute inset-0 pointer-events-none"
         initial={{ opacity: 0 }}
@@ -159,13 +142,13 @@ const BenefitsSection = () => {
         animate={isVisible ? "visible" : "hidden"}
         variants={titleVariants}
       >
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-white">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
           Who Benefits from{" "}
           <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
             EduSync AI
           </span>
         </h2>
-        <p className="text-lg text-white text-center">
+        <p className="text-lg text-gray-700 text-center">
           Our platform serves both students and educators with specialized tools and features
         </p>
       </motion.div>
