@@ -1,66 +1,9 @@
 
-import { useRef, useEffect, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Points, PointMaterial } from '@react-three/drei';
+import { useRef, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Points, PointMaterial } from '@react-three/drei';
 import * as random from 'maath/random';
 import * as THREE from 'three';
-import { Vector3, Euler } from 'three';
-
-// Brain model that represents AI/Education
-function BrainModel({ position = [0, 0, 0], scale = 1, rotation = [0, 0, 0] }: { 
-  position?: [number, number, number]; 
-  scale?: number; 
-  rotation?: [number, number, number]; 
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  
-  // Gentle floating animation
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
-      meshRef.current.rotation.y += 0.001;
-    }
-  });
-  
-  return (
-    <group position={new Vector3(...position)} scale={scale} rotation={new Euler(...rotation)}>
-      <mesh ref={meshRef}>
-        <icosahedronGeometry args={[0.5, 2]} />
-        <meshStandardMaterial 
-          color="#8B5CF6" 
-          emissive="#4C1D95"
-          emissiveIntensity={0.2}
-          roughness={0.3}
-          metalness={0.8}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-// Simplified 3D Text
-function SimpleText({ position = [0, 0, 0], color = "#ffffff" }: {
-  position: [number, number, number];
-  color?: string;
-}) {
-  const textRef = useRef<THREE.Group>(null);
-  
-  useFrame((state) => {
-    if (textRef.current) {
-      textRef.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.3) * 0.1;
-      textRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
-    }
-  });
-  
-  return (
-    <group ref={textRef} position={new Vector3(...position)}>
-      <mesh>
-        <sphereGeometry args={[0.2, 16, 16]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-    </group>
-  );
-}
 
 // Interactive particle system
 function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
@@ -71,10 +14,7 @@ function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
   const points = useRef<THREE.Points>(null);
   
   // Create particles
-  const [sphere] = useState(() => {
-    const arr = random.inSphere(new Float32Array(count * 3), { radius: 1.5 });
-    return arr as Float32Array;
-  });
+  const sphere = useRef(random.inSphere(new Float32Array(count * 3), { radius: 1.5 }));
   
   useFrame((state) => {
     if (points.current) {
@@ -93,7 +33,7 @@ function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
   return (
     <Points
       ref={points}
-      positions={sphere}
+      positions={sphere.current}
       stride={3}
       frustumCulled={false}
     >
@@ -116,13 +56,6 @@ function Scene({ mousePos }: { mousePos: React.RefObject<{x: number, y: number}>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={0.5} />
       <ParticleField mousePos={mousePos} />
-      <BrainModel position={[0, 0, -1]} scale={0.4} rotation={[0, Math.PI, 0]} />
-      <SimpleText position={[0, 0.5, 0]} color="#ffffff" />
-      <OrbitControls 
-        enableZoom={false} 
-        enablePan={false} 
-        enableRotate={false} 
-      />
     </>
   );
 }
