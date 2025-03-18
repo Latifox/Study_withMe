@@ -13,8 +13,8 @@ function ParticleField({ count = 2000, mousePos, color = "#8B5CF6" }: {
 }) {
   const points = useRef<THREE.Points>(null);
   
-  // Create particles
-  const sphere = useRef(random.inSphere(new Float32Array(count * 3), { radius: 1.5 }));
+  // Create particles with explicit Float32Array typing
+  const sphere = useRef<Float32Array>(random.inSphere(new Float32Array(count * 3), { radius: 1.5 }) as Float32Array);
   
   useFrame((state) => {
     if (points.current) {

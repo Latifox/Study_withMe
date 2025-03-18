@@ -128,7 +128,7 @@ const HeroSection = () => {
         variants={catchphraseVariants}
         initial="hidden"
         animate={isLoaded ? "visible" : "hidden"}
-        style={calculateParallaxTransform(0.5)}
+        // Removed the style={calculateParallaxTransform(0.5)} from here
       >
         <div className="relative z-10 flex justify-center">
           {catchphraseArray.map((char, index) => (
