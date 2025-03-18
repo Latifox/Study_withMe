@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { BookOpenText, Brain, ChartBar, ArrowRight, UserX, Lightbulb, GraduationCap, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+
 const EducationalFlowTimeline = () => {
   const [isVisible, setIsVisible] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
@@ -15,15 +17,18 @@ const EducationalFlowTimeline = () => {
     }, {
       threshold: 0.3
     });
+
     if (timelineRef.current) {
       observer.observe(timelineRef.current);
     }
+
     return () => {
       if (timelineRef.current) {
         observer.unobserve(timelineRef.current);
       }
     };
   }, []);
+
   const timelineSteps = [{
     id: 1,
     title: "Student Activities",
@@ -61,6 +66,7 @@ const EducationalFlowTimeline = () => {
         </div>,
     delay: 0.25
   }];
+
   const containerVariants = {
     hidden: {
       opacity: 0,
@@ -72,14 +78,13 @@ const EducationalFlowTimeline = () => {
       transition: {
         type: "spring",
         stiffness: 70,
-        // Increased from 50 for faster animation
         damping: 15,
-        // Reduced from 20 for faster animation
         when: "beforeChildren",
-        staggerChildren: 0.1 // Reduced from 0.2 for faster staggering
+        staggerChildren: 0.1
       }
     }
   };
+
   const itemVariants = {
     hidden: {
       opacity: 0,
@@ -91,13 +96,12 @@ const EducationalFlowTimeline = () => {
       transition: {
         type: "spring",
         stiffness: 70,
-        // Increased from 40 for faster animation
         damping: 12,
-        // Reduced from 15 for faster animation
         delay
       }
     })
   };
+
   const arrowVariants = {
     hidden: {
       opacity: 0,
@@ -109,32 +113,31 @@ const EducationalFlowTimeline = () => {
       transition: {
         type: "spring",
         stiffness: 60,
-        // Increased from 30 for faster animation
         damping: 8,
-        // Reduced from 10 for faster animation
-        delay: 0.2 // Reduced from 0.5 for faster appearance
+        delay: 0.2
       }
     }
   };
+
   const pulseAnimation = {
     scale: [1, 1.1, 1],
     opacity: [0.8, 1, 0.8],
     transition: {
       duration: 2,
-      // Reduced from 3 for faster animation
       repeat: Infinity,
       repeatType: "reverse" as const
     }
   };
+
   const dataFlowAnimation = {
     x: [0, 10, 0],
     transition: {
       duration: 1.5,
-      // Reduced from 2 for faster animation
       repeat: Infinity,
       ease: "linear"
     }
   };
+
   return <div ref={timelineRef} className="mt-16 max-w-6xl mx-auto px-4">
       <motion.div className="text-center mb-12" initial={{
       opacity: 0,
@@ -146,29 +149,24 @@ const EducationalFlowTimeline = () => {
       opacity: 0,
       y: 20
     }} transition={{
-      duration: 0.4 // Reduced from 0.6 for faster animation
+      duration: 0.4
     }}>
         
         
       </motion.div>
 
       <motion.div className="relative" variants={containerVariants} initial="hidden" animate={isVisible ? "visible" : "hidden"}>
-        {/* Timeline Track */}
         <div className="absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full mx-10 md:mx-20" />
-
-        {/* Timeline Steps */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 relative z-10">
           {timelineSteps.map((step, index) => <motion.div key={step.id} className="flex flex-col items-center" custom={step.delay} variants={itemVariants}>
               <motion.div className="w-16 h-16 rounded-full bg-gradient-to-b from-blue-400 to-blue-600 flex items-center justify-center mb-3" animate={pulseAnimation}>
                 {step.icon}
               </motion.div>
-              <div className="h-8" /> {/* Spacer for timeline alignment */}
-              <h4 className="font-semibold text-center mb-1">{step.title}</h4>
-              <p className="text-sm text-gray-500 text-center max-w-[200px]">
+              <div className="h-8" />
+              <h4 className="font-semibold text-center mb-1 text-white">{step.title}</h4>
+              <p className="text-sm text-white text-center max-w-[200px]">
                 {step.description}
               </p>
-
-              {/* Flow arrows between steps (except last) */}
               {index < timelineSteps.length - 1 && <motion.div className="absolute top-24 transform -translate-y-1/2 hidden md:block" style={{
             left: `${index * 20 + 16}%`,
             width: '8%'
@@ -180,4 +178,5 @@ const EducationalFlowTimeline = () => {
       </motion.div>
     </div>;
 };
+
 export default EducationalFlowTimeline;
