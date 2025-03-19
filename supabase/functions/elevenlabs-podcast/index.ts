@@ -107,11 +107,31 @@ serve(async (req) => {
               console.log(`[PODCAST STORAGE] Storage bucket: podcast_audio`);
               console.log(`[PODCAST STORAGE] File name: ${fileName}`);
               
+              // First, check if the folder exists, if not create it
+              try {
+                const { data: folderExists } = await supabase.storage
+                  .from('podcast_audio')
+                  .list(`lecture_${lectureId}`);
+                  
+                if (!folderExists || folderExists.length === 0) {
+                  console.log(`[PODCAST STORAGE] Folder doesn't exist, creating empty placeholder file`);
+                  // Create an empty file to ensure the folder exists
+                  await supabase.storage
+                    .from('podcast_audio')
+                    .upload(`lecture_${lectureId}/.placeholder`, new Uint8Array(0), {
+                      contentType: 'text/plain',
+                    });
+                }
+              } catch (folderError) {
+                console.log(`[PODCAST STORAGE] Error checking folder, will attempt to create it anyway:`, folderError);
+              }
+              
               const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('podcast_audio')
                 .upload(filePath, audioBuffer, {
                   contentType: 'audio/mpeg',
-                  cacheControl: '3600'
+                  cacheControl: '3600',
+                  upsert: true
                 });
               
               if (uploadError) {
@@ -207,11 +227,31 @@ serve(async (req) => {
             console.log(`[PODCAST STORAGE] Storage bucket: podcast_audio`);
             console.log(`[PODCAST STORAGE] File name: ${fileName}`);
             
+            // First, check if the folder exists, if not create it
+            try {
+              const { data: folderExists } = await supabase.storage
+                .from('podcast_audio')
+                .list(`lecture_${lectureId}`);
+                
+              if (!folderExists || folderExists.length === 0) {
+                console.log(`[PODCAST STORAGE] Folder doesn't exist, creating empty placeholder file`);
+                // Create an empty file to ensure the folder exists
+                await supabase.storage
+                  .from('podcast_audio')
+                  .upload(`lecture_${lectureId}/.placeholder`, new Uint8Array(0), {
+                    contentType: 'text/plain',
+                  });
+              }
+            } catch (folderError) {
+              console.log(`[PODCAST STORAGE] Error checking folder, will attempt to create it anyway:`, folderError);
+            }
+            
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('podcast_audio')
               .upload(filePath, audioBuffer, {
                 contentType: 'audio/mpeg',
-                cacheControl: '3600'
+                cacheControl: '3600',
+                upsert: true
               });
             
             if (uploadError) {

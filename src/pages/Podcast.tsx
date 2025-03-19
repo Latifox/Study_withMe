@@ -81,86 +81,30 @@ const Podcast = () => {
     if (!lectureId) return;
     setIsLoading(true);
     try {
+      console.log(`Fetching podcast for lecture ID: ${lectureId}`);
       const {
         data,
         error
       } = await supabase.from('lecture_podcast').select('*').eq('lecture_id', parseInt(lectureId)).single();
+      
       if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching podcast from database:', error);
         throw error;
       }
+      
       if (data) {
+        console.log('Podcast data retrieved from database:', data);
         setPodcast(data);
+        
         if (data.is_processed) {
           console.log('Podcast is processed, checking for audio source');
-
-          // First try the local stored audio if available
-          if (data.stored_audio_path) {
-            console.log('Using stored audio file path:', data.stored_audio_path);
-            try {
-              // Get a public URL for the stored audio file
-              const { data: publicUrlData } = await supabase.storage
-                .from('podcast_audio')
-                .getPublicUrl(data.stored_audio_path);
-              
-              if (publicUrlData && publicUrlData.publicUrl) {
-                console.log('Successfully retrieved public URL for stored audio:', publicUrlData.publicUrl);
-                setPodcastAudio({
-                  url: publicUrlData.publicUrl,
-                  finished: true,
-                  progress: 100
-                });
-                
-                if (audioRef.current) {
-                  audioRef.current.src = publicUrlData.publicUrl;
-                  audioRef.current.volume = isMuted ? 0 : volume;
-                }
-              } else {
-                // Fall back to the external URL if available
-                if (data.audio_url) {
-                  console.log('Falling back to external audio URL:', data.audio_url);
-                  setPodcastAudio({
-                    url: data.audio_url,
-                    finished: true,
-                    progress: 100
-                  });
-                  if (audioRef.current) {
-                    audioRef.current.src = data.audio_url;
-                    audioRef.current.volume = isMuted ? 0 : volume;
-                  }
-                }
-              }
-            } catch (storageError) {
-              console.error('Error accessing stored audio file:', storageError);
-              // Fall back to the external URL if available
-              if (data.audio_url) {
-                setPodcastAudio({
-                  url: data.audio_url,
-                  finished: true,
-                  progress: 100
-                });
-                if (audioRef.current) {
-                  audioRef.current.src = data.audio_url;
-                  audioRef.current.volume = isMuted ? 0 : volume;
-                }
-              }
-            }
-          } else if (data.audio_url) {
-            // Fall back to the external URL if no stored path is available
-            console.log('Using external audio URL:', data.audio_url);
-            setPodcastAudio({
-              url: data.audio_url,
-              finished: true,
-              progress: 100
-            });
-            if (audioRef.current) {
-              audioRef.current.src = data.audio_url;
-              audioRef.current.volume = isMuted ? 0 : volume;
-            }
-          }
+          await setupPodcastAudio(data);
         } else if (data.job_id) {
           console.log('Podcast has a job ID but is not processed yet. Starting polling:', data.job_id);
           startPollingJobStatus(data.job_id);
         }
+      } else {
+        console.log('No podcast found for this lecture');
       }
     } catch (error) {
       console.error('Error fetching podcast:', error);
@@ -171,6 +115,85 @@ const Podcast = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const setupPodcastAudio = async (podcastData: PodcastData) => {
+    try {
+      console.log('Setting up podcast audio with data:', podcastData);
+      
+      // First check for stored audio in the bucket
+      if (podcastData.stored_audio_path) {
+        console.log('Podcast has stored audio path:', podcastData.stored_audio_path);
+        
+        // Get list of files in the lecture folder to verify
+        const lectureFolderPath = `lecture_${lectureId}`;
+        const { data: folderData, error: folderError } = await supabase.storage
+          .from('podcast_audio')
+          .list(lectureFolderPath);
+          
+        if (folderError) {
+          console.error('Error checking podcast folder:', folderError);
+        }
+        
+        console.log('Files in lecture folder:', folderData);
+        
+        // Get a public URL for the stored audio file
+        const { data: publicUrlData } = await supabase.storage
+          .from('podcast_audio')
+          .getPublicUrl(podcastData.stored_audio_path);
+        
+        if (publicUrlData && publicUrlData.publicUrl) {
+          console.log('Successfully retrieved public URL for stored audio:', publicUrlData.publicUrl);
+          setPodcastAudio({
+            url: publicUrlData.publicUrl,
+            finished: true,
+            progress: 100
+          });
+          
+          if (audioRef.current) {
+            console.log('Setting audio source to stored audio file');
+            audioRef.current.src = publicUrlData.publicUrl;
+            audioRef.current.volume = isMuted ? 0 : volume;
+          }
+          return; // Exit early if we successfully set up stored audio
+        } else {
+          console.error('Failed to get public URL for stored audio path');
+        }
+      }
+      
+      // Fall back to external URL if available and we couldn't use stored audio
+      if (podcastData.audio_url) {
+        console.log('Using external audio URL as fallback:', podcastData.audio_url);
+        setPodcastAudio({
+          url: podcastData.audio_url,
+          finished: true,
+          progress: 100
+        });
+        
+        if (audioRef.current) {
+          audioRef.current.src = podcastData.audio_url;
+          audioRef.current.volume = isMuted ? 0 : volume;
+        }
+      } else {
+        console.error('No audio sources available for this podcast');
+      }
+    } catch (storageError) {
+      console.error('Error setting up podcast audio:', storageError);
+      // Fall back to the external URL if available
+      if (podcastData.audio_url) {
+        console.log('Falling back to external audio URL due to error:', podcastData.audio_url);
+        setPodcastAudio({
+          url: podcastData.audio_url,
+          finished: true,
+          progress: 100
+        });
+        
+        if (audioRef.current) {
+          audioRef.current.src = podcastData.audio_url;
+          audioRef.current.volume = isMuted ? 0 : volume;
+        }
+      }
     }
   };
 
@@ -456,7 +479,8 @@ const Podcast = () => {
   };
 
   const hasPodcastAudio = () => {
-    return podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path) || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
+    return (podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path)) || 
+           (podcastAudio && (podcastAudio.url || podcastAudio.episode_url));
   };
 
   useEffect(() => {
