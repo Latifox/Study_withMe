@@ -81,7 +81,7 @@ serve(async (req) => {
         if (lectureId && altStatusData.finished === true && (altStatusData.url || altStatusData.episode_url)) {
           const audioUrl = altStatusData.url || altStatusData.episode_url;
           
-          // NEW: Download and store the audio file if we have a URL
+          // Download and store the audio file if we have a URL
           if (audioUrl) {
             try {
               console.log(`Downloading audio file from: ${audioUrl}`);
@@ -164,7 +164,7 @@ serve(async (req) => {
       if (lectureId && statusData.finished === true && (statusData.url || statusData.episode_url)) {
         const audioUrl = statusData.url || statusData.episode_url;
         
-        // NEW: Download and store the audio file if we have a URL
+        // Download and store the audio file if we have a URL
         if (audioUrl) {
           try {
             console.log(`Downloading audio file from: ${audioUrl}`);

@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
+
 interface PodcastData {
   id: number;
   lecture_id: number;
@@ -22,6 +23,7 @@ interface PodcastData {
   job_id?: string;
   stored_audio_path?: string;
 }
+
 interface WondercraftPodcastResponse {
   id?: string;
   job_id?: string;
@@ -34,9 +36,11 @@ interface WondercraftPodcastResponse {
   error?: boolean;
   message?: string;
 }
+
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5";
 const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a";
 const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e";
+
 const Podcast = () => {
   const {
     courseId,
@@ -61,6 +65,7 @@ const Podcast = () => {
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     if (lectureId) {
       fetchPodcast();
@@ -71,6 +76,7 @@ const Podcast = () => {
       }
     };
   }, [lectureId]);
+
   const fetchPodcast = async () => {
     if (!lectureId) return;
     setIsLoading(true);
@@ -92,33 +98,36 @@ const Podcast = () => {
             console.log('Using stored audio file path:', data.stored_audio_path);
             try {
               // Get a public URL for the stored audio file
-              const {
-                data: publicUrlData,
-                error: publicUrlError
-              } = await supabase.storage.from('podcast_audio').getPublicUrl(data.stored_audio_path);
-              if (publicUrlError) {
-                console.error('Error getting public URL for stored audio:', publicUrlError);
-                // Fall back to the external URL
-                if (data.audio_url) {
-                  setPodcastAudio({
-                    url: data.audio_url,
-                    finished: true,
-                    progress: 100
-                  });
-                }
-              } else if (publicUrlData && publicUrlData.publicUrl) {
+              const { data: publicUrlData } = await supabase.storage
+                .from('podcast_audio')
+                .getPublicUrl(data.stored_audio_path);
+              
+              if (publicUrlData && publicUrlData.publicUrl) {
                 console.log('Successfully retrieved public URL for stored audio:', publicUrlData.publicUrl);
                 setPodcastAudio({
                   url: publicUrlData.publicUrl,
                   finished: true,
                   progress: 100
                 });
-              }
-              if (audioRef.current) {
-                // Set the source to either the local stored file or the external URL
-                const audioSource = publicUrlData && publicUrlData.publicUrl ? publicUrlData.publicUrl : data.audio_url;
-                audioRef.current.src = audioSource;
-                audioRef.current.volume = isMuted ? 0 : volume;
+                
+                if (audioRef.current) {
+                  audioRef.current.src = publicUrlData.publicUrl;
+                  audioRef.current.volume = isMuted ? 0 : volume;
+                }
+              } else {
+                // Fall back to the external URL if available
+                if (data.audio_url) {
+                  console.log('Falling back to external audio URL:', data.audio_url);
+                  setPodcastAudio({
+                    url: data.audio_url,
+                    finished: true,
+                    progress: 100
+                  });
+                  if (audioRef.current) {
+                    audioRef.current.src = data.audio_url;
+                    audioRef.current.volume = isMuted ? 0 : volume;
+                  }
+                }
               }
             } catch (storageError) {
               console.error('Error accessing stored audio file:', storageError);
@@ -164,6 +173,7 @@ const Podcast = () => {
       setIsLoading(false);
     }
   };
+
   const generatePodcast = async () => {
     if (!lectureId) return;
     setIsGenerating(true);
@@ -196,6 +206,7 @@ const Podcast = () => {
       setIsGenerating(false);
     }
   };
+
   const generateAudio = async () => {
     if (!podcast) return;
     setIsGeneratingAudio(true);
@@ -240,6 +251,7 @@ const Podcast = () => {
       setIsGeneratingAudio(false);
     }
   };
+
   const startPollingJobStatus = (jobId: string) => {
     setIsPollingSatus(true);
     if (pollIntervalRef.current) {
@@ -309,6 +321,7 @@ const Podcast = () => {
     }, 8000);
     pollIntervalRef.current = intervalId;
   };
+
   const playTextToSpeech = async (text: string) => {
     if (!text) return;
     setIsAudioLoading(true);
@@ -355,6 +368,7 @@ const Podcast = () => {
       setIsAudioLoading(false);
     }
   };
+
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -366,12 +380,14 @@ const Podcast = () => {
       }
     }
   };
+
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (audioRef.current && isPlaying) {
@@ -379,42 +395,40 @@ const Podcast = () => {
       setIsPlaying(false);
     }
   };
+
   const formatScript = (script: string) => {
     return script.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph}</p>);
   };
+
   const handleAudioEnded = () => {
     setIsPlaying(false);
   };
+
   const downloadPodcast = () => {
     if (podcast?.stored_audio_path) {
-      supabase.storage.from('podcast_audio').getPublicUrl(podcast.stored_audio_path).then(({
-        data,
-        error
-      }) => {
-        if (error) {
-          console.error('Error getting public URL for download:', error);
-          // Fall back to external URL
-          if (podcast?.audio_url) {
-            const link = document.createElement('a');
-            link.href = podcast.audio_url;
-            link.download = 'podcast.mp3';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-          return;
-        }
-        if (data && data.publicUrl) {
-          const link = document.createElement('a');
-          link.href = data.publicUrl;
-          link.download = `lecture_${lectureId}_podcast.mp3`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      });
+      const { data } = supabase.storage
+        .from('podcast_audio')
+        .getPublicUrl(podcast.stored_audio_path);
+      
+      if (data && data.publicUrl) {
+        const link = document.createElement('a');
+        link.href = data.publicUrl;
+        link.download = `lecture_${lectureId}_podcast.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (podcast?.audio_url) {
+        // Fall back to external URL
+        const link = document.createElement('a');
+        link.href = podcast.audio_url;
+        link.download = 'podcast.mp3';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
       return;
     }
+    
     if (podcast?.audio_url) {
       const link = document.createElement('a');
       link.href = podcast.audio_url;
@@ -424,6 +438,7 @@ const Podcast = () => {
       document.body.removeChild(link);
       return;
     }
+    
     const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
     if (downloadUrl) {
       const link = document.createElement('a');
@@ -434,24 +449,29 @@ const Podcast = () => {
       document.body.removeChild(link);
     }
   };
+
   const calculateProgress = () => {
     if (!podcastAudio) return 0;
     return podcastAudio.progress || 0;
   };
+
   const hasPodcastAudio = () => {
     return podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path) || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
   };
+
   useEffect(() => {
     const updateTime = () => {
       if (audioRef.current && !isDraggingTime) {
         setCurrentTime(audioRef.current.currentTime);
       }
     };
+
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
         setDuration(audioRef.current.duration);
       }
     };
+
     const audioElement = audioRef.current;
     if (audioElement) {
       audioElement.addEventListener('timeupdate', updateTime);
@@ -464,6 +484,7 @@ const Podcast = () => {
       }
     };
   }, [isDraggingTime]);
+
   const handleTimeChange = (value: number[]) => {
     const newTime = value[0];
     setCurrentTime(newTime);
@@ -471,11 +492,13 @@ const Podcast = () => {
       audioRef.current.currentTime = newTime;
     }
   };
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
+
   const handleSeekBackward = () => {
     if (audioRef.current) {
       const newTime = Math.max(0, audioRef.current.currentTime - 10);
@@ -483,6 +506,7 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
+
   const handleSeekForward = () => {
     if (audioRef.current) {
       const newTime = Math.min(duration, audioRef.current.currentTime + 10);
@@ -490,6 +514,7 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
+
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
@@ -497,6 +522,7 @@ const Podcast = () => {
       audioRef.current.volume = isMuted ? 0 : newVolume;
     }
   };
+
   return <PodcastBackground>
       <div className="container max-w-6xl py-8">
         <div className="flex items-center justify-between mb-6">
@@ -691,4 +717,5 @@ const Podcast = () => {
       </div>
     </PodcastBackground>;
 };
+
 export default Podcast;
