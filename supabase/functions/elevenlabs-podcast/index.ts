@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -10,6 +11,8 @@ serve(async (req) => {
   try {
     const reqData = await req.json();
     const { script, hostVoiceId, guestVoiceId, musicId, jobId, lectureId } = reqData;
+
+    console.log(`Processing request with lectureId: ${lectureId}, jobId: ${jobId || 'new job'}`);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -61,7 +64,10 @@ serve(async (req) => {
           // Create the file path with a timestamp to avoid conflicts
           const timestamp = new Date().getTime();
           const fileName = `podcast_${timestamp}.mp3`;
-          const filePath = `lecture_${lectureId}/${fileName}`;
+          
+          // Create a directory structure based on the lecture ID
+          const folderPath = `lecture_${lectureId}`;
+          const filePath = `${folderPath}/${fileName}`;
           
           console.log(`Uploading podcast to storage at path: ${filePath}`);
           
@@ -85,7 +91,8 @@ serve(async (req) => {
             .from('lecture_podcast')
             .update({ 
               stored_audio_path: filePath,
-              is_processed: true 
+              is_processed: true,
+              audio_url: audioUrl // Also store the original URL as a fallback
             })
             .eq('lecture_id', lectureId)
             .select()

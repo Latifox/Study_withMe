@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +47,7 @@ const Podcast = () => {
     courseId,
     lectureId
   } = useParams();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading state
   const [isGenerating, setIsGenerating] = useState(false);
   const [podcast, setPodcast] = useState<PodcastData | null>(null);
   const [podcastAudio, setPodcastAudio] = useState<WondercraftPodcastResponse | null>(null);
@@ -67,11 +68,15 @@ const Podcast = () => {
   } = useToast();
 
   useEffect(() => {
+    // Ensure the podcast_audio bucket exists when the component mounts
     ensureBucketExists('podcast_audio');
     
+    // Immediately fetch podcast data when the component mounts
     if (lectureId) {
+      setIsLoading(true);
       fetchPodcast();
     }
+    
     return () => {
       if (pollIntervalRef.current) {
         window.clearInterval(pollIntervalRef.current);
@@ -81,7 +86,7 @@ const Podcast = () => {
 
   const fetchPodcast = async () => {
     if (!lectureId) return;
-    setIsLoading(true);
+    
     try {
       console.log(`Fetching podcast for lecture ID: ${lectureId}`);
       const {
