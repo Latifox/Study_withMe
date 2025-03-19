@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, ensureBucketExists } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,6 +67,8 @@ const Podcast = () => {
   } = useToast();
 
   useEffect(() => {
+    ensureBucketExists('podcast_audio');
+    
     if (lectureId) {
       fetchPodcast();
     }
@@ -97,7 +99,7 @@ const Podcast = () => {
         setPodcast(data);
         
         if (data.is_processed) {
-          console.log('Podcast is processed, checking for audio source');
+          console.log('Podcast is processed, setting up audio source');
           await setupPodcastAudio(data);
         } else if (data.job_id) {
           console.log('Podcast has a job ID but is not processed yet. Starting polling:', data.job_id);
@@ -126,18 +128,6 @@ const Podcast = () => {
       if (podcastData.stored_audio_path) {
         console.log('Podcast has stored audio path:', podcastData.stored_audio_path);
         
-        // Get list of files in the lecture folder to verify
-        const lectureFolderPath = `lecture_${lectureId}`;
-        const { data: folderData, error: folderError } = await supabase.storage
-          .from('podcast_audio')
-          .list(lectureFolderPath);
-          
-        if (folderError) {
-          console.error('Error checking podcast folder:', folderError);
-        }
-        
-        console.log('Files in lecture folder:', folderData);
-        
         // Get a public URL for the stored audio file
         const { data: publicUrlData } = await supabase.storage
           .from('podcast_audio')
@@ -155,6 +145,7 @@ const Podcast = () => {
             console.log('Setting audio source to stored audio file');
             audioRef.current.src = publicUrlData.publicUrl;
             audioRef.current.volume = isMuted ? 0 : volume;
+            audioRef.current.load(); // Explicitly load the audio
           }
           return; // Exit early if we successfully set up stored audio
         } else {
@@ -174,6 +165,7 @@ const Podcast = () => {
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
+          audioRef.current.load(); // Explicitly load the audio
         }
       } else {
         console.error('No audio sources available for this podcast');
@@ -192,6 +184,7 @@ const Podcast = () => {
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
+          audioRef.current.load(); // Explicitly load the audio
         }
       }
     }
@@ -493,6 +486,7 @@ const Podcast = () => {
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
         setDuration(audioRef.current.duration);
+        console.log('Audio metadata loaded, duration:', audioRef.current.duration);
       }
     };
 
@@ -500,14 +494,30 @@ const Podcast = () => {
     if (audioElement) {
       audioElement.addEventListener('timeupdate', updateTime);
       audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audioElement.addEventListener('error', (e) => {
+        console.error('Audio loading error:', e);
+      });
     }
     return () => {
       if (audioElement) {
         audioElement.removeEventListener('timeupdate', updateTime);
         audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audioElement.removeEventListener('error', () => {});
       }
     };
   }, [isDraggingTime]);
+
+  useEffect(() => {
+    if (podcastAudio && audioRef.current) {
+      const audioUrl = podcastAudio.url || podcastAudio.episode_url;
+      if (audioUrl && audioRef.current.src !== audioUrl) {
+        console.log('Updating audio source in useEffect:', audioUrl);
+        audioRef.current.src = audioUrl;
+        audioRef.current.volume = isMuted ? 0 : volume;
+        audioRef.current.load(); // Explicitly load the audio
+      }
+    }
+  }, [podcastAudio, isMuted, volume]);
 
   const handleTimeChange = (value: number[]) => {
     const newTime = value[0];
@@ -572,7 +582,14 @@ const Podcast = () => {
         </div>
 
         <div className="hidden">
-          <audio ref={audioRef} onEnded={handleAudioEnded} controls className="w-full mb-4" onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)} />
+          <audio 
+            ref={audioRef} 
+            onEnded={handleAudioEnded} 
+            controls 
+            className="w-full mb-4" 
+            onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
+            preload="auto" // Preload audio data
+          />
         </div>
 
         {isGenerating && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">

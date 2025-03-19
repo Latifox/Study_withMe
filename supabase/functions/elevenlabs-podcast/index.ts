@@ -1,7 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.31.0";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -9,516 +7,308 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('elevenlabs-podcast function called');
-
-  // Initialize Supabase client
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
   try {
-    const requestBody = await req.json();
-    console.log('Request body received:', JSON.stringify(requestBody));
-    
-    const { script, jobId, lectureId } = requestBody;
-    // Use the new custom voice IDs with fallbacks to the previous ones
-    const hostVoiceId = requestBody.hostVoiceId || "1da32dae-a953-4e5f-81df-94e4bb1965e5"; 
-    const guestVoiceId = requestBody.guestVoiceId || "0b356f1c-03d6-4e80-9427-9e26e7e2d97a"; 
-    // Use the specific music ID provided
-    const musicId = requestBody.musicId || "168bab40-3ead-4699-80a4-c97a7d613e3e";
-    
-    // Check for API key
-    const apiKey = Deno.env.get('WONDERCRAFT_API_KEY');
-    if (!apiKey) {
-      console.error('WONDERCRAFT_API_KEY environment variable is not set');
-      throw new Error('Wondercraft API key is missing');
-    }
+    const reqData = await req.json();
+    const { script, hostVoiceId, guestVoiceId, musicId, jobId, lectureId } = reqData;
 
-    // If jobId is provided, we're checking status of an existing job
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // If jobId is provided, check the status of an existing job
     if (jobId) {
-      console.log(`Checking status for job ID: ${jobId}`);
+      console.log(`Checking status for job: ${jobId}`);
       
-      // Try the original endpoint format first (match what we get from the creation response)
-      const statusEndpoint = `https://api.wondercraft.ai/v1/podcast/scripted/${jobId}`;
-      console.log(`Trying endpoint: ${statusEndpoint}`);
-      
-      const statusResponse = await fetch(statusEndpoint, {
+      // Get the job status from Wondercraft
+      const response = await fetch(`https://api.wondercraft.ai/v1/syntheses/${jobId}`, {
         method: 'GET',
         headers: {
-          'X-API-KEY': apiKey,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('WONDERCRAFT_API_KEY')}`,
         },
       });
+
+      if (!response.ok) {
+        console.error('Error response from Wondercraft API:', await response.text());
+        throw new Error('Failed to get job status from Wondercraft');
+      }
+
+      const data = await response.json();
+      console.log('Job status response:', data);
       
-      if (!statusResponse.ok) {
-        console.error(`Status check failed with status: ${statusResponse.status}`);
-        const errorText = await statusResponse.text();
-        console.error('Error response body:', errorText);
+      // If the job is finished, download the audio and store it
+      if ((data.state === 'ready' || data.finished === true) && (data.episode_url || data.url)) {
+        const audioUrl = data.episode_url || data.url;
+        console.log('Podcast is ready, downloading from URL:', audioUrl);
         
-        // If the first endpoint fails, try alternative endpoint format
-        const alternativeEndpoint = `https://api.wondercraft.ai/v1/podcast/${jobId}`;
-        console.log(`Trying alternative endpoint: ${alternativeEndpoint}`);
-        
-        const altResponse = await fetch(alternativeEndpoint, {
-          method: 'GET',
-          headers: {
-            'X-API-KEY': apiKey,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!altResponse.ok) {
-          console.error(`Alternative status check failed with status: ${altResponse.status}`);
-          const altErrorText = await altResponse.text();
-          console.error('Alternative error response body:', altErrorText);
-          throw new Error(`Failed to check job status: ${altResponse.status} ${altErrorText}`);
-        }
-        
-        const altStatusData = await altResponse.json();
-        console.log('Job status response from alternative endpoint:', JSON.stringify(altStatusData));
-        
-        // If podcast is finished and we have a URL and a lecture ID, update the database
-        if (lectureId && altStatusData.finished === true && (altStatusData.url || altStatusData.episode_url)) {
-          const audioUrl = altStatusData.url || altStatusData.episode_url;
+        try {
+          // First ensure the podcast_audio bucket exists
+          const bucketName = 'podcast_audio';
+          await ensureBucketExists(supabaseClient, bucketName);
           
-          // Download and store the audio file if we have a URL
-          if (audioUrl) {
-            try {
-              console.log(`[PODCAST STORAGE] Starting audio download from: ${audioUrl}`);
-              const audioResponse = await fetch(audioUrl);
-              if (!audioResponse.ok) {
-                console.error(`[PODCAST STORAGE] Download failed with status: ${audioResponse.status}`);
-                throw new Error(`Failed to download audio: ${audioResponse.status}`);
-              }
-              
-              console.log(`[PODCAST STORAGE] Download response received, status: ${audioResponse.status}`);
-              console.log(`[PODCAST STORAGE] Download content type: ${audioResponse.headers.get('content-type')}`);
-              console.log(`[PODCAST STORAGE] Download content length: ${audioResponse.headers.get('content-length')} bytes`);
-              
-              console.log(`[PODCAST STORAGE] Converting audio to buffer...`);
-              const audioArrayBuffer = await audioResponse.arrayBuffer();
-              console.log(`[PODCAST STORAGE] Audio buffer created, size: ${audioArrayBuffer.byteLength} bytes`);
-              const audioBuffer = new Uint8Array(audioArrayBuffer);
-              
-              const fileName = `podcast_${lectureId}_${Date.now()}.mp3`;
-              const filePath = `lecture_${lectureId}/${fileName}`;
-              
-              console.log(`[PODCAST STORAGE] Preparing to upload audio file to storage path: ${filePath}`);
-              console.log(`[PODCAST STORAGE] Storage bucket: podcast_audio`);
-              console.log(`[PODCAST STORAGE] File name: ${fileName}`);
-              
-              // First, check if the folder exists, if not create it
-              try {
-                const { data: folderExists } = await supabase.storage
-                  .from('podcast_audio')
-                  .list(`lecture_${lectureId}`);
-                  
-                if (!folderExists || folderExists.length === 0) {
-                  console.log(`[PODCAST STORAGE] Folder doesn't exist, creating empty placeholder file`);
-                  // Create an empty file to ensure the folder exists
-                  await supabase.storage
-                    .from('podcast_audio')
-                    .upload(`lecture_${lectureId}/.placeholder`, new Uint8Array(0), {
-                      contentType: 'text/plain',
-                    });
-                }
-              } catch (folderError) {
-                console.log(`[PODCAST STORAGE] Error checking folder, will attempt to create it anyway:`, folderError);
-              }
-              
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('podcast_audio')
-                .upload(filePath, audioBuffer, {
-                  contentType: 'audio/mpeg',
-                  cacheControl: '3600',
-                  upsert: true
-                });
-              
-              if (uploadError) {
-                console.error('[PODCAST STORAGE] Error uploading audio to storage:', uploadError);
-                console.error('[PODCAST STORAGE] Error code:', uploadError.code);
-                console.error('[PODCAST STORAGE] Error message:', uploadError.message);
-                console.error('[PODCAST STORAGE] Error details:', uploadError.details);
-                // Continue with the external URL if upload fails
-              } else {
-                console.log('[PODCAST STORAGE] Successfully uploaded audio to storage:', uploadData);
-                console.log('[PODCAST STORAGE] Upload path:', uploadData.path);
-                
-                // Update the podcast record with the stored file path
-                console.log(`[PODCAST STORAGE] Updating podcast with stored audio path: ${filePath}`);
-                const { error: updatePathError } = await supabase
-                  .from('lecture_podcast')
-                  .update({
-                    stored_audio_path: filePath
-                  })
-                  .eq('lecture_id', lectureId);
-                
-                if (updatePathError) {
-                  console.error('[PODCAST STORAGE] Error updating stored audio path:', updatePathError);
-                  console.error('[PODCAST STORAGE] Error code:', updatePathError.code);
-                  console.error('[PODCAST STORAGE] Error message:', updatePathError.message);
-                } else {
-                  console.log('[PODCAST STORAGE] Successfully updated stored audio path in database');
-                }
-              }
-            } catch (downloadError) {
-              console.error('[PODCAST STORAGE] Error processing audio download and storage:', downloadError);
-              console.error('[PODCAST STORAGE] Error stack:', downloadError.stack);
-              // Continue with external URL if download/storage fails
-            }
+          // Download the audio file
+          console.log('Starting download of podcast audio...');
+          const audioResponse = await fetch(audioUrl);
+          
+          if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio file: ${audioResponse.statusText}`);
           }
           
-          console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
-          const { error: updateError } = await supabase
-            .from('lecture_podcast')
-            .update({
-              audio_url: audioUrl,
-              is_processed: true,
-              job_id: jobId
-            })
-            .eq('lecture_id', lectureId);
-            
-          if (updateError) {
-            console.error('Error updating podcast info in database:', updateError);
-          } else {
-            console.log('Successfully updated podcast audio URL in database');
-          }
-        }
-        
-        return new Response(JSON.stringify({ 
-          success: true, 
-          podcastData: altStatusData,
-          lectureId
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      const statusData = await statusResponse.json();
-      console.log('Job status response from original endpoint:', JSON.stringify(statusData));
-      
-      // If podcast is finished and we have a URL and a lecture ID, update the database
-      if (lectureId && statusData.finished === true && (statusData.url || statusData.episode_url)) {
-        const audioUrl = statusData.url || statusData.episode_url;
-        
-        // Download and store the audio file if we have a URL
-        if (audioUrl) {
-          try {
-            console.log(`[PODCAST STORAGE] Starting audio download from: ${audioUrl}`);
-            const audioResponse = await fetch(audioUrl);
-            if (!audioResponse.ok) {
-              console.error(`[PODCAST STORAGE] Download failed with status: ${audioResponse.status}`);
-              throw new Error(`Failed to download audio: ${audioResponse.status}`);
-            }
-            
-            console.log(`[PODCAST STORAGE] Download response received, status: ${audioResponse.status}`);
-            console.log(`[PODCAST STORAGE] Download content type: ${audioResponse.headers.get('content-type')}`);
-            console.log(`[PODCAST STORAGE] Download content length: ${audioResponse.headers.get('content-length')} bytes`);
-            
-            console.log(`[PODCAST STORAGE] Converting audio to buffer...`);
-            const audioArrayBuffer = await audioResponse.arrayBuffer();
-            console.log(`[PODCAST STORAGE] Audio buffer created, size: ${audioArrayBuffer.byteLength} bytes`);
-            const audioBuffer = new Uint8Array(audioArrayBuffer);
-            
-            const fileName = `podcast_${lectureId}_${Date.now()}.mp3`;
-            const filePath = `lecture_${lectureId}/${fileName}`;
-            
-            console.log(`[PODCAST STORAGE] Preparing to upload audio file to storage path: ${filePath}`);
-            console.log(`[PODCAST STORAGE] Storage bucket: podcast_audio`);
-            console.log(`[PODCAST STORAGE] File name: ${fileName}`);
-            
-            // First, check if the folder exists, if not create it
-            try {
-              const { data: folderExists } = await supabase.storage
-                .from('podcast_audio')
-                .list(`lecture_${lectureId}`);
-                
-              if (!folderExists || folderExists.length === 0) {
-                console.log(`[PODCAST STORAGE] Folder doesn't exist, creating empty placeholder file`);
-                // Create an empty file to ensure the folder exists
-                await supabase.storage
-                  .from('podcast_audio')
-                  .upload(`lecture_${lectureId}/.placeholder`, new Uint8Array(0), {
-                    contentType: 'text/plain',
-                  });
-              }
-            } catch (folderError) {
-              console.log(`[PODCAST STORAGE] Error checking folder, will attempt to create it anyway:`, folderError);
-            }
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('podcast_audio')
-              .upload(filePath, audioBuffer, {
-                contentType: 'audio/mpeg',
-                cacheControl: '3600',
-                upsert: true
-              });
-            
-            if (uploadError) {
-              console.error('[PODCAST STORAGE] Error uploading audio to storage:', uploadError);
-              console.error('[PODCAST STORAGE] Error code:', uploadError.code);
-              console.error('[PODCAST STORAGE] Error message:', uploadError.message);
-              console.error('[PODCAST STORAGE] Error details:', uploadError.details);
-              // Continue with the external URL if upload fails
-            } else {
-              console.log('[PODCAST STORAGE] Successfully uploaded audio to storage:', uploadData);
-              console.log('[PODCAST STORAGE] Upload path:', uploadData.path);
-              
-              // Update the podcast record with the stored file path
-              console.log(`[PODCAST STORAGE] Updating podcast with stored audio path: ${filePath}`);
-              const { error: updatePathError } = await supabase
-                .from('lecture_podcast')
-                .update({
-                  stored_audio_path: filePath
-                })
-                .eq('lecture_id', lectureId);
-              
-              if (updatePathError) {
-                console.error('[PODCAST STORAGE] Error updating stored audio path:', updatePathError);
-                console.error('[PODCAST STORAGE] Error code:', updatePathError.code);
-                console.error('[PODCAST STORAGE] Error message:', updatePathError.message);
-              } else {
-                console.log('[PODCAST STORAGE] Successfully updated stored audio path in database');
-              }
-            }
-          } catch (downloadError) {
-            console.error('[PODCAST STORAGE] Error processing audio download and storage:', downloadError);
-            console.error('[PODCAST STORAGE] Error stack:', downloadError.stack);
-            // Continue with external URL if download/storage fails
-          }
-        }
-        
-        console.log(`Updating podcast audio URL for lecture ID: ${lectureId}`);
-        const { error: updateError } = await supabase
-          .from('lecture_podcast')
-          .update({
-            audio_url: audioUrl,
-            is_processed: true,
-            job_id: jobId
-          })
-          .eq('lecture_id', lectureId);
+          console.log('Podcast audio downloaded successfully, creating buffer...');
+          const audioBuffer = await audioResponse.arrayBuffer();
           
-        if (updateError) {
-          console.error('Error updating podcast info in database:', updateError);
-        } else {
-          console.log('Successfully updated podcast audio URL in database');
-        }
-      }
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        podcastData: statusData,
-        lectureId
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    // Otherwise, we're creating a new podcast
-    console.log(`Using Host Voice ID: ${hostVoiceId} and Guest Voice ID: ${guestVoiceId}`);
-    console.log(`Using Music ID: ${musicId}`);
-    
-    if (!script) {
-      console.error('Missing required parameter: script');
-      throw new Error('Script is required');
-    }
-    
-    if (!lectureId) {
-      console.error('Missing required parameter: lectureId');
-      throw new Error('Lecture ID is required');
-    }
-    
-    console.log(`Script length: ${script.length} characters`);
-    console.log(`Script first 100 characters: "${script.substring(0, 100)}..."`);
-    
-    // Format script for Wondercraft by removing role markers
-    const scriptLines = script.split('\n');
-    const formattedScript = [];
-    
-    console.log('Formatting script for Wondercraft API...');
-    console.log(`Script has ${scriptLines.length} lines`);
-    
-    // Log a few sample lines to debug
-    if (scriptLines.length > 0) {
-      console.log('Sample lines from script:');
-      for (let i = 0; i < Math.min(5, scriptLines.length); i++) {
-        console.log(`Line ${i}: "${scriptLines[i]}"`);
-      }
-    }
-    
-    // Enhanced script parsing with role prefix removal
-    for (let i = 0; i < scriptLines.length; i++) {
-      const line = scriptLines[i].trim();
-      
-      // Skip empty lines
-      if (line === '') continue;
-      
-      // Try to match HOST: or GUEST: with more flexible patterns and remove prefixes
-      if (line.toUpperCase().startsWith('HOST:')) {
-        formattedScript.push({
-          text: line.substring(5).trim(), // Remove the "HOST:" prefix
-          voice_id: hostVoiceId
-        });
-      } else if (line.toUpperCase().startsWith('GUEST:')) {
-        formattedScript.push({
-          text: line.substring(6).trim(), // Remove the "GUEST:" prefix
-          voice_id: guestVoiceId
-        });
-      } else if (line.match(/^HOST\s*:/i)) {
-        // Match with possible space between HOST and :
-        const textContent = line.replace(/^HOST\s*:/i, '').trim();
-        formattedScript.push({
-          text: textContent,
-          voice_id: hostVoiceId
-        });
-      } else if (line.match(/^GUEST\s*:/i)) {
-        // Match with possible space between GUEST and :
-        const textContent = line.replace(/^GUEST\s*:/i, '').trim();
-        formattedScript.push({
-          text: textContent,
-          voice_id: guestVoiceId
-        });
-      } else if (line.match(/^\*\*HOST\*\*:/i)) {
-        // Match markdown format
-        const textContent = line.replace(/^\*\*HOST\*\*:/i, '').trim();
-        formattedScript.push({
-          text: textContent,
-          voice_id: hostVoiceId
-        });
-      } else if (line.match(/^\*\*GUEST\*\*:/i)) {
-        // Match markdown format
-        const textContent = line.replace(/^\*\*GUEST\*\*:/i, '').trim();
-        formattedScript.push({
-          text: textContent,
-          voice_id: guestVoiceId
-        });
-      }
-    }
-    
-    console.log(`Formatted script with ${formattedScript.length} segments`);
-    
-    // If no segments found, try alternative parsing approach
-    if (formattedScript.length === 0) {
-      console.log('No segments found with standard parsing, trying alternative approach...');
-      
-      // Try to parse blocks of text separated by blank lines
-      let currentSpeaker = 'host'; // Start with host
-      let currentText = '';
-      
-      for (let i = 0; i < scriptLines.length; i++) {
-        const line = scriptLines[i].trim();
-        
-        if (line === '') {
-          // End of paragraph, add the current text if not empty
-          if (currentText !== '') {
-            formattedScript.push({
-              text: currentText.trim(),
-              voice_id: currentSpeaker === 'host' ? hostVoiceId : guestVoiceId
+          // Create the file path with a timestamp to avoid conflicts
+          const timestamp = new Date().getTime();
+          const fileName = `podcast_${timestamp}.mp3`;
+          const filePath = `lecture_${lectureId}/${fileName}`;
+          
+          console.log(`Uploading podcast to storage at path: ${filePath}`);
+          
+          // Upload the audio file to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabaseClient.storage
+            .from(bucketName)
+            .upload(filePath, audioBuffer, {
+              contentType: 'audio/mpeg',
+              upsert: true,
             });
             
-            // Switch speaker for next paragraph
-            currentSpeaker = currentSpeaker === 'host' ? 'guest' : 'host';
-            currentText = '';
+          if (uploadError) {
+            console.error('Error uploading audio to storage:', uploadError);
+            throw uploadError;
           }
-        } else {
-          // Add this line to the current text
-          currentText += ' ' + line;
+          
+          console.log('Podcast audio uploaded successfully:', uploadData);
+          
+          // Update the database record with the storage path
+          const { data: updateData, error: updateError } = await supabaseClient
+            .from('lecture_podcast')
+            .update({ 
+              stored_audio_path: filePath,
+              is_processed: true 
+            })
+            .eq('lecture_id', lectureId)
+            .select()
+            .single();
+            
+          if (updateError) {
+            console.error('Error updating database with storage path:', updateError);
+            throw updateError;
+          }
+          
+          console.log('Database updated with storage path:', updateData);
+          
+          // Return the complete data with the storage path
+          return new Response(
+            JSON.stringify({ 
+              podcastData: { 
+                ...data, 
+                stored_audio_path: filePath 
+              } 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (storageError) {
+          console.error('Error storing podcast audio:', storageError);
+          // If storage fails, just return the original data without local storage
+          return new Response(
+            JSON.stringify({ podcastData: data }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
       }
-      
-      // Add the last paragraph if not empty
-      if (currentText !== '') {
-        formattedScript.push({
-          text: currentText.trim(),
-          voice_id: currentSpeaker === 'host' ? hostVoiceId : guestVoiceId
-        });
-      }
-      
-      console.log(`Alternative parsing found ${formattedScript.length} segments`);
+
+      // Return the status data if the job is not yet complete
+      return new Response(
+        JSON.stringify({ podcastData: data }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    if (formattedScript.length === 0) {
-      console.error('No valid script segments were found after all parsing attempts');
-      throw new Error('Script format is invalid, no valid segments could be extracted');
+
+    // If no jobId was provided, create a new podcast generation job
+    if (!script) {
+      throw new Error('Script is required for podcast generation');
     }
-    
-    // Create request body for Wondercraft
-    const wondercraftBody = {
-      script: formattedScript,
-      // Custom music settings with the provided music ID
-      music_spec: {
-        music_id: musicId, // Use the specific music ID
-        fade_in_ms: 1000,
-        fade_out_ms: 1000,
-        playback_start: 0,
-        playback_end: 1000, // Let Wondercraft determine the end automatically
-        volume: 0.05
-      }
-    };
-    
-    console.log('Sending request to Wondercraft API with payload structure:');
-    console.log(`- Number of script segments: ${wondercraftBody.script.length}`);
-    console.log('- Sample voice IDs being used:', wondercraftBody.script.length > 0 ? wondercraftBody.script[0].voice_id : 'none');
-    console.log('- Music ID being used:', wondercraftBody.music_spec.music_id);
-    
-    // Send request to Wondercraft API for podcast creation
-    const response = await fetch("https://api.wondercraft.ai/v1/podcast/scripted", {
+
+    console.log('Creating new podcast with script length:', script.length);
+    const response = await fetch('https://api.wondercraft.ai/v1/syntheses', {
       method: 'POST',
       headers: {
-        'X-API-KEY': apiKey,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('WONDERCRAFT_API_KEY')}`,
       },
-      body: JSON.stringify(wondercraftBody),
+      body: JSON.stringify({
+        script,
+        voice_settings: [
+          {
+            gender: "female",
+            name: "Host",
+            voice_id: hostVoiceId,
+          },
+          {
+            gender: "male",
+            name: "Guest",
+            voice_id: guestVoiceId,
+          },
+        ],
+        music_id: musicId,
+      }),
     });
 
-    console.log('Wondercraft API response status:', response.status);
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Wondercraft API error:', errorText);
-      throw new Error(`Failed to create podcast: ${response.status} ${errorText}`);
+      console.error('Error response from Wondercraft API:', await response.text());
+      throw new Error('Failed to create podcast with Wondercraft');
     }
 
-    // Get the response data
-    const podcastData = await response.json();
+    const data = await response.json();
+    console.log('Podcast creation response:', data);
+
+    // Save the job ID to the database for future status checks
+    const jobIdToSave = data.id;
     
-    console.log('Successfully created podcast with Wondercraft:', JSON.stringify(podcastData));
-    
-    // Store the endpoint used for creation to use the same format for status checks
-    if (podcastData.job_id) {
-      console.log(`Podcast job created with ID: ${podcastData.job_id}`);
-      console.log(`Status check endpoint will be: https://api.wondercraft.ai/v1/podcast/scripted/${podcastData.job_id}`);
-      
-      // Save the job ID to the database
-      console.log(`Updating job ID for lecture ID: ${lectureId}`);
-      const { error: updateError } = await supabase
+    if (jobIdToSave) {
+      const { error } = await supabaseClient
         .from('lecture_podcast')
-        .update({
-          job_id: podcastData.job_id,
-          is_processed: false
+        .update({ 
+          job_id: jobIdToSave
         })
         .eq('lecture_id', lectureId);
         
-      if (updateError) {
-        console.error('Error updating podcast job ID in database:', updateError);
+      if (error) {
+        console.error('Error saving job ID to database:', error);
       } else {
-        console.log('Successfully updated podcast job ID in database');
+        console.log('Saved job ID to database:', jobIdToSave);
       }
     }
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
-      podcastData: podcastData,
-      lectureId
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+
+    return new Response(
+      JSON.stringify({ podcastData: data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error in elevenlabs-podcast function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 });
+
+// Helper function to check if a storage bucket exists and create it if it doesn't
+async function ensureBucketExists(supabaseClient, bucketName) {
+  try {
+    console.log(`Checking if bucket ${bucketName} exists...`);
+    // Try to get the bucket first
+    const { data: bucket, error } = await supabaseClient.storage.getBucket(bucketName);
+    
+    if (error) {
+      console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
+      const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 50 * 1024 * 1024, // 50MB limit for podcast files
+      });
+      
+      if (createError) {
+        console.error(`Error creating ${bucketName} bucket:`, createError);
+        return false;
+      }
+      console.log(`Successfully created ${bucketName} bucket`);
+      return true;
+    }
+    
+    console.log(`Bucket ${bucketName} already exists`);
+    return true;
+  } catch (error) {
+    console.error('Error checking/creating bucket:', error);
+    return false;
+  }
+}
+
+// Helper function to create client for Supabase
+function createClient(supabaseUrl, supabaseKey) {
+  return {
+    from: (table) => ({
+      select: (columns) => ({
+        eq: (column, value) => ({
+          single: () => fetch(`${supabaseUrl}/rest/v1/${table}?${column}=eq.${value}&select=${columns || '*'}`, {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+          }).then(res => res.json().then(data => ({ data: data[0] || null, error: null }))),
+        }),
+        limit: (limit) => ({
+          single: () => fetch(`${supabaseUrl}/rest/v1/${table}?select=${columns || '*'}&limit=${limit}`, {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+          }).then(res => res.json().then(data => ({ data: data[0] || null, error: null }))),
+        }),
+      }),
+      update: (updates) => ({
+        eq: (column, value) => ({
+          select: () => ({
+            single: () => fetch(`${supabaseUrl}/rest/v1/${table}?${column}=eq.${value}`, {
+              method: 'PATCH',
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation',
+              },
+              body: JSON.stringify(updates),
+            }).then(res => res.json().then(data => ({ data: data[0] || null, error: null }))),
+          }),
+        }),
+      }),
+      insert: (values) => ({
+        select: () => ({
+          single: () => fetch(`${supabaseUrl}/rest/v1/${table}`, {
+            method: 'POST',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify(values),
+          }).then(res => res.json().then(data => ({ data: data[0] || null, error: null }))),
+        }),
+      }),
+    }),
+    storage: {
+      getBucket: (name) => fetch(`${supabaseUrl}/storage/v1/bucket/${name}`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+      }).then(res => res.ok ? res.json().then(data => ({ data, error: null })) : res.json().then(error => ({ data: null, error }))),
+      createBucket: (name, options) => fetch(`${supabaseUrl}/storage/v1/bucket`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, public: options?.public, file_size_limit: options?.fileSizeLimit }),
+      }).then(res => res.ok ? res.json().then(data => ({ data, error: null })) : res.json().then(error => ({ data: null, error }))),
+      from: (bucket) => ({
+        upload: (path, fileBody, options) => fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${path}`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': options?.contentType || 'application/octet-stream',
+            'x-upsert': options?.upsert ? 'true' : 'false',
+          },
+          body: fileBody,
+        }).then(res => res.ok ? res.json().then(data => ({ data, error: null })) : res.json().then(error => ({ data: null, error }))),
+      }),
+    },
+  };
+}
