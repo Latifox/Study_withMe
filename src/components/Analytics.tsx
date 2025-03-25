@@ -20,6 +20,8 @@ type UserProgressRow = Database['public']['Tables']['user_progress']['Row'];
 type UserProgress = {
   quizProgress: QuizProgress[];
   progressData: UserProgressRow[];
+  allTimeQuizProgress?: QuizProgress[]; // Added for all-time stats
+  allTimeProgressData?: UserProgressRow[]; // Added for all-time stats
 };
 
 const Analytics = () => {
@@ -57,6 +59,7 @@ const Analytics = () => {
     queryFn: async (): Promise<UserProgress> => {
       const startDate = getDateRange();
       
+      // Fetch time-filtered quiz progress for charts
       const { data: quizProgress, error: quizError } = await supabase
         .from('quiz_progress')
         .select('*')
@@ -66,6 +69,7 @@ const Analytics = () => {
       
       if (quizError) throw quizError;
       
+      // Fetch time-filtered user progress for charts
       const { data: progressData, error: progressError } = await supabase
         .from('user_progress')
         .select('*')
@@ -75,20 +79,41 @@ const Analytics = () => {
       
       if (progressError) throw progressError;
 
+      // Fetch all-time quiz progress for stats cards
+      const { data: allTimeQuizProgress, error: allTimeQuizError } = await supabase
+        .from('quiz_progress')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('completed_at', { ascending: true });
+      
+      if (allTimeQuizError) throw allTimeQuizError;
+      
+      // Fetch all-time user progress for stats cards
+      const { data: allTimeProgressData, error: allTimeProgressError } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', user?.id)
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: false });
+      
+      if (allTimeProgressError) throw allTimeProgressError;
+
       return {
         quizProgress: quizProgress || [],
-        progressData: progressData || []
+        progressData: progressData || [],
+        allTimeQuizProgress: allTimeQuizProgress || [],
+        allTimeProgressData: allTimeProgressData || []
       };
     },
     enabled: !!user
   });
 
   const calculateStreak = () => {
-    if (!userProgress?.progressData.length) return 0;
+    if (!userProgress?.allTimeProgressData?.length) return 0;
     
     const today = startOfDay(new Date());
     const uniqueDates = new Set(
-      userProgress.progressData.map(p => 
+      userProgress.allTimeProgressData.map(p => 
         startOfDay(new Date(p.completed_at!)).toISOString()
       )
     );
@@ -104,8 +129,18 @@ const Analytics = () => {
     return streak;
   };
 
+  // Calculate all-time stats for cards
+  const totalLectures = userProgress?.allTimeQuizProgress ? 
+    new Set(userProgress.allTimeQuizProgress.map(p => p.lecture_id)).size : 0;
+
+  const totalXP = userProgress?.allTimeQuizProgress ? 
+    userProgress.allTimeQuizProgress.reduce((sum, p) => sum + (p.quiz_score || 0), 0) : 0;
+
+  const currentStreak = calculateStreak();
+
+  // Time-range filtered data for charts
   const prepareChartData = () => {
-    if (!userProgress?.quizProgress.length) return [];
+    if (!userProgress?.quizProgress?.length) return [];
     const startDate = getDateRange();
     const dateRange = eachDayOfInterval({
       start: startDate,
@@ -132,7 +167,7 @@ const Analytics = () => {
   };
 
   const prepareHeatmapData = () => {
-    if (!userProgress?.progressData.length) return [];
+    if (!userProgress?.progressData?.length) return [];
     
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
     
@@ -160,13 +195,6 @@ const Analytics = () => {
     return 'bg-yellow-500';
   };
 
-  const totalLectures = userProgress?.quizProgress ? 
-    new Set(userProgress.quizProgress.map(p => p.lecture_id)).size : 0;
-
-  const totalXP = userProgress?.quizProgress ? 
-    userProgress.quizProgress.reduce((sum, p) => sum + (p.quiz_score || 0), 0) : 0;
-
-  const currentStreak = calculateStreak();
   const chartData = prepareChartData();
   const heatmapData = prepareHeatmapData();
 

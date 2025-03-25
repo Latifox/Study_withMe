@@ -12,16 +12,12 @@ interface StatsCardProps {
 }
 
 const StatsCard = ({ title, value, icon: Icon, gradientFrom, gradientTo }: StatsCardProps) => {
-  // Function to get gradient classes based on props
-  const getGradientClasses = () => {
-    return `pt-6 rounded-lg relative group transition-colors ${
-      `bg-gradient-to-br from-${gradientFrom} to-${gradientTo}`
-    }`;
-  };
+  // Create dynamic gradient class string based on props
+  const gradientClass = `bg-gradient-to-br from-${gradientFrom} to-${gradientTo}`;
 
   return (
     <Card className="bg-white/50 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-shadow overflow-hidden">
-      <CardContent className={getGradientClasses()}>
+      <CardContent className={`pt-6 rounded-lg relative group transition-colors ${gradientClass}`}>
         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="flex items-center gap-4 relative z-10">
           <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
