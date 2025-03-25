@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
@@ -266,7 +265,7 @@ const Analytics = () => {
               </div>
             </div>
 
-            <ActivityChart data={chartData} />
+            <ActivityChart data={chartData} timeRange={timeRange} />
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
