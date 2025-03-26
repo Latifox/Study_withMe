@@ -23,26 +23,26 @@ serve(async (req) => {
     if (jobId) {
       console.log(`Checking status for job: ${jobId}`);
       
-      // Get the job status from Wondercraft
-      const response = await fetch(`https://api.wondercraft.ai/v1/syntheses/${jobId}`, {
+      // Get the job status from ElevenLabs API instead of Wondercraft
+      const response = await fetch(`https://api.elevenlabs.io/v1/history/${jobId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('WONDERCRAFT_API_KEY')}`,
+          'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') || '',
         },
       });
 
       if (!response.ok) {
-        console.error('Error response from Wondercraft API:', await response.text());
-        throw new Error('Failed to get job status from Wondercraft');
+        console.error('Error response from ElevenLabs API:', await response.text());
+        throw new Error('Failed to get job status from ElevenLabs');
       }
 
       const data = await response.json();
       console.log('Job status response:', data);
       
       // If the job is finished, download the audio and store it
-      if ((data.state === 'ready' || data.finished === true) && (data.episode_url || data.url)) {
-        const audioUrl = data.episode_url || data.url;
+      if (data.state === 'done' || data.state === 'ready') {
+        const audioUrl = data.audio_url || data.history_item_url;
         console.log('Podcast is ready, downloading from URL:', audioUrl);
         
         try {
@@ -138,58 +138,93 @@ serve(async (req) => {
     }
 
     console.log('Creating new podcast with script length:', script.length);
-    const response = await fetch('https://api.wondercraft.ai/v1/syntheses', {
+
+    // Use ElevenLabs API directly instead of Wondercraft
+    const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('WONDERCRAFT_API_KEY')}`,
+        'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') || '',
       },
       body: JSON.stringify({
-        script,
-        voice_settings: [
-          {
-            gender: "female",
-            name: "Host",
-            voice_id: hostVoiceId,
-          },
-          {
-            gender: "male",
-            name: "Guest",
-            voice_id: guestVoiceId,
-          },
-        ],
-        music_id: musicId,
+        text: script,
+        model_id: "eleven_monolingual_v1",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        },
+        voice_id: hostVoiceId || "EXAVITQu4vr4xnSDxMaL", // Default to Sarah voice if not specified
       }),
     });
 
     if (!response.ok) {
-      console.error('Error response from Wondercraft API:', await response.text());
-      throw new Error('Failed to create podcast with Wondercraft');
+      console.error('Error response from ElevenLabs API:', await response.text());
+      throw new Error('Failed to create podcast with ElevenLabs');
     }
 
-    const data = await response.json();
-    console.log('Podcast creation response:', data);
-
-    // Save the job ID to the database for future status checks
-    const jobIdToSave = data.id;
+    // Get the audio as array buffer
+    const audioArrayBuffer = await response.arrayBuffer();
     
-    if (jobIdToSave) {
-      const { error } = await supabaseClient
-        .from('lecture_podcast')
-        .update({ 
-          job_id: jobIdToSave
-        })
-        .eq('lecture_id', lectureId);
-        
-      if (error) {
-        console.error('Error saving job ID to database:', error);
-      } else {
-        console.log('Saved job ID to database:', jobIdToSave);
-      }
+    // Upload the audio to Supabase storage
+    const bucketName = 'podcast_audio';
+    await ensureBucketExists(supabaseClient, bucketName);
+    
+    // Create the file path with a timestamp to avoid conflicts
+    const timestamp = new Date().getTime();
+    const fileName = `podcast_${timestamp}.mp3`;
+    
+    // Create a directory structure based on the lecture ID
+    const folderPath = `lecture_${lectureId}`;
+    const filePath = `${folderPath}/${fileName}`;
+    
+    // Upload the audio file to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+      .from(bucketName)
+      .upload(filePath, audioArrayBuffer, {
+        contentType: 'audio/mpeg',
+        upsert: true,
+      });
+      
+    if (uploadError) {
+      console.error('Error uploading audio to storage:', uploadError);
+      throw uploadError;
     }
-
+    
+    // Get a public URL for the stored audio file
+    const { data: publicUrlData } = await supabaseClient.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+      
+    const audioUrl = publicUrlData?.publicUrl;
+    
+    // Update the database record
+    const { data: updateData, error: updateError } = await supabaseClient
+      .from('lecture_podcast')
+      .update({ 
+        stored_audio_path: filePath,
+        is_processed: true,
+        audio_url: audioUrl
+      })
+      .eq('lecture_id', lectureId)
+      .select()
+      .single();
+      
+    if (updateError) {
+      console.error('Error updating database with storage path:', updateError);
+      throw updateError;
+    }
+    
+    // Return success response with the audio URL
     return new Response(
-      JSON.stringify({ podcastData: data }),
+      JSON.stringify({ 
+        podcastData: {
+          id: timestamp.toString(),
+          url: audioUrl,
+          finished: true,
+          progress: 100,
+          stored_audio_path: filePath
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -315,6 +350,11 @@ function createClient(supabaseUrl, supabaseKey) {
           },
           body: fileBody,
         }).then(res => res.ok ? res.json().then(data => ({ data, error: null })) : res.json().then(error => ({ data: null, error }))),
+        getPublicUrl: (path) => ({
+          data: {
+            publicUrl: `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+          }
+        }),
       }),
     },
   };

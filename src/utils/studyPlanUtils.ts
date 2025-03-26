@@ -28,7 +28,7 @@ export const getActionIcon = (action: string) => {
 
 export const isValidLearningStep = (step: any) => {
   return typeof step === 'object' &&
-         typeof step === 'number' &&
+         typeof step.step === 'number' &&
          typeof step.title === 'string' &&
          typeof step.description === 'string' &&
          typeof step.action === 'string' &&
