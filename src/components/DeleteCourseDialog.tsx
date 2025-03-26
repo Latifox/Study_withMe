@@ -35,8 +35,8 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
         
-        // Step 1: First check and delete any podcast connections and files
-        console.log('Checking for podcast connections for lecture IDs:', lectureIds);
+        // Step 1: First delete any podcast connections and files
+        console.log('Deleting podcast data for lecture IDs:', lectureIds);
         
         // Get podcast records to check for stored files
         const { data: podcastRecords, error: podcastRecordsError } = await supabase
@@ -46,8 +46,10 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
           
         if (podcastRecordsError && !podcastRecordsError.message.includes('no rows')) {
           console.error('Error fetching podcast records:', podcastRecordsError);
-          // Continue with deletion anyway
-        } else if (podcastRecords && podcastRecords.length > 0) {
+          throw podcastRecordsError;
+        } 
+        
+        if (podcastRecords && podcastRecords.length > 0) {
           // Delete any stored audio files if they exist
           for (const record of podcastRecords) {
             if (record.stored_audio_path) {
@@ -63,17 +65,17 @@ export function DeleteCourseDialog({ courseId, courseTitle }: DeleteCourseDialog
               }
             }
           }
-        }
-        
-        // Delete podcast records
-        const { error: podcastsError } = await supabase
-          .from('lecture_podcast')
-          .delete()
-          .in('lecture_id', lectureIds);
           
-        if (podcastsError && !podcastsError.message.includes('no rows')) {
-          console.error('Error deleting podcast connections:', podcastsError);
-          throw podcastsError;
+          // Delete podcast records
+          const { error: podcastsError } = await supabase
+            .from('lecture_podcast')
+            .delete()
+            .in('lecture_id', lectureIds);
+            
+          if (podcastsError) {
+            console.error('Error deleting podcast records:', podcastsError);
+            throw podcastsError;
+          }
         }
         
         // Continue with the rest of the deletion process

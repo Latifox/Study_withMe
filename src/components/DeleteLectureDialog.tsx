@@ -39,38 +39,42 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         throw fetchError;
       }
       
-      // Step 1: Check for stored podcast audio files and delete them if they exist
+      // Step 1: Delete podcast data first
+      // Check if there's any podcast data to delete
       const { data: podcastData, error: podcastFetchError } = await supabase
         .from('lecture_podcast')
         .select('stored_audio_path')
-        .eq('lecture_id', lectureId)
-        .single();
-        
-      if (podcastFetchError && podcastFetchError.code !== 'PGRST116') {
-        console.error('Error fetching podcast data:', podcastFetchError);
-        // Continue with deletion anyway
-      } else if (podcastData && podcastData.stored_audio_path) {
-        console.log('Deleting stored podcast audio file:', podcastData.stored_audio_path);
-        const { error: storageError } = await supabase
-          .storage
-          .from('podcast_audio')
-          .remove([podcastData.stored_audio_path]);
-          
-        if (storageError) {
-          console.log('Error deleting podcast audio file (continuing):', storageError);
-          // Continue with deletion even if file removal fails
-        }
-      }
-      
-      // Step 2: Delete lecture podcast records first (this fixes the foreign key constraint error)
-      const { error: podcastError } = await supabase
-        .from('lecture_podcast')
-        .delete()
         .eq('lecture_id', lectureId);
         
-      if (podcastError && !podcastError.message.includes('no rows')) {
-        console.error('Error deleting lecture podcast:', podcastError);
-        throw podcastError;
+      if (!podcastFetchError && podcastData && podcastData.length > 0) {
+        // Delete audio files if they exist
+        for (const record of podcastData) {
+          if (record.stored_audio_path) {
+            console.log('Deleting stored podcast audio file:', record.stored_audio_path);
+            const { error: storageError } = await supabase
+              .storage
+              .from('podcast_audio')
+              .remove([record.stored_audio_path]);
+              
+            if (storageError) {
+              console.log('Error deleting podcast audio file (continuing):', storageError);
+              // Continue with deletion even if file removal fails
+            }
+          }
+        }
+        
+        // Delete podcast records
+        const { error: podcastDeleteError } = await supabase
+          .from('lecture_podcast')
+          .delete()
+          .eq('lecture_id', lectureId);
+          
+        if (podcastDeleteError) {
+          console.error('Error deleting podcast records:', podcastDeleteError);
+          throw podcastDeleteError;
+        }
+      } else if (podcastFetchError && !podcastFetchError.message?.includes('no rows')) {
+        console.error('Error checking for podcast data:', podcastFetchError);
       }
       
       // Delete quiz progress
@@ -79,7 +83,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         .delete()
         .eq('lecture_id', lectureId);
 
-      if (quizError) {
+      if (quizError && !quizError.message?.includes('no rows')) {
         console.error('Error deleting quiz progress:', quizError);
         throw quizError;
       }
@@ -90,7 +94,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         .delete()
         .eq('lecture_id', lectureId);
 
-      if (userProgressError) {
+      if (userProgressError && !userProgressError.message?.includes('no rows')) {
         console.error('Error deleting user progress:', userProgressError);
         throw userProgressError;
       }
@@ -101,7 +105,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         .delete()
         .eq('lecture_id', lectureId);
 
-      if (segmentsError) {
+      if (segmentsError && !segmentsError.message?.includes('no rows')) {
         console.error('Error deleting segments:', segmentsError);
         throw segmentsError;
       }
@@ -112,7 +116,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         .delete()
         .eq('lecture_id', lectureId);
 
-      if (configError) {
+      if (configError && !configError.message?.includes('no rows')) {
         console.error('Error deleting AI configs:', configError);
         throw configError;
       }
@@ -123,7 +127,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         .delete()
         .eq('lecture_id', lectureId);
 
-      if (segmentInfoError) {
+      if (segmentInfoError && !segmentInfoError.message?.includes('no rows')) {
         console.error('Error deleting segment info:', segmentInfoError);
         throw segmentInfoError;
       }
@@ -134,7 +138,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
         .delete()
         .eq('lecture_id', lectureId);
 
-      if (studyPlansError) {
+      if (studyPlansError && !studyPlansError.message?.includes('no rows')) {
         console.error('Error deleting study plans:', studyPlansError);
         throw studyPlansError;
       }
