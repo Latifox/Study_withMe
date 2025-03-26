@@ -1,5 +1,5 @@
 
-import { BookOpen, MessageSquare, Activity, Brain, Network, FileText, MapPin, Headphones } from "lucide-react";
+import { BookOpen, MessageSquare, Activity, Brain, Network, FileText, MapPin, Headphones, ClipboardCheck } from "lucide-react";
 
 export const getActionIcon = (action: string) => {
   switch (action) {
@@ -14,11 +14,13 @@ export const getActionIcon = (action: string) => {
     case 'quiz':
       return Brain;
     case 'mindmap':
-      return MapPin;
+      return Network;
     case 'podcast':
       return Headphones;
     case 'resources':
       return Network;
+    case 'study-plan':
+      return ClipboardCheck;
     default:
       return null;
   }
@@ -26,7 +28,7 @@ export const getActionIcon = (action: string) => {
 
 export const isValidLearningStep = (step: any) => {
   return typeof step === 'object' &&
-         typeof step.step === 'number' &&
+         typeof step === 'number' &&
          typeof step.title === 'string' &&
          typeof step.description === 'string' &&
          typeof step.action === 'string' &&

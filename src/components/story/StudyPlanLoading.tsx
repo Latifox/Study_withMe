@@ -1,6 +1,6 @@
 
 import { motion } from "framer-motion";
-import { Network } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 const StudyPlanLoading = () => {
@@ -38,7 +38,7 @@ const StudyPlanLoading = () => {
               transition={{ duration: 2, repeat: Infinity }}
               className="inline-block"
             >
-              <Network className="w-12 h-12 text-white" />
+              <ClipboardCheck className="w-12 h-12 text-white" />
             </motion.div>
             <h2 className="text-2xl font-bold text-white">Creating Your Study Plan</h2>
             <p className="text-white/80">Analyzing content and designing your learning journey...</p>

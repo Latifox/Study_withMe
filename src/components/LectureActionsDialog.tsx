@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity, BrainCircuit, Mic } from "lucide-react";
+import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity, BrainCircuit, Mic, ClipboardCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface LectureActionsDialogProps {
@@ -78,7 +78,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
             size="lg"
           >
-            <Network className="w-5 h-5" />
+            <ClipboardCheck className="w-5 h-5" />
             Study plan
           </Button>
           <Button
@@ -126,7 +126,7 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
             className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
             size="lg"
           >
-            <BrainCircuit className="w-5 h-5" />
+            <Network className="w-5 h-5" />
             Mindmap
           </Button>
           <Button
