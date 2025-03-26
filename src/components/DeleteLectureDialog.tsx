@@ -24,17 +24,18 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
     try {
       console.log('Deleting lecture:', lectureId);
       
-      // First get the PDF path for this lecture
+      // Determine the correct table name based on mode
       const mode = window.location.href.includes('professor-course') ? 'professor' : 'student';
-      const tableName = mode === 'professor' ? 'professor_lectures' : 'lectures';
+      const lectureTable = mode === 'professor' ? 'professor_lectures' : 'lectures';
       
+      // First get the PDF path for this lecture
       const { data: lectureData, error: fetchError } = await supabase
-        .from(tableName)
+        .from(lectureTable)
         .select('pdf_path')
         .eq('id', lectureId)
-        .single();
+        .maybeSingle();
       
-      if (fetchError) {
+      if (fetchError && !fetchError.message?.includes('no rows')) {
         console.error('Error fetching lecture PDF path:', fetchError);
         throw fetchError;
       }
@@ -43,10 +44,15 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
       // Check if there's any podcast data to delete
       const { data: podcastData, error: podcastFetchError } = await supabase
         .from('lecture_podcast')
-        .select('stored_audio_path')
+        .select('id, stored_audio_path')
         .eq('lecture_id', lectureId);
         
-      if (!podcastFetchError && podcastData && podcastData.length > 0) {
+      if (podcastFetchError && !podcastFetchError.message?.includes('no rows')) {
+        console.error('Error fetching podcast data:', podcastFetchError);
+        throw podcastFetchError;
+      }
+      
+      if (podcastData && podcastData.length > 0) {
         // Delete audio files if they exist
         for (const record of podcastData) {
           if (record.stored_audio_path) {
@@ -61,20 +67,18 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
               // Continue with deletion even if file removal fails
             }
           }
-        }
-        
-        // Delete podcast records
-        const { error: podcastDeleteError } = await supabase
-          .from('lecture_podcast')
-          .delete()
-          .eq('lecture_id', lectureId);
           
-        if (podcastDeleteError) {
-          console.error('Error deleting podcast records:', podcastDeleteError);
-          throw podcastDeleteError;
+          // Delete individual podcast record
+          const { error: podcastDeleteError } = await supabase
+            .from('lecture_podcast')
+            .delete()
+            .eq('id', record.id);
+            
+          if (podcastDeleteError) {
+            console.error(`Error deleting podcast record ${record.id}:`, podcastDeleteError);
+            throw podcastDeleteError;
+          }
         }
-      } else if (podcastFetchError && !podcastFetchError.message?.includes('no rows')) {
-        console.error('Error checking for podcast data:', podcastFetchError);
       }
       
       // Delete quiz progress
@@ -145,7 +149,7 @@ export function DeleteLectureDialog({ lectureId, lectureTitle, courseId }: Delet
 
       // Finally delete the lecture
       const { error: lectureError } = await supabase
-        .from(tableName)
+        .from(lectureTable)
         .delete()
         .eq('id', lectureId);
 

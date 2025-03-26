@@ -34,82 +34,110 @@ export function DeleteProfessorCourseDialog({ courseId, courseTitle }: DeletePro
       // Delete related content for each lecture
       if (lectures && lectures.length > 0) {
         const lectureIds = lectures.map(lecture => lecture.id);
+        console.log('Deleting content for lecture IDs:', lectureIds);
         
-        // Step 1: First delete any podcast connections and files
-        console.log('Deleting podcast data for lecture IDs:', lectureIds);
-        
-        // Get podcast records to check for stored files
-        const { data: podcastRecords, error: podcastRecordsError } = await supabase
-          .from('lecture_podcast')
-          .select('id, stored_audio_path')
-          .in('lecture_id', lectureIds);
+        // Process each lecture individually to ensure proper deletion order
+        for (const lectureId of lectureIds) {
+          // Step 1: Delete any podcast connections first
+          const { data: podcastData, error: podcastQueryError } = await supabase
+            .from('lecture_podcast')
+            .select('id, stored_audio_path')
+            .eq('lecture_id', lectureId);
+            
+          if (podcastQueryError && !podcastQueryError.message.includes('no rows')) {
+            console.error(`Error fetching podcast data for lecture ${lectureId}:`, podcastQueryError);
+            throw podcastQueryError;
+          }
           
-        if (podcastRecordsError && !podcastRecordsError.message.includes('no rows')) {
-          console.error('Error fetching podcast records:', podcastRecordsError);
-          throw podcastRecordsError;
-        } 
-        
-        if (podcastRecords && podcastRecords.length > 0) {
-          // Delete any stored audio files if they exist
-          for (const record of podcastRecords) {
-            if (record.stored_audio_path) {
-              console.log('Deleting stored podcast audio file:', record.stored_audio_path);
-              const { error: storageError } = await supabase
-                .storage
-                .from('podcast_audio')
-                .remove([record.stored_audio_path]);
-                
-              if (storageError) {
-                console.log('Error deleting podcast audio file (continuing):', storageError);
-                // Continue with deletion even if file removal fails
+          if (podcastData && podcastData.length > 0) {
+            // Delete stored podcast audio files if they exist
+            for (const record of podcastData) {
+              if (record.stored_audio_path) {
+                console.log('Deleting stored podcast audio file:', record.stored_audio_path);
+                const { error: storageError } = await supabase
+                  .storage
+                  .from('podcast_audio')
+                  .remove([record.stored_audio_path]);
+                  
+                if (storageError) {
+                  console.log('Error deleting podcast audio file (continuing):', storageError);
+                  // Continue with deletion even if file removal fails
+                }
+              }
+              
+              // Delete individual podcast record
+              const { error: podcastDeleteError } = await supabase
+                .from('lecture_podcast')
+                .delete()
+                .eq('id', record.id);
+              
+              if (podcastDeleteError) {
+                console.error(`Error deleting podcast record ${record.id}:`, podcastDeleteError);
+                throw podcastDeleteError;
               }
             }
           }
           
-          // Delete podcast records
-          const { error: podcastsError } = await supabase
-            .from('lecture_podcast')
+          // Step 2: Delete professor segments content
+          const { error: segmentsError } = await supabase
+            .from('professor_segments_content')
             .delete()
-            .in('lecture_id', lectureIds);
-            
-          if (podcastsError) {
-            console.error('Error deleting podcast records:', podcastsError);
-            throw podcastsError;
+            .eq('lecture_id', lectureId);
+
+          if (segmentsError && !segmentsError.message.includes('no rows')) {
+            console.error(`Error deleting professor segments content for lecture ${lectureId}:`, segmentsError);
+            throw segmentsError;
+          }
+
+          // Step 3: Delete professor segments info
+          const { error: segmentInfoError } = await supabase
+            .from('professor_lecture_segments')
+            .delete()
+            .eq('lecture_id', lectureId);
+
+          if (segmentInfoError && !segmentInfoError.message.includes('no rows')) {
+            console.error(`Error deleting professor segments info for lecture ${lectureId}:`, segmentInfoError);
+            throw segmentInfoError;
           }
         }
         
-        // Step 2: Delete professor segments content
-        const { error: segmentsError } = await supabase
-          .from('professor_segments_content')
-          .delete()
-          .in('lecture_id', lectureIds);
+        // Step 4: Now it's safe to delete all lectures since dependencies are removed
+        for (const lectureId of lectureIds) {
+          // Get the PDF path before deleting
+          const { data: lectureData, error: lectureDataError } = await supabase
+            .from('professor_lectures')
+            .select('pdf_path')
+            .eq('id', lectureId)
+            .maybeSingle();
+            
+          if (lectureDataError) {
+            console.error(`Error fetching lecture data for ${lectureId}:`, lectureDataError);
+            // Continue with deletion even if we can't get the PDF path
+          }
+          
+          // Delete the lecture
+          const { error: lectureDeleteError } = await supabase
+            .from('professor_lectures')
+            .delete()
+            .eq('id', lectureId);
 
-        if (segmentsError && !segmentsError.message.includes('no rows')) {
-          console.error('Error deleting professor segments content:', segmentsError);
-          throw segmentsError;
-        }
-
-        // Step 3: Delete professor segments info
-        const { error: segmentInfoError } = await supabase
-          .from('professor_lecture_segments')
-          .delete()
-          .in('lecture_id', lectureIds);
-
-        if (segmentInfoError && !segmentInfoError.message.includes('no rows')) {
-          console.error('Error deleting professor segments info:', segmentInfoError);
-          throw segmentInfoError;
-        }
-
-        // Step 4: Delete all lectures
-        console.log('Deleting professor lectures for course ID:', courseId);
-        const { error: lecturesError } = await supabase
-          .from('professor_lectures')
-          .delete()
-          .eq('professor_course_id', courseId);
-
-        if (lecturesError) {
-          console.error('Error deleting professor lectures:', lecturesError);
-          throw lecturesError;
+          if (lectureDeleteError) {
+            console.error(`Error deleting professor lecture ${lectureId}:`, lectureDeleteError);
+            throw lectureDeleteError;
+          }
+          
+          // Delete the PDF file if it exists
+          if (lectureData?.pdf_path) {
+            const { error: storageError } = await supabase
+              .storage
+              .from('lecture_pdfs')
+              .remove([lectureData.pdf_path]);
+              
+            if (storageError) {
+              console.log(`Error deleting PDF file for lecture ${lectureId} (continuing):`, storageError);
+              // Continue with other deletions even if file removal fails
+            }
+          }
         }
       }
 
