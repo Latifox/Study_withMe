@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
+
 interface PodcastData {
   id: number;
   lecture_id: number;
@@ -22,6 +23,7 @@ interface PodcastData {
   job_id?: string;
   stored_audio_path?: string;
 }
+
 interface WondercraftPodcastResponse {
   id?: string;
   job_id?: string;
@@ -34,9 +36,10 @@ interface WondercraftPodcastResponse {
   error?: boolean;
   message?: string;
 }
-const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5";
-const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a";
-const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e";
+
+const HOST_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Sarah
+const GUEST_VOICE_ID = "N2lVS1w4EtoT3dr4eOWO"; // Callum
+
 const Podcast = () => {
   const {
     courseId,
@@ -62,6 +65,7 @@ const Podcast = () => {
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     const fetchData = async () => {
       if (!lectureId) return;
@@ -89,6 +93,7 @@ const Podcast = () => {
       }
     };
   }, [lectureId]);
+
   const fetchPodcast = async () => {
     if (!lectureId) return;
     try {
@@ -126,6 +131,7 @@ const Podcast = () => {
       throw error; // Re-throw to be caught by the outer try-catch
     }
   };
+
   const setupPodcastAudio = async (podcastData: PodcastData) => {
     try {
       console.log('Setting up podcast audio with data:', podcastData);
@@ -184,6 +190,7 @@ const Podcast = () => {
       }
     }
   };
+
   const generatePodcast = async () => {
     if (!lectureId) return;
     setIsGenerating(true);
@@ -216,40 +223,134 @@ const Podcast = () => {
       setIsGenerating(false);
     }
   };
+
   const generateAudio = async () => {
     if (!podcast) return;
     setIsGeneratingAudio(true);
     try {
       console.log('Generating audio for podcast with script length:', podcast.full_script.length);
-      console.log('Calling wondercraft-podcast function with host voice ID:', HOST_VOICE_ID, 'and guest voice ID:', GUEST_VOICE_ID);
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('elevenlabs-podcast', {
-        body: {
-          script: podcast.full_script,
-          hostVoiceId: HOST_VOICE_ID,
-          guestVoiceId: GUEST_VOICE_ID,
-          musicId: MUSIC_ID,
-          lectureId: parseInt(lectureId!) // Pass the lecture ID to the edge function
-        }
+      
+      const lines = podcast.full_script.split('\n');
+      const parsedScript = parseScript(lines);
+      
+      if (parsedScript.length === 0) {
+        throw new Error("Failed to parse podcast script");
+      }
+      
+      const timestamp = new Date().getTime();
+      const audioFileName = `podcast_${lectureId}_${timestamp}.mp3`;
+      
+      setPodcastAudio({
+        progress: 5,
+        finished: false,
+        message: "Preparing script for processing..."
       });
-      if (error) {
-        console.error('Error response from wondercraft-podcast function:', error);
-        throw error;
-      }
-      console.log('Response from wondercraft-podcast function:', data);
-      if (data?.podcastData) {
-        setPodcastAudio(data.podcastData);
-        const jobId = data.podcastData.job_id || data.podcastData.id;
-        if (jobId) {
-          toast({
-            title: "Processing",
-            description: "Your podcast is being generated. We'll update you when it's ready."
+      
+      startPollingProgress(10);
+      
+      const audioBlobs = [];
+      let currentProgress = 10;
+      
+      for (let i = 0; i < parsedScript.length; i++) {
+        const segment = parsedScript[i];
+        const segmentProgress = 80 / parsedScript.length;
+        
+        try {
+          setPodcastAudio(prev => ({
+            ...prev,
+            progress: currentProgress,
+            message: `Processing segment ${i+1} of ${parsedScript.length}...`
+          }));
+          
+          const voiceId = segment.speaker === 'host' ? HOST_VOICE_ID : GUEST_VOICE_ID;
+          
+          const { data, error } = await supabase.functions.invoke('text-to-speech', {
+            body: {
+              text: segment.text,
+              voiceId: voiceId
+            }
           });
-          startPollingJobStatus(jobId);
+          
+          if (error) throw error;
+          
+          if (data?.audioContent) {
+            const binaryString = atob(data.audioContent);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let j = 0; j < binaryString.length; j++) {
+              bytes[j] = binaryString.charCodeAt(j);
+            }
+            const blob = new Blob([bytes], { type: 'audio/mp3' });
+            audioBlobs.push(blob);
+          }
+          
+          currentProgress += segmentProgress;
+          setPodcastAudio(prev => ({
+            ...prev,
+            progress: Math.min(90, currentProgress)
+          }));
+        } catch (segmentError) {
+          console.error(`Error processing segment ${i}:`, segmentError);
         }
       }
+      
+      setPodcastAudio(prev => ({
+        ...prev,
+        progress: 90,
+        message: "Combining audio segments..."
+      }));
+      
+      const combinedBlob = new Blob(audioBlobs, { type: 'audio/mp3' });
+      const audioFile = new File([combinedBlob], audioFileName, { type: 'audio/mp3' });
+      
+      setPodcastAudio(prev => ({
+        ...prev,
+        progress: 95,
+        message: "Uploading podcast audio..."
+      }));
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('podcast_audio')
+        .upload(audioFileName, audioFile);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: publicUrlData } = await supabase.storage
+        .from('podcast_audio')
+        .getPublicUrl(audioFileName);
+        
+      const audioUrl = publicUrlData?.publicUrl;
+      
+      const { error: updateError } = await supabase
+        .from('lecture_podcast')
+        .update({
+          is_processed: true,
+          stored_audio_path: audioFileName,
+          audio_url: audioUrl
+        })
+        .eq('id', podcast.id);
+        
+      if (updateError) throw updateError;
+      
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.volume = isMuted ? 0 : volume;
+        audioRef.current.load();
+      }
+      
+      setPodcastAudio({
+        url: audioUrl,
+        finished: true,
+        progress: 100,
+        message: "Podcast audio ready!"
+      });
+      
+      await fetchPodcast();
+      
+      toast({
+        title: "Success",
+        description: "Podcast audio is ready to play"
+      });
+      
     } catch (error) {
       console.error('Error generating podcast audio:', error);
       toast({
@@ -257,78 +358,93 @@ const Podcast = () => {
         description: "Failed to generate podcast audio",
         variant: "destructive"
       });
+    } finally {
+      if (pollIntervalRef.current) {
+        window.clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
       setIsGeneratingAudio(false);
+      setIsPollingSatus(false);
     }
   };
-  const startPollingJobStatus = (jobId: string) => {
+
+  const parseScript = (lines: string[]) => {
+    const segments: {speaker: 'host' | 'guest', text: string}[] = [];
+    let currentSpeaker: 'host' | 'guest' | null = null;
+    let currentText = '';
+    
+    for (let line of lines) {
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine) continue;
+      
+      if (trimmedLine.startsWith('Host:')) {
+        if (currentSpeaker && currentText) {
+          segments.push({
+            speaker: currentSpeaker,
+            text: currentText.trim()
+          });
+        }
+        
+        currentSpeaker = 'host';
+        currentText = trimmedLine.substring(5).trim();
+      } 
+      else if (trimmedLine.startsWith('Guest:') || 
+               trimmedLine.startsWith('Expert:') || 
+               trimmedLine.startsWith('Dr.')) {
+        if (currentSpeaker && currentText) {
+          segments.push({
+            speaker: currentSpeaker,
+            text: currentText.trim()
+          });
+        }
+        
+        currentSpeaker = 'guest';
+        currentText = trimmedLine.includes(':') ? 
+          trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim() : 
+          trimmedLine;
+      }
+      else if (currentSpeaker) {
+        currentText += ' ' + trimmedLine;
+      }
+      else {
+        currentSpeaker = 'host';
+        currentText = trimmedLine;
+      }
+    }
+    
+    if (currentSpeaker && currentText) {
+      segments.push({
+        speaker: currentSpeaker,
+        text: currentText.trim()
+      });
+    }
+    
+    return segments;
+  };
+
+  const startPollingProgress = (startProgress: number) => {
     setIsPollingSatus(true);
     if (pollIntervalRef.current) {
       window.clearInterval(pollIntervalRef.current);
     }
-    let failedAttempts = 0;
-    const maxFailedAttempts = 5;
-    const intervalId = window.setInterval(async () => {
-      try {
-        console.log('Polling job status for job ID:', jobId);
-        const {
-          data,
-          error
-        } = await supabase.functions.invoke('elevenlabs-podcast', {
-          body: {
-            jobId,
-            lectureId: parseInt(lectureId!) // Pass the lecture ID for database updates
-          }
-        });
-        if (error) {
-          console.error('Error polling job status:', error);
-          failedAttempts++;
-          if (failedAttempts >= maxFailedAttempts) {
-            throw new Error(`Failed to check podcast status after ${maxFailedAttempts} attempts`);
-          }
-          return;
-        }
-        failedAttempts = 0;
-        console.log('Status polling response:', data);
-        if (data?.podcastData) {
-          setPodcastAudio(data.podcastData);
-          const finished = data.podcastData.finished;
-          const status = data.podcastData.status || data.podcastData.state;
-          const audioUrl = data.podcastData.url || data.podcastData.episode_url;
-          const error = data.podcastData.error;
-          const errorMessage = data.podcastData.message;
-          if ((finished === true || status === 'completed' || status === 'ready') && audioUrl) {
-            setIsPollingSatus(false);
-            setIsGeneratingAudio(false);
-            if (audioRef.current) {
-              audioRef.current.src = audioUrl;
-              audioRef.current.volume = isMuted ? 0 : volume;
-            }
-            fetchPodcast();
-            window.clearInterval(pollIntervalRef.current!);
-            pollIntervalRef.current = null;
-            toast({
-              title: "Success",
-              description: "Podcast audio is ready to play"
-            });
-          } else if (error === true || status === 'failed') {
-            throw new Error(errorMessage || 'Podcast generation failed');
-          }
-        }
-      } catch (error) {
-        console.error('Error polling job status:', error);
-        toast({
-          title: "Error",
-          description: "Failed to check podcast status",
-          variant: "destructive"
-        });
-        window.clearInterval(pollIntervalRef.current!);
-        pollIntervalRef.current = null;
-        setIsPollingSatus(false);
-        setIsGeneratingAudio(false);
+    
+    let currentProgress = startProgress;
+    const interval = window.setInterval(() => {
+      if (currentProgress < 90) {
+        currentProgress += 1;
+        setPodcastAudio(prev => ({
+          ...prev,
+          progress: currentProgress
+        }));
+      } else {
+        window.clearInterval(interval);
       }
-    }, 8000);
-    pollIntervalRef.current = intervalId;
+    }, 1000);
+    
+    pollIntervalRef.current = interval;
   };
+
   const playTextToSpeech = async (text: string) => {
     if (!text) return;
     setIsAudioLoading(true);
@@ -375,6 +491,7 @@ const Podcast = () => {
       setIsAudioLoading(false);
     }
   };
+
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -386,12 +503,14 @@ const Podcast = () => {
       }
     }
   };
+
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (audioRef.current && isPlaying) {
@@ -399,12 +518,15 @@ const Podcast = () => {
       setIsPlaying(false);
     }
   };
+
   const formatScript = (script: string) => {
     return script.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph}</p>);
   };
+
   const handleAudioEnded = () => {
     setIsPlaying(false);
   };
+
   const downloadPodcast = () => {
     if (podcast?.stored_audio_path) {
       const {
@@ -446,13 +568,16 @@ const Podcast = () => {
       document.body.removeChild(link);
     }
   };
+
   const calculateProgress = () => {
     if (!podcastAudio) return 0;
     return podcastAudio.progress || 0;
   };
+
   const hasPodcastAudio = () => {
     return podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path) || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
   };
+
   useEffect(() => {
     const updateTime = () => {
       if (audioRef.current && !isDraggingTime) {
@@ -481,6 +606,7 @@ const Podcast = () => {
       }
     };
   }, [isDraggingTime]);
+
   useEffect(() => {
     if (podcastAudio && audioRef.current) {
       const audioUrl = podcastAudio.url || podcastAudio.episode_url;
@@ -492,6 +618,7 @@ const Podcast = () => {
       }
     }
   }, [podcastAudio, isMuted, volume]);
+
   const handleTimeChange = (value: number[]) => {
     const newTime = value[0];
     setCurrentTime(newTime);
@@ -499,11 +626,13 @@ const Podcast = () => {
       audioRef.current.currentTime = newTime;
     }
   };
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
+
   const handleSeekBackward = () => {
     if (audioRef.current) {
       const newTime = Math.max(0, audioRef.current.currentTime - 10);
@@ -511,6 +640,7 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
+
   const handleSeekForward = () => {
     if (audioRef.current) {
       const newTime = Math.min(duration, audioRef.current.currentTime + 10);
@@ -518,6 +648,7 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
+
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
@@ -525,6 +656,7 @@ const Podcast = () => {
       audioRef.current.volume = isMuted ? 0 : newVolume;
     }
   };
+
   return <PodcastBackground>
       <div className="container max-w-6xl py-8">
         <div className="flex items-center justify-between mb-6">
@@ -728,4 +860,5 @@ const Podcast = () => {
       </div>
     </PodcastBackground>;
 };
+
 export default Podcast;
