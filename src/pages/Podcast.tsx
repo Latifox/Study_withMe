@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -43,11 +42,8 @@ const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a";
 const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e";
 
 const Podcast = () => {
-  const {
-    courseId,
-    lectureId
-  } = useParams();
-  const [isLoading, setIsLoading] = useState(true); // Start with loading state
+  const { courseId, lectureId } = useParams();
+  const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [podcast, setPodcast] = useState<PodcastData | null>(null);
   const [podcastAudio, setPodcastAudio] = useState<WondercraftPodcastResponse | null>(null);
@@ -63,15 +59,11 @@ const Podcast = () => {
   const [isDraggingTime, setIsDraggingTime] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Ensure the podcast_audio bucket exists when the component mounts
     ensureBucketExists('podcast_audio');
     
-    // Immediately fetch podcast data when the component mounts
     if (lectureId) {
       setIsLoading(true);
       fetchPodcast();
@@ -89,12 +81,13 @@ const Podcast = () => {
     
     try {
       console.log(`Fetching podcast for lecture ID: ${lectureId}`);
-      const {
-        data,
-        error
-      } = await supabase.from('lecture_podcast').select('*').eq('lecture_id', parseInt(lectureId)).single();
+      const { data, error } = await supabase
+        .from('lecture_podcast')
+        .select('*')
+        .eq('lecture_id', parseInt(lectureId))
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching podcast from database:', error);
         throw error;
       }
@@ -129,11 +122,9 @@ const Podcast = () => {
     try {
       console.log('Setting up podcast audio with data:', podcastData);
       
-      // First check for stored audio in the bucket
       if (podcastData.stored_audio_path) {
         console.log('Podcast has stored audio path:', podcastData.stored_audio_path);
         
-        // Get a public URL for the stored audio file
         const { data: publicUrlData } = await supabase.storage
           .from('podcast_audio')
           .getPublicUrl(podcastData.stored_audio_path);
@@ -150,15 +141,14 @@ const Podcast = () => {
             console.log('Setting audio source to stored audio file');
             audioRef.current.src = publicUrlData.publicUrl;
             audioRef.current.volume = isMuted ? 0 : volume;
-            audioRef.current.load(); // Explicitly load the audio
+            audioRef.current.load();
           }
-          return; // Exit early if we successfully set up stored audio
+          return;
         } else {
           console.error('Failed to get public URL for stored audio path');
         }
       }
       
-      // Fall back to external URL if available and we couldn't use stored audio
       if (podcastData.audio_url) {
         console.log('Using external audio URL as fallback:', podcastData.audio_url);
         setPodcastAudio({
@@ -170,14 +160,13 @@ const Podcast = () => {
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
-          audioRef.current.load(); // Explicitly load the audio
+          audioRef.current.load();
         }
       } else {
         console.error('No audio sources available for this podcast');
       }
     } catch (storageError) {
       console.error('Error setting up podcast audio:', storageError);
-      // Fall back to the external URL if available
       if (podcastData.audio_url) {
         console.log('Falling back to external audio URL due to error:', podcastData.audio_url);
         setPodcastAudio({
@@ -189,7 +178,7 @@ const Podcast = () => {
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
-          audioRef.current.load(); // Explicitly load the audio
+          audioRef.current.load();
         }
       }
     }
@@ -298,7 +287,7 @@ const Podcast = () => {
           if (failedAttempts >= maxFailedAttempts) {
             throw new Error(`Failed to check podcast status after ${maxFailedAttempts} attempts`);
           }
-          return; // Continue polling even if this attempt failed
+          return;
         }
         failedAttempts = 0;
         console.log('Status polling response:', data);
@@ -439,7 +428,6 @@ const Podcast = () => {
         link.click();
         document.body.removeChild(link);
       } else if (podcast?.audio_url) {
-        // Fall back to external URL
         const link = document.createElement('a');
         link.href = podcast.audio_url;
         link.download = 'podcast.mp3';
@@ -519,7 +507,7 @@ const Podcast = () => {
         console.log('Updating audio source in useEffect:', audioUrl);
         audioRef.current.src = audioUrl;
         audioRef.current.volume = isMuted ? 0 : volume;
-        audioRef.current.load(); // Explicitly load the audio
+        audioRef.current.load();
       }
     }
   }, [podcastAudio, isMuted, volume]);
@@ -593,7 +581,7 @@ const Podcast = () => {
             controls 
             className="w-full mb-4" 
             onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
-            preload="auto" // Preload audio data
+            preload="auto"
           />
         </div>
 
