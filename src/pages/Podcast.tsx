@@ -10,7 +10,6 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
-
 interface PodcastData {
   id: number;
   lecture_id: number;
@@ -23,7 +22,6 @@ interface PodcastData {
   job_id?: string;
   stored_audio_path?: string;
 }
-
 interface WondercraftPodcastResponse {
   id?: string;
   job_id?: string;
@@ -36,13 +34,14 @@ interface WondercraftPodcastResponse {
   error?: boolean;
   message?: string;
 }
-
 const HOST_VOICE_ID = "1da32dae-a953-4e5f-81df-94e4bb1965e5";
 const GUEST_VOICE_ID = "0b356f1c-03d6-4e80-9427-9e26e7e2d97a";
 const MUSIC_ID = "168bab40-3ead-4699-80a4-c97a7d613e3e";
-
 const Podcast = () => {
-  const { courseId, lectureId } = useParams();
+  const {
+    courseId,
+    lectureId
+  } = useParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [podcast, setPodcast] = useState<PodcastData | null>(null);
@@ -60,15 +59,14 @@ const Podcast = () => {
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     const fetchData = async () => {
       if (!lectureId) return;
-      
       setIsLoading(true);
       setError(null);
-      
       try {
         await ensureBucketExists('podcast_audio');
         await fetchPodcast();
@@ -84,38 +82,29 @@ const Podcast = () => {
         setIsLoading(false);
       }
     };
-
     fetchData();
-    
     return () => {
       if (pollIntervalRef.current) {
         window.clearInterval(pollIntervalRef.current);
       }
     };
   }, [lectureId]);
-
   const fetchPodcast = async () => {
     if (!lectureId) return;
-    
     try {
       console.log(`Fetching podcast for lecture ID: ${lectureId}`);
-      const { data, error } = await supabase
-        .from('lecture_podcast')
-        .select('*')
-        .eq('lecture_id', parseInt(lectureId))
-        .maybeSingle();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('lecture_podcast').select('*').eq('lecture_id', parseInt(lectureId)).maybeSingle();
       if (error) {
         console.error('Error fetching podcast from database:', error);
         throw error;
       }
-      
       console.log('Podcast fetch response:', data);
-      
       if (data) {
         console.log('Podcast data retrieved from database:', data);
         setPodcast(data);
-        
         if (data.is_processed) {
           console.log('Podcast is processed, setting up audio source');
           await setupPodcastAudio(data);
@@ -137,18 +126,14 @@ const Podcast = () => {
       throw error; // Re-throw to be caught by the outer try-catch
     }
   };
-
   const setupPodcastAudio = async (podcastData: PodcastData) => {
     try {
       console.log('Setting up podcast audio with data:', podcastData);
-      
       if (podcastData.stored_audio_path) {
         console.log('Podcast has stored audio path:', podcastData.stored_audio_path);
-        
-        const { data: publicUrlData } = await supabase.storage
-          .from('podcast_audio')
-          .getPublicUrl(podcastData.stored_audio_path);
-        
+        const {
+          data: publicUrlData
+        } = await supabase.storage.from('podcast_audio').getPublicUrl(podcastData.stored_audio_path);
         if (publicUrlData && publicUrlData.publicUrl) {
           console.log('Successfully retrieved public URL for stored audio:', publicUrlData.publicUrl);
           setPodcastAudio({
@@ -156,7 +141,6 @@ const Podcast = () => {
             finished: true,
             progress: 100
           });
-          
           if (audioRef.current) {
             console.log('Setting audio source to stored audio file');
             audioRef.current.src = publicUrlData.publicUrl;
@@ -168,7 +152,6 @@ const Podcast = () => {
           console.error('Failed to get public URL for stored audio path');
         }
       }
-      
       if (podcastData.audio_url) {
         console.log('Using external audio URL as fallback:', podcastData.audio_url);
         setPodcastAudio({
@@ -176,7 +159,6 @@ const Podcast = () => {
           finished: true,
           progress: 100
         });
-        
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
@@ -194,7 +176,6 @@ const Podcast = () => {
           finished: true,
           progress: 100
         });
-        
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
@@ -203,7 +184,6 @@ const Podcast = () => {
       }
     }
   };
-
   const generatePodcast = async () => {
     if (!lectureId) return;
     setIsGenerating(true);
@@ -236,7 +216,6 @@ const Podcast = () => {
       setIsGenerating(false);
     }
   };
-
   const generateAudio = async () => {
     if (!podcast) return;
     setIsGeneratingAudio(true);
@@ -281,7 +260,6 @@ const Podcast = () => {
       setIsGeneratingAudio(false);
     }
   };
-
   const startPollingJobStatus = (jobId: string) => {
     setIsPollingSatus(true);
     if (pollIntervalRef.current) {
@@ -351,7 +329,6 @@ const Podcast = () => {
     }, 8000);
     pollIntervalRef.current = intervalId;
   };
-
   const playTextToSpeech = async (text: string) => {
     if (!text) return;
     setIsAudioLoading(true);
@@ -398,7 +375,6 @@ const Podcast = () => {
       setIsAudioLoading(false);
     }
   };
-
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -410,14 +386,12 @@ const Podcast = () => {
       }
     }
   };
-
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (audioRef.current && isPlaying) {
@@ -425,21 +399,17 @@ const Podcast = () => {
       setIsPlaying(false);
     }
   };
-
   const formatScript = (script: string) => {
     return script.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph}</p>);
   };
-
   const handleAudioEnded = () => {
     setIsPlaying(false);
   };
-
   const downloadPodcast = () => {
     if (podcast?.stored_audio_path) {
-      const { data } = supabase.storage
-        .from('podcast_audio')
-        .getPublicUrl(podcast.stored_audio_path);
-      
+      const {
+        data
+      } = supabase.storage.from('podcast_audio').getPublicUrl(podcast.stored_audio_path);
       if (data && data.publicUrl) {
         const link = document.createElement('a');
         link.href = data.publicUrl;
@@ -457,7 +427,6 @@ const Podcast = () => {
       }
       return;
     }
-    
     if (podcast?.audio_url) {
       const link = document.createElement('a');
       link.href = podcast.audio_url;
@@ -467,7 +436,6 @@ const Podcast = () => {
       document.body.removeChild(link);
       return;
     }
-    
     const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
     if (downloadUrl) {
       const link = document.createElement('a');
@@ -478,36 +446,30 @@ const Podcast = () => {
       document.body.removeChild(link);
     }
   };
-
   const calculateProgress = () => {
     if (!podcastAudio) return 0;
     return podcastAudio.progress || 0;
   };
-
   const hasPodcastAudio = () => {
-    return (podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path)) || 
-           (podcastAudio && (podcastAudio.url || podcastAudio.episode_url));
+    return podcast?.is_processed && (podcast?.audio_url || podcast?.stored_audio_path) || podcastAudio && (podcastAudio.url || podcastAudio.episode_url);
   };
-
   useEffect(() => {
     const updateTime = () => {
       if (audioRef.current && !isDraggingTime) {
         setCurrentTime(audioRef.current.currentTime);
       }
     };
-
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
         setDuration(audioRef.current.duration);
         console.log('Audio metadata loaded, duration:', audioRef.current.duration);
       }
     };
-
     const audioElement = audioRef.current;
     if (audioElement) {
       audioElement.addEventListener('timeupdate', updateTime);
       audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
-      audioElement.addEventListener('error', (e) => {
+      audioElement.addEventListener('error', e => {
         console.error('Audio loading error:', e);
       });
     }
@@ -519,7 +481,6 @@ const Podcast = () => {
       }
     };
   }, [isDraggingTime]);
-
   useEffect(() => {
     if (podcastAudio && audioRef.current) {
       const audioUrl = podcastAudio.url || podcastAudio.episode_url;
@@ -531,7 +492,6 @@ const Podcast = () => {
       }
     }
   }, [podcastAudio, isMuted, volume]);
-
   const handleTimeChange = (value: number[]) => {
     const newTime = value[0];
     setCurrentTime(newTime);
@@ -539,13 +499,11 @@ const Podcast = () => {
       audioRef.current.currentTime = newTime;
     }
   };
-
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
-
   const handleSeekBackward = () => {
     if (audioRef.current) {
       const newTime = Math.max(0, audioRef.current.currentTime - 10);
@@ -553,7 +511,6 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
-
   const handleSeekForward = () => {
     if (audioRef.current) {
       const newTime = Math.min(duration, audioRef.current.currentTime + 10);
@@ -561,7 +518,6 @@ const Podcast = () => {
       setCurrentTime(newTime);
     }
   };
-
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
@@ -569,7 +525,6 @@ const Podcast = () => {
       audioRef.current.volume = isMuted ? 0 : newVolume;
     }
   };
-
   return <PodcastBackground>
       <div className="container max-w-6xl py-8">
         <div className="flex items-center justify-between mb-6">
@@ -595,14 +550,7 @@ const Podcast = () => {
         </div>
 
         <div className="hidden">
-          <audio 
-            ref={audioRef} 
-            onEnded={handleAudioEnded} 
-            controls 
-            className="w-full mb-4" 
-            onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
-            preload="auto"
-          />
+          <audio ref={audioRef} onEnded={handleAudioEnded} controls className="w-full mb-4" onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)} preload="auto" />
         </div>
 
         {error && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-red-300 shadow-lg">
@@ -716,14 +664,8 @@ const Podcast = () => {
                   <Headphones className="w-4 h-4" />
                   Full Conversation
                 </TabsTrigger>
-                <TabsTrigger value="host" className="flex items-center gap-1 data-[state=active]:bg-white data-[state=active]:text-blue-700">
-                  <Mic className="w-4 h-4" />
-                  Host Script
-                </TabsTrigger>
-                <TabsTrigger value="guest" className="flex items-center gap-1 data-[state=active]:bg-white data-[state=active]:text-blue-700">
-                  <User className="w-4 h-4" />
-                  Expert Script
-                </TabsTrigger>
+                
+                
               </TabsList>
 
               <TabsContent value="full">
@@ -789,5 +731,4 @@ const Podcast = () => {
       </div>
     </PodcastBackground>;
 };
-
 export default Podcast;
