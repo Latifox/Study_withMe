@@ -8,6 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { MessageSquare, FileText, HelpCircle, BookOpen, Network, Link, Activity, BrainCircuit, Mic, ClipboardCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface LectureActionsDialogProps {
   isOpen: boolean;
@@ -18,6 +21,8 @@ interface LectureActionsDialogProps {
 const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDialogProps) => {
   const navigate = useNavigate();
   const { courseId } = useParams();
+  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleChatAction = () => {
     navigate(`/course/${courseId}/lecture/${lectureId}/chat`);
@@ -59,9 +64,41 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
     onClose();
   };
 
-  const handlePodcastAction = () => {
-    navigate(`/course/${courseId}/lecture/${lectureId}/podcast`);
-    onClose();
+  const handlePodcastAction = async () => {
+    try {
+      setIsLoading('podcast');
+      
+      // Check if podcast exists for this lecture
+      const { data: podcastData, error } = await supabase
+        .from('lecture_podcast')
+        .select('*')
+        .eq('lecture_id', lectureId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        // Real error occurred
+        console.error('Error checking podcast existence:', error);
+        toast({
+          title: "Error",
+          description: "Could not check podcast status. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+      // Navigate to podcast page regardless of result
+      // The podcast page will handle showing generate button or existing podcast
+      navigate(`/course/${courseId}/lecture/${lectureId}/podcast`);
+      onClose();
+    } catch (error) {
+      console.error('Error in podcast action:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(null);
+    }
   };
 
   return (
@@ -131,11 +168,12 @@ const LectureActionsDialog = ({ isOpen, onClose, lectureId }: LectureActionsDial
           </Button>
           <Button
             onClick={handlePodcastAction}
+            disabled={isLoading === 'podcast'}
             className="flex items-center gap-3 w-full bg-white/15 hover:bg-white/25 text-white border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg shadow-md"
             size="lg"
           >
             <Mic className="w-5 h-5" />
-            Podcast
+            {isLoading === 'podcast' ? 'Loading...' : 'Podcast'}
           </Button>
           <Button
             onClick={handleResourcesAction}
