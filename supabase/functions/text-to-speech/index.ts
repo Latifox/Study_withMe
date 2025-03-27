@@ -26,7 +26,7 @@ serve(async (req) => {
     console.log(`Text length: ${text.length} characters`);
     
     // Check if text is too long and needs to be chunked
-    const MAX_TEXT_LENGTH = 6000; // Setting a safer limit
+    const MAX_TEXT_LENGTH = 6000; // Increased from 5000 to 6000
     
     if (text.length > MAX_TEXT_LENGTH) {
       console.log(`Text exceeds maximum length, chunking into smaller parts`);
