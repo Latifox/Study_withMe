@@ -224,6 +224,38 @@ const Podcast = () => {
     }
   };
 
+  const startPollingJobStatus = (jobId: string) => {
+    setIsPollingSatus(true);
+    if (pollIntervalRef.current) {
+      window.clearInterval(pollIntervalRef.current);
+    }
+    
+    const interval = window.setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('lecture_podcast')
+          .select('*')
+          .eq('job_id', jobId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data && data.is_processed) {
+          window.clearInterval(interval);
+          setIsPollingSatus(false);
+          setPodcast(data);
+          await setupPodcastAudio(data);
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        window.clearInterval(interval);
+        setIsPollingSatus(false);
+      }
+    }, 5000);
+    
+    pollIntervalRef.current = interval;
+  };
+
   const generateAudio = async () => {
     if (!podcast) return;
     setIsGeneratingAudio(true);

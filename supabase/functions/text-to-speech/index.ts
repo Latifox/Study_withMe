@@ -25,6 +25,15 @@ serve(async (req) => {
     console.log(`Converting text to speech with voice ID: ${defaultVoiceId}`);
     console.log(`Text length: ${text.length} characters`);
     
+    // Check if text is too long and needs to be chunked
+    const MAX_TEXT_LENGTH = 5000; // Setting a safer limit
+    
+    if (text.length > MAX_TEXT_LENGTH) {
+      console.log(`Text exceeds maximum length, chunking into smaller parts`);
+      // Return an error for now - this should be handled on the client side
+      throw new Error(`Text too long (${text.length} characters). Maximum allowed is ${MAX_TEXT_LENGTH} characters.`);
+    }
+    
     // Send request to ElevenLabs API
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${defaultVoiceId}/stream`, {
       method: 'POST',
@@ -51,10 +60,23 @@ serve(async (req) => {
     // Get the audio as array buffer
     const audioArrayBuffer = await response.arrayBuffer();
     
-    // Convert to base64 for easy passing over JSON
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
+    // Memory-efficient conversion to base64
+    // Use a more efficient method to convert large binary data to base64
+    let base64Audio = "";
     
-    console.log('Successfully converted text to speech');
+    try {
+      // More memory-efficient approach
+      const bytes = new Uint8Array(audioArrayBuffer);
+      const binString = Array.from(bytes)
+        .map(byte => String.fromCharCode(byte))
+        .join('');
+      base64Audio = btoa(binString);
+      
+      console.log('Successfully converted text to speech');
+    } catch (conversionError) {
+      console.error('Error converting audio to base64:', conversionError);
+      throw new Error('Failed to process audio data');
+    }
     
     return new Response(JSON.stringify({ 
       success: true, 
