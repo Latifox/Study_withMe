@@ -20,67 +20,113 @@ serve(async (req) => {
     }
     
     // Default voice IDs for each role (using ElevenLabs voice IDs)
-    const defaultVoiceId = voiceId || "EXAVITQu4vr4xnSDxMaL"; // Sarah's voice ID by default
+    const hostVoiceId = "EXAVITQu4vr4xnSDxMaL"; // Sarah (female host)
+    const guestVoiceId = "TxGEqnHWrfWFTfGW9XjX"; // Josh (male guest expert)
     
-    console.log(`Converting text to speech with voice ID: ${defaultVoiceId}`);
-    console.log(`Text length: ${text.length} characters`);
+    // Process text to separate host and guest parts
+    const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
+    
+    if (paragraphs.length === 0) {
+      throw new Error('No valid text content found');
+    }
+    
+    // Determine which paragraphs belong to host vs guest
+    // First paragraph is always the host, then they alternate
+    let hostText = '';
+    let guestText = '';
+    
+    paragraphs.forEach((paragraph, index) => {
+      if (index % 2 === 0) {
+        // Host paragraphs (0, 2, 4, ...)
+        hostText += paragraph + '\n\n';
+      } else {
+        // Guest paragraphs (1, 3, 5, ...)
+        guestText += paragraph + '\n\n';
+      }
+    });
+    
+    console.log(`Processed script into ${hostText.length} host characters and ${guestText.length} guest characters`);
     
     // Check if text is too long and needs to be chunked
     const MAX_TEXT_LENGTH = 6000; // Increased from 5000 to 6000
     
-    if (text.length > MAX_TEXT_LENGTH) {
+    if (hostText.length > MAX_TEXT_LENGTH || guestText.length > MAX_TEXT_LENGTH) {
       console.log(`Text exceeds maximum length, chunking into smaller parts`);
       // Return an error for now - this should be handled on the client side
-      throw new Error(`Text too long (${text.length} characters). Maximum allowed is ${MAX_TEXT_LENGTH} characters.`);
+      throw new Error(`Text too long. Maximum allowed is ${MAX_TEXT_LENGTH} characters per voice.`);
     }
     
-    // Send request to ElevenLabs API
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${defaultVoiceId}/stream`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') || '',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_monolingual_v1",
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-        }
-      }),
-    });
+    // Make parallel requests to ElevenLabs API for host and guest voices
+    const [hostResponse, guestResponse] = await Promise.all([
+      // Only make the request if there's text for that role
+      hostText.trim() ? 
+        fetch(`https://api.elevenlabs.io/v1/text-to-speech/${hostVoiceId}/stream`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') || '',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: hostText,
+            model_id: "eleven_monolingual_v1",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75,
+            }
+          }),
+        }) : 
+        Promise.resolve(null),
+        
+      guestText.trim() ? 
+        fetch(`https://api.elevenlabs.io/v1/text-to-speech/${guestVoiceId}/stream`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') || '',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: guestText,
+            model_id: "eleven_monolingual_v1",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75,
+            }
+          }),
+        }) : 
+        Promise.resolve(null),
+    ]);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('ElevenLabs API error:', errorText);
+    // Check responses
+    if ((hostText.trim() && !hostResponse?.ok) || (guestText.trim() && !guestResponse?.ok)) {
+      const errorTextHost = hostResponse ? await hostResponse.text() : '';
+      const errorTextGuest = guestResponse ? await guestResponse.text() : '';
+      console.error('ElevenLabs API error:', errorTextHost || errorTextGuest);
       throw new Error('Failed to convert text to speech');
     }
 
-    // Get the audio as array buffer
-    const audioArrayBuffer = await response.arrayBuffer();
+    // Get the audio as array buffers
+    const hostAudioArrayBuffer = hostResponse ? await hostResponse.arrayBuffer() : null;
+    const guestAudioArrayBuffer = guestResponse ? await guestResponse.arrayBuffer() : null;
     
-    // Memory-efficient conversion to base64
-    // Use a more efficient method to convert large binary data to base64
-    let base64Audio = "";
-    
-    try {
-      // More memory-efficient approach
-      const bytes = new Uint8Array(audioArrayBuffer);
-      const binString = Array.from(bytes)
+    // Convert to base64
+    const hostBase64Audio = hostAudioArrayBuffer ? btoa(
+      Array.from(new Uint8Array(hostAudioArrayBuffer))
         .map(byte => String.fromCharCode(byte))
-        .join('');
-      base64Audio = btoa(binString);
-      
-      console.log('Successfully converted text to speech');
-    } catch (conversionError) {
-      console.error('Error converting audio to base64:', conversionError);
-      throw new Error('Failed to process audio data');
-    }
+        .join('')
+    ) : '';
+    
+    const guestBase64Audio = guestAudioArrayBuffer ? btoa(
+      Array.from(new Uint8Array(guestAudioArrayBuffer))
+        .map(byte => String.fromCharCode(byte))
+        .join('')
+    ) : '';
+    
+    console.log('Successfully converted text to speech for multiple voices');
     
     return new Response(JSON.stringify({ 
       success: true, 
-      audioContent: base64Audio,
+      hostAudio: hostBase64Audio,
+      guestAudio: guestBase64Audio,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
