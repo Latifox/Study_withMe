@@ -537,10 +537,7 @@ const Podcast = () => {
             </Link>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">Podcast</h1>
           </div>
-          {!isGenerating && !podcast && <Button onClick={generatePodcast} className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md">
-              <Headphones className="w-4 h-4 mr-2" />
-              Generate Podcast
-            </Button>}
+          {!isGenerating && !podcast}
           {!isGenerating && podcast && <div className="flex gap-2">
               {!hasPodcastAudio() && <Button onClick={generateAudio} disabled={isGeneratingAudio || isPollingSatus} variant="default" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md">
                   {isGeneratingAudio || isPollingSatus ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Headphones className="w-4 h-4 mr-2" />}
