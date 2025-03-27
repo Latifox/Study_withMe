@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { text, voiceId } = await req.json();
+    console.log(`Received text of length: ${text?.length || 0} characters`);
     
     if (!text) {
       throw new Error('Text is required');
@@ -23,8 +24,9 @@ serve(async (req) => {
     const hostVoiceId = "EXAVITQu4vr4xnSDxMaL"; // Sarah (female host)
     const guestVoiceId = "TxGEqnHWrfWFTfGW9XjX"; // Josh (male guest expert)
     
-    // Process text to separate host and guest parts
+    // Process text to separate host and guest parts using empty line as separator
     const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
+    console.log(`Split text into ${paragraphs.length} paragraphs.`);
     
     if (paragraphs.length === 0) {
       throw new Error('No valid text content found');
@@ -36,11 +38,16 @@ serve(async (req) => {
     let guestText = '';
     
     paragraphs.forEach((paragraph, index) => {
+      // Log each paragraph for debugging
+      console.log(`Paragraph ${index}: ${paragraph.substring(0, 30)}...`);
+      
       if (index % 2 === 0) {
         // Host paragraphs (0, 2, 4, ...)
+        console.log(`Adding paragraph ${index} to host script`);
         hostText += paragraph + '\n\n';
       } else {
         // Guest paragraphs (1, 3, 5, ...)
+        console.log(`Adding paragraph ${index} to guest script`);
         guestText += paragraph + '\n\n';
       }
     });
@@ -55,6 +62,8 @@ serve(async (req) => {
       // Return an error for now - this should be handled on the client side
       throw new Error(`Text too long. Maximum allowed is ${MAX_TEXT_LENGTH} characters per voice.`);
     }
+    
+    console.log(`Sending requests to ElevenLabs API for host voice (${hostVoiceId}) and guest voice (${guestVoiceId})`);
     
     // Make parallel requests to ElevenLabs API for host and guest voices
     const [hostResponse, guestResponse] = await Promise.all([
@@ -97,16 +106,28 @@ serve(async (req) => {
     ]);
 
     // Check responses
-    if ((hostText.trim() && !hostResponse?.ok) || (guestText.trim() && !guestResponse?.ok)) {
-      const errorTextHost = hostResponse ? await hostResponse.text() : '';
-      const errorTextGuest = guestResponse ? await guestResponse.text() : '';
-      console.error('ElevenLabs API error:', errorTextHost || errorTextGuest);
-      throw new Error('Failed to convert text to speech');
+    if (hostResponse && !hostResponse.ok) {
+      const errorTextHost = await hostResponse.text();
+      console.error('ElevenLabs API error for host voice:', errorTextHost);
+      throw new Error(`Failed to convert host text to speech: ${errorTextHost}`);
     }
+    
+    if (guestResponse && !guestResponse.ok) {
+      const errorTextGuest = await guestResponse.text();
+      console.error('ElevenLabs API error for guest voice:', errorTextGuest);
+      throw new Error(`Failed to convert guest text to speech: ${errorTextGuest}`);
+    }
+
+    // Log response status
+    console.log(`Host response status: ${hostResponse?.status || 'No response'}`);
+    console.log(`Guest response status: ${guestResponse?.status || 'No response'}`);
 
     // Get the audio as array buffers
     const hostAudioArrayBuffer = hostResponse ? await hostResponse.arrayBuffer() : null;
     const guestAudioArrayBuffer = guestResponse ? await guestResponse.arrayBuffer() : null;
+    
+    console.log(`Host audio buffer size: ${hostAudioArrayBuffer?.byteLength || 0} bytes`);
+    console.log(`Guest audio buffer size: ${guestAudioArrayBuffer?.byteLength || 0} bytes`);
     
     // Convert to base64
     const hostBase64Audio = hostAudioArrayBuffer ? btoa(
@@ -121,7 +142,9 @@ serve(async (req) => {
         .join('')
     ) : '';
     
-    console.log('Successfully converted text to speech for multiple voices');
+    console.log(`Successfully converted text to speech for multiple voices`);
+    console.log(`Host audio base64 length: ${hostBase64Audio.length}`);
+    console.log(`Guest audio base64 length: ${guestBase64Audio.length}`);
     
     return new Response(JSON.stringify({ 
       success: true, 

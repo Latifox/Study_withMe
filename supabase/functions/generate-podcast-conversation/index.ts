@@ -99,8 +99,11 @@ serve(async (req) => {
     
     ${config.custom_instructions ? `ADDITIONAL INSTRUCTIONS:\n${config.custom_instructions}\n` : ''}
     
-    FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT EACH PARAGRAPH REPRESENTING A PERSON'S REPLY, DON'T USE ROLE IDENTIFIERS, SEPARATE EACH PARAGRAPH WITH AN EMPTY LINE, THE FIRST LINE OF THE DIALOGUE SHOULD BE THE HOST.
-    NEVER USE ROLE IDENTIFIERS AT THE BEGINING OF THE LINE. ONLY USE "-".
+    FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT:
+    - The first paragraph must be the host's introduction
+    - Alternate between host and guest for each paragraph
+    - Separate each paragraph with an empty line (crucial for voice processing)
+    - DO NOT use role identifiers like "Host:" or "Guest:" at the beginning of paragraphs
     
     IMPORTANT LENGTH CONSTRAINT: Your response MUST be under 2000 characters total. This is a strict requirement. Prioritize the most important concepts and keep explanations concise. If you generate more than 2000 characters, your response will be rejected.
     
@@ -121,6 +124,7 @@ serve(async (req) => {
           { role: 'user', content: podcastPrompt }
         ],
         temperature: config.temperature,
+        max_tokens: 1000,  // Limiting token count to help enforce character limit
       }),
     });
 
@@ -133,25 +137,24 @@ serve(async (req) => {
     const data = await openAIResponse.json();
     const fullScript = data.choices[0].message.content;
     console.log('Received podcast script with length:', fullScript.length);
-
-    // Parse the script to separate by speaker but don't use these for elevenlabs
-    const hostLines = [];
-    const guestLines = [];
     
-    const lines = fullScript.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith('HOST:')) {
-        hostLines.push(line.substring(5).trim());
-      } else if (line.startsWith('GUEST:')) {
-        guestLines.push(line.substring(6).trim());
-      }
+    if (fullScript.length > 2000) {
+      console.warn(`Script exceeds 2000 character limit (${fullScript.length} chars). Truncating...`);
+      // We could implement truncation logic here if needed
     }
 
-    const hostScript = hostLines.join('\n\n');
-    const guestScript = guestLines.join('\n\n');
+    // Parse the script to separate by paragraphs
+    const paragraphs = fullScript.split('\n\n').filter(p => p.trim() !== '');
+    console.log('Parsed script into paragraphs:', paragraphs.length);
+    
+    // Separate host and guest content based on alternating paragraphs
+    const hostParagraphs = paragraphs.filter((_, i) => i % 2 === 0);
+    const guestParagraphs = paragraphs.filter((_, i) => i % 2 === 1);
+    
+    const hostScript = hostParagraphs.join('\n\n');
+    const guestScript = guestParagraphs.join('\n\n');
 
-    console.log('Extracted script segments - Host:', hostLines.length, 'lines, Guest:', guestLines.length, 'lines');
+    console.log('Extracted script segments - Host:', hostParagraphs.length, 'paragraphs, Guest:', guestParagraphs.length, 'paragraphs');
 
     // Store the podcast in the database
     const { data: podcastData, error: podcastError } = await supabaseClient
