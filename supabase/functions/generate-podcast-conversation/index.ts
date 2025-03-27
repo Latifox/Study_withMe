@@ -102,7 +102,9 @@ serve(async (req) => {
     FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT EACH PARAGRAPH REPRESENTING A PERSON'S REPLY, DON'T USE ROLE IDENTIFIERS, SEPARATE EACH PARAGRAPH WITH AN EMPTY LINE, THE FIRST LINE OF THE DIALOGUE SHOULD BE THE HOST.
     NEVER USE ROLE IDENTIFIERS AT THE BEGINING OF THE LINE. ONLY USE "-".
     
-    Please create a complete podcast episode that covers the key points from the lecture in an engaging way. KEEP THE SCRIPT LENGTH UNDER 2000 characters!
+    IMPORTANT LENGTH CONSTRAINT: Your response MUST be under 2000 characters total. This is a strict requirement. Prioritize the most important concepts and keep explanations concise. If you generate more than 2000 characters, your response will be rejected.
+    
+    Please create a complete podcast episode that covers the key points from the lecture in an engaging way.
     `;
 
     console.log('Sending request to OpenAI...');
