@@ -57,17 +57,35 @@ const Podcast = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isDraggingTime, setIsDraggingTime] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    ensureBucketExists('podcast_audio');
-    
-    if (lectureId) {
+    const fetchData = async () => {
+      if (!lectureId) return;
+      
       setIsLoading(true);
-      fetchPodcast();
-    }
+      setError(null);
+      
+      try {
+        await ensureBucketExists('podcast_audio');
+        await fetchPodcast();
+      } catch (error) {
+        console.error("Error initializing podcast page:", error);
+        setError("Failed to load podcast data. Please try again.");
+        toast({
+          title: "Error",
+          description: "Failed to load podcast data",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
     
     return () => {
       if (pollIntervalRef.current) {
@@ -92,6 +110,8 @@ const Podcast = () => {
         throw error;
       }
       
+      console.log('Podcast fetch response:', data);
+      
       if (data) {
         console.log('Podcast data retrieved from database:', data);
         setPodcast(data);
@@ -105,6 +125,7 @@ const Podcast = () => {
         }
       } else {
         console.log('No podcast found for this lecture');
+        setPodcast(null);
       }
     } catch (error) {
       console.error('Error fetching podcast:', error);
@@ -113,8 +134,7 @@ const Podcast = () => {
         description: "Failed to fetch podcast data",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
+      throw error; // Re-throw to be caught by the outer try-catch
     }
   };
 
@@ -585,6 +605,16 @@ const Podcast = () => {
           />
         </div>
 
+        {error && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-red-300 shadow-lg">
+            <div className="flex flex-col items-center justify-center py-8">
+              <h3 className="text-xl font-semibold mb-2 text-red-600">Error</h3>
+              <p className="text-gray-700">{error}</p>
+              <Button onClick={() => window.location.reload()} className="mt-4 bg-red-600 hover:bg-red-700 text-white">
+                Retry
+              </Button>
+            </div>
+          </Card>}
+
         {isGenerating && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
             <div className="flex flex-col items-center justify-center py-12">
               <div className="animate-spin mb-4">
@@ -605,7 +635,7 @@ const Podcast = () => {
             </div>
           </Card>}
 
-        {!isLoading && !isGenerating && podcast && <>
+        {!isLoading && !isGenerating && !error && podcast && <>
             {isPollingSatus && <Card className="p-4 mb-4 bg-white/80 backdrop-blur-sm border border-white/50 shadow-md">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -686,6 +716,14 @@ const Podcast = () => {
                   <Headphones className="w-4 h-4" />
                   Full Conversation
                 </TabsTrigger>
+                <TabsTrigger value="host" className="flex items-center gap-1 data-[state=active]:bg-white data-[state=active]:text-blue-700">
+                  <Mic className="w-4 h-4" />
+                  Host Script
+                </TabsTrigger>
+                <TabsTrigger value="guest" className="flex items-center gap-1 data-[state=active]:bg-white data-[state=active]:text-blue-700">
+                  <User className="w-4 h-4" />
+                  Expert Script
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="full">
@@ -735,7 +773,7 @@ const Podcast = () => {
             </Tabs>
           </>}
 
-        {!isLoading && !isGenerating && !podcast && <Card className="p-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
+        {!isLoading && !isGenerating && !error && !podcast && <Card className="p-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Headphones className="w-12 h-12 mb-4 text-gray-400" />
               <h3 className="text-xl font-semibold mb-2 text-gray-800">No Podcast Available</h3>
