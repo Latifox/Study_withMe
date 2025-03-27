@@ -102,7 +102,7 @@ serve(async (req) => {
     FORMAT YOUR RESPONSE AS A DIALOGUE SCRIPT EACH PARAGRAPH REPRESENTING A PERSON'S REPLY, DON'T USE ROLE IDENTIFIERS, SEPARATE EACH PARAGRAPH WITH AN EMPTY LINE, THE FIRST LINE OF THE DIALOGUE SHOULD BE THE HOST.
     NEVER USE ROLE IDENTIFIERS AT THE BEGINING OF THE LINE. ONLY USE "-".
     
-    Please create a complete podcast episode that covers the key points from the lecture in an engaging way. KEEP THE SCRIPT LENGTH UNDER 4000 charaters!
+    Please create a complete podcast episode that covers the key points from the lecture in an engaging way. KEEP THE SCRIPT LENGTH UNDER 2000 characters!
     `;
 
     console.log('Sending request to OpenAI...');
