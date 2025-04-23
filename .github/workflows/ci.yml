@@ -27,11 +27,8 @@ jobs:
     - name: Lint code (allow errors for now)
       run: npm run lint || true
     
-    - name: Install coverage dependencies
-      run: npm install --no-save @vitest/coverage-v8
-    
-    - name: Run tests with coverage
-      run: vitest run --coverage
+    - name: Run tests
+      run: npm run test
     
     - name: SonarCloud Scan
       uses: SonarSource/sonarqube-scan-action@v5
