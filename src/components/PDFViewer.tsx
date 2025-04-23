@@ -43,7 +43,7 @@ const PDFViewer = ({
         return data.publicUrl;
       } catch (err) {
         console.error('Error fetching PDF:', err);
-        setError('Failed to load PDF. Please check your permissions or try again later.');
+        setError('Failed to load the PDF. Please check your permissions or try again later.');
         throw err;
       }
     },
