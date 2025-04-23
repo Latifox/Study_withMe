@@ -54,7 +54,7 @@ La documentation complète du projet est disponible dans le dossier `/documentat
 2. [Planification Agile (Scrum)](./documentation/02-planification-agile-scrum.md) - Approche de développement et organisation des sprints
 3. [Conception](./documentation/03-conception-sprint.md) - Détails techniques et conception des fonctionnalités
 
-## 🤝 Contribution
+##  Contribution
 
 Les contributions sont les bienvenues ! Voici comment participer :
 
