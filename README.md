@@ -43,7 +43,7 @@ npm run dev
 
 - Node.js (v16 ou supérieur)
 - Compte Supabase pour la base de données et les fonctions serverless
-- Clés API pour OpenAI et autres services d'IA
+- Clés API pour OpenAI et ELEVENLABS 
 - npm ou yarn
 
 ## 📚 Documentation
@@ -54,7 +54,7 @@ La documentation complète du projet est disponible dans le dossier `/documentat
 2. [Planification Agile (Scrum)](./documentation/02-planification-agile-scrum.md) - Approche de développement et organisation des sprints
 3. [Conception](./documentation/03-conception-sprint.md) - Détails techniques et conception des fonctionnalités
 
-## 🤝 Contribution
+##  Contribution
 
 Les contributions sont les bienvenues ! Voici comment participer :
 
@@ -64,14 +64,4 @@ Les contributions sont les bienvenues ! Voici comment participer :
 4. Poussez sur la branche (`git push origin feature/amazing-feature`)
 5. Ouvrez une Pull Request
 
-## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
-## 📞 Contact
-
-Pour toute question ou suggestion, n'hésitez pas à ouvrir une issue ou à contacter l'équipe de développement.
-
----
-
-Développé avec ❤️ pour améliorer l'apprentissage et l'éducation. 
