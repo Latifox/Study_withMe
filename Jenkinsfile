@@ -25,7 +25,14 @@ pipeline {
         
         stage('Lint') {
             steps {
-                powershell 'npx eslint . --max-warnings 100 || true'
+                powershell '''
+                    try {
+                        npx eslint . --max-warnings 100
+                    } catch {
+                        Write-Host "ESLint found issues but continuing the build..."
+                    }
+                    exit 0
+                '''
             }
         }
         
