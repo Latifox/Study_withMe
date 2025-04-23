@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Shallow clones should be disabled for better SonarQube analysis
     
@@ -30,11 +30,10 @@ jobs:
     - name: Run tests with coverage
       run: npm run test:coverage
     
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@master
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarqube-scan-action@v5
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
@@ -49,7 +48,7 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Node.js
       uses: actions/setup-node@v3
