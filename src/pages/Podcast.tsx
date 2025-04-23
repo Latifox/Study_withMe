@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward } from "lucide-react";
+import { ArrowLeft, RefreshCw, Headphones, Mic, User, Play, Pause, VolumeX, Volume2, Download, SkipBack, SkipForward, AlertCircle } from "lucide-react";
 import PodcastBackground from "@/components/ui/PodcastBackground";
 
 interface PodcastData {
@@ -72,7 +72,6 @@ const Podcast = () => {
       setIsLoading(true);
       setError(null);
       try {
-        await ensureBucketExists('podcast_audio');
         await fetchPodcast();
       } catch (error) {
         console.error("Error initializing podcast page:", error);
@@ -132,24 +131,60 @@ const Podcast = () => {
     }
   };
 
+  const getAudioUrl = async (path: string): Promise<string | null> => {
+    // Try audio_podcasts bucket first
+    try {
+      const { data: audioPodcastsUrl } = await supabase.storage
+        .from('audio_podcasts')
+        .getPublicUrl(path);
+      
+      if (audioPodcastsUrl?.publicUrl) {
+        console.log('Retrieved URL from audio_podcasts bucket:', audioPodcastsUrl.publicUrl);
+        return audioPodcastsUrl.publicUrl;
+      }
+    } catch (error) {
+      console.warn('Failed to get URL from audio_podcasts bucket:', error);
+    }
+    
+    // Try podcast_audio bucket as fallback
+    try {
+      const { data: podcastAudioUrl } = await supabase.storage
+        .from('podcast_audio')
+        .getPublicUrl(path);
+      
+      if (podcastAudioUrl?.publicUrl) {
+        console.log('Retrieved URL from podcast_audio bucket:', podcastAudioUrl.publicUrl);
+        return podcastAudioUrl.publicUrl;
+      }
+    } catch (error) {
+      console.warn('Failed to get URL from podcast_audio bucket:', error);
+    }
+    
+    console.error('Could not retrieve audio URL from any bucket');
+    return null;
+  };
+
   const setupPodcastAudio = async (podcastData: PodcastData) => {
     try {
       console.log('Setting up podcast audio with data:', podcastData);
+      
+      // First check for stored audio path
       if (podcastData.stored_audio_path) {
         console.log('Podcast has stored audio path:', podcastData.stored_audio_path);
-        const {
-          data: publicUrlData
-        } = await supabase.storage.from('podcast_audio').getPublicUrl(podcastData.stored_audio_path);
-        if (publicUrlData && publicUrlData.publicUrl) {
-          console.log('Successfully retrieved public URL for stored audio:', publicUrlData.publicUrl);
+        
+        const audioUrl = await getAudioUrl(podcastData.stored_audio_path);
+        
+        if (audioUrl) {
+          console.log('Successfully retrieved public URL for stored audio:', audioUrl);
           setPodcastAudio({
-            url: publicUrlData.publicUrl,
+            url: audioUrl,
             finished: true,
             progress: 100
           });
+          
           if (audioRef.current) {
             console.log('Setting audio source to stored audio file');
-            audioRef.current.src = publicUrlData.publicUrl;
+            audioRef.current.src = audioUrl;
             audioRef.current.volume = isMuted ? 0 : volume;
             audioRef.current.load();
           }
@@ -158,6 +193,8 @@ const Podcast = () => {
           console.error('Failed to get public URL for stored audio path');
         }
       }
+      
+      // Fallback to audio_url if present
       if (podcastData.audio_url) {
         console.log('Using external audio URL as fallback:', podcastData.audio_url);
         setPodcastAudio({
@@ -165,6 +202,7 @@ const Podcast = () => {
           finished: true,
           progress: 100
         });
+        
         if (audioRef.current) {
           audioRef.current.src = podcastData.audio_url;
           audioRef.current.volume = isMuted ? 0 : volume;
@@ -340,37 +378,77 @@ const Podcast = () => {
         message: "Uploading podcast audio..."
       }));
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('podcast_audio')
-        .upload(audioFileName, audioFile);
-        
-      if (uploadError) throw uploadError;
+      let uploadSuccess = false;
+      let audioFileUrl = '';
       
-      const { data: publicUrlData } = await supabase.storage
-        .from('podcast_audio')
-        .getPublicUrl(audioFileName);
-        
-      const audioUrl = publicUrlData?.publicUrl;
+      // Try audio_podcasts first
+      try {
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('audio_podcasts')
+          .upload(audioFileName, audioFile);
+          
+        if (!uploadError) {
+          console.log('Successfully uploaded to audio_podcasts bucket');
+          const { data: publicUrlData } = await supabase.storage
+            .from('audio_podcasts')
+            .getPublicUrl(audioFileName);
+            
+          audioFileUrl = publicUrlData?.publicUrl || '';
+          uploadSuccess = true;
+        } else {
+          console.error('Error uploading to audio_podcasts:', uploadError);
+        }
+      } catch (uploadError) {
+        console.error('Exception uploading to audio_podcasts:', uploadError);
+      }
       
+      // If audio_podcasts failed, try podcast_audio as fallback
+      if (!uploadSuccess) {
+        try {
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('podcast_audio')
+            .upload(audioFileName, audioFile);
+            
+          if (!uploadError) {
+            console.log('Successfully uploaded to podcast_audio bucket');
+            const { data: publicUrlData } = await supabase.storage
+              .from('podcast_audio')
+              .getPublicUrl(audioFileName);
+              
+            audioFileUrl = publicUrlData?.publicUrl || '';
+            uploadSuccess = true;
+          } else {
+            console.error('Error uploading to podcast_audio:', uploadError);
+          }
+        } catch (uploadError) {
+          console.error('Exception uploading to podcast_audio:', uploadError);
+        }
+      }
+      
+      if (!uploadSuccess) {
+        throw new Error('Failed to upload audio file to any bucket');
+      }
+      
+      // Update the podcast record with the new audio path
       const { error: updateError } = await supabase
         .from('lecture_podcast')
         .update({
           is_processed: true,
           stored_audio_path: audioFileName,
-          audio_url: audioUrl
+          audio_url: audioFileUrl
         })
         .eq('id', podcast.id);
         
       if (updateError) throw updateError;
       
       if (audioRef.current) {
-        audioRef.current.src = audioUrl;
+        audioRef.current.src = audioFileUrl;
         audioRef.current.volume = isMuted ? 0 : volume;
         audioRef.current.load();
       }
       
       setPodcastAudio({
-        url: audioUrl,
+        url: audioFileUrl,
         finished: true,
         progress: 100,
         message: "Podcast audio ready!"
@@ -405,7 +483,7 @@ const Podcast = () => {
     let currentSpeaker: 'host' | 'guest' | null = null;
     let currentText = '';
     
-    for (let line of lines) {
+    for (const line of lines) {
       const trimmedLine = line.trim();
       
       if (!trimmedLine) continue;
@@ -559,45 +637,53 @@ const Podcast = () => {
     setIsPlaying(false);
   };
 
-  const downloadPodcast = () => {
+  const downloadPodcast = async () => {
     if (podcast?.stored_audio_path) {
-      const {
-        data
-      } = supabase.storage.from('podcast_audio').getPublicUrl(podcast.stored_audio_path);
-      if (data && data.publicUrl) {
-        const link = document.createElement('a');
-        link.href = data.publicUrl;
-        link.download = `lecture_${lectureId}_podcast.mp3`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else if (podcast?.audio_url) {
+      try {
+        const audioUrl = await getAudioUrl(podcast.stored_audio_path);
+        
+        if (audioUrl) {
+          // Create a temporary link and trigger download
+          const link = document.createElement('a');
+          link.href = audioUrl;
+          link.download = `podcast-${lectureId}.mp3`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          throw new Error('Could not retrieve download URL');
+        }
+      } catch (error) {
+        console.error('Error downloading podcast:', error);
+        toast({
+          title: "Error",
+          description: "Failed to download podcast. The audio file may not exist.",
+          variant: "destructive"
+        });
+      }
+    } else if (podcast?.audio_url) {
+      // Direct download from URL
+      try {
         const link = document.createElement('a');
         link.href = podcast.audio_url;
-        link.download = 'podcast.mp3';
+        link.download = `podcast-${lectureId}.mp3`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error downloading from audio URL:', error);
+        toast({
+          title: "Error",
+          description: "Failed to download podcast from external URL",
+          variant: "destructive"
+        });
       }
-      return;
-    }
-    if (podcast?.audio_url) {
-      const link = document.createElement('a');
-      link.href = podcast.audio_url;
-      link.download = 'podcast.mp3';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
-    }
-    const downloadUrl = podcastAudio?.url || podcastAudio?.episode_url;
-    if (downloadUrl) {
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = 'podcast.mp3';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    } else {
+      toast({
+        title: "Error",
+        description: "No podcast audio available to download",
+        variant: "destructive"
+      });
     }
   };
 
@@ -689,6 +775,47 @@ const Podcast = () => {
     }
   };
 
+  if (error) {
+    return (
+      <PodcastBackground>
+        <div className="container max-w-6xl py-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Link to={`/course/${courseId}`}>
+                <Button variant="gradient" size="sm" className="text-white hover:opacity-90">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Course
+                </Button>
+              </Link>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">Podcast</h1>
+            </div>
+          </div>
+          
+          <div className="flex justify-center items-center min-h-[300px]">
+            <div className="p-6 bg-white/80 rounded-lg shadow-lg max-w-md text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Error Loading Podcast</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <div className="flex justify-center space-x-3">
+                <Button 
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                >
+                  Try Again
+                </Button>
+                <Button 
+                  onClick={generatePodcast}
+                >
+                  Generate New Podcast
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </PodcastBackground>
+    );
+  }
+
   return <PodcastBackground>
       <div className="container max-w-6xl py-8">
         <div className="flex items-center justify-between mb-6">
@@ -713,16 +840,6 @@ const Podcast = () => {
         <div className="hidden">
           <audio ref={audioRef} onEnded={handleAudioEnded} controls className="w-full mb-4" onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)} preload="auto" />
         </div>
-
-        {error && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-red-300 shadow-lg">
-            <div className="flex flex-col items-center justify-center py-8">
-              <h3 className="text-xl font-semibold mb-2 text-red-600">Error</h3>
-              <p className="text-gray-700">{error}</p>
-              <Button onClick={() => window.location.reload()} className="mt-4 bg-red-600 hover:bg-red-700 text-white">
-                Retry
-              </Button>
-            </div>
-          </Card>}
 
         {isGenerating && <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
             <div className="flex flex-col items-center justify-center py-12">

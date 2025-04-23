@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +27,7 @@ import StoryNodes from "./pages/StoryNodes";
 import StoryContent from "./pages/StoryContent";
 import Podcast from "./pages/Podcast";
 import NotFound from "./pages/NotFound";
+import MindMap from "./pages/MindMap";
 
 const queryClient = new QueryClient();
 
@@ -70,7 +70,7 @@ const App = () => (
               path="/course/:courseId/lecture/:lectureId/story/content/:nodeId" 
               element={<StoryContent />} 
             />
-            <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<NotFound />} />
+            <Route path="/course/:courseId/lecture/:lectureId/mindmap" element={<MindMap />} />
             <Route path="/course/:courseId/lecture/:lectureId/podcast" element={<Podcast />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

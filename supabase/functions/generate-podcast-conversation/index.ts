@@ -1,6 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +16,10 @@ serve(async (req) => {
   try {
     const { lectureId } = await req.json();
     console.log('Processing podcast generation for lecture:', lectureId);
+
+    if (!lectureId) {
+      throw new Error('Lecture ID is required');
+    }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -67,6 +71,11 @@ serve(async (req) => {
     }
 
     const lecture = lectureResponse.data;
+    
+    if (!lecture?.content) {
+      throw new Error('Lecture content is empty or missing');
+    }
+
     const config = configResponse.data || {
       temperature: 0.7,
       creativity_level: 0.5,
@@ -76,11 +85,20 @@ serve(async (req) => {
 
     console.log('Using AI config:', config);
     
+    // Create a shorter version of the content if it's too long
+    const maxContentLength = 6000;
+    let truncatedContent = lecture.content;
+    if (lecture.content.length > maxContentLength) {
+      truncatedContent = lecture.content.substring(0, maxContentLength) + 
+        "\n[Content truncated due to length constraints. Please focus on the main concepts from the beginning of the lecture.]";
+      console.log(`Lecture content truncated from ${lecture.content.length} to ${truncatedContent.length} characters`);
+    }
+    
     const podcastPrompt = `
     Create a podcast-style conversation about the following lecture titled "${lecture.title}". 
     
     LECTURE CONTENT:
-    ${lecture.content}
+    ${truncatedContent}
     
     FORMAT:
     Create a natural, engaging podcast conversation between two personas:
@@ -111,30 +129,44 @@ serve(async (req) => {
     `;
 
     console.log('Sending request to OpenAI...');
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You are an AI specialized in creating educational podcast scripts.' },
-          { role: 'user', content: podcastPrompt }
-        ],
-        temperature: config.temperature,
-        max_tokens: 1000,  // Limiting token count to help enforce character limit
-      }),
-    });
+    
+    // Use a try/catch specifically for the OpenAI request
+    let openAIResponse;
+    try {
+      openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',  // Updated to use the latest model
+          messages: [
+            { role: 'system', content: 'You are an AI specialized in creating educational podcast scripts.' },
+            { role: 'user', content: podcastPrompt }
+          ],
+          temperature: config.temperature,
+          max_tokens: 1000,  // Limiting token count to help enforce character limit
+        }),
+      });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      throw new Error(`OpenAI API call failed: ${error.message}`);
+    }
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error('Failed to get response from OpenAI');
+      console.error(`OpenAI API error (${openAIResponse.status}):`, errorText);
+      throw new Error(`Failed to get response from OpenAI (Status ${openAIResponse.status})`);
     }
 
     const data = await openAIResponse.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Unexpected OpenAI response format:', data);
+      throw new Error('Invalid response format from OpenAI');
+    }
+    
     const fullScript = data.choices[0].message.content;
     console.log('Received podcast script with length:', fullScript.length);
     
@@ -147,6 +179,11 @@ serve(async (req) => {
     const paragraphs = fullScript.split('\n\n').filter(p => p.trim() !== '');
     console.log('Parsed script into paragraphs:', paragraphs.length);
     
+    if (paragraphs.length < 2) {
+      console.warn('Not enough paragraphs to create a conversation');
+      throw new Error('Generated script does not contain enough paragraphs for a conversation');
+    }
+    
     // Separate host and guest content based on alternating paragraphs
     const hostParagraphs = paragraphs.filter((_, i) => i % 2 === 0);
     const guestParagraphs = paragraphs.filter((_, i) => i % 2 === 1);
@@ -157,24 +194,31 @@ serve(async (req) => {
     console.log('Extracted script segments - Host:', hostParagraphs.length, 'paragraphs, Guest:', guestParagraphs.length, 'paragraphs');
 
     // Store the podcast in the database
-    const { data: podcastData, error: podcastError } = await supabaseClient
-      .from('lecture_podcast')
-      .insert({
-        lecture_id: lectureId,
-        full_script: fullScript,
-        host_script: hostScript,
-        expert_script: guestScript,
-        student_script: "" // Keeping this field for backward compatibility
-      })
-      .select()
-      .single();
+    let podcastData;
+    try {
+      const { data, error: podcastError } = await supabaseClient
+        .from('lecture_podcast')
+        .insert({
+          lecture_id: lectureId,
+          full_script: fullScript,
+          host_script: hostScript,
+          expert_script: guestScript,
+          student_script: "" // Keeping this field for backward compatibility
+        })
+        .select()
+        .single();
 
-    if (podcastError) {
-      console.error('Error storing podcast:', podcastError);
-      throw new Error('Failed to store podcast');
+      if (podcastError) {
+        console.error('Error storing podcast:', podcastError);
+        throw new Error(`Failed to store podcast: ${podcastError.message}`);
+      }
+      
+      podcastData = data;
+      console.log('Successfully stored podcast with ID:', podcastData.id);
+    } catch (error) {
+      console.error('Database error when storing podcast:', error);
+      throw new Error(`Database operation failed: ${error.message}`);
     }
-
-    console.log('Successfully stored podcast with ID:', podcastData.id);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -186,7 +230,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-podcast-conversation function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Unknown error occurred',
+      success: false,
+      message: 'Failed to generate podcast'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -27,9 +27,16 @@ export function CreateCourseDialog() {
     setIsSubmitting(true);
     try {
       console.log('Creating course with title:', title.trim());
+      
+      // Get the current user
+      const { data: userData } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('courses')
-        .insert([{ title: title.trim() }])
+        .insert([{ 
+          title: title.trim(),
+          owner_id: userData.user?.id 
+        }])
         .select()
         .single();
 
