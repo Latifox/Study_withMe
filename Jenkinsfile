@@ -25,9 +25,9 @@ pipeline {
         
         stage('Lint') {
             steps {
-                powershell 'npm run lint'
+                powershell 'npx eslint "**/*.{ts,tsx}" --report-unused-disable-directives --max-warnings 0'
             }
-        }
+}
         
         stage('Test') {
             steps {
