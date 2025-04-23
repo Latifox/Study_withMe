@@ -19,7 +19,7 @@ pipeline {
         
         stage('Setup') {
             steps {
-                powershell 'npm ci --legacy-peer-deps'
+                powershell 'npm install --legacy-peer-deps'
             }
         }
         
