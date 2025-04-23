@@ -20,7 +20,7 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: npm run ci-install
+      run: npm install --no-package-lock --legacy-peer-deps
     
     - name: Lint code
       run: npm run lint
@@ -50,7 +50,7 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: npm run ci-install
+      run: npm install --no-package-lock --legacy-peer-deps
     
     - name: Build
       run: npm run build
