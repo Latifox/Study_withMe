@@ -43,7 +43,7 @@ npm run dev
 
 - Node.js (v16 ou supérieur)
 - Compte Supabase pour la base de données et les fonctions serverless
-- Clés API pour OpenAI et autres services d'IA
+- Clés API pour OpenAI et ELEVENLABS 
 - npm ou yarn
 
 ## 📚 Documentation
