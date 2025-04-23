@@ -75,9 +75,14 @@ pipeline {
         stage('Upload to Nexus') {
             steps {
                 script {
-                    def packageJSON = readJSON file: 'package.json'
-                    def appVersion = packageJSON.version
-                    def appName = packageJSON.name
+                    // Read package.json using PowerShell instead of readJSON
+                    def packageInfo = powershell(script: '''
+                        $packageJson = Get-Content -Raw -Path package.json | ConvertFrom-Json
+                        Write-Output "$($packageJson.name):$($packageJson.version)"
+                    ''', returnStdout: true).trim().split(':')
+                    
+                    def appName = packageInfo[0]
+                    def appVersion = packageInfo[1]
                     
                     // Create a zip file of the dist directory
                     powershell "Compress-Archive -Path dist -DestinationPath ${appName}-${appVersion}.zip -Force"
